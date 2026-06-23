@@ -53,8 +53,15 @@
 ### 前端
 
 - [ ] 页面清单与路由对应
-- [ ] API 基址与环境变量（`VITE_API_BASE`）有定义
+- [ ] API 基址与环境变量（`VITE_API_BASE`、`VITE_DEV_PORT`）有定义
 - [ ] 子应用独立运行与嵌入模式的 basename 策略
+
+### 端口与多应用隔离
+
+- [ ] 已在 [应用端口与命名注册表](../../docs-project/应用端口与命名注册表.md) 登记或核对 `app_key`
+- [ ] API 端口、Vite dev 端口、Docker 映射端口互不冲突
+- [ ] 各 BFF 使用独立 `POSTGRES_DB`，未与其他应用混连
+- [ ] Qiankun `entry` 使用子应用 dev 端口，非主应用 API 端口
 
 ## 缺陷报告格式
 

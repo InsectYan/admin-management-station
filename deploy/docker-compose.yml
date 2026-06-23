@@ -45,8 +45,10 @@ services:
     environment:
       POSTGRES_HOST: postgres
       REDIS_HOST: redis
+      PORT: ${MAIN_PORT:-7001}
+      POSTGRES_DB: ${MAIN_POSTGRES_DB:-admin_platform}
     ports:
-      - "7001:7001"
+      - "${MAIN_PORT:-7001}:${MAIN_PORT:-7001}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -62,8 +64,10 @@ services:
       - ./config/.env.local
     environment:
       POSTGRES_HOST: postgres
+      PORT: ${NOVEL_PORT:-7002}
+      POSTGRES_DB: ${NOVEL_POSTGRES_DB:-novel_db}
     ports:
-      - "7002:7002"
+      - "${NOVEL_PORT:-7002}:${NOVEL_PORT:-7002}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -82,13 +86,13 @@ services:
       WORKSPACES_ROOT: /workspaces
       TEMPLATES_ROOT: /workspace-templates
       DATA_ROOT: /data
-      PORT: 7003
+      PORT: ${AGENT_PORT:-7003}
     volumes:
       - ../workspaces:/workspaces
       - ../workspace-templates:/workspace-templates
       - ../data:/data
     ports:
-      - "7003:7003"
+      - "${AGENT_PORT:-7003}:${AGENT_PORT:-7003}"
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,6 +1,6 @@
 # Egg.js 后端工作流
 
-> 编码规范：`.cursor/rules/egg-backend.mdc`
+> 编码规范：`.cursor/rules/egg-backend.mdc`、`.cursor/rules/app-registry.mdc`
 
 ## 参考设计
 
@@ -13,7 +13,10 @@
 Model → Service → Controller → Router → Middleware（鉴权）
 ```
 
-## 主应用：菜单模块
+## 主应用：菜单模块（app_key=main）
+
+- API **7001**，数据库 **`admin_platform`**
+- 代码目录：`menu-master/backend/` 或 `apps/main-backend/`
 
 ### API 清单
 
@@ -33,7 +36,9 @@ Model → Service → Controller → Router → Middleware（鉴权）
 - 写操作：`egg-jwt` 验证 + RBAC（`role === 'admin'`）
 - 可选：Redis 缓存菜单树
 
-## 子应用：小说模块
+## 子应用：小说模块（app_key=novel）
+
+- API **7002**，数据库 **`novel_db`**
 
 ### API 清单
 
@@ -52,9 +57,10 @@ Model → Service → Controller → Router → Middleware（鉴权）
 
 ## 配置
 
-- `config/config.default.js`：PostgreSQL 连接、JWT secret、路由 prefix `/api`
-- `config/plugin.js`：启用 `egg-jwt`、`egg-orm`
-- `app.js`：时区 `Asia/Shanghai`
+- `config/config.default.js`：`PORT` 读 `{APP_KEY}_PORT` 或 `process.env.PORT`；PostgreSQL 读 `{APP_KEY}_POSTGRES_DB`
+- 主应用：`PORT=7001`，`POSTGRES_DB=admin_platform`
+- 小说：`PORT=7002`，`POSTGRES_DB=novel_db`
+- 详见 [`应用端口与命名注册表.md`](../../docs-project/应用端口与命名注册表.md)
 
 ## 验收
 

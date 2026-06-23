@@ -16,6 +16,7 @@ description: >-
 1. 确认目标设计文档路径（默认 `docs-project/` 下对应 `.md` 文件）。
 2. 阅读 [README.md](README.md) 了解 skill 用法。
 3. 开发编码规范以 [`.cursor/rules/`](../../.cursor/rules/) 为准，本 skill 只定义**流程与实现要点**。
+4. **多应用并行**：实现前读取 [应用端口与命名注册表](../../docs-project/应用端口与命名注册表.md)（或 `app-registry.mdc`），确认 `app_key`、API 端口、Vite dev 端口、`POSTGRES_DB` 无冲突。
 
 ## 执行流程
 
@@ -87,6 +88,7 @@ tasks/
 
 | 文档 | 类型 | 说明 |
 |-----|------|------|
+| `docs-project/应用端口与命名注册表.md` | 注册表 | **各应用端口、库名、容器名（并行开发必读）** |
 | `docs-project/私人管理平台主应用设计.md` | 主应用 | React Web + Qiankun 基座、菜单系统 |
 | `docs-project/小说管理页面子应用设计.MD` | 子应用 | React + Ant Design 小说管理微应用 |
 | `docs-project/部署与Docker方案.md` | 部署 | Docker Compose 与 Nginx 拓扑 |
@@ -97,3 +99,4 @@ tasks/
 - 不跳过设计缺陷检测直接编码
 - 不在渲染进程直接使用 Node.js API（本项目为 Web SPA，无桌面进程）
 - 不偏离设计文档自行扩展未要求的功能
+- 不硬编码端口或数据库名；须符合 `app-registry.mdc` 登记值

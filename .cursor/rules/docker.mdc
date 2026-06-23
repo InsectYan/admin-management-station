@@ -12,6 +12,7 @@ alwaysApply: false
 - 日常启动用 **`ams local`**，不直接记 compose 参数。
 - 配置分层：`deploy/config/.env.local`（团队）+ `apps/*/.env`（个人密钥）。
 - profile：`local` 全栈，`infra` 仅 postgres + redis。
+- **端口与数据库名**：各应用分配唯一值，以 **`app-registry.mdc`** / [`docs-project/应用端口与命名注册表.md`](../../docs-project/应用端口与命名注册表.md) 为准；新增服务先登记再改 Compose。
 
 ## 目录
 

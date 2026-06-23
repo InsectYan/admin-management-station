@@ -27,18 +27,20 @@ ams local:infra                # 仅 DB + Redis，业务代码宿主机热更新
 
 | 容器 | 地址 | 说明 |
 |------|------|------|
-| `ams-main-frontend` | http://localhost:8080 | 主应用 + Qiankun |
-| `ams-novel-frontend` | http://localhost:8081 | 小说子应用 |
-| `ams-api-main` | http://localhost:7001 | Egg.js 平台 BFF |
-| `ams-agent-server` | http://localhost:7003 | **Pi Agent**（对齐 cartoon-server） |
-| `ams-postgres` | localhost:5432 | PostgreSQL |
+| `ams-main-frontend` | http://localhost:8080 | 主应用 + Qiankun（dev Vite **5173**） |
+| `ams-novel-frontend` | http://localhost:8081 | 小说子应用（dev Vite **5174**） |
+| `ams-api-main` | http://localhost:7001 | Egg.js 平台 BFF · `admin_platform` |
+| `ams-api-novel` | http://localhost:7002 | Egg.js 小说 API · `novel_db` |
+| `ams-agent-server` | http://localhost:7003 | **Pi Agent** |
+| `ams-postgres` | localhost:5432 | PostgreSQL（多库） |
 
-部署细节：[deploy/README.md](../deploy/README.md) · [部署与Docker方案.md](./部署与Docker方案.md)
+部署细节：[deploy/README.md](../deploy/README.md) · [部署与Docker方案.md](./部署与Docker方案.md) · **[应用端口与命名注册表.md](./应用端口与命名注册表.md)**
 
 ## 文档清单
 
 | 文档 | 类型 | 说明 |
 |-----|------|------|
+| [**应用端口与命名注册表.md**](./应用端口与命名注册表.md) | 注册表 | 各应用端口、库名、并行开发 |
 | [Agent开发方案.md](./Agent开发方案.md) | Agent | **Pi v3** 智能体（对齐 cartoon-agent） |
 | [部署与Docker方案.md](./部署与Docker方案.md) | 部署 | Compose 拓扑、Nginx、环境变量 |
 | [私人管理平台主应用设计.md](./私人管理平台主应用设计.md) | 主应用 | React 基座 + Qiankun + 菜单 |
@@ -48,9 +50,9 @@ ams local:infra                # 仅 DB + Redis，业务代码宿主机热更新
 
 ```
 浏览器
-  ├── 主应用 SPA（:8080）── Qiankun ── 子应用 SPA（:8081）
-  ├── Egg.js 平台 BFF（:7001）── 菜单 / 鉴权
-  ├── Egg.js 小说 API（:7002）
+  ├── 主应用 SPA（Docker :8080 · dev :5173）── Qiankun ── 子应用（:8081 / dev :5174）
+  ├── Egg.js 平台 BFF（:7001）── admin_platform
+  ├── Egg.js 小说 API（:7002）── novel_db
   └── Agent Server（:7003）── BFF + Pi · SSE 对话
            ├── PostgreSQL / Redis
            ├── workspaces/ · data/（Pi 工作区，对齐 cartoon-agent）
@@ -69,6 +71,7 @@ ams local:infra                # 仅 DB + Redis，业务代码宿主机热更新
 
 | 规则 | 说明 |
 |------|------|
+| `.cursor/rules/app-registry.mdc` | **多应用端口与数据库名** |
 | `.cursor/rules/pi-v3-agent.mdc` | Pi Agent 全链路 |
 | `.cursor/rules/pi-minimal-design.mdc` | Pi 极简原则 |
 | `.cursor/rules/deploy-cli.mdc` | **`ams` 指令与 deploy/** |

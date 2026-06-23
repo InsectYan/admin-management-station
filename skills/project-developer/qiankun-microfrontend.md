@@ -1,11 +1,12 @@
 # Qiankun 微前端集成工作流
 
-> 编码规范：`.cursor/rules/qiankun-microfrontend.mdc`
+> 编码规范：`.cursor/rules/qiankun-microfrontend.mdc`、`.cursor/rules/app-registry.mdc`
 
 ## 参考设计
 
 - 主应用：`docs-project/私人管理平台主应用设计.md` §3.2、§3.6
 - 子应用：`docs-project/小说管理页面子应用设计.MD` §通信机制
+- 端口/entry：[`应用端口与命名注册表.md`](../../docs-project/应用端口与命名注册表.md)
 
 ## 集成流程
 
@@ -17,7 +18,7 @@
 registerMicroApps([
   {
     name: menu.microapp_name,       // 如 'novel-app'
-    entry: '//localhost:3001',      // dev；生产换构建 URL
+    entry: '//localhost:5174',      // 小说 Vite dev；生产 /subapps/novel-app/
     container: '#subapp-container',
     activeRule: `/media/${menu.route_prefix}`,
     props: { menuData: menu, basename: `/media/${menu.route_prefix}` }
@@ -25,6 +26,12 @@ registerMicroApps([
 ]);
 start();
 ```
+
+**entry 对照**（见注册表）：
+
+| app_key | Vite dev entry | Docker / 生产 entry |
+|---------|----------------|---------------------|
+| `novel` | `//localhost:5174` | `/subapps/novel-app/` |
 
 ### 2. 菜单 ↔ 子应用映射
 

@@ -39,6 +39,7 @@ alwaysApply: true
 
 | 规则文件 | 适用范围 |
 |---------|---------|
+| **`app-registry.mdc`** | **多应用端口、数据库名、容器名（并行开发必读）** |
 | `pi-v3-agent.mdc` | Pi Agent（BFF + Pi，对齐 cartoon-agent） |
 | `pi-minimal-design.mdc` | Pi 极简原则 |
 | `deploy-cli.mdc` | **`ams` CLI 与 deploy/** |

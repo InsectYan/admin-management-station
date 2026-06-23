@@ -10,12 +10,12 @@
 | `Dockerfile.agent` | Agent Server 镜像 | 是 |
 | `.env.prod` | 生产（待增） | 是 |
 
-个人密钥写在 **`apps/agent-server/.env`**、**`apps/main-backend/.env`** 等，**优先级高于**本目录。
+个人密钥写在 **`apps/agent-server/.env`**、**`menu-master/backend/.env`** 等，**优先级高于**本目录。
 
 ## 加载顺序（本地）
 
 1. `deploy/config/.env.local`
-2. `apps/<service>/.env`（个人覆盖）
+2. `apps/<service>/.env` 或 `menu-master/*/.env`（个人覆盖）
 
 `deploy/docker-compose.yml` 通过 `env_file` 合并。
 

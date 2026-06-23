@@ -2,7 +2,8 @@
 
 > **编排入口**：[`deploy/docker-compose.yml`](../deploy/docker-compose.yml)  
 > **CLI**：`ams local`（对齐 [cartoon-agent](E:/AI Tools/projects/cartoon-agent) 的 `cartoon local`）  
-> **规范**：`.cursor/rules/deploy-cli.mdc`、`.cursor/rules/docker.mdc`
+> **规范**：`.cursor/rules/deploy-cli.mdc`、`.cursor/rules/docker.mdc`、**`.cursor/rules/app-registry.mdc`**  
+> **端口/库名注册表**：[应用端口与命名注册表.md](./应用端口与命名注册表.md)
 
 ## 1. 与 cartoon-agent 对齐
 
@@ -16,26 +17,29 @@
 
 ## 2. 服务拓扑
 
-| 服务 | 容器名 | 端口 | 职责 |
-|-----|--------|------|------|
-| 主应用前端 | `ams-main-frontend` | 8080 | Nginx + React + Qiankun |
-| 小说子应用 | `ams-novel-frontend` | 8081 | Nginx + React + Ant Design |
-| 平台 BFF | `ams-api-main` | 7001 | Egg.js 菜单/鉴权 |
-| 小说 API | `ams-api-novel` | 7002 | Egg.js 小说业务 |
-| **Agent** | **`ams-agent-server`** | **7003** | **BFF + Pi** |
-| PostgreSQL | `ams-postgres` | 5432 | 持久化 |
-| Redis | `ams-redis` | 6379 | 菜单缓存 |
+> 完整端口、Vite dev、数据库名见 **[应用端口与命名注册表.md](./应用端口与命名注册表.md)**。
+
+| 服务 | app_key | 容器名 | API 端口 | 前端 Docker | Vite dev | 数据库名 |
+|-----|---------|--------|----------|-------------|----------|----------|
+| 主应用前端 | `main` | `ams-main-frontend` | — | 8080 | 5173 | — |
+| 小说子应用 | `novel` | `ams-novel-frontend` | — | 8081 | 5174 | — |
+| 平台 BFF | `main` | `ams-api-main` | 7001 | — | — | `admin_platform` |
+| 小说 API | `novel` | `ams-api-novel` | 7002 | — | — | `novel_db` |
+| **Agent** | `agent` | `ams-agent-server` | 7003 | — | 7003 | `admin_platform` |
+| PostgreSQL | — | `ams-postgres` | 5432 | — | — | 多库 |
+| Redis | — | `ams-redis` | 6379 | — | — | — |
 
 ## 3. 目录结构
 
 ```
 admin-management-station/
+├── menu-master/               # 主应用（frontend Vite :5173 · backend :7001）
 ├── apps/
-│   ├── main-frontend/
+│   ├── main-frontend/         # 可与 menu-master 对齐
 │   ├── main-backend/
-│   ├── novel-frontend/
-│   ├── novel-backend/
-│   └── agent-server/          # Pi v3（对齐 cartoon-agent server/）
+│   ├── novel-frontend/        # Vite :5174 · Docker :8081
+│   ├── novel-backend/         # API :7002 · DB novel_db
+│   └── agent-server/          # :7003
 ├── deploy/                    # ★ 编排与 CLI（非仓库根 compose）
 │   ├── docker-compose.yml
 │   ├── bin/ams.mjs
@@ -64,10 +68,12 @@ ams local
 
 ```bash
 ams local:infra
-# 另开终端
-cd apps/main-backend && npm run dev
-cd apps/main-frontend && npm run dev
-cd apps/agent-server && npm run dev
+# 另开终端（端口见应用端口与命名注册表）
+cd menu-master/backend && npm run dev      # :7001
+cd menu-master/frontend && npm run dev     # :5173
+cd apps/novel-backend && npm run dev       # :7002
+cd apps/novel-frontend && npm run dev      # :5174
+cd apps/agent-server && npm run dev        # :7003
 ```
 
 ### 4.3 停止
@@ -121,11 +127,19 @@ location /subapps/novel-app/ {
 ```env
 POSTGRES_USER=admin
 POSTGRES_PASSWORD=admin123
-POSTGRES_DB=admin_platform
+
+MAIN_PORT=7001
+MAIN_POSTGRES_DB=admin_platform
+
+NOVEL_PORT=7002
+NOVEL_POSTGRES_DB=novel_db
+
+AGENT_PORT=7003
+
 JWT_SECRET=CHANGE_ME_LOCAL_JWT
 ```
 
-**个人密钥**（gitignore）：`apps/agent-server/.env`（LLM API Key 等）
+**个人密钥**（gitignore）：`apps/agent-server/.env`、`menu-master/backend/.env` 等
 
 ## 8. 健康检查
 
@@ -153,4 +167,5 @@ docker compose -f deploy/docker-compose.yml exec api-main npm run migrate:up
 
 - [deploy/README.md](../deploy/README.md)
 - [Agent开发方案.md](./Agent开发方案.md)
+- [**应用端口与命名注册表.md**](./应用端口与命名注册表.md)
 - [cartoon-agent/deploy/README.md](E:/AI Tools/projects/cartoon-agent/deploy/README.md)

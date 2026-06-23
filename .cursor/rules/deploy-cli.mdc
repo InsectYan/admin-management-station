@@ -29,10 +29,12 @@ alwaysApply: false
 
 | 场景 | 团队默认（可提交） | 密钥（gitignore） |
 |------|-------------------|-------------------|
-| 本地 Docker | `deploy/config/.env.local` | `apps/*/.env` |
+| 本地 Docker | `deploy/config/.env.local` | `apps/*/.env`、`menu-master/*/.env` |
 | 生产 | `deploy/config/.env.prod` | 部署平台密钥 |
 
 加载顺序：**config 默认 → app `.env` 覆盖**。
+
+各应用 **PORT / POSTGRES_DB** 以 [`app-registry.mdc`](./app-registry.mdc) 为准；Compose 中每个 service 映射独立宿主机端口。
 
 ## 脚本约定
 

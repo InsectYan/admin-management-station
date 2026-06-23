@@ -52,6 +52,7 @@ skills/project-developer/
 **不在本 skill 中重复编码规范。** 开发时须遵循 [`.cursor/rules/`](../../.cursor/rules/) 下对应规则：
 
 - 通用：`development-standards.mdc`
+- **多应用端口/库名：`app-registry.mdc`**（[`应用端口与命名注册表.md`](../../docs-project/应用端口与命名注册表.md)）
 - 前端：`react-web.mdc`、`react-antd.mdc`
 - 部署：`docker.mdc`
 - 后端：`egg-backend.mdc`
@@ -72,3 +73,4 @@ skills/project-developer/
 - [私人管理平台主应用设计](../../docs-project/私人管理平台主应用设计.md)
 - [小说管理页面子应用设计](../../docs-project/小说管理页面子应用设计.MD)
 - [部署与Docker方案](../../docs-project/部署与Docker方案.md)
+- [**应用端口与命名注册表**](../../docs-project/应用端口与命名注册表.md)

@@ -15,14 +15,14 @@ alwaysApply: false
 主应用 / 子应用（React + Qiankun）
         │ HTTP / SSE
         ▼
-apps/agent-server/（Node，端口 7003）
+apps/agent-server/（Node，`app_key=agent`，端口 **7003**）
   ├── BFF 业务 API（对话 enrichment、artifacts）
   ├── Pi AgentManager（按业务域工作目录）
   └── internal API（供 workspace tools 读平台数据）
         │
         ├─► data/（artifacts JSON，gitignore）
         ├─► workspaces/（Pi 会话态，gitignore）
-        └─► PostgreSQL（元数据，与平台库可同实例不同 schema）
+        └─► PostgreSQL（`admin_platform`，见 `app-registry.mdc`）
 ```
 
 平台菜单/鉴权仍由 `apps/main-backend`（Egg.js）负责；**Agent 能力独立进程**，与 cartoon-agent `server/` 同模式。

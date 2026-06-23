@@ -12,7 +12,7 @@
 
 ## 与开发规范的关系
 
-- **编码规范**： [`.cursor/rules/`](../.cursor/rules/) — 开发时必须遵循
+- **编码规范**： [`.cursor/rules/`](../.cursor/rules/) — 开发时必须遵循（含 **`app-registry.mdc`** 多应用端口/库名）
 - **开发流程**： `skills/{skill-name}/` — 定义如何分析设计、拆分任务、分模块实现
 
 Skill 工作流文档引用 `.cursor/rules/`，不在 skill 中重复编码标准。

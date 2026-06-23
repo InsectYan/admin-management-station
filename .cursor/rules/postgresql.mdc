@@ -33,6 +33,12 @@ alwaysApply: false
 - 生产环境：`synchronize: false`，变更走 migration。
 - 禁止在应用层拼接用户输入到 SQL。
 
+## 多应用数据库隔离
+
+- 单 PostgreSQL 实例（`:5432`），**按业务域分 database**，勿混用连接串。
+- 主应用菜单/鉴权 → `admin_platform`；小说业务 → `novel_db`；Agent 元数据 → `admin_platform`。
+- 新增子应用：在 `app-registry.mdc` 登记 `{app_key}_db` 后再建 migration。
+
 ## 设计文档对照
 
 设计文档中每张表须包含：`created_at`、`updated_at`、必要索引与外键约束；缺失时在实现前反馈设计缺陷。

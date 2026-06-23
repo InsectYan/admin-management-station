@@ -1,11 +1,12 @@
 # 主应用前端工作流（React Web SPA + Qiankun）
 
-> 编码规范：`.cursor/rules/react-web.mdc`、`.cursor/rules/docker.mdc`
+> 编码规范：`.cursor/rules/react-web.mdc`、`.cursor/rules/docker.mdc`、`.cursor/rules/app-registry.mdc`
 
 ## 参考设计
 
 - `docs-project/私人管理平台主应用设计.md`
 - `docs-project/部署与Docker方案.md`
+- **`docs-project/应用端口与命名注册表.md`**（`app_key=main`）
 
 ## 目标架构
 
@@ -18,16 +19,21 @@
 ## 目录
 
 ```
-apps/
-├── main-frontend/src/
-│   ├── components/     # 菜单栏、布局
-│   ├── containers/
-│   ├── services/       # HTTP API 封装
-│   └── hooks/
-└── main-backend/       # Egg.js BFF
+menu-master/                 # 主应用开发目录（或 apps/main-*）
+├── frontend/src/            # Vite dev :5173
+└── backend/                 # Egg.js   :7001 · DB admin_platform
 docker/
-docker-compose.yml
+deploy/docker-compose.yml
 ```
+
+## 主应用端口（app_key=main）
+
+| 用途 | 端口 |
+|------|------|
+| Egg.js BFF | 7001 |
+| Vite dev | 5173 |
+| Nginx Docker | 8080 |
+| PostgreSQL | `admin_platform` @ :5432 |
 
 ## 实现顺序
 
@@ -44,7 +50,7 @@ docker-compose.yml
 ### 3. Qiankun 注册
 
 - 从菜单 API 动态 `registerMicroApps`
-- `entry` 指向子应用 Nginx URL（如 `/subapps/novel-app/`）
+- `entry` 指向各子应用注册端口（如小说 dev `//localhost:5174`，Docker `/subapps/novel-app/`）
 
 ### 4. Docker
 

@@ -1,6 +1,6 @@
 # PostgreSQL 数据库工作流
 
-> 编码规范：`.cursor/rules/postgresql.mdc`
+> 编码规范：`.cursor/rules/postgresql.mdc`、`.cursor/rules/app-registry.mdc`
 
 ## 参考设计
 
@@ -10,8 +10,18 @@
 ## 实现顺序
 
 ```
-DDL（建表）→ 索引 → 外键 → ORM Model → Migration 脚本
+登记 app_key / POSTGRES_DB → DDL → 索引 → 外键 → ORM Model → Migration
 ```
+
+## 多库策略
+
+| app_key | 数据库名 | 典型表 |
+|---------|----------|--------|
+| `main` | `admin_platform` | `menu_items` |
+| `novel` | `novel_db` | `novels`, `chapters`, `users` |
+| `agent` | `admin_platform` | Agent 元数据 |
+
+同一 PostgreSQL 实例（`:5432`），各 BFF 连接**各自** `POSTGRES_DB`，禁止混连。
 
 ## 主应用表
 

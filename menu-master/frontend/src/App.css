@@ -1,0 +1,105 @@
+:root {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  color: #1f2937;
+  background: #f3f4f6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-sider {
+  width: 240px;
+  background: #111827;
+  color: #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.app-brand {
+  padding: 20px 16px;
+  font-size: 18px;
+  font-weight: 600;
+  border-bottom: 1px solid #374151;
+}
+
+.menu-status {
+  padding: 16px;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.menu-status.error {
+  color: #fca5a5;
+}
+
+.menu-list {
+  padding: 12px 8px;
+  overflow-y: auto;
+}
+
+.menu-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #d1d5db;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.menu-link:hover,
+.menu-link.active {
+  background: #374151;
+  color: #fff;
+}
+
+.menu-icon {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.subapp-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.subapp-container {
+  flex: 1;
+  min-height: calc(100vh - 0px);
+  background: #fff;
+}
+
+.welcome-panel {
+  padding: 48px;
+}
+
+.welcome-panel h2 {
+  margin: 0 0 8px;
+}
+
+.welcome-panel p {
+  margin: 0;
+  color: #6b7280;
+}

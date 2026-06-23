@@ -30,15 +30,17 @@ deploy/
 
 ## 本地容器（profile local）
 
-| 容器 | 地址 | 说明 |
-|------|------|------|
-| `ams-main-frontend` | http://localhost:8080 | 主应用 React + Qiankun |
-| `ams-novel-frontend` | http://localhost:8081 | 小说子应用 |
-| `ams-api-main` | http://localhost:7001 | Egg.js 平台 BFF |
-| `ams-api-novel` | http://localhost:7002 | Egg.js 小说 API |
-| `ams-agent-server` | http://localhost:7003 | **Pi Agent**（BFF + Pi） |
-| `ams-postgres` | localhost:5432 | PostgreSQL |
-| `ams-redis` | localhost:6379 | Redis |
+> 完整对照表：[应用端口与命名注册表.md](../docs-project/应用端口与命名注册表.md)
+
+| 容器 | app_key | 地址 | 说明 |
+|------|---------|------|------|
+| `ams-main-frontend` | `main` | http://localhost:8080 | 主应用；Vite dev **5173** |
+| `ams-novel-frontend` | `novel` | http://localhost:8081 | 小说子应用；Vite dev **5174** |
+| `ams-api-main` | `main` | http://localhost:7001 | Egg.js · DB `admin_platform` |
+| `ams-api-novel` | `novel` | http://localhost:7002 | Egg.js · DB `novel_db` |
+| `ams-agent-server` | `agent` | http://localhost:7003 | Pi Agent |
+| `ams-postgres` | — | localhost:5432 | 多 database |
+| `ams-redis` | — | localhost:6379 | Redis |
 
 ## Agent 运行时边界
 

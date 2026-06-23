@@ -42,12 +42,14 @@ ams local
 
 | 容器 | 地址 | 说明 |
 |------|------|------|
-| `ams-main-frontend` | http://localhost:8080 | 主应用；`/api` 代理平台 BFF |
-| `ams-novel-frontend` | http://localhost:8081 | 小说子应用 |
-| `ams-api-main` | http://localhost:7001 | Egg.js 平台 BFF |
-| `ams-api-novel` | http://localhost:7002 | Egg.js 小说 API |
+| `ams-main-frontend` | http://localhost:8080 | 主应用；dev Vite **5173** |
+| `ams-novel-frontend` | http://localhost:8081 | 小说子应用；dev Vite **5174** |
+| `ams-api-main` | http://localhost:7001 | Egg.js · `admin_platform` |
+| `ams-api-novel` | http://localhost:7002 | Egg.js · `novel_db` |
 | `ams-agent-server` | http://localhost:7003 | **BFF + Pi Agent** |
-| `ams-postgres` | localhost:5432 | PostgreSQL |
+| `ams-postgres` | localhost:5432 | PostgreSQL（多库） |
+
+端口注册表：[docs-project/应用端口与命名注册表.md](docs-project/应用端口与命名注册表.md)
 
 部署详解：[`deploy/README.md`](deploy/README.md)
 
@@ -64,7 +66,8 @@ ams local
 
 | 目录 | 说明 |
 |------|------|
-| `apps/main-frontend/` | React + Qiankun 主应用 |
+| `menu-master/` | **主应用开发**（Vite :5173 · API :7001） |
+| `apps/main-frontend/` | 主应用（可与 menu-master 对齐） |
 | `apps/main-backend/` | Egg.js 平台 BFF |
 | `apps/novel-frontend/` | 小说子应用 |
 | `apps/novel-backend/` | Egg.js 小说 API |
@@ -87,6 +90,7 @@ ams local
 | `deploy-cli.mdc` | **`ams` 指令与 deploy/** |
 | `react-web.mdc` | 前端 SPA |
 | `docker.mdc` | 容器与镜像 |
+| `app-registry.mdc` | **多应用端口与数据库名** |
 | `egg-backend.mdc` | Egg.js BFF |
 | `qiankun-microfrontend.mdc` | 微前端 |
 

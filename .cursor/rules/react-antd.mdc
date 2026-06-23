@@ -29,7 +29,7 @@ alwaysApply: false
 ## 构建
 
 - Vite + `vite-plugin-qiankun`，`useDevMode: true` 用于开发。
-- 生产构建分离 vendor chunk；dev 端口与主应用注册 entry 一致。
+- 生产构建分离 vendor chunk；**Vite dev 端口**按 `app-registry.mdc`（小说 **5174**），与主应用 Qiankun `entry` 一致。
 
 ## 图表
 
