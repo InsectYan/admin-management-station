@@ -35,7 +35,7 @@ Pi 的 `workspace-templates/`、`workspaces/`、`data/` **不在 monorepo 根目
 | `apps/{domain}/workspaces/` | 运行时工作区（gitignore） |
 | `apps/{domain}/data/` | artifacts JSON（gitignore，可选） |
 
-实现 `agent-server` 时通过环境变量（如 `TEMPLATES_ROOT`、`WORKSPACES_ROOT`）指向上述目录，并在该子应用的 `docker-compose.services.yml` 中挂载卷。
+实现 `agent-server` 时通过环境变量（如 `TEMPLATES_ROOT`、`WORKSPACES_ROOT`）指向上述目录，并在该子应用的 `deploy/docker-compose.yml` 中挂载卷。
 
 ## 逻辑子 Agent（agent_name）
 

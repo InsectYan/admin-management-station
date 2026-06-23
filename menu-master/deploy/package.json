@@ -1,0 +1,18 @@
+{
+  "name": "ams-main-cli",
+  "version": "1.0.0",
+  "private": true,
+  "description": "主应用本地 Docker CLI（npm link 后使用 ams-main <命令>）",
+  "type": "module",
+  "bin": {
+    "ams-main": "./bin/ams-main.mjs"
+  },
+  "scripts": {
+    "link": "npm link",
+    "local": "node scripts/run.mjs local",
+    "local:frontend": "node scripts/run.mjs local:frontend",
+    "local:infra": "node scripts/run.mjs local:infra",
+    "local:reset": "node scripts/run.mjs local:reset",
+    "local:down": "node scripts/run.mjs local:down"
+  }
+}

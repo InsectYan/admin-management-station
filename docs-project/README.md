@@ -2,28 +2,24 @@
 
 私人管理平台（admin-management-station）设计方案与部署说明。
 
-**架构对齐**：[cartoon-agent](E:/AI Tools/projects/cartoon-agent) 的 **Pi v3 Agent + 单 CLI 部署**；本平台在此基础上增加 **Qiankun 微前端 + Egg.js 平台 BFF**。
+**架构对齐**：[cartoon-agent](E:/AI Tools/projects/cartoon-agent) 的 **Pi v3 Agent + 每应用 deploy/**；本平台在此基础上增加 **Qiankun 微前端 + Egg.js 平台 BFF**。
 
 ## 一条命令：本地 vs 开发
 
-**全局 CLI**：`ams <命令>`（`deploy/` 目录 `npm link` 一次）
+**每应用 CLI**（在对应 `{app}/deploy` 目录 `npm link`）：
 
 ```bash
-cd deploy && npm link          # 每台机器首次
-ams help
-ams local                      # Docker 全栈
-ams local:infra                # 仅 DB + Redis，业务代码宿主机热更新
+cd menu-master/deploy && npm link && ams-main local
+ams-main local:infra                # 仅 DB + Redis，业务代码宿主机热更新
 ```
 
-| 命令 | 作用 |
-|------|------|
-| **`ams local`** | 启动本地 Docker 全栈 |
-| **`ams local:infra`** | 仅 PostgreSQL + Redis |
-| **`ams local:frontend`** | 仅前端容器 |
-| **`ams local:reset`** | 清库重建（开发） |
-| **`ams local:down`** | 停止本地 Docker |
+| CLI | 典型命令 |
+|-----|----------|
+| **`ams-main`** | `local`、`local:infra`、`local:frontend`、`local:reset`、`local:down` |
+| **`ams-novel`** | `local`（profile novel） |
+| **`ams-agent`** | `local`（profile agent） |
 
-> **Windows**：`ams local` 走 PowerShell。未 link：`node deploy/scripts/run.mjs local`
+> **Windows**：各 CLI 的 `local` 走 PowerShell。详见各应用 `deploy/README.md`。
 
 | 容器 | 地址 | 说明 |
 |------|------|------|

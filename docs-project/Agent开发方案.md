@@ -105,11 +105,11 @@ apps/agent-server/（:7003）
 ## 9. 本地开发
 
 ```bash
-# 全栈（含 agent-server 容器）
-cd deploy && npm link && ams local
+# Agent 容器
+cd apps/agent-server/deploy && npm link && ams-agent local
 
 # 仅 DB，宿主机跑 agent-server 热更新
-ams local:infra
+ams-agent local:infra
 cd apps/agent-server && npm run dev
 ```
 

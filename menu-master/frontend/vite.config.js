@@ -10,12 +10,16 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
+      host: '0.0.0.0',
       port,
       strictPort: true,
       cors: true,
+      watch: {
+        usePolling: true,
+      },
       proxy: {
         '/api': {
-          target: apiOrigin,
+          target: env.VITE_PROXY_TARGET || apiOrigin,
           changeOrigin: true,
         },
       },

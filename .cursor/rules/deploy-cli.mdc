@@ -1,61 +1,69 @@
 ---
-description: 部署 CLI 与指令执行规范（对齐 cartoon-agent deploy/）
-globs: ["deploy/**/*"]
+description: 部署 CLI 与指令执行规范（对齐 cartoon-agent，每应用独立 deploy/）
+globs: ["**/deploy/**/*"]
 alwaysApply: false
 ---
 
 # 部署 CLI 规范
 
-## 全局 CLI
+## 原则
 
-- 包名：`deploy/package.json`，bin 命令 **`ams`**（admin-management-station）
-- 每台机器首次：`cd deploy && npm link`
-- 日常：`ams <命令>`；未 link 时：`node deploy/scripts/run.mjs <命令>`
+- **每应用一套 `deploy/`**（结构对齐 [cartoon-agent/deploy](E:/AI Tools/projects/cartoon-agent/deploy)），含 `docker-compose.yml`、`config/`、`scripts/`、`bin/`、`package.json`、`README.md`。
+- 仓库根 **`deploy/` 仅共享 infra**（`compose/infra.yml`），**无全局 `ams` CLI**。
+- 新增子应用须复制同一 deploy 骨架并登记 `app-registry.mdc`。
 
-## 命令表（与 cartoon-agent 对齐）
+## 各应用 CLI
+
+| app_key | deploy 目录 | npm link 后命令 |
+|---------|-------------|-----------------|
+| `main` | `menu-master/deploy/` | **`ams-main`** |
+| `novel` | `apps/novel/deploy/` | **`ams-novel`** |
+| `agent` | `apps/agent-server/deploy/` | **`ams-agent`** |
+
+每台机器首次：`cd {app}/deploy && npm link`  
+未 link：`node {app}/deploy/scripts/run.mjs <命令>`
+
+## 命令表（每应用 CLI 对齐 cartoon-agent）
 
 | 命令 | 作用 |
 |------|------|
-| **`ams local`** | 启动主应用 Docker 栈（infra + menu-master） |
-| **`ams local:all`** | 启动全栈（含 `--profile novel`、`--profile agent`） |
-| **`ams local:main`** | 同 `ams local` |
-| **`ams local:novel`** | 仅小说子应用栈 |
-| **`ams local:agent`** | 仅 Agent 栈 |
-| **`ams local:frontend`** | 仅重建主应用前端容器 |
-| **`ams local:infra`** | 仅 DB + Redis（宿主机跑业务代码热更新） |
-| **`ams local:reset`** | 清库重建 + 冒烟（开发用） |
-| **`ams local:down`** | 停止本地 Docker |
-| `ams help` | 命令列表 |
+| **`{cli} local`** | 启动本应用 Docker 栈（include 共享 infra） |
+| **`{cli} local:infra`** | 仅 DB + Redis（宿主机热更新业务代码） |
+| **`{cli} local:frontend`** | 仅主应用：重建前端容器 |
+| **`{cli} local:reset`** | 清库重建（开发用） |
+| **`{cli} local:down`** | 停止本应用 compose 项目 |
+| `{cli} help` | 命令列表 |
 
-> **Windows**：`ams local` 走 PowerShell（`deploy/scripts/*.ps1`），不依赖 WSL。
+子应用 novel/agent 的 `local` 需带 Compose **profile**（`novel` / `agent`），在各自 `run.mjs` 内封装。
+
+> **Windows**：`local` 走 PowerShell（`deploy/scripts/*.ps1`），不依赖 WSL。
 
 ## 配置分层
 
 | 场景 | 团队默认（可提交） | 密钥（gitignore） |
 |------|-------------------|-------------------|
-| 本地 Docker | `deploy/config/.env.local` | `apps/*/.env`、`menu-master/*/.env` |
-| 生产 | `deploy/config/.env.prod` | 部署平台密钥 |
+| 本地 Docker | `{app}/deploy/config/.env.local` | `{app}/backend/.env`、`src/.env` 等 |
+| 生产 | `{app}/deploy/config/.env.prod`（按需） | 部署平台密钥 |
 
-加载顺序：**config 默认 → app `.env` 覆盖**。
+加载顺序：**deploy/config 默认 → 业务目录 `.env` 覆盖**。
 
-各应用 **PORT / POSTGRES_DB** 以 [`app-registry.mdc`](./app-registry.mdc) 为准；Compose 中每个 service 映射独立宿主机端口。
+端口/库名以 [`app-registry.mdc`](./app-registry.mdc) 为准。
 
 ## 脚本约定
 
-- `deploy/scripts/run.mjs` — 任务调度核心（禁止在 bin 里堆逻辑）
-- `deploy/scripts/compose.ps1` — 统一 Docker Compose 入口
-- `deploy/scripts/_utf8.ps1` — Windows UTF-8 控制台初始化（**中文 I/O 规范见 `windows-console.mdc`**）
-- 所有含中文的 `.ps1` 须 **UTF-8 BOM** + 首行 dot-source `_utf8.ps1`
-- 新增命令：在 `run.mjs` switch 注册 + 更新 `deploy/README.md` 与根 `README.md`
+- `{app}/deploy/scripts/run.mjs` — 任务调度（禁止在 bin 里堆逻辑）
+- `{app}/deploy/scripts/compose.ps1` — 统一 compose 入口（`-f {app}/deploy/docker-compose.yml`）
+- `{app}/deploy/scripts/_utf8.ps1` — Windows UTF-8（见 `windows-console.mdc`）
+- 含中文的 `.ps1` 须 **UTF-8 BOM**
+- 新增命令：在**该应用** `run.mjs` 注册 + 更新**该应用** `deploy/README.md` 与 `scripts/README.md`
 
-## Docker Compose
+## Docker 镜像
 
-- **根编排**：`deploy/docker-compose.yml`（include 各应用 `docker-compose.services.yml`）
-- **共享基础设施**：`deploy/compose/infra.yml`
-- **单应用**：`menu-master/docker-compose.yml` 等；规范见 **`docker-compose.mdc`**
-- 容器内互访用 **service 名**，勿用 `localhost`
+- **Canonical Dockerfile 在 `{app}/deploy/config/`**（对齐 cartoon-agent `deploy/config/Dockerfile`）
+- **禁止**在应用根目录保留 `docker/`、`docker-compose.services.yml` 等冗余编排文件
 
 ## 禁止
 
-- 在文档中写仅 bash 可用、Windows 无法执行的启动步骤（须提供 ps1 或 `ams` 封装）
-- 密钥写入 `deploy/config/.env.*` 可提交文件（仅占位符）
+- 在根 `deploy/` 集中维护应用级 compose、CLI 或 `.env.local`
+- 文档只写 bash、Windows 无法执行的步骤
+- 密钥写入可提交的 `deploy/config/.env.*`（仅占位符）

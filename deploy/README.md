@@ -1,127 +1,39 @@
-# admin-management-station — 部署与 CLI
+# 共享基础设施
 
+本目录仅保留 **多应用共享** 的 PostgreSQL、Redis 与网络 `ams-net`。
 
+各应用的 Docker 编排、CLI、环境变量与 README 均在 **各自 `deploy/` 目录**（对齐 [cartoon-agent/deploy](E:/AI Tools/projects/cartoon-agent/deploy) 结构）。
 
-对齐 [cartoon-agent/deploy](E:/AI Tools/projects/cartoon-agent/deploy)：**`deploy/` 目录 + 全局 CLI `ams`**。
+## 应用 deploy 入口
 
-
-
-## 日常入口
-
-
-
-| 你想做什么 | 命令 |
-
-|------------|------|
-
-| 主应用 Docker（infra + menu-master） | **`ams local`** |
-
-| 全栈（含 novel、agent profile） | **`ams local:all`** |
-
-| 仅 DB + Redis | **`ams local:infra`** |
-
-| 仅主应用（同 local） | **`ams local:main`** |
-
-| 仅小说 / Agent | **`ams local:novel`** / **`ams local:agent`** |
-
-| 清库重建 | **`ams local:reset`** |
-
-| 停止 | **`ams local:down`** |
-
-
-
-未 link：`node deploy/scripts/run.mjs local`
-
-
-
-> **Windows 中文终端**：`.ps1` 须 UTF-8 BOM，见 [`.cursor/rules/windows-console.mdc`](../.cursor/rules/windows-console.mdc)
-
-
-
-## 分层 Compose 架构
-
-
-
-```
-
-deploy/
-
-├── compose/infra.yml              # 共享 PostgreSQL + Redis + ams-net
-
-├── docker-compose.yml             # 根 include（infra + 各应用 services）
-
-└── config/.env.local
-
-
-
-menu-master/
-
-├── docker-compose.yml             # 主应用独立栈
-
-├── docker-compose.services.yml
-
-└── docker/*.Dockerfile
-
-
-
-apps/novel/、apps/agent-server/     # 各子应用/Agent 同上结构
-
-```
-
-
-
-规范：[`.cursor/rules/docker-compose.mdc`](../.cursor/rules/docker-compose.mdc)
-
-
-
-**单应用启动**（不经过 ams）：
-
-
+| app_key | 目录 | CLI | 说明 |
+|---------|------|-----|------|
+| `main` | [`menu-master/deploy/`](../menu-master/deploy/) | **`ams-main`** | 主应用 infra + API + 前端 |
+| `novel` | [`apps/novel/deploy/`](../apps/novel/deploy/) | **`ams-novel`** | 小说子应用（profile novel） |
+| `agent` | [`apps/agent-server/deploy/`](../apps/agent-server/deploy/) | **`ams-agent`** | Pi Agent（profile agent） |
 
 ```bash
-
-cd menu-master && docker compose up -d --build
-
-cd apps/novel && docker compose --profile novel up -d --build
-
+cd menu-master/deploy && npm link && ams-main local
+cd apps/novel/deploy && npm link && ams-novel local
+cd apps/agent-server/deploy && npm link && ams-agent local
 ```
 
-
-
-## 本地容器
-
-
-
-> 完整对照表：[应用端口与命名注册表.md](../docs-project/应用端口与命名注册表.md)
-
-
-
-| 容器 | app_key | 地址 | 说明 |
-
-|------|---------|------|------|
-
-| `ams-main-frontend` | `main` | http://localhost:8080 | 主应用；Vite dev **5173** |
-
-| `ams-novel-frontend` | `novel` | http://localhost:8081 | profile `novel` |
-
-| `ams-api-main` | `main` | http://localhost:7001 | Egg.js · `admin_platform` |
-
-| `ams-api-novel` | `novel` | http://localhost:7002 | profile `novel` |
-
-| `ams-agent-server` | `agent` | http://localhost:7003 | profile `agent` |
-
-| `ams-postgres` | — | localhost:5432 | 多 database |
-
-| `ams-redis` | — | localhost:6379 | Redis |
-
-
-
-## Agent 运行时边界
+## 共享 infra 文件
 
 ```
-前端 ──HTTP/SSE──► agent-server:7003（BFF + Pi）
-                    └─ PostgreSQL（元数据）
+deploy/
+└── compose/
+    └── infra.yml    # ams-postgres、ams-redis、ams-net
 ```
 
-Pi 工作区目录由**业务子应用**自带并挂载，不在仓库根配置。平台鉴权/菜单：`api-main:7001`（Egg.js）。
+各应用 `deploy/docker-compose.yml` 通过 **include** 引入 `compose/infra.yml`。
 
+**注意**：多个应用栈同时 up 时会共用同一 Postgres/Redis 容器名与端口；并行开发时优先 **`ams-main local:infra`** 或只启动一个完整栈，避免重复创建 infra。
+
+## 规范
+
+- [docker-compose.mdc](../.cursor/rules/docker-compose.mdc) — 每应用 deploy 目录约定
+- [deploy-cli.mdc](../.cursor/rules/deploy-cli.mdc) — 各应用 CLI 命令
+- [app-registry.mdc](../.cursor/rules/app-registry.mdc) — 端口与库名
+
+端口注册表：[应用端口与命名注册表.md](../docs-project/应用端口与命名注册表.md)

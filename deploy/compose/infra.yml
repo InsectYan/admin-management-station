@@ -1,6 +1,6 @@
 # 共享基础设施：PostgreSQL + Redis + 网络 ams-net
-# 单独启动：ams local:infra
-# 通常由根 compose 或各应用 compose include 引入，勿重复手工 up 两次
+# 由各应用 deploy/docker-compose.yml include 引入
+# 仅 infra：ams-main local:infra（或 ams-novel / ams-agent local:infra）
 
 services:
   postgres:

@@ -42,10 +42,10 @@ alwaysApply: true
 | **`app-registry.mdc`** | **多应用端口、数据库名、容器名（并行开发必读）** |
 | `pi-v3-agent.mdc` | Pi Agent（BFF + Pi，对齐 cartoon-agent） |
 | `pi-minimal-design.mdc` | Pi 极简原则 |
-| `deploy-cli.mdc` | **`ams` CLI 与 deploy/** |
+| `deploy-cli.mdc` | **各应用 `ams-{app_key}` CLI 与 `{app}/deploy/`** |
 | **`windows-console.mdc`** | **Windows PowerShell 中文 I/O（UTF-8 BOM）** |
 | `docker.mdc` | 容器与镜像 |
-| **`docker-compose.mdc`** | **分层 Compose（根 include + 各应用独立栈）** |
+| **`docker-compose.mdc`** | **每应用独立 `deploy/`（对齐 cartoon-agent）** |
 | `react-web.mdc` | React Web SPA 主应用与子应用前端 |
 | `egg-backend.mdc` | Egg.js BFF 后端 |
 | `postgresql.mdc` | 数据库表结构与 ORM |

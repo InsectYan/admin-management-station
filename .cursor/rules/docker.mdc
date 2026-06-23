@@ -1,6 +1,6 @@
 ---
-description: Docker 容器化部署规范（deploy/ + ams CLI）
-globs: "{deploy/**,docker/**,**/Dockerfile*,**/docker-compose*.yml,.env*}"
+description: Docker 容器化部署规范（每应用 deploy/，对齐 cartoon-agent）
+globs: "{deploy/**,**/deploy/**,**/Dockerfile*,**/docker-compose*.yml}"
 alwaysApply: false
 ---
 
@@ -8,41 +8,45 @@ alwaysApply: false
 
 ## 原则
 
-- **分层编排**：共享 `deploy/compose/infra.yml`；各应用在自身目录提供 `docker-compose.yml` + `docker-compose.services.yml`；根 `deploy/docker-compose.yml` **include** 全部应用片段。详见 **`docker-compose.mdc`**。
-- 日常启动用 **`ams local`**（默认主应用栈），全栈用 **`ams local:all`**。
-- 配置分层：`deploy/config/.env.local`（团队）+ 各应用 `.env`（个人密钥）。
-- **端口与数据库名**：以 **`app-registry.mdc`** 为准；新增服务先登记再改 Compose。
+- **每应用独立 `deploy/`**（结构对齐 cartoon-agent）；仓库根 `deploy/` **仅** `compose/infra.yml`。
+- 日常启动：**`ams-{app_key} local`**（在对应 `{app}/deploy` npm link 后）。
+- 配置分层：`{app}/deploy/config/.env.local`（团队）+ 业务目录 `.env`（个人密钥）。
+- **端口与数据库名**：以 **`app-registry.mdc`** 为准。
 
 ## 目录
 
 ```
-deploy/
-  compose/infra.yml          # 共享 DB + Redis + ams-net
-  docker-compose.yml         # 根 include 入口
-  config/.env.local
-menu-master/
-  docker-compose.yml         # 主应用独立栈
-  docker-compose.services.yml
-  docker/*.Dockerfile
-apps/{app_key}/
+deploy/compose/infra.yml          # 共享 DB + Redis + ams-net
+
+menu-master/deploy/
   docker-compose.yml
-  docker-compose.services.yml
+  config/Dockerfile              # BFF
+  frontend/Dockerfile            # Vite dev（在 frontend/ 目录）
+  scripts/ + bin/ams-main
+
+apps/{app_key}/deploy/            # 同上，CLI ams-{app_key}
 ```
 
-## 镜像
+**禁止**应用根目录保留 `docker/`、`docker-compose.services.yml`。
 
-- 前端：多阶段 Node 构建 + Nginx。
-- Egg.js BFF：Node Alpine，`npm ci --omit=dev`。
-- Agent：`deploy/config/Dockerfile.agent`（BFF + Pi）。
-- 数据库：`postgres:16-alpine` + 数据卷。
+## 镜像（对齐 cartoon-agent）
+
+| 类型 | 路径 | build context | 说明 |
+|------|------|---------------|------|
+| Egg.js BFF | `{app}/deploy/config/Dockerfile` | 应用根 `..` | 本地 Docker |
+| 前端 Vite dev | `{app}/frontend/Dockerfile` | `frontend/` | **本地 Docker 不用 nginx 多阶段** |
+| Agent | `{app}/deploy/config/Dockerfile` | 应用根 `..` | 单服务 |
+| 数据库 | `postgres:16-alpine`（infra） | — | 共享 |
+
+基础镜像统一 **`node:22-alpine`**（与 cartoon-agent 一致）。
 
 ## 网络
 
-- 容器互访用 **service 名**（如 `postgres`、`agent-server`）。
-- 主应用 Nginx：`/api/` → api-main，`/agent-api/` → agent-server，`/subapps/` → 子应用。
+- 容器互访用 **service 名**（`postgres`、`api-main`、`agent-server`）。
+- 主应用 Vite dev（`frontend/Dockerfile`）：容器内 `/api` 代理到 `api-main`（经 `VITE_PROXY_TARGET`）。
 
 ## CLI
 
-见 `.cursor/rules/deploy-cli.mdc`。新增服务时同步更新 `deploy/docker-compose.yml` 与 `ams help`。
+见 `.cursor/rules/deploy-cli.mdc`。命令与 README 维护在**各应用** `deploy/`，不在根目录集中。
 
 详细拓扑：`docs-project/部署与Docker方案.md`

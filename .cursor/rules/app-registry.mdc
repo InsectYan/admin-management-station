@@ -16,7 +16,7 @@ alwaysApply: false
 |------|------|
 | 应用标识 `app_key` | 小写英文，全局唯一（如 `main`、`novel`、`agent`） |
 | API 端口 | 7001 起递增，**禁止**两个服务共用同一宿主机端口 |
-| 前端 Docker 端口 | 8080 起递增（Nginx 容器映射） |
+| 前端 Docker 端口 | 5173 起递增（Vite dev 容器，对齐 cartoon-agent） |
 | 前端 Vite dev 端口 | 5173 起递增（宿主机热更新，与 Docker 端口分离） |
 | 数据库名 | `{app_key}_db` 或语义名（如 `admin_platform` = 主库）；**一库一业务域** |
 | 容器名 | `ams-{role}-{app_key}` 或 `ams-api-{app_key}` |
@@ -24,11 +24,11 @@ alwaysApply: false
 
 ## 已登记应用
 
-| app_key | 说明 | 代码目录 | Compose 目录 | 容器名 | API 端口 | 前端 Docker | Vite dev | 数据库名 |
-|---------|------|----------|--------------|--------|----------|-------------|----------|----------|
-| `main` | 主应用（菜单 + Qiankun 基座） | `menu-master/` | `menu-master/docker-compose.yml` | `ams-api-main`, `ams-main-frontend` | **7001** | **8080** | **5173** | `admin_platform` |
-| `novel` | 小说子应用 | `apps/novel-*` | `apps/novel/docker-compose.yml` | `ams-api-novel`, `ams-novel-frontend` | **7002** | **8081** | **5174** | `novel_db` |
-| `agent` | Pi Agent（BFF + Pi） | `apps/agent-server/` | `apps/agent-server/docker-compose.yml` | `ams-agent-server` | **7003** | — | **7003** | `admin_platform`（元数据） |
+| app_key | 说明 | 代码目录 | deploy 目录 | CLI | 容器名 | API 端口 | 前端 Docker | Vite dev | 数据库名 |
+|---------|------|----------|-------------|-----|--------|----------|-------------|----------|----------|
+| `main` | 主应用（菜单 + Qiankun 基座） | `menu-master/` | `menu-master/deploy/` | `ams-main` | `ams-api-main`, `ams-main-frontend` | **7001** | **5173** | **5173** | `admin_platform` |
+| `novel` | 小说子应用 | `apps/novel-*` | `apps/novel/deploy/` | `ams-novel` | `ams-api-novel`, `ams-novel-frontend` | **7002** | **8081** | **5174** | `novel_db` |
+| `agent` | Pi Agent（BFF + Pi） | `apps/agent-server/` | `apps/agent-server/deploy/` | `ams-agent` | `ams-agent-server` | **7003** | — | **7003** | `admin_platform`（元数据） |
 
 ## 共享基础设施
 
@@ -39,7 +39,7 @@ alwaysApply: false
 
 ## 环境变量约定
 
-**团队默认**：`deploy/config/.env.local`
+**团队默认**：`{app}/deploy/config/.env.local`（各应用独立；共享 infra 见 `deploy/compose/infra.yml`）
 
 ```env
 # 主应用 BFF
@@ -75,9 +75,9 @@ VITE_SUBAPP_NOVEL_ENTRY=http://localhost:5174
 
 1. 在本文档与 `docs-project/应用端口与命名注册表.md` 登记新行
 2. 分配 API 端口（下一个可用：7004）、Vite dev（5175+）、Docker 前端（8082+）、`{app_key}_db`
-3. 按 **`docker-compose.mdc`** 创建 `{app}/docker-compose.yml` + `docker-compose.services.yml`，并更新 `deploy/docker-compose.yml` include
+3. 按 **`docker-compose.mdc`** 复制 `{app}/deploy/` 骨架（含 CLI、`config/Dockerfile*`、单文件 `docker-compose.yml`）
 4. 主应用菜单表增加 `microapp_name` / `route_prefix` 与 Qiankun `entry` 一致
-5. 更新 `deploy/README.md` 与根 `README.md` 端口表
+5. 更新 `{app}/deploy/README.md`、根 `deploy/README.md` 应用索引
 
 ## Nginx / Qiankun entry 对照
 

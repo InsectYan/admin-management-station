@@ -10,35 +10,21 @@
 - 小说管理子应用（规划中）— `apps/novel-*`
 - Pi Agent 服务（规划中）— `apps/agent-server/`
 
-## 一条命令：本地 vs 开发
+## 本地 Docker（每应用独立 CLI）
 
-**全局 CLI**：`ams <命令>`（`deploy/` 目录 `npm link` 一次）
+部署结构对齐 [cartoon-agent/deploy](../cartoon-agent/deploy)：**每个应用在 `{app}/deploy/` 自管 compose、配置与 CLI**。仓库根 [`deploy/`](deploy/) 仅共享 PostgreSQL / Redis。
 
-```bash
-cd deploy && npm link          # 每台机器首次
-ams help
-ams local                      # 启动主应用 Docker 栈
-```
+| app_key | 首次 link | 日常启动 |
+|---------|-----------|----------|
+| 主应用 | `cd menu-master/deploy && npm link` | **`ams-main local`** |
+| 小说 | `cd apps/novel/deploy && npm link` | **`ams-novel local`** |
+| Agent | `cd apps/agent-server/deploy && npm link` | **`ams-agent local`** |
 
-| 命令 | 作用 |
-|------|------|
-| **`ams local`** | 启动主应用 Docker 栈（infra + menu-master） |
-| **`ams local:all`** | 启动全栈（含 novel、agent profile） |
-| **`ams local:main`** | 同 `ams local` |
-| **`ams local:novel`** | 仅小说子应用栈 |
-| **`ams local:agent`** | 仅 Agent 栈 |
-| **`ams local:infra`** | 仅 DB + Redis（宿主机热更新业务代码） |
-| **`ams local:frontend`** | 仅重建主应用前端容器 |
-| **`ams local:reset`** | 清库重建（开发用） |
-| **`ams local:down`** | 停止根编排栈 |
-
-单应用目录内也可：`cd menu-master && docker compose up -d --build`
-
-> **Windows**：`ams local` 内部走 PowerShell。未 link：`node deploy/scripts/run.mjs local`
+命令详情见各应用 [`deploy/README.md`](menu-master/deploy/README.md)（主应用示例）。
 
 | 容器 | 地址 | 说明 |
 |------|------|------|
-| `ams-main-frontend` | http://localhost:8080 | 主应用；dev Vite **5173** |
+| `ams-main-frontend` | http://localhost:5173 | 主应用 Vite dev（Docker 与宿主机同端口） |
 | `ams-novel-frontend` | http://localhost:8081 | 小说子应用；dev Vite **5174** |
 | `ams-api-main` | http://localhost:7001 | Egg.js · `admin_platform` |
 | `ams-api-novel` | http://localhost:7002 | Egg.js · `novel_db` |
@@ -47,25 +33,23 @@ ams local                      # 启动主应用 Docker 栈
 
 端口注册表：[docs-project/应用端口与命名注册表.md](docs-project/应用端口与命名注册表.md)
 
-部署详解：[`deploy/README.md`](deploy/README.md)
+共享 infra 索引：[deploy/README.md](deploy/README.md)
 
 ## 配置分层
 
 | 场景 | 环境文件（可提交） | 密钥（gitignore） |
 |------|-------------------|-------------------|
-| **本地 Docker** | `deploy/config/.env.local` | 各应用目录下 `.env` |
-| **生产** | `deploy/config/.env.prod`（待增） | 部署平台密钥 |
-
-详见 [`deploy/config/README.md`](deploy/config/README.md)。
+| **本地 Docker** | `{app}/deploy/config/.env.local` | 各应用 `backend/.env`、`src/.env` 等 |
+| **生产** | `{app}/deploy/config/.env.prod`（按需） | 部署平台密钥 |
 
 ## 目录
 
 | 目录 | 说明 |
 |------|------|
-| `menu-master/` | **主应用**（frontend :5173 · backend :7001） |
-| `apps/novel/` | 小说子应用 Docker 编排（业务代码 `novel-*` 待建） |
-| `apps/agent-server/` | Agent BFF + Pi（:7003，待实现） |
-| `deploy/` | 共享 infra + 根 compose + **`ams` CLI** |
+| `menu-master/` | **主应用**（frontend :5173 · backend :7001 · [`deploy/`](menu-master/deploy/)） |
+| `apps/novel/` | 小说子应用编排（[`deploy/`](apps/novel/deploy/)） |
+| `apps/agent-server/` | Agent BFF + Pi（[`deploy/`](apps/agent-server/deploy/)） |
+| `deploy/` | **仅**共享 `compose/infra.yml` |
 | `docs-project/` | 设计文档 |
 | `skills/` | 开发流程 Skills |
 
@@ -78,8 +62,8 @@ ams local                      # 启动主应用 Docker 栈
 | 规则 | 说明 |
 |-----|------|
 | `development-standards.mdc` | 通用约束 |
-| `deploy-cli.mdc` | **`ams` 指令与 deploy/** |
-| `docker-compose.mdc` | 分层 Compose 编排 |
+| `deploy-cli.mdc` | **各应用 `ams-{app_key}` CLI** |
+| `docker-compose.mdc` | **每应用 `deploy/` 目录** |
 | `app-registry.mdc` | **多应用端口与数据库名** |
 | `react-web.mdc` | 前端 SPA |
 | `egg-backend.mdc` | Egg.js BFF |

@@ -1,7 +1,7 @@
 # 部署与 Docker 方案
 
-> **编排入口**：[`deploy/docker-compose.yml`](../deploy/docker-compose.yml)  
-> **CLI**：`ams local`（对齐 [cartoon-agent](E:/AI Tools/projects/cartoon-agent) 的 `cartoon local`）  
+> **编排入口**：`{app}/deploy/docker-compose.yml`（include 共享 [`deploy/compose/infra.yml`](../deploy/compose/infra.yml)）  
+> **CLI**：`ams-main` / `ams-novel` / `ams-agent`（对齐 [cartoon-agent](E:/AI Tools/projects/cartoon-agent) 每应用 `deploy/`）  
 > **规范**：`.cursor/rules/deploy-cli.mdc`、`.cursor/rules/docker.mdc`、**`.cursor/rules/app-registry.mdc`**  
 > **端口/库名注册表**：[应用端口与命名注册表.md](./应用端口与命名注册表.md)
 
@@ -9,9 +9,10 @@
 
 | 能力 | cartoon-agent | 本平台 |
 |------|---------------|--------|
-| 编排目录 | `deploy/docker-compose.yml` | 同左 |
-| 全局 CLI | `cartoon local` | **`ams local`** |
-| 配置分层 | `deploy/config/.env.local` + `server/.env` | `deploy/config/.env.local` + `apps/*/.env` |
+| 编排目录 | `{repo}/deploy/docker-compose.yml` | **`{app}/deploy/docker-compose.yml`** |
+| CLI | `cartoon local` | **`ams-{app_key} local`** |
+| 配置分层 | `deploy/config/.env.local` + `server/.env` | `{app}/deploy/config/.env.local` + 业务 `.env` |
+| 共享 infra | 单应用内置 DB | 根 `deploy/compose/infra.yml`（多应用共用） |
 | Windows | PowerShell 封装 compose | 同左 |
 | Agent 进程 | `cartoon-server:3001` | `ams-agent-server:7003` |
 
@@ -33,15 +34,14 @@
 
 ```
 admin-management-station/
-├── menu-master/               # 主应用（frontend :5173 · backend :7001）
+├── menu-master/
+│   ├── backend/ frontend/
+│   └── deploy/                # ams-main CLI + docker-compose.yml
 ├── apps/
-│   ├── novel/                 # 小说 compose + docker（业务代码 novel-* 待建）
-│   └── agent-server/          # Agent :7003
-├── deploy/                    # ★ 共享 infra + 根 compose + ams CLI
-│   ├── compose/infra.yml
-│   ├── docker-compose.yml
-│   ├── config/.env.local
-│   └── scripts/
+│   ├── novel/deploy/          # ams-novel
+│   └── agent-server/deploy/   # ams-agent
+├── deploy/                    # ★ 仅共享 infra
+│   └── compose/infra.yml
 ├── docs-project/
 └── skills/
 ```
@@ -50,19 +50,17 @@ Pi 的 `workspace-templates/`、`workspaces/` 在**子应用目录**内按需添
 
 ## 4. 启动方式
 
-### 4.1 全栈 Docker（推荐联调）
+### 4.1 主应用 Docker（推荐联调）
 
 ```bash
-cd deploy && npm link    # 首次
-ams local
+cd menu-master/deploy && npm link    # 首次
+ams-main local
 ```
-
-等价：`ams local` → `menu-master/docker-compose.yml`（include infra）
 
 ### 4.2 仅基础设施（宿主机热更新）
 
 ```bash
-ams local:infra
+ams-main local:infra
 # 另开终端（端口见应用端口与命名注册表）
 cd menu-master/backend && npm run dev      # :7001
 cd menu-master/frontend && npm run dev     # :5173
@@ -74,25 +72,31 @@ cd apps/agent-server && npm run dev        # :7003
 ### 4.3 停止
 
 ```bash
-ams local:down
+ams-main local:down
+# 子应用：ams-novel local:down / ams-agent local:down
 ```
 
-## 5. docker-compose 片段（见 deploy/ 完整文件）
+## 5. docker-compose 示例（见各应用 deploy/ 完整文件）
 
 ```yaml
-# deploy/docker-compose.yml
-services:
-  postgres:
-    profiles: ["local", "infra"]
-    image: postgres:16-alpine
-    ports: ["5432:5432"]
+# menu-master/deploy/docker-compose.yml（节选）
+include:
+  - path: ../../deploy/compose/infra.yml
+    env_file: ./config/.env.local
 
+services:
+  api-main:
+    build:
+      context: ..
+      dockerfile: deploy/config/Dockerfile.backend
+
+# apps/agent-server/deploy/docker-compose.yml（节选）
   agent-server:
     profiles: ["agent"]
     build:
-      dockerfile: deploy/config/Dockerfile.agent
+      context: ..
+      dockerfile: deploy/config/Dockerfile
     ports: ["7003:7003"]
-    # Pi workspace 卷：实现时在子应用目录配置，见 Agent开发方案.md §3
 ```
 
 ## 6. Nginx 路由（主应用）

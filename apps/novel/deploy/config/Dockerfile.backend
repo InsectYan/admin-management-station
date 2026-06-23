@@ -1,0 +1,5 @@
+# 占位：实现 apps/novel-backend 后替换为 deploy/config/Dockerfile
+FROM node:22-alpine
+WORKDIR /app
+EXPOSE 7002
+CMD ["node", "-e", "console.log('novel-backend placeholder'); setInterval(()=>{}, 1e9)"]
