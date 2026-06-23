@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Card, Input, Select, Space, Typography, message } from 'antd';
+import { Button, Input, Select, Space, Typography, message } from 'antd';
+import PageShell from '../components/PageShell.jsx';
 import { fetchLlmProfiles, streamAgentChat } from '../services/agentChat.js';
 
 const { Text, Paragraph } = Typography;
@@ -67,7 +68,7 @@ export default function AgentChatPage() {
   };
 
   return (
-    <Card title="AI 创作助手（Pi Agent）">
+    <PageShell title="AI 创作助手">
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
         <Space wrap>
           <Text type="secondary">会话 ID：</Text>
@@ -85,15 +86,7 @@ export default function AgentChatPage() {
           />
         </Space>
 
-        <div
-          style={{
-            minHeight: 320,
-            background: '#fafafa',
-            border: '1px solid #f0f0f0',
-            borderRadius: 8,
-            padding: 16,
-          }}
-        >
+        <div className="novel-agent-chat-panel">
           {messages.map((m, i) => (
             <Paragraph key={i}>
               <Text strong>{m.role === 'user' ? '你' : '助手'}：</Text> {m.content}
@@ -129,6 +122,6 @@ export default function AgentChatPage() {
           发送
         </Button>
       </Space>
-    </Card>
+    </PageShell>
   );
 }

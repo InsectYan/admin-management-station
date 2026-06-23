@@ -8,7 +8,7 @@ alwaysApply: false
 
 ## 原则
 
-- **每应用一套完整 `deploy/`**，compose 内含 Postgres/Redis，**无全局 `ams` CLI**。
+- **每应用一套完整 `deploy/`**，compose 内含 Postgres，**无全局 `ams` CLI**。
 - 仓库根 **`deploy/` 不再承载共享 infra**（见 `app-self-contained.mdc`）。
 
 ## 各应用 CLI
@@ -28,7 +28,7 @@ alwaysApply: false
 | 命令 | 作用 |
 |------|------|
 | **`{cli} local`** | 启动本应用完整 Docker 栈 |
-| **`{cli} local:infra`** | 仅 Postgres + Redis |
+| **`{cli} local:infra`** | 仅 Postgres |
 | **`{cli} local:frontend`** | 仅主应用：重建前端容器 |
 | **`{cli} local:reset`** | 清库重建 |
 | **`{cli} local:down`** | 停止本栈 |

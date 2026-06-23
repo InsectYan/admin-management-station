@@ -144,21 +144,20 @@ npm run dev
 
 ## Qiankun
 
+主应用从 **`/api/menus/root`** 动态注册子应用；`database/init.sql` 种子包含 `novel-sub`：
 
+| 表 | 说明 |
+|----|------|
+| `subapp_registry` | 子应用 entry、端口元数据 |
+| `menu_items` | 侧栏菜单，`microapp_name=novel-app` |
 
-一级菜单 `microapp_name` 与 entry 映射见 `frontend/src/qiankun/config.js`：
+菜单响应字段：`entry`、`active_rule`、`basename`、`subapp`。
 
+前端 fallback：`VITE_SUBAPP_NOVEL_ENTRY`（默认 `http://localhost:5174`），见 `frontend/.env.local.example`。
 
-
-| microapp_name | 开发 entry |
-
-|---------------|------------|
-
-| `novel-app` | `VITE_SUBAPP_NOVEL_ENTRY`（默认 `http://localhost:5174`） |
-
-
-
-`activeRule`：`/media/{route_prefix}`
+| microapp_name | route_prefix | activeRule |
+|---------------|--------------|------------|
+| `novel-app` | `novel` | `/media/novel` |
 
 
 

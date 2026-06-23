@@ -1,4 +1,6 @@
-const AGENT_BASE = import.meta.env.VITE_AGENT_API_BASE || '/agent-api';
+import { resolveAgentApiBase } from './apiConfig.js';
+
+const AGENT_BASE = resolveAgentApiBase();
 
 function parseSseBlock(block) {
   const lines = block.split('\n');

@@ -13,8 +13,8 @@ cd novel-sub/deploy && npm link && ams-novel local   # 含 Agent
 
 | CLI | 说明 |
 |-----|------|
-| **`ams-main`** | 主应用：Postgres + Redis + API + 前端 |
-| **`ams-novel`** | 小说子应用：Postgres + Redis + API + **Agent** + 前端 |
+| **`ams-main`** | 主应用：Postgres + API + 前端 |
+| **`ams-novel`** | 小说子应用：Postgres + API + **Agent** + 前端 |
 
 **无 `ams-agent`** — Agent 内置于 `novel-sub/agent/`，随 `ams-novel local` 启动。
 
@@ -47,7 +47,7 @@ menu-master/          ← 完整主应用（frontend + backend + database + depl
 novel-sub/            ← 完整子应用（+ agent + workspace-templates + deploy）
 ```
 
-两应用各自自带 Postgres/Redis，**不共享**根级 infra。
+两应用各自自带 Postgres，缓存默认 **memory**，**不共享**根级 infra。
 
 ## 开发规范
 

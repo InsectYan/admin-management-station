@@ -6,7 +6,7 @@ alwaysApply: false
 
 # 应用端口与命名注册表
 
-每个应用**自带 Postgres/Redis**，并行运行时须使用**不同宿主机端口**。新增应用须先登记再写代码。
+每个应用**自带 Postgres**，并行运行时须使用**不同宿主机端口**。缓存默认 **memory**（见 `cache-local.mdc`）。新增应用须先登记再写代码。
 
 **人类可读副本**：[`docs-project/应用端口与命名注册表.md`](../../docs-project/应用端口与命名注册表.md)
 
@@ -20,17 +20,17 @@ alwaysApply: false
 | Agent 端口 | 随所属应用登记（非独立 app_key） |
 | Vite dev | 5173 起递增 |
 | Postgres 宿主机端口 | 5432 起递增（容器内仍为 5432） |
-| Redis 宿主机端口 | 6379 起递增（容器内仍为 6379） |
+| 缓存 | 默认 `CACHE_DRIVER=memory`，无需 Redis 端口 |
 | 数据库名 | `{app_key}_db` 或语义名 |
 | 容器名 | `ams-{role}-{app_key}` |
 | CLI | `ams-{app_key}`，位于 `{app}/deploy/` |
 
 ## 已登记应用
 
-| app_key | 应用根目录 | CLI | API | Agent | Vite | PG 宿主机 | Redis 宿主机 | 库名 |
-|---------|-----------|-----|-----|-------|------|-----------|--------------|------|
-| `main` | `menu-master/` | `ams-main` | **7001** | — | **5173** | **5432** | **6379** | `admin_platform` |
-| `novel` | `novel-sub/` | `ams-novel` | **7002** | **7003** | **5174** | **5433** | **6380** | `novel_db` |
+| app_key | 应用根目录 | CLI | API | Agent | Vite | PG 宿主机 | 库名 |
+|---------|-----------|-----|-----|-------|------|-----------|------|
+| `main` | `menu-master/` | `ams-main` | **7001** | — | **5173** | **5432** | `admin_platform` |
+| `novel` | `novel-sub/` | `ams-novel` | **7002** | **7003** | **5174** | **5433** | `novel_db` |
 
 ## 标准目录（每个应用）
 
@@ -44,7 +44,7 @@ alwaysApply: false
 ├── workspaces/            # gitignore
 ├── data/                  # gitignore
 ├── deploy/
-│   ├── docker-compose.yml # 含 postgres、redis（可选）、api、frontend、agent
+│   ├── docker-compose.yml # 含 postgres、api、frontend、agent
 │   └── bin/ams-{app_key}
 └── README.md
 ```
@@ -54,11 +54,21 @@ alwaysApply: false
 - 仓库根 `deploy/compose/infra.yml` 作为默认依赖
 - `apps/` 下放置半套服务或独立 Agent 项目
 - 硬编码端口；须读 env 或 `deploy/config/.env.local`
+- 本地默认启动 Redis 容器
 
 ## Nginx / Qiankun（集成时）
 
 | app_key | microapp_name | activeRule 示例 | dev entry |
 |---------|---------------|-----------------|-----------|
-| `novel` | `novel-app` | `/media/novel` | `//localhost:5174` |
+| `novel` | `novel-app` | `/media/novel` | `http://localhost:5174` |
 
-主应用通过菜单注册子应用 entry；**子应用独立 compose 仍可单独运行**。
+主应用 `subapp_registry` + 菜单 API 返回 `entry`；**子应用独立 compose 仍可单独运行**。
+
+子应用 env（主应用侧）：
+
+| 变量 | 用途 |
+|------|------|
+| `SUBAPP_{KEY}_ENTRY` | 菜单 API / Docker 覆盖子应用 Qiankun entry |
+| `VITE_SUBAPP_{KEY}_ENTRY` | 主应用前端 fallback |
+
+详见 `subapp-onboarding.mdc`。

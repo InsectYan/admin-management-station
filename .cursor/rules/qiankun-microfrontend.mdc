@@ -6,6 +6,8 @@ alwaysApply: false
 
 # Qiankun 微前端规范
 
+**新子应用接入必读**：[`subapp-onboarding.mdc`](./subapp-onboarding.mdc)
+
 ## 架构原则
 
 - 主应用为基座：菜单渲染、路由管理、子应用容器、全局状态。
@@ -19,33 +21,44 @@ alwaysApply: false
 | 菜单字段 | Qiankun 配置 |
 |---------|-------------|
 | `microapp_name` | `name` |
-| 构建入口 URL | `entry` |
+| `entry`（菜单 API 或 `VITE_SUBAPP_*_ENTRY`） | `entry` |
 | `route_prefix` | `activeRule`（如 `/media/${route_prefix}`） |
+
+主库 `subapp_registry` 种子 + 环境变量 `SUBAPP_*_ENTRY`；前端 fallback 见 `menu-master/frontend/src/qiankun/config.js`。
+
+## 子应用 API（关键）
+
+- Qiankun 在**浏览器**运行；子应用 **不得**用相对 `/api` 访问本子应用 BFF（会打到主应用 :5173 → 主 BFF :7001 → JWT 401）。
+- 须 `{sub}/frontend/src/services/apiConfig.js` 在 `__POWERED_BY_QIANKUN__` 时使用 **绝对 URL** `http://localhost:{子API端口}/api`。
+- Agent 同理：`http://localhost:{Agent端口}`。
 
 ## 子应用生命周期
 
-必须导出 `bootstrap`、`mount`、`unmount`：
-
-```javascript
-export async function bootstrap() { /* 初始化 */ }
-export async function mount(props) { /* 挂载到 props.container */ }
-export async function unmount() { /* 卸载并清理监听 */ }
-```
+必须导出 `bootstrap`、`mount`、`unmount`（`vite-plugin-qiankun` 或手动导出）。
 
 ## 路由与 basename
 
-- 子应用 Router 必须设置与主应用一致的 `basename`（从 `props` 或全局变量获取）。
-- 独立运行时 fallback：`window.__POWERED_BY_QIANKUN__ ? props.basename : '/'`。
-- 主应用路由：`/:appKey/*` 匹配子应用前缀。
+- 子应用 Router 必须设置与主应用一致的 `basename`（从 `props.basename`，如 `/media/novel`）。
+- 主应用路由：`/media/*` → `#subapp-container`。
+
+## 资源加载（entry）
+
+- **浏览器** fetch entry，不是 Docker 容器 fetch。
+- dev entry：`http://localhost:{子Vite端口}`（须与 compose 宿主机端口、registry 一致）。
+- 子应用 frontend **须先启动**，再在主应用点菜单。
+- 生产：Nginx `/subapps/{microapp_name}/`。
+- **禁止** entry 使用 `host.docker.internal`（浏览器无法解析为子应用 dev 服务）。
+
+## 嵌入态 UI
+
+- `__POWERED_BY_QIANKUN__` 时隐藏子应用全站 Header/品牌，仅保留页内 Tab 或侧栏。
+- 内容区用卡片/ `PageShell`，与主应用 `#f5f5f5` 背景协调。
 
 ## 通信
 
-- 主 → 子：Qiankun `props` 传递菜单元数据、用户信息、basename。
-- 跨应用：全局事件总线或 Qiankun 全局状态；子应用卸载时清理全部监听。
-- 样式/JS 隔离：启用 Qiankun 沙箱；避免污染 `window` 全局变量。
+- 主 → 子：Qiankun `props`（`menuData`、`basename`、`subapp`）。
+- 跨应用：全局事件或 Qiankun 全局状态；卸载时清理监听。
 
-## 资源加载
+## 相关规则
 
-- 开发：`entry` 指向**该子应用** Vite dev 端口（如小说 `//localhost:5174`），见 `app-registry.mdc`。
-- 生产：经主应用 Nginx `/subapps/{microapp_name}/`，HTTP 加载，避免 `file://`。
-- 主应用 API 端口（7001）与子应用 dev 端口（5174+）不可混用为 entry。
+- `subapp-onboarding.mdc` · `app-registry.mdc` · `react-web.mdc` · `egg-backend.mdc`

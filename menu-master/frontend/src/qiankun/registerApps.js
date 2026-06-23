@@ -9,12 +9,13 @@ export function registerSubApps(rootMenus) {
   registerMicroApps(
     enabledMenus.map(menu => ({
       name: menu.microapp_name,
-      entry: resolveSubAppEntry(menu.microapp_name),
+      entry: resolveSubAppEntry(menu.microapp_name, menu.entry),
       container: '#subapp-container',
-      activeRule: buildActiveRule(menu.route_prefix),
+      activeRule: menu.active_rule || buildActiveRule(menu.route_prefix),
       props: {
         menuData: menu,
-        basename: buildBasename(menu.route_prefix),
+        basename: menu.basename || buildBasename(menu.route_prefix),
+        subapp: menu.subapp,
       },
     })),
     {

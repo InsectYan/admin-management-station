@@ -9,7 +9,7 @@ alwaysApply: true
 
 ## 自包含应用（最高优先级）
 
-**每个主应用、子应用必须是可独立拆出的完整项目**，自带 frontend、backend、（可选）agent、database、deploy；PostgreSQL/Redis 由各应用自己的 compose 管理，**禁止**仓库级共享 infra。
+**每个主应用、子应用必须是可独立拆出的完整项目**，自带 frontend、backend、（可选）agent、database、deploy；PostgreSQL 由各应用 compose 管理，缓存默认 **memory**（见 `cache-local.mdc`），**禁止**仓库级共享 infra。
 
 详见 **[`app-self-contained.mdc`](./app-self-contained.mdc)**。与本节冲突的旧约定（如 `apps/`、`deploy/compose/infra.yml`、独立 `agent-server`）一律以自包含规则为准。
 
@@ -47,6 +47,8 @@ alwaysApply: true
 |---------|---------|
 | **`app-self-contained.mdc`** | **自包含应用架构（必读）** |
 | **`app-registry.mdc`** | **多应用端口、数据库名、容器名（并行开发必读）** |
+| **`cache-local.mdc`** | **本地优先缓存（默认 memory，无 Redis 容器）** |
+| **`subapp-onboarding.mdc`** | **新子应用接入主应用（Qiankun）检查清单与避坑** |
 | `pi-v3-agent.mdc` | 子应用内 `{app}/agent/` Pi 开发 |
 | `pi-minimal-design.mdc` | Pi 极简原则 |
 | `deploy-cli.mdc` | **各应用 `ams-{app_key}` CLI 与 `{app}/deploy/`** |

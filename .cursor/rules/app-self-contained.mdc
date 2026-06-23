@@ -16,22 +16,23 @@ alwaysApply: true
 | 服务端 BFF | `{app}/backend/` | Egg.js REST API |
 | Agent（若需要） | `{app}/agent/` | Pi BFF + AgentManager，**不得**拆成仓库级独立服务 |
 | 数据库设计 | `{app}/database/` | `init.sql`、迁移说明；ORM 模型在 `backend/app/model/` |
-| Redis（若需要） | 在 `{app}/deploy/docker-compose.yml` 声明 | 可选，随应用栈启动 |
+| 缓存 | `{app}/backend/app/lib/cache.js` | 默认 **memory**（进程内），见 `cache-local.mdc` |
 | 部署 | `{app}/deploy/` | 单文件 compose + `ams-{app_key}` CLI + Dockerfile |
 
 **禁止**出现「只有前端 / 只有 Agent / 只有 deploy 壳」的仓库级目录（如已废弃的 `apps/`）。
 
 ## 2. 基础设施归属
 
-- **PostgreSQL、Redis 由各应用自己的 `deploy/docker-compose.yml` 管理**，不得依赖仓库根级共享 infra。
-- 并行开发时通过 **不同宿主机端口** 区分（见 `app-registry.mdc`），容器内仍用 `postgres:5432`、`redis:6379`。
+- **PostgreSQL 由各应用自己的 `deploy/docker-compose.yml` 管理**，不得依赖仓库根级共享 infra。
+- **缓存默认进程内 memory**，不依赖 Redis 容器（见 `cache-local.mdc`）。
+- 并行开发时通过 **不同宿主机端口** 区分 Postgres（见 `app-registry.mdc`），容器内仍用 `postgres:5432`。
 - 容器互访用 **Compose service 名**，禁止 `localhost`。
 
 ## 3. 可独立拆出检验
 
 复制 `{app}/` 整目录到新仓库后，须能：
 
-1. `cd deploy && npm link && ams-{app_key} local` 拉起完整栈（DB + 可选 Redis + API + 前端 + Agent）
+1. `cd deploy && npm link && ams-{app_key} local` 拉起完整栈（DB + API + 前端 + Agent）
 2. 或分别 `backend` / `frontend` / `agent` 宿主机 `npm run dev`（文档写清端口与 `.env`）
 3. 不依赖 monorepo 根目录、`apps/`、根 `deploy/compose/infra.yml`
 
@@ -52,6 +53,7 @@ alwaysApply: true
 ## 6. 新增子应用
 
 1. 复制 `novel-sub/` 或 `menu-master/` 骨架为新的 `{app}/`
-2. 在 `app-registry.mdc` 登记端口（含 **独立** Postgres/Redis 宿主机端口）
-3. 实现完整 `{app}/deploy/docker-compose.yml`（含 DB，无外部 include）
-4. 更新 `{app}/README.md` 与 `{app}/deploy/README.md`
+2. 在 `app-registry.mdc` 登记端口（含 **独立** Postgres 宿主机端口）
+3. 按 **`subapp-onboarding.mdc`** 完成主库种子、JWT 白名单、apiConfig、compose 端口与联调
+4. 实现完整 `{app}/deploy/docker-compose.yml`（含 DB，无外部 include）
+5. 更新 `{app}/README.md` 与 `{app}/deploy/README.md`

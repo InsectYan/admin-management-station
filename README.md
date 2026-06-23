@@ -13,7 +13,7 @@
 | 主应用 | [`menu-master/`](menu-master/) | `ams-main` | 菜单 + Qiankun 基座 · `:7001` · PG `:5432` |
 | 小说子应用 | [`novel-sub/`](novel-sub/) | `ams-novel` | 前端 + BFF + Agent · `:7002`/`:7003` · PG `:5433` |
 
-每个应用 `deploy/docker-compose.yml` **自带 Postgres/Redis**，不共享根级 infra。
+每个应用 `deploy/docker-compose.yml` **自带 Postgres**；缓存默认 **memory**（见 `cache-local.mdc`），不共享根级 infra。
 
 ## 快速启动
 

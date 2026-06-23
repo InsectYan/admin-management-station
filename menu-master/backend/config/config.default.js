@@ -21,6 +21,13 @@ module.exports = appInfo => {
   config.jwt = {
     secret: process.env.JWT_SECRET || 'CHANGE_ME_LOCAL_JWT',
     enable: true,
+    ignore: ctx => {
+      if (ctx.path === '/api/health') return true;
+      if (ctx.method === 'GET' && (ctx.path === '/api/menus' || ctx.path === '/api/menus/root')) {
+        return true;
+      }
+      return false;
+    },
   };
 
   config.sequelize = {
@@ -45,6 +52,22 @@ module.exports = appInfo => {
       port: Number(process.env.PORT || process.env.MAIN_PORT || 7001),
       hostname: '0.0.0.0',
     },
+  };
+
+  config.cache = {
+    driver: process.env.CACHE_DRIVER || 'memory',
+    menuTtl: Number(process.env.CACHE_MENU_TTL || 300),
+    subappTtl: Number(process.env.CACHE_SUBAPP_TTL || 300),
+    redis: {
+      host: process.env.REDIS_HOST || '127.0.0.1',
+      port: Number(process.env.REDIS_PORT || 6379),
+      password: process.env.REDIS_PASSWORD || undefined,
+      db: Number(process.env.REDIS_DB || 0),
+    },
+  };
+
+  config.subappEntryEnv = {
+    'novel-app': 'SUBAPP_NOVEL_ENTRY',
   };
 
   return config;

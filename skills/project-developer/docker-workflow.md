@@ -11,7 +11,7 @@
 
 | 路径 | 用途 |
 |------|------|
-| `{app}/deploy/docker-compose.yml` | **完整栈**：postgres + redis + api + frontend + agent（可选） |
+| `{app}/deploy/docker-compose.yml` | **完整栈**：postgres + api + frontend + agent（可选） |
 | `{app}/deploy/config/` | `.env.local` + Dockerfile.* |
 | `{app}/deploy/scripts/` | `ams-{app_key}` CLI |
 
@@ -20,7 +20,7 @@
 ## 新应用步骤
 
 1. 复制 `novel-sub/` 或 `menu-master/` 整目录
-2. 登记 `app-registry.mdc`（含独立 PG/Redis 宿主机端口）
+2. 登记 `app-registry.mdc`（含独立 PG 宿主机端口）
 3. 验证 `ams-{app_key} local` 可独立启动
 
 ## 命令

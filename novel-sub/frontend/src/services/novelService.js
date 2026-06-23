@@ -1,4 +1,6 @@
-const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+import { resolveNovelApiBase } from './apiConfig.js';
+
+const API_BASE = resolveNovelApiBase();
 
 async function request(path, options = {}) {
   const res = await fetch(`${API_BASE}${path}`, {
@@ -8,11 +10,14 @@ async function request(path, options = {}) {
     },
     ...options,
   });
-  const json = await res.json();
-  if (!res.ok || json.code !== 0) {
-    throw new Error(json.message || `HTTP ${res.status}`);
+  const json = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(json?.message || `HTTP ${res.status}`);
   }
-  return json.data;
+  if (json && json.code !== 0 && json.code !== 200) {
+    throw new Error(json.message || '请求失败');
+  }
+  return json?.data;
 }
 
 export function fetchNovels(params = {}) {

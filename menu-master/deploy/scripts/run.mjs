@@ -77,15 +77,15 @@ function printHelp() {
   console.log(`主应用 (menu-master) — CLI
 
 首次（每台机器一次）:
-  cd menu-master/deploy && npm link
+  cd menu-master/deploy && npm run link
 
 用法:
   ams-main <命令>
 
 本地 Docker:
-  ams-main local              启动 Postgres + Redis + API + 前端
+  ams-main local              启动 Postgres + API + 前端
   ams-main local:frontend     仅重建前端容器
-  ams-main local:infra        仅 Postgres + Redis（宿主机热更新）
+  ams-main local:infra        仅 Postgres（宿主机热更新）
   ams-main local:reset        清库重建
   ams-main local:down         停止本栈
 
@@ -93,8 +93,6 @@ function printHelp() {
   node menu-master/deploy/scripts/run.mjs <命令>
 `)
 }
-
-const appCompose = join(deployDir, 'docker-compose.yml')
 
 switch (task) {
   case 'help':
@@ -112,7 +110,7 @@ switch (task) {
     else run('bash', [join(__dirname, 'start-local-frontend.sh')])
     break
   case 'local:infra':
-    runCompose(appCompose, ['up', '-d', 'postgres', 'redis'])
+    runCompose(appCompose, ['up', '-d', 'postgres'])
     break
   case 'local:reset':
     if (isWin) runPs1('reset-dev.ps1')

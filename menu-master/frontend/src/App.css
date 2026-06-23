@@ -34,10 +34,14 @@
   flex-direction: column;
 }
 
+#subapp-container .novel-sub-layout.embedded {
+  min-height: 100%;
+}
+
 .subapp-container {
   flex: 1;
   min-height: 100vh;
-  background: #fff;
+  background: #f5f5f5;
 }
 
 .welcome-panel {

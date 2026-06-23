@@ -1,6 +1,6 @@
 # 子应用前端工作流（React + Ant Design + Vite）
 
-> 编码规范：`.cursor/rules/react-web.mdc`、`.cursor/rules/react-antd.mdc`、`.cursor/rules/app-self-contained.mdc`
+> 编码规范：`.cursor/rules/react-web.mdc`、`.cursor/rules/react-antd.mdc`、`.cursor/rules/app-self-contained.mdc`、**`.cursor/rules/subapp-onboarding.mdc`（接入主应用必读）**
 
 ## 参考设计
 
@@ -26,18 +26,20 @@ novel-sub/
 | Pi Agent | 7003 |
 | Vite dev | 5174 |
 | Postgres 宿主机 | 5433 · `novel_db` |
-| Redis 宿主机 | 6380 |
 
 ## 实现顺序
 
-1. Vite + React + Ant Design + `vite-plugin-qiankun`
-2. 导出 Qiankun 生命周期（bootstrap/mount/unmount）
-3. Router `basename` 从 props 获取
-4. 多步骤表单草稿 → `sessionStorage` 或后端草稿 API
-5. `ams-novel local` 验证完整栈可独立部署
+1. 阅读 **`subapp-onboarding.mdc`**，登记 `app-registry` + 主库 `subapp_registry`
+2. Vite + React + Ant Design + `vite-plugin-qiankun`
+3. `services/apiConfig.js`（Qiankun 下绝对 BFF URL）
+4. 导出 Qiankun 生命周期；Router `basename` 从 props 获取
+5. 嵌入态 UI：隐藏重复顶栏（`__POWERED_BY_QIANKUN__`）
+6. `ams-{sub} local` 验证；再与 `ams-main` 联调
 
 ## 验收
 
 - [ ] 独立 `npm run dev` 可访问
-- [ ] 嵌入主应用 basename 正确
-- [ ] 复制 `novel-sub/` 目录可脱离 monorepo 运行
+- [ ] `http://localhost:{api}/api/health` 正常（非 401/500）
+- [ ] 嵌入主应用：Network 请求 **子 BFF 绝对 URL**，非 `:5173/api`
+- [ ] 嵌入主应用 basename、entry 端口与 registry 一致
+- [ ] 复制 `{sub}/` 目录可脱离 monorepo 运行

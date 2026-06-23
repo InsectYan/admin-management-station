@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import './App.css';
 import MainLayout from './components/MainLayout.jsx';
 import NovelListPage from './views/NovelListPage.jsx';
 import NovelDetailPage from './views/NovelDetailPage.jsx';

@@ -13,7 +13,10 @@ function normalizeEntry(entry) {
   return `//${entry.replace(/^\/+/, '')}`;
 }
 
-export function resolveSubAppEntry(microappName) {
+export function resolveSubAppEntry(microappName, menuEntry) {
+  if (menuEntry) {
+    return normalizeEntry(menuEntry);
+  }
   const configured = SUBAPP_ENTRY_MAP[microappName];
   if (configured) {
     return normalizeEntry(configured);

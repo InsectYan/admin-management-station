@@ -1,8 +1,64 @@
-.novel-sub-layout {
-  min-height: 100vh;
-  background: #f5f5f5;
+.novel-page {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px 24px 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
-.novel-sub-content {
-  padding: 24px;
+.novel-sub-layout.embedded .novel-page {
+  border: 1px solid #f0f0f0;
+  box-shadow: none;
+}
+
+.novel-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.novel-page-title {
+  margin: 0 !important;
+}
+
+.novel-page-extra {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.novel-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.novel-status-tag-draft {
+  color: #d48806;
+  background: #fffbe6;
+  border-color: #ffe58f;
+}
+
+.novel-status-tag-published {
+  color: #389e0d;
+  background: #f6ffed;
+  border-color: #b7eb8f;
+}
+
+.novel-status-tag-archived {
+  color: #595959;
+  background: #fafafa;
+  border-color: #d9d9d9;
+}
+
+.novel-agent-chat-panel {
+  min-height: 320px;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 16px;
 }

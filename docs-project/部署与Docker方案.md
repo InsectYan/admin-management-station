@@ -1,6 +1,7 @@
 # 部署与 Docker 方案
 
-> **架构**：每应用**自包含** compose（Postgres + Redis + 业务服务），见 `.cursor/rules/app-self-contained.mdc`  
+> **架构**：每应用**自包含** compose（Postgres + 业务服务），见 `.cursor/rules/app-self-contained.mdc`  
+> **缓存**：默认 **memory**（见 `cache-local.mdc`），无需 Redis 容器  
 > **CLI**：`ams-main` / `ams-novel`（**无** `ams-agent`）  
 > **规范**：`deploy-cli.mdc`、`docker.mdc`、`docker-compose.mdc`、`app-registry.mdc`  
 > **端口**：[应用端口与命名注册表.md](./应用端口与命名注册表.md)
@@ -9,7 +10,8 @@
 
 | 原则 | 说明 |
 |------|------|
-| 自包含 | 每个 `{app}/deploy/docker-compose.yml` **自带** Postgres、Redis（可选） |
+| 自包含 | 每个 `{app}/deploy/docker-compose.yml` **自带** Postgres |
+| 本地缓存 | `CACHE_DRIVER=memory`，进程内缓存菜单/子应用注册表 |
 | 可拆出 | 复制 `menu-master/` 或 `novel-sub/` 整目录即可独立运行 |
 | 无共享 infra | **禁止**依赖根 `deploy/compose/infra.yml`（已废弃） |
 
@@ -19,8 +21,7 @@
 
 | 容器 | 端口 | 说明 |
 |------|------|------|
-| `ams-main-postgres` | 5432 | `admin_platform` |
-| `ams-main-redis` | 6379 | 菜单缓存等 |
+| `ams-main-postgres` | 5432 | `admin_platform` + `subapp_registry` |
 | `ams-api-main` | 7001 | Egg.js BFF |
 | `ams-main-frontend` | 5173 | Vite dev |
 
@@ -29,7 +30,6 @@
 | 容器 | 端口 | 说明 |
 |------|------|------|
 | `ams-novel-postgres` | **5433** | `novel_db` |
-| `ams-novel-redis` | **6380** | 可选 |
 | `ams-api-novel` | 7002 | Egg.js BFF |
 | `ams-novel-agent` | 7003 | Pi Agent（内置） |
 | `ams-novel-frontend` | 8081 / dev 5174 | 子应用 UI |
@@ -72,6 +72,13 @@ cd novel-sub/frontend && npm run dev
 cd novel-sub/agent && npm run dev
 ```
 
+### 主应用 + novel-sub 联调（Qiankun）
+
+```bash
+cd menu-master/backend && npm run db:init   # subapp_registry + menu_items
+# 主应用 :5173/:7001 + novel-sub frontend :5174
+```
+
 ### 停止
 
 ```bash
@@ -81,7 +88,7 @@ ams-novel local:down
 
 ## 5. compose 要点（无 include infra）
 
-每个应用的 `docker-compose.yml` 内直接声明 `postgres`、`redis` service，独立 network/volume 名（如 `ams-novel-net`）。
+每个应用的 `docker-compose.yml` 内直接声明 `postgres` service，独立 network/volume 名（如 `ams-novel-net`）。
 
 ## 6. Nginx（主应用集成子应用时）
 
@@ -89,29 +96,11 @@ ams-novel local:down
 location /api/ {
   proxy_pass http://ams-api-main:7001/api/;
 }
-location /agent-api/ {
-  proxy_pass http://ams-novel-agent:7003/;   # 联调时指向子应用 Agent
-}
+
 location /subapps/novel-app/ {
-  proxy_pass http://ams-novel-frontend:5174/;
+  alias /var/www/novel-sub/frontend/dist/;
+  try_files $uri $uri/ /subapps/novel-app/index.html;
 }
 ```
 
-## 7. 环境变量
-
-各应用 **`{app}/deploy/config/.env.local`**（可提交）+ **`{app}/backend/.env`**、**`{app}/agent/.env`**（gitignore 密钥）。
-
-## 8. 健康检查
-
-| 服务 | 路径 |
-|------|------|
-| 平台 BFF | `GET /api/health` |
-| Agent | `GET /health` |
-| PostgreSQL | `pg_isready` |
-
-## 9. 相关文档
-
-- [应用端口与命名注册表.md](./应用端口与命名注册表.md)
-- [Agent开发方案.md](./Agent开发方案.md)
-- [menu-master/deploy/README.md](../menu-master/deploy/README.md)
-- [novel-sub/deploy/README.md](../novel-sub/deploy/README.md)
+开发时子应用 entry 由菜单 API `entry` 字段提供（默认 `http://localhost:5174`）。

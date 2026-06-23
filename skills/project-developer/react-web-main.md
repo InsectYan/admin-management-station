@@ -1,6 +1,6 @@
 # 主应用前端工作流（React Web SPA + Qiankun）
 
-> 编码规范：`.cursor/rules/react-web.mdc`、`.cursor/rules/docker.mdc`、`.cursor/rules/app-registry.mdc`
+> 编码规范：`.cursor/rules/react-web.mdc`、`.cursor/rules/qiankun-microfrontend.mdc`、**`.cursor/rules/subapp-onboarding.mdc`**
 
 ## 参考设计
 
@@ -42,21 +42,21 @@ deploy/docker-compose.yml
 - Vite + React + React Router + Qiankun
 - 布局：左侧菜单 + 右侧 `#subapp-container`
 
-### 2. 菜单渲染
+### 2. 菜单与 JWT
 
-- `services/menuService.js` 调用 `GET /api/menus/root`
-- 树形菜单，点击更新路由
+- `services/menuService.js` → `GET /api/menus`、`/api/menus/root`
+- **主应用 `egg-jwt` 须 ignore 上述 GET**，否则侧栏 401（见 `subapp-onboarding.mdc`）
 
 ### 3. Qiankun 注册
 
 - 从菜单 API 动态 `registerMicroApps`
-- `entry` 指向各子应用注册端口（如小说 dev `//localhost:5174`，Docker `/subapps/novel-app/`）
+- `entry`：`http://localhost:{子Vite端口}`（浏览器访问）；`VITE_SUBAPP_*_ENTRY` fallback
 
 ### 4. Docker
 
 ```bash
-docker compose -f docker-compose.dev.yml up -d   # postgres + redis
-docker compose up -d --build                      # 全栈
+ams-main local:infra   # 仅 Postgres
+ams-main local         # 全栈
 ```
 
 ## 验收

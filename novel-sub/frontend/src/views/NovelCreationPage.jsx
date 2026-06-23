@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Button, Card, Form, Input, Select, Steps, message } from 'antd';
+import { Button, Form, Input, Select, Steps, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import PageShell from '../components/PageShell.jsx';
 import { createNovel } from '../services/novelService.js';
 
 const DRAFT_KEY = 'novel:create:draft';
@@ -49,7 +50,7 @@ export default function NovelCreationPage() {
   };
 
   return (
-    <Card title="新建小说">
+    <PageShell title="新建小说">
       <Steps current={current} items={steps} style={{ marginBottom: 24 }} />
       <Form form={form} layout="vertical" initialValues={draft}>
         {current === 0 && (
@@ -94,6 +95,6 @@ export default function NovelCreationPage() {
           {current === steps.length - 1 ? '完成' : '下一步'}
         </Button>
       </div>
-    </Card>
+    </PageShell>
   );
 }

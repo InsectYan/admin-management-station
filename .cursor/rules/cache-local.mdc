@@ -1,0 +1,48 @@
+---
+description: 本地优先缓存策略（默认进程内 memory，无需 Redis 容器）
+globs: "{menu-master/**,novel-sub/**,docs-project/**,**/backend/**}"
+alwaysApply: false
+---
+
+# 本地优先缓存规范
+
+## 原则
+
+- **默认不使用 Redis 容器**；本地开发与 Docker compose 均以 **进程内 memory 缓存** 为主。
+- 缓存实现位于各应用 `backend/app/lib/cache.js`，通过 `CACHE_DRIVER` 切换。
+- 生产环境如需分布式缓存，可切换 `CACHE_DRIVER=redis` 并 `npm install ioredis`（可选依赖，非默认安装）。
+
+## 配置
+
+| 变量 | 默认 | 说明 |
+|------|------|------|
+| `CACHE_DRIVER` | `memory` | `memory` \| `redis` |
+| `CACHE_MENU_TTL` | `300` | 菜单缓存秒数 |
+| `CACHE_SUBAPP_TTL` | `300` | 子应用注册表缓存秒数 |
+| `REDIS_HOST` | — | 仅 `CACHE_DRIVER=redis` 时使用 |
+| `REDIS_PORT` | `6379` | 同上 |
+
+## 使用场景
+
+| 场景 | 推荐 |
+|------|------|
+| 本地 dev / Docker local | `memory` |
+| 单实例生产 | `memory` 或外部 Redis |
+| 多实例水平扩展 | `redis` + ioredis |
+
+## 代码约定
+
+- Service 层通过 `this.app.cache.get/set/del` 读写。
+- 写操作（菜单 CRUD）须 `invalidateMenuCache()` 或按前缀清理。
+- **禁止**为本地开发默认拉起 Redis compose service。
+
+## Compose
+
+- `{app}/deploy/docker-compose.yml` **不含** `redis` service（除非未来单独 profile 且文档明确）。
+- 与 `app-self-contained.mdc` 一致：每应用仅需 Postgres + 业务服务。
+
+## 禁止
+
+- 文档/规则中写「本地必须 Redis」
+- 无业务代码引用时仍默认启动 Redis 容器
+- 硬编码 Redis 主机名 `redis` 作为本地默认

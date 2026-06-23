@@ -65,8 +65,8 @@ function printHelp() {
   cd novel-sub/deploy && npm link
 
 用法:
-  ams-novel local              启动 Postgres + Redis + API + Agent + 前端
-  ams-novel local:infra        仅 Postgres + Redis（宿主机热更新业务代码）
+  ams-novel local              启动 Postgres + API + Agent + 前端
+  ams-novel local:infra        仅 Postgres（宿主机热更新业务代码）
   ams-novel local:reset        清库重建
   ams-novel local:down         停止本栈
 
@@ -87,7 +87,7 @@ switch (task) {
     else runCompose(['up', '-d', '--build'])
     break
   case 'local:infra':
-    runCompose(['up', '-d', 'postgres', 'redis'])
+    runCompose(['up', '-d', 'postgres'])
     break
   case 'local:reset':
     if (isWin) runPs1('reset-dev.ps1')

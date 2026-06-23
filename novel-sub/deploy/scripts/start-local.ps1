@@ -8,6 +8,6 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""
 Write-Host "Novel stack started"
-Write-Host "  Frontend  http://localhost:8081"
+Write-Host "  Frontend  http://localhost:5174"
 Write-Host "  API       http://localhost:7002"
 Write-Host "Stop: ams-novel local:down"

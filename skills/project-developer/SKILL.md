@@ -16,7 +16,7 @@ description: >-
 1. 确认目标设计文档路径（默认 `docs-project/` 下对应 `.md` 文件）。
 2. 阅读 [README.md](README.md) 了解 skill 用法。
 3. 开发编码规范以 [`.cursor/rules/`](../../.cursor/rules/) 为准，本 skill 只定义**流程与实现要点**。
-4. **多应用并行**：实现前读取 [应用端口与命名注册表](../../docs-project/应用端口与命名注册表.md)（或 `app-registry.mdc`），确认各应用**独立** Postgres/Redis 宿主机端口无冲突。
+4. **多应用并行**：实现前读取 [应用端口与命名注册表](../../docs-project/应用端口与命名注册表.md)（或 `app-registry.mdc`），确认各应用**独立** Postgres 宿主机端口无冲突。
 5. **自包含**：每个应用目录须完整可拆出，见 [`app-self-contained.mdc`](../../.cursor/rules/app-self-contained.mdc)。
 
 ## 执行流程

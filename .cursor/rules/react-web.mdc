@@ -38,8 +38,8 @@ novel-sub/frontend/src/
 
 - 组件 PascalCase；工具/钩子 camelCase。
 - 枚举放 `common/enums`，全大写下划线，ES Module 导出。
-- API 调用封装在 `services/`，组件内不直接裸 fetch。
-- 环境变量：`VITE_APP_KEY`、`VITE_API_BASE`、`VITE_DEV_PORT` 等，不硬编码端口或数据库连接。
+- API 调用封装在 `services/`；**子应用**须 `services/apiConfig.js` 区分 Qiankun 嵌入与独立运行（见 `subapp-onboarding.mdc`）。
+- 环境变量：`VITE_APP_KEY`、`VITE_API_BASE`、`VITE_DEV_PORT`、`VITE_SUBAPP_*_ENTRY`（主应用）、不硬编码端口。
 - **多应用并行**：主应用 Vite **5173**、小说子应用 **5174**（见 `app-registry.mdc`）；禁止两个前端共用同一 dev 端口。
 
 ## 草稿与本地状态

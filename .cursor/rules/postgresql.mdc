@@ -29,7 +29,7 @@ alwaysApply: false
 ## 访问层
 
 - 通过 ORM（Sequelize / TypeORM）定义模型，避免裸 SQL。
-- 多步写操作用事务；读多写少场景考虑缓存（Redis）。
+- 多步写操作用事务；读多写少场景使用 `app/lib/cache.js`（默认 memory，见 `cache-local.mdc`）。
 - 生产环境：`synchronize: false`，变更走 migration。
 - 禁止在应用层拼接用户输入到 SQL。
 

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Button, Input, Select, Space, Table, message, Progress } from 'antd';
+import { Button, Input, Select, Space, Table, Tag, message, Progress } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
+import PageShell from '../components/PageShell.jsx';
 import { deleteNovel, fetchNovels } from '../services/novelService.js';
 
 const statusOptions = [
@@ -9,6 +11,17 @@ const statusOptions = [
   { value: 'published', label: '已发布' },
   { value: 'archived', label: '归档' },
 ];
+
+const statusMeta = {
+  draft: { label: '草稿', className: 'novel-status-tag-draft' },
+  published: { label: '已发布', className: 'novel-status-tag-published' },
+  archived: { label: '归档', className: 'novel-status-tag-archived' },
+};
+
+function StatusTag({ value }) {
+  const meta = statusMeta[value] || { label: value || '-', className: '' };
+  return <Tag className={meta.className}>{meta.label}</Tag>;
+}
 
 export default function NovelListPage() {
   const navigate = useNavigate();
@@ -43,10 +56,15 @@ export default function NovelListPage() {
   };
 
   const columns = [
-    { title: 'ID', dataIndex: 'id', width: 80 },
-    { title: '小说名称', dataIndex: 'title' },
-    { title: '作者', dataIndex: 'author_name', width: 120 },
-    { title: '状态', dataIndex: 'status', width: 100 },
+    { title: 'ID', dataIndex: 'id', width: 72 },
+    { title: '小说名称', dataIndex: 'title', ellipsis: true },
+    { title: '作者', dataIndex: 'author_name', width: 120, ellipsis: true },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 100,
+      render: value => <StatusTag value={value} />,
+    },
     {
       title: '进度',
       dataIndex: 'progress',
@@ -56,11 +74,11 @@ export default function NovelListPage() {
     {
       title: '操作',
       key: 'action',
-      width: 200,
+      width: 160,
       render: (_, record) => (
-        <Space>
+        <Space size="small">
           <Link to={`${record.id}`}>查看</Link>
-          <Button type="link" danger onClick={() => handleDelete(record.id)}>
+          <Button type="link" danger size="small" onClick={() => handleDelete(record.id)}>
             删除
           </Button>
         </Space>
@@ -69,30 +87,42 @@ export default function NovelListPage() {
   ];
 
   return (
-    <div>
-      <Space wrap style={{ marginBottom: 16 }}>
+    <PageShell
+      title="小说列表"
+      extra={(
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('new')}>
+          新建小说
+        </Button>
+      )}
+    >
+      <div className="novel-filter-bar">
         <Input
           placeholder="输入小说名称"
           value={filters.title}
           onChange={e => setFilters(f => ({ ...f, title: e.target.value }))}
-          style={{ width: 200 }}
+          style={{ width: 220 }}
+          allowClear
         />
         <Select
           placeholder="选择状态"
-          value={filters.status}
-          onChange={v => setFilters(f => ({ ...f, status: v }))}
-          options={statusOptions}
+          value={filters.status || undefined}
+          onChange={v => setFilters(f => ({ ...f, status: v || '' }))}
+          options={statusOptions.filter(o => o.value !== '')}
           style={{ width: 140 }}
           allowClear
         />
         <Button type="primary" onClick={loadNovels}>
           筛选
         </Button>
-        <Button type="dashed" onClick={() => navigate('new')}>
-          新建小说
-        </Button>
-      </Space>
-      <Table rowKey="id" loading={loading} columns={columns} dataSource={novels} />
-    </div>
+      </div>
+      <Table
+        rowKey="id"
+        loading={loading}
+        columns={columns}
+        dataSource={novels}
+        pagination={{ pageSize: 10, showSizeChanger: false }}
+        locale={{ emptyText: '暂无小说，点击右上角新建' }}
+      />
+    </PageShell>
   );
 }

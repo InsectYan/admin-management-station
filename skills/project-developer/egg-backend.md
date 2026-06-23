@@ -34,7 +34,7 @@ Model → Service → Controller → Router → Middleware（鉴权）
 - `app/service/menu.js`：树形组装、`getRootMenus` 过滤 `parent_id IS NULL`
 - `app/controller/menu.js`：统一 `{ code, message, data }` 响应
 - 写操作：`egg-jwt` 验证 + RBAC（`role === 'admin'`）
-- 可选：Redis 缓存菜单树
+- 菜单树：默认 `app/lib/cache.js` memory 缓存（见 `cache-local.mdc`）
 
 ## 子应用：小说模块（app_key=novel）
 

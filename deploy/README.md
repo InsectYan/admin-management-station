@@ -4,10 +4,10 @@
 
 ## 请改用各应用自管 infra
 
-| 应用 | Postgres 容器 | Redis 容器 | CLI |
-|------|---------------|------------|-----|
-| 主应用 | `ams-main-postgres` | `ams-main-redis` | `ams-main local` |
-| 小说 | `ams-novel-postgres` | `ams-novel-redis` | `ams-novel local` |
+| 应用 | Postgres 容器 | CLI |
+|------|---------------|-----|
+| 主应用 | `ams-main-postgres` | `ams-main local` |
+| 小说 | `ams-novel-postgres` | `ams-novel local` |
 
 配置见：
 

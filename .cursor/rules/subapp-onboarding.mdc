@@ -1,0 +1,149 @@
+---
+description: 新子应用接入主应用（Qiankun）检查清单与常见陷阱
+globs: "{menu-master/**,novel-sub/**,docs-project/**,**/deploy/**,**/qiankun/**,**/frontend/**,**/backend/**}"
+alwaysApply: false
+---
+
+# 子应用接入主应用 — 规范与避坑
+
+新增子应用时**须先读本文件**，再改代码。参考实现：`novel-sub/` + `menu-master/database/init.sql`。
+
+## 1. 登记与种子数据（主库）
+
+| 步骤 | 位置 | 要求 |
+|------|------|------|
+| 登记端口 | `app-registry.mdc` | API / Vite / PG 宿主机端口 |
+| 子应用注册 | `menu-master/database/init.sql` 或 `database/migrations/*.sql` | `subapp_registry` 一行 |
+| 菜单 | 同上 `menu_items` | `microapp_name`、`route_prefix`、`status=enabled` |
+| 增量迁移 | `menu-master/database/migrations/` | 已有 PG 卷时**不能**只改 init.sql |
+
+菜单 API 须返回 `entry`、`active_rule`、`basename`（见 `menu-master/backend/app/service/menu.js`）。
+
+环境变量覆盖 entry：`SUBAPP_{NAME}_ENTRY`（如 `SUBAPP_NOVEL_ENTRY`）。
+
+## 2. 主应用 JWT 白名单（必做）
+
+`egg-jwt` 全局启用时，**菜单与子应用 BFF 无关的公开读接口**必须加入 `ignore`，否则前端 `/api/menus` 返回 **401**，侧栏空白。
+
+```javascript
+// menu-master/backend/config/config.default.js
+config.jwt = {
+  enable: true,
+  ignore: ctx => {
+    if (ctx.path === '/api/health') return true;
+    if (ctx.method === 'GET' && (ctx.path === '/api/menus' || ctx.path === '/api/menus/root')) return true;
+    return false;
+  },
+};
+```
+
+写操作仍走 `adminAuth` 中间件，不在此白名单内。
+
+## 3. Qiankun entry（浏览器拉取，非容器）
+
+| 误区 | 正确 |
+|------|------|
+| entry 用 `host.docker.internal` | **浏览器**拉 entry，须用 `http://localhost:{Vite端口}` |
+| Docker 映射 `8081:5174` 但配置写 5174 | **宿主机端口须与 `app-registry` Vite 端口一致**（小说 **5174**） |
+| 只启动主应用就点子菜单 | 子应用 **frontend 须已启动**，否则 `LOADING_SOURCE_CODE: Failed to fetch` |
+
+配置位置：
+
+- 主应用：`menu-master/frontend/.env.local` → `VITE_SUBAPP_{KEY}_ENTRY`
+- 主应用 Docker：`menu-master/deploy/config/.env.local` → `SUBAPP_*_ENTRY=http://localhost:5174`
+- 主库：`subapp_registry.entry_dev`
+
+## 4. 子应用 API 基址（401 最常见原因）
+
+**Qiankun 嵌入后页面 origin 为主应用（如 `:5173`）**，子应用若用相对路径 `/api`，请求会打到**主 BFF（7001）**并触发主应用 JWT → **401**。
+
+**强制**：子应用 `frontend/src/services/apiConfig.js`（或等价模块）：
+
+```javascript
+// Qiankun 下使用子应用 BFF 绝对地址
+if (qiankunWindow.__POWERED_BY_QIANKUN__) {
+  return 'http://localhost:7002/api'; // 按 app-registry 替换端口
+}
+return import.meta.env.VITE_API_BASE || '/api';
+```
+
+| 服务 | 独立 dev | Qiankun 嵌入 |
+|------|----------|--------------|
+| 子 BFF | `/api` + Vite proxy | `http://localhost:{API端口}/api` |
+| Agent | `/agent-api` + proxy | `http://localhost:{Agent端口}` |
+
+子 BFF 须启用 `egg-cors`（`origin: '*'` 或主应用 origin）。
+
+**禁止**：在 Qiankun 模式下假设 `/api` 仍指向本子应用。
+
+## 5. 子应用 Egg.js 后端
+
+### 5.1 Sequelize 插件
+
+```javascript
+// {sub}/backend/config/plugin.js — 禁止只写 dialect
+exports.sequelize = { enable: true, package: 'egg-sequelize' };
+exports.cors = { enable: true, package: 'egg-cors' };
+```
+
+未正确启用会导致 `ctx.model.*` 为 `undefined` → **500**。
+
+### 5.2 Docker 内 Postgres 端口
+
+| 场景 | `POSTGRES_PORT` |
+|------|-----------------|
+| 容器内连 `postgres` service | **5432**（compose `environment` 显式设置） |
+| 宿主机 `npm run dev` | **宿主机映射端口**（如小说 **5433**，见 `backend/.env`） |
+
+**禁止**在 compose 内使用 `NOVEL_POSTGRES_PORT`（5433）作为 `POSTGRES_PORT`；5433 仅用于 `ports:` 宿主机映射。
+
+## 6. Docker / deploy 清单
+
+| 项 | 要求 |
+|----|------|
+| `package-lock.json` | 每个 `{app}/backend`、`frontend` 须有，否则 `npm ci` 失败 |
+| Dockerfile 启动 | `npx egg-scripts start --workers=1`，**禁止** `npm run start`（含 `--daemon` 会导致容器退出重启） |
+| compose 变量 | 使用 `compose.ps1` / `--env-file deploy/config/.env.local` |
+| Vite 端口映射 | `"${NOVEL_VITE_PORT:-5174}:5174"`，与 registry 一致 |
+| 前端 env | compose 注入 `VITE_API_BASE=http://localhost:7002/api` 等 |
+
+## 7. 嵌入态 UI
+
+- 检测 `__POWERED_BY_QIANKUN__`：**隐藏**子应用独立顶栏/品牌，避免与主应用 Sider 重复。
+- 使用 `PageShell` 等统一内容区；主应用 `#subapp-container` 背景与 padding 与主内容区一致（见 `menu-master/frontend/src/App.css`）。
+
+## 8. 缓存
+
+- 默认 `CACHE_DRIVER=memory`，**不**为本地开发添加 Redis compose（见 `cache-local.mdc`）。
+
+## 9. 联调顺序
+
+```text
+1. ams-{sub} local          # 子应用 PG + BFF + frontend (+ agent)
+2. 确认 localhost:{vite} 与 localhost:{api}/api/health 可访问
+3. ams-main local           # 主应用
+4. menu-master/backend npm run db:init   # 含 subapp_registry（已有卷时）
+5. 浏览器打开主应用 → 点击菜单
+```
+
+## 10. 新增子应用 Checklist
+
+- [ ] `app-registry.mdc` 登记
+- [ ] `subapp_registry` + `menu_items` 种子/迁移
+- [ ] 主应用 JWT `ignore` 含菜单 GET（若改菜单路径须同步）
+- [ ] 子应用 `apiConfig.js` + `VITE_*_ENTRY` / `SUBAPP_*_ENTRY`
+- [ ] compose Vite 宿主机端口 = registry Vite 端口
+- [ ] compose 内 `POSTGRES_PORT=5432`
+- [ ] `plugin.js` 启用 `egg-sequelize`、`egg-cors`
+- [ ] backend/frontend `package-lock.json`
+- [ ] Dockerfile 前台启动 egg
+- [ ] Qiankun 嵌入 UI 去重顶栏
+- [ ] README 写联调步骤
+
+## 禁止
+
+- 子应用在 Qiankun 下用相对 `/api` 调本子应用 BFF
+- entry 仅配置容器内地址、与浏览器宿主机端口不一致
+- 主应用 JWT 拦截 `GET /api/menus`
+- Docker 内 ORM 连 PG 宿主机映射端口（5433 等）
+- 无 lockfile 的 `npm ci`、Docker 内 `egg-scripts --daemon`

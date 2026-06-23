@@ -10,7 +10,7 @@ alwaysApply: false
 
 | 层级 | 路径 | 职责 |
 |------|------|------|
-| **应用 deploy** | `{app}/deploy/` | **完整栈**：Postgres +（可选）Redis + API + 前端 + Agent |
+| **应用 deploy** | `{app}/deploy/` | **完整栈**：Postgres + API + 前端 + Agent |
 | **镜像构建** | `{app}/deploy/config/Dockerfile*` | 本应用 canonical Dockerfile |
 
 **目标**：`ams-{app_key} local` 只依赖 `{app}/deploy/docker-compose.yml`，**不 include 仓库根 infra**。
@@ -22,7 +22,7 @@ alwaysApply: false
 ```
 {app}/deploy/
 ├── README.md
-├── docker-compose.yml         # 单文件，含 postgres/redis/services
+├── docker-compose.yml         # 单文件，含 postgres + services（无默认 redis）
 ├── package.json + bin/ams-{app_key}
 ├── config/
 │   ├── .env.local
@@ -42,17 +42,24 @@ alwaysApply: false
 
 ## docker-compose.yml 要点
 
-- `postgres`、`redis` service 写在**同一文件**
+## docker-compose.yml 要点
+
+- `postgres` service 写在**同一文件**；缓存用 `CACHE_DRIVER=memory`（见 `cache-local.mdc`）
+- **容器内** `POSTGRES_PORT=5432`；`{APP}_POSTGRES_PORT` 仅用于 `ports:` 宿主机映射
+- 前端 `ports:` 须 `"${VITE端口}:5174"` 与 `app-registry` 一致，**禁止**随意映射到 8081 等未登记端口
+- 每个 `{app}/backend`、`frontend` 提交 `package-lock.json`（`npm ci` 依赖）
+- 启动 compose 时用 `scripts/compose.ps1`（带 `--env-file config/.env.local`）
 - init SQL：`../database/init.sql` 或 `../backend/database/init.sql`
 - 独立 network / volume 名带 app 前缀（如 `ams-novel-net`）
 - **禁止** `include: ../../deploy/compose/infra.yml`
 
-## 新增子应用 checklist
+## 6. 新增子应用
 
 1. 复制 `novel-sub/` 或 `menu-master/` 为模板
-2. 登记 `app-registry.mdc`（含 PG/Redis 宿主机端口）
-3. 实现完整 compose，验证 `ams-{app_key} local` 可独立启动
-4. 更新 `{app}/README.md`
+2. 在 `app-registry.mdc` 登记端口（含 **独立** Postgres 宿主机端口）
+3. 按 **`subapp-onboarding.mdc`** 完成主库种子、JWT 白名单、apiConfig、compose 端口
+4. 实现完整 compose，验证 `ams-{app_key} local` 可独立启动
+5. 更新 `{app}/README.md`
 
 ## 禁止
 
@@ -67,3 +74,4 @@ alwaysApply: false
 - `docker.mdc`
 - `deploy-cli.mdc`
 - `app-registry.mdc`
+- `subapp-onboarding.mdc`

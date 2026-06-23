@@ -8,7 +8,8 @@ alwaysApply: false
 
 ## 原则
 
-- **每应用 `deploy/docker-compose.yml` 自带 Postgres/Redis**（见 `app-self-contained.mdc`）。
+- **每应用 `deploy/docker-compose.yml` 自带 Postgres**（见 `app-self-contained.mdc`）。
+- 缓存默认 **memory**，无需 Redis 容器（见 `cache-local.mdc`）。
 - 日常启动：**`ams-{app_key} local`**。
 - 配置：`{app}/deploy/config/.env.local` + 业务目录 `.env`。
 - 端口以 **`app-registry.mdc`** 为准。
@@ -16,8 +17,8 @@ alwaysApply: false
 ## 目录
 
 ```
-menu-master/deploy/     # ams-main · PG :5432 · Redis :6379
-novel-sub/deploy/       # ams-novel · PG :5433 · Redis :6380 · agent
+menu-master/deploy/     # ams-main · PG :5432
+novel-sub/deploy/       # ams-novel · PG :5433 · agent
 ```
 
 **禁止**依赖根 `deploy/compose/infra.yml`。
