@@ -1,0 +1,10 @@
+# 小说子应用独立 Docker 栈
+# 启动：cd apps/novel && docker compose --profile novel up -d --build
+# 或：ams local:novel
+
+name: ams-novel
+
+include:
+  - path: ../../deploy/compose/infra.yml
+    env_file: ../../deploy/config/.env.local
+  - path: ./docker-compose.services.yml

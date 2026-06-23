@@ -1,6 +1,6 @@
 ---
 description: Pi v3 Agent 开发规范（对齐 cartoon-agent）
-globs: ["apps/agent-server/**/*", "workspace-templates/**/*", "workspaces/**/*", "data/**/*"]
+globs: ["apps/agent-server/**/*", "apps/*/workspace-templates/**/*", "apps/*/workspaces/**/*"]
 alwaysApply: false
 ---
 
@@ -20,38 +20,26 @@ apps/agent-server/（Node，`app_key=agent`，端口 **7003**）
   ├── Pi AgentManager（按业务域工作目录）
   └── internal API（供 workspace tools 读平台数据）
         │
-        ├─► data/（artifacts JSON，gitignore）
-        ├─► workspaces/（Pi 会话态，gitignore）
         └─► PostgreSQL（`admin_platform`，见 `app-registry.mdc`）
 ```
 
-平台菜单/鉴权仍由 `apps/main-backend`（Egg.js）负责；**Agent 能力独立进程**，与 cartoon-agent `server/` 同模式。
+平台菜单/鉴权由 `menu-master/backend`（Egg.js）负责；**Agent 能力独立进程**。
 
-## 工作目录
+## 工作目录（子应用域内，非仓库根）
 
-| 目录 | 角色 | 核心文件 |
-|------|------|----------|
-| `workspaces/{domain}_{id}/` | 业务域工作区 | SOUL.md, AGENTS.md, USER.md, MEMORY.md, tools/, sessions/ |
-| `workspace-templates/{domain}/` | 模板 | 首次对话从模板复制 |
+Pi 的 `workspace-templates/`、`workspaces/`、`data/` **不在 monorepo 根目录**配置，而由**具体业务子应用/Agent 域**自带：
 
-小说管理域模板：`workspace-templates/novel/`（对应子应用业务）。
+| 路径（示例） | 角色 |
+|-------------|------|
+| `apps/{domain}/workspace-templates/` | 模板（SOUL.md、AGENTS.md、tools/） |
+| `apps/{domain}/workspaces/` | 运行时工作区（gitignore） |
+| `apps/{domain}/data/` | artifacts JSON（gitignore，可选） |
+
+实现 `agent-server` 时通过环境变量（如 `TEMPLATES_ROOT`、`WORKSPACES_ROOT`）指向上述目录，并在该子应用的 `docker-compose.services.yml` 中挂载卷。
 
 ## 逻辑子 Agent（agent_name）
 
 **非独立进程**；Pi 单轮内通过 `agent_name` + `message_type` 区分（见各域 `AGENTS.md`）。
-
-小说域示例（与 cartoon-agent creator 对齐）：
-
-| agent_name | 能力 |
-|------------|------|
-| novel_writer | 小说 / 扩写 |
-| outline_planner | 大纲 / 任务拆解 |
-| genre_analyst | 类型分析 |
-| scene_analyst | 场景环境 |
-| character_analyst | 人物形象 |
-| script_adapter | 剧本化 |
-| storyboard_director | 分镜运镜 |
-| prompt_engineer | 提示词 |
 
 ## 核心 API（agent-server）
 
@@ -68,7 +56,7 @@ apps/agent-server/（Node，`app_key=agent`，端口 **7003**）
 ```
 
 - `inbox.md` = BFF enrichment（含 `## 当前消息`）
-- `outbox.json` = Pi 写出；BFF 落库 / 写 `data/` artifacts
+- `outbox.json` = Pi 写出；BFF 落库 / 写 artifacts
 - 无 outbox → 通用补写 + fallback（见 cartoon-agent `creatorTurnFallback`）
 
 ## 改代码索引
@@ -79,10 +67,11 @@ apps/agent-server/（Node，`app_key=agent`，端口 **7003**）
 | enrichment | `apps/agent-server/src/bff/services/enrich*.ts` |
 | Pi 单轮 | `apps/agent-server/src/agent/runTurn.ts` |
 | 落库 | `apps/agent-server/src/bff/services/outboxPersist.ts` |
-| 工作区模板 | `workspace-templates/novel/AGENTS.md` |
+| 域模板 | 各子应用内 `workspace-templates/**/AGENTS.md` |
 
 ## 禁止
 
+- 在仓库根目录新增 `workspace-templates/`、`workspaces/`、`data/`
 - Python LangGraph / 独立 Python Agent 子进程
 - TypeScript 关键词硬编码路由 `agent_name`
 - Pi 层直接 write 业务库（须经 BFF 契约）

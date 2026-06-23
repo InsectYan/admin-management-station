@@ -24,11 +24,11 @@ alwaysApply: false
 
 ## 已登记应用
 
-| app_key | 说明 | 代码目录 | Compose service | 容器名 | API 端口 | 前端 Docker | Vite dev | 数据库名 |
-|---------|------|----------|-----------------|--------|----------|-------------|----------|----------|
-| `main` | 主应用（菜单 + Qiankun 基座） | `menu-master/` 或 `apps/main-*` | `api-main`, `main-frontend` | `ams-api-main`, `ams-main-frontend` | **7001** | **8080** | **5173** | `admin_platform` |
-| `novel` | 小说子应用 | `apps/novel-*` | `api-novel`, `novel-frontend` | `ams-api-novel`, `ams-novel-frontend` | **7002** | **8081** | **5174** | `novel_db` |
-| `agent` | Pi Agent（BFF + Pi） | `apps/agent-server/` | `agent-server` | `ams-agent-server` | **7003** | — | **7003** | `admin_platform`（元数据） |
+| app_key | 说明 | 代码目录 | Compose 目录 | 容器名 | API 端口 | 前端 Docker | Vite dev | 数据库名 |
+|---------|------|----------|--------------|--------|----------|-------------|----------|----------|
+| `main` | 主应用（菜单 + Qiankun 基座） | `menu-master/` | `menu-master/docker-compose.yml` | `ams-api-main`, `ams-main-frontend` | **7001** | **8080** | **5173** | `admin_platform` |
+| `novel` | 小说子应用 | `apps/novel-*` | `apps/novel/docker-compose.yml` | `ams-api-novel`, `ams-novel-frontend` | **7002** | **8081** | **5174** | `novel_db` |
+| `agent` | Pi Agent（BFF + Pi） | `apps/agent-server/` | `apps/agent-server/docker-compose.yml` | `ams-agent-server` | **7003** | — | **7003** | `admin_platform`（元数据） |
 
 ## 共享基础设施
 
@@ -75,7 +75,7 @@ VITE_SUBAPP_NOVEL_ENTRY=http://localhost:5174
 
 1. 在本文档与 `docs-project/应用端口与命名注册表.md` 登记新行
 2. 分配 API 端口（下一个可用：7004）、Vite dev（5175+）、Docker 前端（8082+）、`{app_key}_db`
-3. 更新 `deploy/docker-compose.yml`、`deploy/config/.env.local`
+3. 按 **`docker-compose.mdc`** 创建 `{app}/docker-compose.yml` + `docker-compose.services.yml`，并更新 `deploy/docker-compose.yml` include
 4. 主应用菜单表增加 `microapp_name` / `route_prefix` 与 Qiankun `entry` 一致
 5. 更新 `deploy/README.md` 与根 `README.md` 端口表
 

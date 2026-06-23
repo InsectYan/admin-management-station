@@ -8,23 +8,25 @@ alwaysApply: false
 
 ## 原则
 
-- **编排文件位于 `deploy/docker-compose.yml`**，不在仓库根（对齐 cartoon-agent）。
-- 日常启动用 **`ams local`**，不直接记 compose 参数。
-- 配置分层：`deploy/config/.env.local`（团队）+ `apps/*/.env`（个人密钥）。
-- profile：`local` 全栈，`infra` 仅 postgres + redis。
-- **端口与数据库名**：各应用分配唯一值，以 **`app-registry.mdc`** / [`docs-project/应用端口与命名注册表.md`](../../docs-project/应用端口与命名注册表.md) 为准；新增服务先登记再改 Compose。
+- **分层编排**：共享 `deploy/compose/infra.yml`；各应用在自身目录提供 `docker-compose.yml` + `docker-compose.services.yml`；根 `deploy/docker-compose.yml` **include** 全部应用片段。详见 **`docker-compose.mdc`**。
+- 日常启动用 **`ams local`**（默认主应用栈），全栈用 **`ams local:all`**。
+- 配置分层：`deploy/config/.env.local`（团队）+ 各应用 `.env`（个人密钥）。
+- **端口与数据库名**：以 **`app-registry.mdc`** 为准；新增服务先登记再改 Compose。
 
 ## 目录
 
 ```
 deploy/
-  docker-compose.yml
+  compose/infra.yml          # 共享 DB + Redis + ams-net
+  docker-compose.yml         # 根 include 入口
   config/.env.local
-  scripts/run.mjs
-docker/
-  main-frontend.Dockerfile
-  main-backend.Dockerfile
-  ...
+menu-master/
+  docker-compose.yml         # 主应用独立栈
+  docker-compose.services.yml
+  docker/*.Dockerfile
+apps/{app_key}/
+  docker-compose.yml
+  docker-compose.services.yml
 ```
 
 ## 镜像

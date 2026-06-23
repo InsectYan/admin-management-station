@@ -1,0 +1,39 @@
+# 小说子应用服务片段（app_key=novel）
+# 代码目录：apps/novel-backend、apps/novel-frontend（待实现）
+# 启用：ams local --profile novel  或  cd apps/novel && docker compose --profile novel up -d
+
+services:
+  api-novel:
+    profiles: ["novel"]
+    build:
+      context: ../..
+      dockerfile: apps/novel/docker/backend.Dockerfile
+    container_name: ams-api-novel
+    restart: unless-stopped
+    env_file:
+      - ../../deploy/config/.env.local
+    environment:
+      APP_KEY: novel
+      POSTGRES_HOST: postgres
+      PORT: ${NOVEL_PORT:-7002}
+      POSTGRES_DB: ${NOVEL_POSTGRES_DB:-novel_db}
+    ports:
+      - "${NOVEL_PORT:-7002}:${NOVEL_PORT:-7002}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  novel-frontend:
+    profiles: ["novel"]
+    build:
+      context: ../..
+      dockerfile: apps/novel/docker/frontend.Dockerfile
+      args:
+        VITE_API_BASE: /api/novel
+        VITE_APP_KEY: novel
+    container_name: ams-novel-frontend
+    restart: unless-stopped
+    ports:
+      - "${NOVEL_FRONTEND_PORT:-8081}:80"
+    depends_on:
+      - api-novel

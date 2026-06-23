@@ -1,6 +1,6 @@
 ---
 description: Pi v3 极简设计原则（对齐 cartoon-agent）
-globs: ["apps/agent-server/**/*", "workspace-templates/**/*", "workspaces/**/*"]
+globs: ["apps/agent-server/**/*", "apps/*/workspace-templates/**/*", "apps/*/workspaces/**/*"]
 alwaysApply: false
 ---
 
@@ -16,7 +16,9 @@ alwaysApply: false
 ## 核心
 
 **Pi 层 = SOUL.md / AGENTS.md + tools/*.mjs + outbox 契约。**  
-业务决策（写小说、分析、分镜等）由 **大模型读 inbox + format 文件** 完成，**不是** TypeScript 关键词路由。
+业务决策由 **大模型读 inbox + format 文件** 完成，**不是** TypeScript 关键词路由。
+
+工作区文件位于**子应用目录**（如 `apps/novel/workspace-templates/`），不在仓库根。
 
 | 代码允许 | 代码禁止 |
 |----------|----------|

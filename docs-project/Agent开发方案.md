@@ -26,24 +26,28 @@ apps/agent-server/（:7003）
   ├── Pi AgentManager（runTurn）
   └── internal API（tools 读平台数据）
         │
-        ├─► workspace-templates/novel/  → workspaces/novel_{id}/
-        ├─► data/（artifacts JSON）
         └─► PostgreSQL（会话、消息元数据）
 ```
 
-## 3. Pi 工作目录
+业务域 Pi 模板 / 工作区 / artifacts 目录挂载在**对应子应用包**内（见 §3），不由仓库根统一提供。
 
-| 路径 | 说明 |
-|------|------|
-| `workspace-templates/novel/` | 模板：SOUL.md、AGENTS.md、tools/、*-format.md |
-| `workspaces/novel_{creatorId}/` | 运行时复制，gitignore |
-| `data/creators/{id}/projects/{projectId}/artifacts/` | BFF 根据 outbox 写入 |
+## 3. Pi 工作目录（子应用域内）
 
-首次对话从模板复制到 `workspaces/`，与 cartoon-agent `workspace-templates/creator/` 流程相同。
+**不在 monorepo 根目录**维护 `workspace-templates/`、`workspaces/`、`data/`。各业务域在实现 Agent 能力时，于**该子应用目录**自建：
+
+| 路径（示例 · 小说域） | 说明 |
+|----------------------|------|
+| `apps/novel/workspace-templates/` | 模板：SOUL.md、AGENTS.md、tools/、*-format.md |
+| `apps/novel/workspaces/` | 运行时复制（gitignore） |
+| `apps/novel/data/` | artifacts JSON（gitignore，可选） |
+
+`agent-server` 通过 `TEMPLATES_ROOT`、`WORKSPACES_ROOT` 等环境变量指向上述路径；Compose 卷挂载写在该子应用或 `apps/agent-server` 的 compose 片段中。
+
+首次对话从模板复制到 `workspaces/`，流程对齐 cartoon-agent `workspace-templates/creator/`。
 
 ## 4. 逻辑子 Agent（agent_name）
 
-**非独立进程**；Pi 在单轮内选择 `agent_name` + `message_type`（详见 `workspace-templates/novel/AGENTS.md`）。
+**非独立进程**；Pi 在单轮内选择 `agent_name` + `message_type`（详见该域子应用内 `workspace-templates/**/AGENTS.md`）。
 
 与 cartoon-agent creator 域对齐的能力：
 
@@ -117,9 +121,11 @@ apps/agent-server/src/
   agent/          # agentManager, runTurn, llmProfiles
   bff/routes/     # chat, llmOptions, internal
   bff/services/   # enrichMessage, outboxPersist, sseChatStream
-workspace-templates/novel/
-workspaces/       # gitignore
-data/             # gitignore
+
+# Pi 工作区（按业务域，在子应用目录内，非仓库根）：
+apps/novel/workspace-templates/
+apps/novel/workspaces/    # gitignore
+apps/novel/data/          # gitignore，可选
 ```
 
 ## 11. 参考文档

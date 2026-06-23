@@ -1,0 +1,10 @@
+# Agent 独立 Docker 栈
+# 启动：cd apps/agent-server && docker compose --profile agent up -d --build
+# 或：ams local:agent
+
+name: ams-agent
+
+include:
+  - path: ../../deploy/compose/infra.yml
+    env_file: ../../deploy/config/.env.local
+  - path: ./docker-compose.services.yml

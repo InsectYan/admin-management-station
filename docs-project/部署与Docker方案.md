@@ -33,25 +33,20 @@
 
 ```
 admin-management-station/
-├── menu-master/               # 主应用（frontend Vite :5173 · backend :7001）
+├── menu-master/               # 主应用（frontend :5173 · backend :7001）
 ├── apps/
-│   ├── main-frontend/         # 可与 menu-master 对齐
-│   ├── main-backend/
-│   ├── novel-frontend/        # Vite :5174 · Docker :8081
-│   ├── novel-backend/         # API :7002 · DB novel_db
-│   └── agent-server/          # :7003
-├── deploy/                    # ★ 编排与 CLI（非仓库根 compose）
+│   ├── novel/                 # 小说 compose + docker（业务代码 novel-* 待建）
+│   └── agent-server/          # Agent :7003
+├── deploy/                    # ★ 共享 infra + 根 compose + ams CLI
+│   ├── compose/infra.yml
 │   ├── docker-compose.yml
-│   ├── bin/ams.mjs
 │   ├── config/.env.local
-│   └── scripts/run.mjs
-├── docker/                    # 各服务 Dockerfile
-│   ├── main-frontend.Dockerfile
-│   └── ...
-├── workspace-templates/
-├── workspaces/                # gitignore
-└── data/                      # gitignore
+│   └── scripts/
+├── docs-project/
+└── skills/
 ```
+
+Pi 的 `workspace-templates/`、`workspaces/` 在**子应用目录**内按需添加，不在仓库根。
 
 ## 4. 启动方式
 
@@ -62,7 +57,7 @@ cd deploy && npm link    # 首次
 ams local
 ```
 
-等价：`docker compose -f deploy/docker-compose.yml --profile local up -d --build`
+等价：`ams local` → `menu-master/docker-compose.yml`（include infra）
 
 ### 4.2 仅基础设施（宿主机热更新）
 
@@ -93,14 +88,11 @@ services:
     ports: ["5432:5432"]
 
   agent-server:
-    profiles: ["local"]
+    profiles: ["agent"]
     build:
       dockerfile: deploy/config/Dockerfile.agent
     ports: ["7003:7003"]
-    volumes:
-      - ../workspaces:/workspaces
-      - ../workspace-templates:/workspace-templates
-      - ../data:/data
+    # Pi workspace 卷：实现时在子应用目录配置，见 Agent开发方案.md §3
 ```
 
 ## 6. Nginx 路由（主应用）

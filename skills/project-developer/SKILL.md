@@ -39,7 +39,7 @@ description: >-
 |-------|-----------|---------|
 | 主应用前端 | [react-web-main.md](react-web-main.md) | `react-web.mdc` |
 | 子应用前端 | [react-web-subapp.md](react-web-subapp.md) | `react-web.mdc` + `react-antd.mdc` |
-| Docker 部署 | [docker-workflow.md](docker-workflow.md) | `docker.mdc` + `deploy-cli.mdc` |
+| Docker 部署 | [docker-workflow.md](docker-workflow.md) | `docker.mdc` + **`docker-compose.mdc`** + `deploy-cli.mdc` |
 | Pi Agent | [../docs-project/Agent开发方案.md](../../docs-project/Agent开发方案.md) | `pi-v3-agent.mdc` + `pi-minimal-design.mdc` |
 | 微前端集成 | [qiankun-microfrontend.md](qiankun-microfrontend.md) | `qiankun-microfrontend.mdc` |
 | 后端 BFF | [egg-backend.md](egg-backend.md) | `egg-backend.mdc` |

@@ -16,8 +16,12 @@ alwaysApply: false
 
 | 命令 | 作用 |
 |------|------|
-| **`ams local`** | 启动本地 Docker 全栈（DB + 各 API + 前端 + agent-server） |
-| **`ams local:frontend`** | 仅启动前端容器（API 走 `apps/*/.env.local` 代理） |
+| **`ams local`** | 启动主应用 Docker 栈（infra + menu-master） |
+| **`ams local:all`** | 启动全栈（含 `--profile novel`、`--profile agent`） |
+| **`ams local:main`** | 同 `ams local` |
+| **`ams local:novel`** | 仅小说子应用栈 |
+| **`ams local:agent`** | 仅 Agent 栈 |
+| **`ams local:frontend`** | 仅重建主应用前端容器 |
 | **`ams local:infra`** | 仅 DB + Redis（宿主机跑业务代码热更新） |
 | **`ams local:reset`** | 清库重建 + 冒烟（开发用） |
 | **`ams local:down`** | 停止本地 Docker |
@@ -39,13 +43,16 @@ alwaysApply: false
 ## 脚本约定
 
 - `deploy/scripts/run.mjs` — 任务调度核心（禁止在 bin 里堆逻辑）
-- `deploy/scripts/compose.ps1` — 统一 `docker compose -f deploy/docker-compose.yml`
+- `deploy/scripts/compose.ps1` — 统一 Docker Compose 入口
+- `deploy/scripts/_utf8.ps1` — Windows UTF-8 控制台初始化（**中文 I/O 规范见 `windows-console.mdc`**）
+- 所有含中文的 `.ps1` 须 **UTF-8 BOM** + 首行 dot-source `_utf8.ps1`
 - 新增命令：在 `run.mjs` switch 注册 + 更新 `deploy/README.md` 与根 `README.md`
 
 ## Docker Compose
 
-- 编排文件：**`deploy/docker-compose.yml`**（非仓库根）
-- 本地全栈：`docker compose --profile local up -d --build`
+- **根编排**：`deploy/docker-compose.yml`（include 各应用 `docker-compose.services.yml`）
+- **共享基础设施**：`deploy/compose/infra.yml`
+- **单应用**：`menu-master/docker-compose.yml` 等；规范见 **`docker-compose.mdc`**
 - 容器内互访用 **service 名**，勿用 `localhost`
 
 ## 禁止

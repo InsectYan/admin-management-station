@@ -1,0 +1,104 @@
+---
+description: 分层 Docker Compose 编排规范（根 include + 各应用独立 compose）
+globs: "{deploy/**,menu-master/**,apps/**,**/docker-compose*.yml,**/Dockerfile*,**/docker/**}"
+alwaysApply: false
+---
+
+# Docker Compose 分层编排规范
+
+## 架构原则
+
+| 层级 | 文件 | 职责 |
+|------|------|------|
+| **共享基础设施** | `deploy/compose/infra.yml` | PostgreSQL、Redis、网络 `ams-net`、数据卷 |
+| **应用服务片段** | `{app}/docker-compose.services.yml` | 仅该 app 的 API / 前端容器，供根 compose include |
+| **应用独立栈** | `{app}/docker-compose.yml` | include infra + 本应用 services，可单独 `docker compose up` |
+| **根编排** | `deploy/docker-compose.yml` | include infra + 全部已登记应用的 services |
+
+**目标**：单应用可独立 Docker 启动；`ams local` / `ams local:all` 一键启动多应用。
+
+## 目录约定（每个 app_key）
+
+```
+{app-root}/                    # 如 menu-master/、apps/novel/
+├── docker-compose.yml         # 独立栈（include infra + services）
+├── docker-compose.services.yml # 服务片段（无 infra）
+├── docker/
+│   ├── backend.Dockerfile     # 有 BFF 时
+│   ├── frontend.Dockerfile    # 有前端时
+│   └── nginx.conf             # 前端 Nginx（如需）
+└── README.md                  # 端口、启动命令
+```
+
+| app_key | 代码根目录 | 独立 compose |
+|---------|-----------|--------------|
+| `main` | `menu-master/` | `menu-master/docker-compose.yml` |
+| `novel` | `apps/novel/`（业务代码 `apps/novel-*`） | `apps/novel/docker-compose.yml` |
+| `agent` | `apps/agent-server/` | `apps/agent-server/docker-compose.yml` |
+
+## 新增子应用 checklist
+
+1. 在 `app-registry.mdc` 与 `docs-project/应用端口与命名注册表.md` 登记端口与库名
+2. 创建 `{app}/docker-compose.services.yml` + `{app}/docker-compose.yml` + `docker/*`
+3. 在 **`deploy/docker-compose.yml`** 的 `include` 增加一行 `- path: ../{app}/docker-compose.services.yml`
+4. 未实现的服务使用 Compose **`profiles: ["{app_key}"]`**，避免 `ams local` 默认构建失败
+5. 在 `deploy/scripts/run.mjs` 增加 `ams local:{app_key}`（可选）
+6. 更新 `deploy/config/.env.local` 中 `{APP_KEY}_PORT` / `{APP_KEY}_FRONTEND_PORT`
+
+**Pi 工作区**：`workspace-templates/`、`workspaces/` 放在**该子应用目录**内，不在仓库根；Agent 实现后再在 compose 中挂载。
+
+## 服务片段模板
+
+```yaml
+# {app}/docker-compose.services.yml
+services:
+  api-{app_key}:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: ams-api-{app_key}
+    env_file:
+      - ../deploy/config/.env.local
+    environment:
+      POSTGRES_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+```
+
+## 独立栈模板
+
+```yaml
+# {app}/docker-compose.yml
+name: ams-{app_key}
+
+include:
+  - path: ../deploy/compose/infra.yml
+    env_file: ../deploy/config/.env.local
+  - path: ./docker-compose.services.yml
+```
+
+## CLI 映射
+
+| 命令 | compose 文件 | 说明 |
+|------|-------------|------|
+| `ams local` / `ams local:main` | `menu-master/docker-compose.yml` | infra + 主应用 |
+| `ams local:all` | `deploy/docker-compose.yml` + profiles | 含 novel、agent |
+| `ams local:infra` | `deploy/compose/infra.yml` | 仅 DB + Redis |
+| `ams local:{app_key}` | 对应 app 的 `docker-compose.yml` | 单应用 |
+| `ams local:down` | `deploy/docker-compose.yml` | 停止根栈 |
+
+环境变量 **`AMS_COMPOSE_FILE`** 可覆盖 compose 路径（`deploy/scripts/compose.ps1`）。
+
+## 禁止
+
+- 在 `deploy/docker-compose.yml` 内联复制某应用全部 service 定义（须 include 片段）
+- 新建应用却不更新根 `include` 列表
+- 容器互访使用 `localhost`（须用 Compose service 名）
+- 硬编码端口
+
+## 相关规则
+
+- `docker.mdc` — 镜像与网络
+- `deploy-cli.mdc` — `ams` 命令
+- `app-registry.mdc` — 端口与库名

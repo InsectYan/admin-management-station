@@ -15,11 +15,24 @@ menu-master/
 
 ## 快速开始
 
-### 1. 基础设施
+### 方式 A：Docker（推荐联调）
+
+```bash
+ams local:infra          # 或随 ams local 一并启动
+# 全主应用栈（infra + API + 前端）
+ams local
+# 等价：cd menu-master && docker compose up -d --build
+```
+
+| 端 | Docker | 宿主机 dev |
+|----|--------|------------|
+| 前端 | http://localhost:8080 | http://localhost:5173 |
+| API | http://localhost:7001 | 同左 |
+
+### 方式 B：宿主机热更新
 
 ```bash
 ams local:infra
-# 或：docker compose -f deploy/docker-compose.yml --profile infra up -d
 ```
 
 ### 2. 后端

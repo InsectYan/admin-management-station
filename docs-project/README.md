@@ -53,11 +53,11 @@ ams local:infra                # 仅 DB + Redis，业务代码宿主机热更新
   ├── 主应用 SPA（Docker :8080 · dev :5173）── Qiankun ── 子应用（:8081 / dev :5174）
   ├── Egg.js 平台 BFF（:7001）── admin_platform
   ├── Egg.js 小说 API（:7002）── novel_db
-  └── Agent Server（:7003）── BFF + Pi · SSE 对话
-           ├── PostgreSQL / Redis
-           ├── workspaces/ · data/（Pi 工作区，对齐 cartoon-agent）
-           └── workspace-templates/novel/
+  └── Agent Server（:7003，profile agent）── BFF + Pi · SSE
+           └── PostgreSQL / Redis（deploy/compose/infra.yml）
 ```
+
+Pi 工作区（`workspace-templates/`、`workspaces/`）在**各业务子应用目录**内按需配置，不在仓库根。
 
 ## 阅读顺序
 
@@ -85,8 +85,8 @@ Agent 漫游对照：[cartoon-agent/.cursor/rules/pi-v3.mdc](E:/AI Tools/project
 ### 1. Agent 开发方案
 
 - 单 Node 进程：**BFF + Pi AgentManager**（`apps/agent-server`）
-- 工作区：`workspace-templates/` → `workspaces/`，outbox 契约驱动 persist
-- 逻辑子能力 via `agent_name`，**非**独立 Python 进程
+- outbox 契约驱动 persist；逻辑子能力 via `agent_name`
+- Pi 模板与运行时工作区放在**子应用域目录**，不在仓库根
 
 ### 2. 指令执行
 

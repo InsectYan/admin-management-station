@@ -1,13 +1,27 @@
-# 统一本地 Docker Compose 入口（编排：deploy/docker-compose.yml）
+﻿# Unified Docker Compose entry for ams CLI.
 param(
   [Parameter(ValueFromRemainingArguments = $true)]
   [string[]]$ComposeArgs
 )
 
+. "$PSScriptRoot\_utf8.ps1"
+
 $ErrorActionPreference = "Stop"
-$ComposeFile = Join-Path (Split-Path -Parent $PSScriptRoot) "docker-compose.yml"
+$DeployDir = Split-Path -Parent $PSScriptRoot
+$RepoRoot = Split-Path -Parent $DeployDir
+
+$ComposeFile = $env:AMS_COMPOSE_FILE
+if (-not $ComposeFile) {
+  $ComposeFile = Join-Path $DeployDir "docker-compose.yml"
+}
 if (-not (Test-Path -LiteralPath $ComposeFile)) {
-  throw "缺少 $ComposeFile"
+  throw "缺少 compose 文件: $ComposeFile"
+}
+
+$EnvLocal = Join-Path $DeployDir "config\.env.local"
+$ComposeEnvArgs = @()
+if (Test-Path -LiteralPath $EnvLocal) {
+  $ComposeEnvArgs = @("--env-file", $EnvLocal)
 }
 
 $prevEap = $ErrorActionPreference
@@ -24,6 +38,6 @@ if (-not $daemonOk) {
 }
 
 $ErrorActionPreference = "Continue"
-& docker compose -f $ComposeFile @ComposeArgs
+& docker compose -f $ComposeFile @ComposeEnvArgs @ComposeArgs
 $exitCode = if ($null -ne $LASTEXITCODE) { $LASTEXITCODE } else { 0 }
 exit $exitCode
