@@ -1,0 +1,99 @@
+# 小说子应用完整栈（app_key=novel）— 自包含，无仓库级共享 infra
+# 启动：cd novel-sub/deploy && npm link && ams-novel local
+
+name: ams-novel
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ams-novel-postgres
+    restart: unless-stopped
+    env_file:
+      - ./config/.env.local
+    environment:
+      POSTGRES_DB: ${NOVEL_POSTGRES_DB:-novel_db}
+    ports:
+      - "${NOVEL_POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - novel_pgdata:/var/lib/postgresql/data
+      - ../database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${NOVEL_POSTGRES_DB:-novel_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ams-novel-redis
+    restart: unless-stopped
+    ports:
+      - "${NOVEL_REDIS_PORT:-6380}:6379"
+    volumes:
+      - novel_redis:/data
+
+  api-novel:
+    build:
+      context: ..
+      dockerfile: deploy/config/Dockerfile.backend
+    container_name: ams-api-novel
+    restart: unless-stopped
+    env_file:
+      - ./config/.env.local
+    environment:
+      APP_KEY: novel
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+      PORT: ${NOVEL_PORT:-7002}
+      POSTGRES_DB: ${NOVEL_POSTGRES_DB:-novel_db}
+    ports:
+      - "${NOVEL_PORT:-7002}:${NOVEL_PORT:-7002}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  agent:
+    build:
+      context: ..
+      dockerfile: deploy/config/Dockerfile.agent
+    container_name: ams-novel-agent
+    restart: unless-stopped
+    env_file:
+      - ./config/.env.local
+    environment:
+      PORT: ${NOVEL_AGENT_PORT:-7003}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin123}@postgres:5432/${NOVEL_POSTGRES_DB:-novel_db}
+      TEMPLATES_ROOT: /app/workspace-templates
+      WORKSPACES_ROOT: /app/workspaces
+      DATA_ROOT: /app/data
+      NOVEL_BFF_URL: http://api-novel:${NOVEL_PORT:-7002}
+      BFF_URL: http://localhost:${NOVEL_AGENT_PORT:-7003}
+    ports:
+      - "${NOVEL_AGENT_PORT:-7003}:${NOVEL_AGENT_PORT:-7003}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api-novel:
+        condition: service_started
+
+  novel-frontend:
+    build:
+      context: ..
+      dockerfile: deploy/config/Dockerfile.frontend
+    container_name: ams-novel-frontend
+    restart: unless-stopped
+    ports:
+      - "${NOVEL_FRONTEND_PORT:-8081}:5174"
+    env_file:
+      - ./config/.env.local
+    depends_on:
+      - api-novel
+      - agent
+
+networks:
+  default:
+    name: ams-novel-net
+
+volumes:
+  novel_pgdata:
+  novel_redis:

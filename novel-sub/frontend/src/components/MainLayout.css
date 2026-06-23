@@ -1,0 +1,12 @@
+.novel-sub-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.novel-sub-title {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+}

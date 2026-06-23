@@ -1,141 +1,105 @@
 # 部署与 Docker 方案
 
-> **编排入口**：`{app}/deploy/docker-compose.yml`（include 共享 [`deploy/compose/infra.yml`](../deploy/compose/infra.yml)）  
-> **CLI**：`ams-main` / `ams-novel` / `ams-agent`（对齐 [cartoon-agent](E:/AI Tools/projects/cartoon-agent) 每应用 `deploy/`）  
-> **规范**：`.cursor/rules/deploy-cli.mdc`、`.cursor/rules/docker.mdc`、**`.cursor/rules/app-registry.mdc`**  
-> **端口/库名注册表**：[应用端口与命名注册表.md](./应用端口与命名注册表.md)
+> **架构**：每应用**自包含** compose（Postgres + Redis + 业务服务），见 `.cursor/rules/app-self-contained.mdc`  
+> **CLI**：`ams-main` / `ams-novel`（**无** `ams-agent`）  
+> **规范**：`deploy-cli.mdc`、`docker.mdc`、`docker-compose.mdc`、`app-registry.mdc`  
+> **端口**：[应用端口与命名注册表.md](./应用端口与命名注册表.md)
 
-## 1. 与 cartoon-agent 对齐
+## 1. 原则
 
-| 能力 | cartoon-agent | 本平台 |
-|------|---------------|--------|
-| 编排目录 | `{repo}/deploy/docker-compose.yml` | **`{app}/deploy/docker-compose.yml`** |
-| CLI | `cartoon local` | **`ams-{app_key} local`** |
-| 配置分层 | `deploy/config/.env.local` + `server/.env` | `{app}/deploy/config/.env.local` + 业务 `.env` |
-| 共享 infra | 单应用内置 DB | 根 `deploy/compose/infra.yml`（多应用共用） |
-| Windows | PowerShell 封装 compose | 同左 |
-| Agent 进程 | `cartoon-server:3001` | `ams-agent-server:7003` |
+| 原则 | 说明 |
+|------|------|
+| 自包含 | 每个 `{app}/deploy/docker-compose.yml` **自带** Postgres、Redis（可选） |
+| 可拆出 | 复制 `menu-master/` 或 `novel-sub/` 整目录即可独立运行 |
+| 无共享 infra | **禁止**依赖根 `deploy/compose/infra.yml`（已废弃） |
 
 ## 2. 服务拓扑
 
-> 完整端口、Vite dev、数据库名见 **[应用端口与命名注册表.md](./应用端口与命名注册表.md)**。
+### menu-master（app_key=main）
 
-| 服务 | app_key | 容器名 | API 端口 | 前端 Docker | Vite dev | 数据库名 |
-|-----|---------|--------|----------|-------------|----------|----------|
-| 主应用前端 | `main` | `ams-main-frontend` | — | 8080 | 5173 | — |
-| 小说子应用 | `novel` | `ams-novel-frontend` | — | 8081 | 5174 | — |
-| 平台 BFF | `main` | `ams-api-main` | 7001 | — | — | `admin_platform` |
-| 小说 API | `novel` | `ams-api-novel` | 7002 | — | — | `novel_db` |
-| **Agent** | `agent` | `ams-agent-server` | 7003 | — | 7003 | `admin_platform` |
-| PostgreSQL | — | `ams-postgres` | 5432 | — | — | 多库 |
-| Redis | — | `ams-redis` | 6379 | — | — | — |
+| 容器 | 端口 | 说明 |
+|------|------|------|
+| `ams-main-postgres` | 5432 | `admin_platform` |
+| `ams-main-redis` | 6379 | 菜单缓存等 |
+| `ams-api-main` | 7001 | Egg.js BFF |
+| `ams-main-frontend` | 5173 | Vite dev |
+
+### novel-sub（app_key=novel）
+
+| 容器 | 端口 | 说明 |
+|------|------|------|
+| `ams-novel-postgres` | **5433** | `novel_db` |
+| `ams-novel-redis` | **6380** | 可选 |
+| `ams-api-novel` | 7002 | Egg.js BFF |
+| `ams-novel-agent` | 7003 | Pi Agent（内置） |
+| `ams-novel-frontend` | 8081 / dev 5174 | 子应用 UI |
 
 ## 3. 目录结构
 
 ```
-admin-management-station/
+admin-management-station/          # 工作区聚合（非运行时依赖）
 ├── menu-master/
-│   ├── backend/ frontend/
-│   └── deploy/                # ams-main CLI + docker-compose.yml
-├── apps/
-│   ├── novel/deploy/          # ams-novel
-│   └── agent-server/deploy/   # ams-agent
-├── deploy/                    # ★ 仅共享 infra
-│   └── compose/infra.yml
+│   ├── frontend/ backend/ database/
+│   └── deploy/                    # ams-main
+├── novel-sub/
+│   ├── frontend/ backend/ agent/ database/
+│   ├── workspace-templates/
+│   └── deploy/                    # ams-novel（含 agent 服务）
 ├── docs-project/
 └── skills/
 ```
 
-Pi 的 `workspace-templates/`、`workspaces/` 在**子应用目录**内按需添加，不在仓库根。
-
-## 4. 启动方式
-
-### 4.1 主应用 Docker（推荐联调）
+## 4. 启动
 
 ```bash
-cd menu-master/deploy && npm link    # 首次
-ams-main local
+# 主应用
+cd menu-master/deploy && npm link && ams-main local
+
+# 小说子应用（含 Agent）
+cd novel-sub/deploy && npm link && ams-novel local
 ```
 
-### 4.2 仅基础设施（宿主机热更新）
+### 宿主机热更新
 
 ```bash
 ams-main local:infra
-# 另开终端（端口见应用端口与命名注册表）
-cd menu-master/backend && npm run dev      # :7001
-cd menu-master/frontend && npm run dev     # :5173
-cd apps/novel-backend && npm run dev       # :7002
-cd apps/novel-frontend && npm run dev      # :5174
-cd apps/agent-server && npm run dev        # :7003
+cd menu-master/backend && npm run dev
+cd menu-master/frontend && npm run dev
+
+ams-novel local:infra
+cd novel-sub/backend && npm run dev
+cd novel-sub/frontend && npm run dev
+cd novel-sub/agent && npm run dev
 ```
 
-### 4.3 停止
+### 停止
 
 ```bash
 ams-main local:down
-# 子应用：ams-novel local:down / ams-agent local:down
+ams-novel local:down
 ```
 
-## 5. docker-compose 示例（见各应用 deploy/ 完整文件）
+## 5. compose 要点（无 include infra）
 
-```yaml
-# menu-master/deploy/docker-compose.yml（节选）
-include:
-  - path: ../../deploy/compose/infra.yml
-    env_file: ./config/.env.local
+每个应用的 `docker-compose.yml` 内直接声明 `postgres`、`redis` service，独立 network/volume 名（如 `ams-novel-net`）。
 
-services:
-  api-main:
-    build:
-      context: ..
-      dockerfile: deploy/config/Dockerfile.backend
-
-# apps/agent-server/deploy/docker-compose.yml（节选）
-  agent-server:
-    profiles: ["agent"]
-    build:
-      context: ..
-      dockerfile: deploy/config/Dockerfile
-    ports: ["7003:7003"]
-```
-
-## 6. Nginx 路由（主应用）
+## 6. Nginx（主应用集成子应用时）
 
 ```nginx
-location / {
-  try_files $uri $uri/ /index.html;
-}
 location /api/ {
   proxy_pass http://ams-api-main:7001/api/;
 }
 location /agent-api/ {
-  proxy_pass http://ams-agent-server:7003/;
+  proxy_pass http://ams-novel-agent:7003/;   # 联调时指向子应用 Agent
 }
 location /subapps/novel-app/ {
-  proxy_pass http://ams-novel-frontend:80/;
+  proxy_pass http://ams-novel-frontend:5174/;
 }
 ```
 
 ## 7. 环境变量
 
-**团队默认**（可提交）：`deploy/config/.env.local`
-
-```env
-POSTGRES_USER=admin
-POSTGRES_PASSWORD=admin123
-
-MAIN_PORT=7001
-MAIN_POSTGRES_DB=admin_platform
-
-NOVEL_PORT=7002
-NOVEL_POSTGRES_DB=novel_db
-
-AGENT_PORT=7003
-
-JWT_SECRET=CHANGE_ME_LOCAL_JWT
-```
-
-**个人密钥**（gitignore）：`apps/agent-server/.env`、`menu-master/backend/.env` 等
+各应用 **`{app}/deploy/config/.env.local`**（可提交）+ **`{app}/backend/.env`**、**`{app}/agent/.env`**（gitignore 密钥）。
 
 ## 8. 健康检查
 
@@ -145,23 +109,9 @@ JWT_SECRET=CHANGE_ME_LOCAL_JWT
 | Agent | `GET /health` |
 | PostgreSQL | `pg_isready` |
 
-## 9. 数据迁移
+## 9. 相关文档
 
-```bash
-docker compose -f deploy/docker-compose.yml exec api-main npm run migrate:up
-```
-
-## 10. 实现状态
-
-| 组件 | 状态 |
-|------|------|
-| `deploy/` + `ams` CLI | 已 scaffold |
-| `apps/*` 业务代码 | 待按设计文档实现 |
-| `Dockerfile.agent` | 占位，待 `apps/agent-server` 就绪后启用 |
-
-## 11. 相关文档
-
-- [deploy/README.md](../deploy/README.md)
+- [应用端口与命名注册表.md](./应用端口与命名注册表.md)
 - [Agent开发方案.md](./Agent开发方案.md)
-- [**应用端口与命名注册表.md**](./应用端口与命名注册表.md)
-- [cartoon-agent/deploy/README.md](E:/AI Tools/projects/cartoon-agent/deploy/README.md)
+- [menu-master/deploy/README.md](../menu-master/deploy/README.md)
+- [novel-sub/deploy/README.md](../novel-sub/deploy/README.md)

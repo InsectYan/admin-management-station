@@ -2,90 +2,58 @@
 
 私人管理平台（admin-management-station）设计方案与部署说明。
 
-**架构对齐**：[cartoon-agent](E:/AI Tools/projects/cartoon-agent) 的 **Pi v3 Agent + 每应用 deploy/**；本平台在此基础上增加 **Qiankun 微前端 + Egg.js 平台 BFF**。
+**架构规则**：每个应用自包含（见 [`.cursor/rules/app-self-contained.mdc`](../.cursor/rules/app-self-contained.mdc)）。
 
-## 一条命令：本地 vs 开发
-
-**每应用 CLI**（在对应 `{app}/deploy` 目录 `npm link`）：
+## 一条命令
 
 ```bash
 cd menu-master/deploy && npm link && ams-main local
-ams-main local:infra                # 仅 DB + Redis，业务代码宿主机热更新
+cd novel-sub/deploy && npm link && ams-novel local   # 含 Agent
 ```
 
-| CLI | 典型命令 |
-|-----|----------|
-| **`ams-main`** | `local`、`local:infra`、`local:frontend`、`local:reset`、`local:down` |
-| **`ams-novel`** | `local`（profile novel） |
-| **`ams-agent`** | `local`（profile agent） |
+| CLI | 说明 |
+|-----|------|
+| **`ams-main`** | 主应用：Postgres + Redis + API + 前端 |
+| **`ams-novel`** | 小说子应用：Postgres + Redis + API + **Agent** + 前端 |
 
-> **Windows**：各 CLI 的 `local` 走 PowerShell。详见各应用 `deploy/README.md`。
+**无 `ams-agent`** — Agent 内置于 `novel-sub/agent/`，随 `ams-novel local` 启动。
 
 | 容器 | 地址 | 说明 |
 |------|------|------|
-| `ams-main-frontend` | http://localhost:8080 | 主应用 + Qiankun（dev Vite **5173**） |
-| `ams-novel-frontend` | http://localhost:8081 | 小说子应用（dev Vite **5174**） |
-| `ams-api-main` | http://localhost:7001 | Egg.js 平台 BFF · `admin_platform` |
-| `ams-api-novel` | http://localhost:7002 | Egg.js 小说 API · `novel_db` |
-| `ams-agent-server` | http://localhost:7003 | **Pi Agent** |
-| `ams-postgres` | localhost:5432 | PostgreSQL（多库） |
+| `ams-main-frontend` | http://localhost:5173 | 主应用 |
+| `ams-main-postgres` | localhost:**5432** | `admin_platform` |
+| `ams-api-main` | http://localhost:7001 | 平台 BFF |
+| `ams-novel-frontend` | http://localhost:5174 / Docker 8081 | 小说 UI |
+| `ams-novel-postgres` | localhost:**5433** | `novel_db` |
+| `ams-api-novel` | http://localhost:7002 | 小说 BFF |
+| `ams-novel-agent` | http://localhost:7003 | Pi Agent |
 
-部署细节：[deploy/README.md](../deploy/README.md) · [部署与Docker方案.md](./部署与Docker方案.md) · **[应用端口与命名注册表.md](./应用端口与命名注册表.md)**
+详见 [部署与Docker方案.md](./部署与Docker方案.md) · [应用端口与命名注册表.md](./应用端口与命名注册表.md)
 
 ## 文档清单
 
-| 文档 | 类型 | 说明 |
-|-----|------|------|
-| [**应用端口与命名注册表.md**](./应用端口与命名注册表.md) | 注册表 | 各应用端口、库名、并行开发 |
-| [Agent开发方案.md](./Agent开发方案.md) | Agent | **Pi v3** 智能体（对齐 cartoon-agent） |
-| [部署与Docker方案.md](./部署与Docker方案.md) | 部署 | Compose 拓扑、Nginx、环境变量 |
-| [私人管理平台主应用设计.md](./私人管理平台主应用设计.md) | 主应用 | React 基座 + Qiankun + 菜单 |
-| [小说管理页面子应用设计.MD](./小说管理页面子应用设计.MD) | 子应用 | React + Ant Design 小说管理 |
+| 文档 | 说明 |
+|-----|------|
+| [应用端口与命名注册表.md](./应用端口与命名注册表.md) | 端口、库名 |
+| [Agent开发方案.md](./Agent开发方案.md) | Pi v3（`novel-sub/agent/`） |
+| [部署与Docker方案.md](./部署与Docker方案.md) | 自包含 compose |
+| [私人管理平台主应用设计.md](./私人管理平台主应用设计.md) | 主应用 |
+| [小说管理页面子应用设计.MD](./小说管理页面子应用设计.MD) | 子应用 |
 
 ## 架构概览
 
 ```
-浏览器
-  ├── 主应用 SPA（Docker :8080 · dev :5173）── Qiankun ── 子应用（:8081 / dev :5174）
-  ├── Egg.js 平台 BFF（:7001）── admin_platform
-  ├── Egg.js 小说 API（:7002）── novel_db
-  └── Agent Server（:7003，profile agent）── BFF + Pi · SSE
-           └── PostgreSQL / Redis（deploy/compose/infra.yml）
+menu-master/          ← 完整主应用（frontend + backend + database + deploy）
+novel-sub/            ← 完整子应用（+ agent + workspace-templates + deploy）
 ```
 
-Pi 工作区（`workspace-templates/`、`workspaces/`）在**各业务子应用目录**内按需配置，不在仓库根。
+两应用各自自带 Postgres/Redis，**不共享**根级 infra。
 
-## 阅读顺序
-
-1. 根目录 [README.md](../README.md) — 项目入口
-2. **[Agent开发方案.md](./Agent开发方案.md)** — Agent 与 cartoon-agent 对齐点
-3. **[部署与Docker方案.md](./部署与Docker方案.md)** — `ams` CLI 与容器
-4. [私人管理平台主应用设计.md](./私人管理平台主应用设计.md) — 微前端基座
-5. [小说管理页面子应用设计.MD](./小说管理页面子应用设计.MD) — 子应用业务
-
-## 开发规范（Cursor）
+## 开发规范
 
 | 规则 | 说明 |
 |------|------|
-| `.cursor/rules/app-registry.mdc` | **多应用端口与数据库名** |
-| `.cursor/rules/pi-v3-agent.mdc` | Pi Agent 全链路 |
-| `.cursor/rules/pi-minimal-design.mdc` | Pi 极简原则 |
-| `.cursor/rules/deploy-cli.mdc` | **`ams` 指令与 deploy/** |
-| `.cursor/rules/react-web.mdc` | 前端 SPA |
-| `.cursor/rules/docker.mdc` | 镜像与 Compose |
-
-Agent 漫游对照：[cartoon-agent/.cursor/rules/pi-v3.mdc](E:/AI Tools/projects/cartoon-agent/.cursor/rules/pi-v3.mdc)
-
-## 与 cartoon-agent 一致的两点
-
-### 1. Agent 开发方案
-
-- 单 Node 进程：**BFF + Pi AgentManager**（`apps/agent-server`）
-- outbox 契约驱动 persist；逻辑子能力 via `agent_name`
-- Pi 模板与运行时工作区放在**子应用域目录**，不在仓库根
-
-### 2. 指令执行
-
-- `deploy/` + 全局 CLI **`ams`**（对应 cartoon 的 `cartoon`）
-- 配置分层：`deploy/config/.env.local` + `apps/*/.env`
-- Windows 优先 PowerShell 脚本封装 docker compose
+| **`app-self-contained.mdc`** | **自包含架构（必读）** |
+| `app-registry.mdc` | 端口与库名 |
+| `pi-v3-agent.mdc` | 子应用内 Agent |
+| `deploy-cli.mdc` | 各应用 CLI |

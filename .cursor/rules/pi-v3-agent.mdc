@@ -1,77 +1,58 @@
 ---
-description: Pi v3 Agent 开发规范（对齐 cartoon-agent）
-globs: ["apps/agent-server/**/*", "apps/*/workspace-templates/**/*", "apps/*/workspaces/**/*"]
+description: Pi v3 Agent 开发规范（位于子应用 {app}/agent/ 内）
+globs: ["novel-sub/agent/**/*", "novel-sub/workspace-templates/**/*", "novel-sub/workspaces/**/*"]
 alwaysApply: false
 ---
 
-# Pi v3 Agent — 平台智能体漫游
+# Pi v3 Agent — 子应用内智能体
 
-> 对齐参考：[cartoon-agent](E:/AI Tools/projects/cartoon-agent) · 定稿见 `docs-project/Agent开发方案.md`  
-> **极简原则**：`.cursor/rules/pi-minimal-design.mdc`
+> 对齐 [cartoon-agent](E:/AI_Projects/cartoon-agent) · 定稿见 `docs-project/Agent开发方案.md`  
+> **架构**：Agent **不是**仓库级独立服务，而是 **`{app}/agent/`** 模块。
 
-## 拓扑（本平台）
+## 拓扑（小说子应用示例）
 
 ```
-主应用 / 子应用（React + Qiankun）
-        │ HTTP / SSE
-        ▼
-apps/agent-server/（Node，`app_key=agent`，端口 **7003**）
-  ├── BFF 业务 API（对话 enrichment、artifacts）
-  ├── Pi AgentManager（按业务域工作目录）
-  └── internal API（供 workspace tools 读平台数据）
-        │
-        └─► PostgreSQL（`admin_platform`，见 `app-registry.mdc`）
+novel-sub/frontend  ──HTTP/SSE──►  novel-sub/agent/ (:7003)
+        │                                    │
+        └── REST ──► novel-sub/backend (:7002)
+                          │
+                          └── novel-sub/deploy/postgres (novel_db)
 ```
 
-平台菜单/鉴权由 `menu-master/backend`（Egg.js）负责；**Agent 能力独立进程**。
+## 工作目录（同应用内）
 
-## 工作目录（子应用域内，非仓库根）
+| 路径 | 角色 |
+|------|------|
+| `novel-sub/workspace-templates/` | Pi 模板 |
+| `novel-sub/workspaces/` | 运行时（gitignore） |
+| `novel-sub/data/` | artifacts（gitignore） |
 
-Pi 的 `workspace-templates/`、`workspaces/`、`data/` **不在 monorepo 根目录**配置，而由**具体业务子应用/Agent 域**自带：
+环境变量 `TEMPLATES_ROOT` 等默认指向**应用根**相对路径，不依赖 monorepo 根。
 
-| 路径（示例） | 角色 |
-|-------------|------|
-| `apps/{domain}/workspace-templates/` | 模板（SOUL.md、AGENTS.md、tools/） |
-| `apps/{domain}/workspaces/` | 运行时工作区（gitignore） |
-| `apps/{domain}/data/` | artifacts JSON（gitignore，可选） |
-
-实现 `agent-server` 时通过环境变量（如 `TEMPLATES_ROOT`、`WORKSPACES_ROOT`）指向上述目录，并在该子应用的 `deploy/docker-compose.yml` 中挂载卷。
-
-## 逻辑子 Agent（agent_name）
-
-**非独立进程**；Pi 单轮内通过 `agent_name` + `message_type` 区分（见各域 `AGENTS.md`）。
-
-## 核心 API（agent-server）
+## 核心 API（agent 进程）
 
 | 路径 | 说明 |
 |------|------|
 | `POST /api/chat` | 对话（SSE） |
 | `GET /api/llm/profiles` | 模型列表 |
-| `GET /api/internal/**` | Pi tools 读平台数据 |
+| `GET /api/internal/**` | Pi tools 读本应用数据 |
 
 ## 单轮管线
 
 ```
-前端 → chat route → enrichMessage → runTurn → outboxPersist → SSE
+前端 → chat → enrichMessage → runTurn → outboxPersist → SSE
 ```
-
-- `inbox.md` = BFF enrichment（含 `## 当前消息`）
-- `outbox.json` = Pi 写出；BFF 落库 / 写 artifacts
-- 无 outbox → 通用补写 + fallback（见 cartoon-agent `creatorTurnFallback`）
 
 ## 改代码索引
 
-| 目标 | 位置（实现后） |
-|------|----------------|
-| SSE 路由 | `apps/agent-server/src/bff/routes/` |
-| enrichment | `apps/agent-server/src/bff/services/enrich*.ts` |
-| Pi 单轮 | `apps/agent-server/src/agent/runTurn.ts` |
-| 落库 | `apps/agent-server/src/bff/services/outboxPersist.ts` |
-| 域模板 | 各子应用内 `workspace-templates/**/AGENTS.md` |
+| 目标 | 位置 |
+|------|------|
+| SSE 路由 | `novel-sub/agent/src/bff/routes/chat.ts` |
+| Pi 单轮 | `novel-sub/agent/src/agent/runTurn.ts` |
+| 域模板 | `novel-sub/workspace-templates/novel/AGENTS.md` |
 
 ## 禁止
 
-- 在仓库根目录新增 `workspace-templates/`、`workspaces/`、`data/`
-- Python LangGraph / 独立 Python Agent 子进程
+- 在 `apps/agent-server/` 或仓库根维护 Agent 代码
+- Pi 直接写业务 PostgreSQL 表（经 BFF 契约）
 - TypeScript 关键词硬编码路由 `agent_name`
-- Pi 层直接 write 业务库（须经 BFF 契约）

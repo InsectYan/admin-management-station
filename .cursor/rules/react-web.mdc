@@ -1,6 +1,6 @@
 ---
 description: React Web SPA 前端开发规范（主应用与子应用）
-globs: "{apps/**,frontend/**,**/renderer/**,**/*.tsx,**/*.jsx}"
+globs: "{menu-master/**,novel-sub/**,**/frontend/**,**/*.tsx,**/*.jsx}"
 alwaysApply: false
 ---
 
@@ -17,23 +17,20 @@ alwaysApply: false
 **主应用**：
 
 ```
-apps/main-frontend/src/
+menu-master/frontend/src/
   components/
-  containers/
   hooks/
   services/
-  common/enums/
+  qiankun/
 ```
 
 **子应用**：
 
 ```
-apps/novel-frontend/src/
+novel-sub/frontend/src/
   components/
   views/
-  stores/
   services/
-  router/
   qiankun/
 ```
 

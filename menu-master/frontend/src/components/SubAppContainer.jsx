@@ -1,4 +1,5 @@
 import { Navigate } from 'react-router-dom';
+import { Empty, Typography } from 'antd';
 import { buildMenuPath } from '../qiankun/config.js';
 
 export default function SubAppContainer() {
@@ -16,8 +17,18 @@ export function HomeRedirect({ rootMenus }) {
   }
   return (
     <div className="welcome-panel">
-      <h2>欢迎使用私人管理平台</h2>
-      <p>暂无可用菜单，请先在数据库中配置 menu_items。</p>
+      <Empty
+        description={
+          <>
+            <Typography.Title level={4} style={{ marginTop: 0 }}>
+              欢迎使用私人管理平台
+            </Typography.Title>
+            <Typography.Text type="secondary">
+              暂无可用菜单，请先在数据库中配置 menu_items。
+            </Typography.Text>
+          </>
+        }
+      />
     </div>
   );
 }

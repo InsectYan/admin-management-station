@@ -1,6 +1,6 @@
 ---
-description: Docker 容器化部署规范（每应用 deploy/，对齐 cartoon-agent）
-globs: "{deploy/**,**/deploy/**,**/Dockerfile*,**/docker-compose*.yml}"
+description: Docker 容器化部署规范（每应用自包含 deploy/）
+globs: "{menu-master/**,novel-sub/**,**/deploy/**,**/Dockerfile*,**/docker-compose*.yml}"
 alwaysApply: false
 ---
 
@@ -8,45 +8,35 @@ alwaysApply: false
 
 ## 原则
 
-- **每应用独立 `deploy/`**（结构对齐 cartoon-agent）；仓库根 `deploy/` **仅** `compose/infra.yml`。
-- 日常启动：**`ams-{app_key} local`**（在对应 `{app}/deploy` npm link 后）。
-- 配置分层：`{app}/deploy/config/.env.local`（团队）+ 业务目录 `.env`（个人密钥）。
-- **端口与数据库名**：以 **`app-registry.mdc`** 为准。
+- **每应用 `deploy/docker-compose.yml` 自带 Postgres/Redis**（见 `app-self-contained.mdc`）。
+- 日常启动：**`ams-{app_key} local`**。
+- 配置：`{app}/deploy/config/.env.local` + 业务目录 `.env`。
+- 端口以 **`app-registry.mdc`** 为准。
 
 ## 目录
 
 ```
-deploy/compose/infra.yml          # 共享 DB + Redis + ams-net
-
-menu-master/deploy/
-  docker-compose.yml
-  config/Dockerfile              # BFF
-  frontend/Dockerfile            # Vite dev（在 frontend/ 目录）
-  scripts/ + bin/ams-main
-
-apps/{app_key}/deploy/            # 同上，CLI ams-{app_key}
+menu-master/deploy/     # ams-main · PG :5432 · Redis :6379
+novel-sub/deploy/       # ams-novel · PG :5433 · Redis :6380 · agent
 ```
 
-**禁止**应用根目录保留 `docker/`、`docker-compose.services.yml`。
+**禁止**依赖根 `deploy/compose/infra.yml`。
 
-## 镜像（对齐 cartoon-agent）
+## 镜像
 
-| 类型 | 路径 | build context | 说明 |
-|------|------|---------------|------|
-| Egg.js BFF | `{app}/deploy/config/Dockerfile` | 应用根 `..` | 本地 Docker |
-| 前端 Vite dev | `{app}/frontend/Dockerfile` | `frontend/` | **本地 Docker 不用 nginx 多阶段** |
-| Agent | `{app}/deploy/config/Dockerfile` | 应用根 `..` | 单服务 |
-| 数据库 | `postgres:16-alpine`（infra） | — | 共享 |
+| 类型 | Dockerfile | context |
+|------|------------|---------|
+| Egg BFF | `{app}/deploy/config/Dockerfile*` | 应用根 |
+| Agent | `{app}/deploy/config/Dockerfile.agent` | 应用根 |
+| 前端 | `{app}/deploy/config/Dockerfile.frontend` 或 `frontend/Dockerfile` | 应用根 / frontend |
 
-基础镜像统一 **`node:22-alpine`**（与 cartoon-agent 一致）。
+基础镜像：**`node:22-alpine`**。
 
 ## 网络
 
-- 容器互访用 **service 名**（`postgres`、`api-main`、`agent-server`）。
-- 主应用 Vite dev（`frontend/Dockerfile`）：容器内 `/api` 代理到 `api-main`（经 `VITE_PROXY_TARGET`）。
+- 容器互访用 service 名（`postgres`、`api-novel`、`agent`）。
+- 禁止容器内用 `localhost` 访问同栈其他服务。
 
 ## CLI
 
-见 `.cursor/rules/deploy-cli.mdc`。命令与 README 维护在**各应用** `deploy/`，不在根目录集中。
-
-详细拓扑：`docs-project/部署与Docker方案.md`
+见 `deploy-cli.mdc`。

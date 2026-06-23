@@ -5,10 +5,10 @@
   "description": "主应用本地 Docker CLI（npm link 后使用 ams-main <命令>）",
   "type": "module",
   "bin": {
-    "ams-main": "./bin/ams-main.mjs"
+    "ams-main": "./bin/ams-main.cmd"
   },
   "scripts": {
-    "link": "npm link",
+    "link": "npm link && node scripts/post-link.mjs",
     "local": "node scripts/run.mjs local",
     "local:frontend": "node scripts/run.mjs local:frontend",
     "local:infra": "node scripts/run.mjs local:infra",

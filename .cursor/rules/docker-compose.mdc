@@ -1,6 +1,6 @@
 ---
-description: Docker Compose 与 deploy 目录规范（每应用独立 deploy/，对齐 cartoon-agent）
-globs: "{deploy/**,menu-master/**,apps/**,**/deploy/**,**/docker-compose*.yml,**/Dockerfile*}"
+description: Docker Compose 与 deploy 目录规范（每应用自包含栈）
+globs: "{menu-master/**,novel-sub/**,**/deploy/**,**/docker-compose*.yml,**/Dockerfile*}"
 alwaysApply: false
 ---
 
@@ -10,87 +10,60 @@ alwaysApply: false
 
 | 层级 | 路径 | 职责 |
 |------|------|------|
-| **共享基础设施** | `deploy/compose/infra.yml` | PostgreSQL、Redis、`ams-net`、数据卷 |
-| **应用 deploy** | `{app}/deploy/` | 单文件 `docker-compose.yml` + CLI + config + scripts |
-| **镜像构建** | `{app}/deploy/config/Dockerfile*` | 唯一 canonical Dockerfile（对齐 cartoon-agent） |
+| **应用 deploy** | `{app}/deploy/` | **完整栈**：Postgres +（可选）Redis + API + 前端 + Agent |
+| **镜像构建** | `{app}/deploy/config/Dockerfile*` | 本应用 canonical Dockerfile |
 
-**目标**：每应用可独立 `ams-{app_key} local`；共享 DB 由 infra include 引入。
+**目标**：`ams-{app_key} local` 只依赖 `{app}/deploy/docker-compose.yml`，**不 include 仓库根 infra**。
 
-## 每应用 deploy 目录（对齐 cartoon-agent）
+详见 [`app-self-contained.mdc`](./app-self-contained.mdc)。
+
+## 每应用 deploy 目录
 
 ```
-{app-root}/deploy/
-├── README.md                  # 本应用日常命令、端口、目录说明
-├── docker-compose.yml         # include infra + 本应用 services（单文件，无 services 片段）
-├── package.json + bin/        # ams-{app_key} CLI
+{app}/deploy/
+├── README.md
+├── docker-compose.yml         # 单文件，含 postgres/redis/services
+├── package.json + bin/ams-{app_key}
 ├── config/
-│   ├── .env.local             # 团队默认（可提交）
-│   ├── README.md
-│   ├── Dockerfile             # BFF / Agent 单服务
-│   └── .env.local
-│   （前端 Dockerfile 在 frontend/ 目录，对齐 cartoon-agent）
+│   ├── .env.local
+│   ├── Dockerfile             # API
+│   ├── Dockerfile.agent       # 有 agent 时
+│   └── Dockerfile.frontend    # 或 frontend/Dockerfile
 └── scripts/
-    ├── README.md
     ├── run.mjs
     ├── compose.ps1 / compose.sh
-    ├── start-local.ps1 / .sh
-    ├── reset-dev.ps1 / .sh
-    └── _utf8.ps1
+    └── ...
 ```
 
-| app_key | 代码根目录 | deploy 目录 | CLI |
-|---------|-----------|-------------|-----|
+| app_key | 应用根 | deploy | CLI |
+|---------|--------|--------|-----|
 | `main` | `menu-master/` | `menu-master/deploy/` | `ams-main` |
-| `novel` | `apps/novel-*` | `apps/novel/deploy/` | `ams-novel` |
-| `agent` | `apps/agent-server/` | `apps/agent-server/deploy/` | `ams-agent` |
+| `novel` | `novel-sub/` | `novel-sub/deploy/` | `ams-novel` |
 
-## docker-compose.yml 模板
+## docker-compose.yml 要点
 
-```yaml
-name: ams-{app_key}
-
-include:
-  - path: ../../deploy/compose/infra.yml   # 深度按实际调整
-    env_file: ./config/.env.local
-
-services:
-  api-{app_key}:
-    build:
-      context: ..
-      dockerfile: deploy/config/Dockerfile
-
-  main-frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
-    env_file:
-      - ./config/.env.local
-      - ../backend/.env
-    # ...
-```
-
-未实现的服务使用 **`profiles: ["{app_key}"]`**，避免误构建。
+- `postgres`、`redis` service 写在**同一文件**
+- init SQL：`../database/init.sql` 或 `../backend/database/init.sql`
+- 独立 network / volume 名带 app 前缀（如 `ams-novel-net`）
+- **禁止** `include: ../../deploy/compose/infra.yml`
 
 ## 新增子应用 checklist
 
-1. 在 `app-registry.mdc` 与 `docs-project/应用端口与命名注册表.md` 登记端口与库名
-2. 复制已有应用 `deploy/` 骨架到 `{app}/deploy/`，改 CLI 名、`docker-compose.yml`、`.env.local`
-3. 在 `{app}/deploy/config/` 添加 Dockerfile（**勿**建 `docker/` 或 `docker-compose.services.yml`）
-4. 更新 `{app}/deploy/README.md`、`{app}/README.md`
-5. 主应用菜单 / Qiankun entry 与注册表一致
-6. 根 [`deploy/README.md`](../../deploy/README.md) 增加一行应用入口索引
-
-**Pi 工作区**：`workspace-templates/`、`workspaces/` 放在**该子应用目录**内，不在仓库根。
+1. 复制 `novel-sub/` 或 `menu-master/` 为模板
+2. 登记 `app-registry.mdc`（含 PG/Redis 宿主机端口）
+3. 实现完整 compose，验证 `ams-{app_key} local` 可独立启动
+4. 更新 `{app}/README.md`
 
 ## 禁止
 
-- 根 `deploy/docker-compose.yml` 或根级 `ams` CLI 统一管理多应用
-- 应用根目录的 `docker-compose.yml`、`docker-compose.services.yml`、`docker/` 目录
-- 容器互访使用 `localhost`（须用 Compose service 名）
-- 硬编码端口
+- 根 `deploy/compose/infra.yml` 作为应用默认依赖
+- `apps/` 目录编排
+- 应用根目录冗余 `docker-compose.yml`（compose 只在 `deploy/`）
+- 容器互访使用 `localhost`
 
 ## 相关规则
 
-- `docker.mdc` — 镜像与网络
-- `deploy-cli.mdc` — 各应用 CLI
-- `app-registry.mdc` — 端口与库名
+- `app-self-contained.mdc`
+- `docker.mdc`
+- `deploy-cli.mdc`
+- `app-registry.mdc`

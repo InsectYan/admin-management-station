@@ -1,40 +1,25 @@
 # 共享基础设施：PostgreSQL + Redis + 网络 ams-net
-# 由各应用 deploy/docker-compose.yml include 引入
-# 仅 infra：ams-main local:infra（或 ams-novel / ams-agent local:infra）
+#
+# ⚠️ 已废弃 — 各应用 deploy/docker-compose.yml 自管 Postgres/Redis。
+# 见 .cursor/rules/app-self-contained.mdc 与 deploy/README.md
+#
+# 勿在新 compose 中 include 本文件。
 
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: ams-postgres
-    restart: unless-stopped
+    container_name: ams-postgres-deprecated
+    profiles: ["deprecated"]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
       POSTGRES_DB: ${POSTGRES_DB:-admin_platform}
     ports:
       - "5432:5432"
-    volumes:
-      - ams_pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-admin_platform}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: ams-redis
-    restart: unless-stopped
+    container_name: ams-redis-deprecated
+    profiles: ["deprecated"]
     ports:
       - "6379:6379"
-    volumes:
-      - ams_redis:/data
-
-networks:
-  default:
-    name: ams-net
-    driver: bridge
-
-volumes:
-  ams_pgdata:
-  ams_redis:

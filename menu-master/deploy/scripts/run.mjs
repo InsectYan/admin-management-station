@@ -10,11 +10,10 @@ import { fileURLToPath } from 'node:url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const deployDir = join(__dirname, '..')
 const appRoot = join(deployDir, '..')
-const repoRoot = join(appRoot, '..')
 const isWin = process.platform === 'win32'
 const task = process.argv[2] || 'help'
 
-const infraCompose = join(repoRoot, 'deploy', 'compose', 'infra.yml')
+const appCompose = join(deployDir, 'docker-compose.yml')
 
 function fail(msg, code = 1) {
   console.error(msg)
@@ -84,9 +83,9 @@ function printHelp() {
   ams-main <命令>
 
 本地 Docker:
-  ams-main local              启动 infra + API + 前端
+  ams-main local              启动 Postgres + Redis + API + 前端
   ams-main local:frontend     仅重建前端容器
-  ams-main local:infra        仅 DB + Redis（宿主机热更新）
+  ams-main local:infra        仅 Postgres + Redis（宿主机热更新）
   ams-main local:reset        清库重建
   ams-main local:down         停止本栈
 
@@ -113,7 +112,7 @@ switch (task) {
     else run('bash', [join(__dirname, 'start-local-frontend.sh')])
     break
   case 'local:infra':
-    runCompose(infraCompose, ['up', '-d'])
+    runCompose(appCompose, ['up', '-d', 'postgres', 'redis'])
     break
   case 'local:reset':
     if (isWin) runPs1('reset-dev.ps1')

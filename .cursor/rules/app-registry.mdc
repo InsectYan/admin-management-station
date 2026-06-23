@@ -1,12 +1,12 @@
 ---
-description: 多应用并行开发时的应用名、端口、数据库命名注册表（主应用 + 子应用 + Agent）
-globs: "{apps/**,menu-master/**,deploy/**,docker/**,docs-project/**}"
+description: 多应用并行开发时的应用名、端口、数据库命名注册表（自包含应用）
+globs: "{menu-master/**,novel-sub/**,docs-project/**,**/deploy/**}"
 alwaysApply: false
 ---
 
 # 应用端口与命名注册表
 
-主应用、多个子应用与 Agent **同时运行**时，必须为每个应用分配**唯一**的应用标识、端口与数据库名。新增应用须先在本表登记，再写代码或改 Compose。
+每个应用**自带 Postgres/Redis**，并行运行时须使用**不同宿主机端口**。新增应用须先登记再写代码。
 
 **人类可读副本**：[`docs-project/应用端口与命名注册表.md`](../../docs-project/应用端口与命名注册表.md)
 
@@ -14,76 +14,51 @@ alwaysApply: false
 
 | 维度 | 规则 |
 |------|------|
-| 应用标识 `app_key` | 小写英文，全局唯一（如 `main`、`novel`、`agent`） |
-| API 端口 | 7001 起递增，**禁止**两个服务共用同一宿主机端口 |
-| 前端 Docker 端口 | 5173 起递增（Vite dev 容器，对齐 cartoon-agent） |
-| 前端 Vite dev 端口 | 5173 起递增（宿主机热更新，与 Docker 端口分离） |
-| 数据库名 | `{app_key}_db` 或语义名（如 `admin_platform` = 主库）；**一库一业务域** |
-| 容器名 | `ams-{role}-{app_key}` 或 `ams-api-{app_key}` |
-| 环境变量 | 使用 `{APP_KEY}_` 前缀或 `VITE_*` / `POSTGRES_DB` 按应用隔离 |
+| 应用标识 `app_key` | 小写英文，全局唯一 |
+| 应用根目录 | **完整项目目录**（见 `app-self-contained.mdc`） |
+| API 端口 | 7001 起递增 |
+| Agent 端口 | 随所属应用登记（非独立 app_key） |
+| Vite dev | 5173 起递增 |
+| Postgres 宿主机端口 | 5432 起递增（容器内仍为 5432） |
+| Redis 宿主机端口 | 6379 起递增（容器内仍为 6379） |
+| 数据库名 | `{app_key}_db` 或语义名 |
+| 容器名 | `ams-{role}-{app_key}` |
+| CLI | `ams-{app_key}`，位于 `{app}/deploy/` |
 
 ## 已登记应用
 
-| app_key | 说明 | 代码目录 | deploy 目录 | CLI | 容器名 | API 端口 | 前端 Docker | Vite dev | 数据库名 |
-|---------|------|----------|-------------|-----|--------|----------|-------------|----------|----------|
-| `main` | 主应用（菜单 + Qiankun 基座） | `menu-master/` | `menu-master/deploy/` | `ams-main` | `ams-api-main`, `ams-main-frontend` | **7001** | **5173** | **5173** | `admin_platform` |
-| `novel` | 小说子应用 | `apps/novel-*` | `apps/novel/deploy/` | `ams-novel` | `ams-api-novel`, `ams-novel-frontend` | **7002** | **8081** | **5174** | `novel_db` |
-| `agent` | Pi Agent（BFF + Pi） | `apps/agent-server/` | `apps/agent-server/deploy/` | `ams-agent` | `ams-agent-server` | **7003** | — | **7003** | `admin_platform`（元数据） |
+| app_key | 应用根目录 | CLI | API | Agent | Vite | PG 宿主机 | Redis 宿主机 | 库名 |
+|---------|-----------|-----|-----|-------|------|-----------|--------------|------|
+| `main` | `menu-master/` | `ams-main` | **7001** | — | **5173** | **5432** | **6379** | `admin_platform` |
+| `novel` | `novel-sub/` | `ams-novel` | **7002** | **7003** | **5174** | **5433** | **6380** | `novel_db` |
 
-## 共享基础设施
+## 标准目录（每个应用）
 
-| 组件 | 容器名 | 端口 | 说明 |
-|------|--------|------|------|
-| PostgreSQL | `ams-postgres` | **5432** | 单实例，多 database |
-| Redis | `ams-redis` | **6379** | 菜单缓存等；可按 app 分 DB index |
-
-## 环境变量约定
-
-**团队默认**：`{app}/deploy/config/.env.local`（各应用独立；共享 infra 见 `deploy/compose/infra.yml`）
-
-```env
-# 主应用 BFF
-MAIN_PORT=7001
-MAIN_POSTGRES_DB=admin_platform
-
-# 小说子应用
-NOVEL_PORT=7002
-NOVEL_POSTGRES_DB=novel_db
-
-# Agent
-AGENT_PORT=7003
-
-# 共享
-POSTGRES_USER=admin
-POSTGRES_PASSWORD=admin123
-JWT_SECRET=CHANGE_ME_LOCAL_JWT
+```
+{app}/
+├── frontend/
+├── backend/
+├── agent/                 # 可选；需要 Pi 的子应用必有
+├── database/              # init.sql（可与 backend/database 合并，但须在本应用内）
+├── workspace-templates/   # 有 agent 时
+├── workspaces/            # gitignore
+├── data/                  # gitignore
+├── deploy/
+│   ├── docker-compose.yml # 含 postgres、redis（可选）、api、frontend、agent
+│   └── bin/ams-{app_key}
+└── README.md
 ```
 
-**各应用 `.env` / `.env.example`**（示例：主应用前端 `menu-master/frontend/.env`）：
+## 禁止
 
-```env
-VITE_APP_KEY=main
-VITE_API_BASE=http://localhost:7001/api
-VITE_DEV_PORT=5173
-# 子应用 entry（开发）按注册表逐个配置，如小说：
-VITE_SUBAPP_NOVEL_ENTRY=http://localhost:5174
-```
+- 仓库根 `deploy/compose/infra.yml` 作为默认依赖
+- `apps/` 下放置半套服务或独立 Agent 项目
+- 硬编码端口；须读 env 或 `deploy/config/.env.local`
 
-**禁止**：在源码中硬编码 `localhost:7001` 等；应读 `import.meta.env.VITE_*` 或 Egg `process.env.{APP}_PORT`。
+## Nginx / Qiankun（集成时）
 
-## 新增子应用 checklist
+| app_key | microapp_name | activeRule 示例 | dev entry |
+|---------|---------------|-----------------|-----------|
+| `novel` | `novel-app` | `/media/novel` | `//localhost:5174` |
 
-1. 在本文档与 `docs-project/应用端口与命名注册表.md` 登记新行
-2. 分配 API 端口（下一个可用：7004）、Vite dev（5175+）、Docker 前端（8082+）、`{app_key}_db`
-3. 按 **`docker-compose.mdc`** 复制 `{app}/deploy/` 骨架（含 CLI、`config/Dockerfile*`、单文件 `docker-compose.yml`）
-4. 主应用菜单表增加 `microapp_name` / `route_prefix` 与 Qiankun `entry` 一致
-5. 更新 `{app}/deploy/README.md`、根 `deploy/README.md` 应用索引
-
-## Nginx / Qiankun entry 对照
-
-| app_key | 生产 entry（经主应用 Nginx） | activeRule 示例 |
-|---------|------------------------------|-----------------|
-| `novel` | `/subapps/novel-app/` → `ams-novel-frontend:80` | `/media/novel` |
-| （新子应用） | `/subapps/{microapp_name}/` | `/media/{route_prefix}` |
-
-开发时 Qiankun `entry` 使用注册表中的 **Vite dev 端口**（如 `//localhost:5174`），勿与 API 端口混淆。
+主应用通过菜单注册子应用 entry；**子应用独立 compose 仍可单独运行**。

@@ -1,41 +1,25 @@
 ---
-description: Pi v3 极简设计原则（对齐 cartoon-agent）
-globs: ["apps/agent-server/**/*", "apps/*/workspace-templates/**/*", "apps/*/workspaces/**/*"]
+description: Pi 极简原则（子应用内 agent 模块）
+globs: ["novel-sub/agent/**/*", "novel-sub/workspace-templates/**/*"]
 alwaysApply: false
 ---
 
-# Pi 极简设计原则
+# Pi 极简设计
 
-## 与 `pi-v3-agent.mdc` 的关系
+工作区位于 **`{app}/workspace-templates/`**（如 `novel-sub/`），不在仓库根。
 
-| 文档 | 角色 |
+## 允许 / 禁止
+
+| 允许 | 禁止 |
 |------|------|
-| **本文件** | 原则 + 禁止清单 + 改完自检（短） |
-| **`pi-v3-agent.mdc`** | 全链路漫游与文件索引 |
+| BFF 拼 context、校验 outbox | TS 关键词硬编码 agent 路由 |
+| Pi 读 inbox + format 决策 | LangGraph / Python 子进程 |
+| tools/*.mjs 调 internal API | Pi 直接写业务库 |
 
-## 核心
+## 构建
 
-**Pi 层 = SOUL.md / AGENTS.md + tools/*.mjs + outbox 契约。**  
-业务决策由 **大模型读 inbox + format 文件** 完成，**不是** TypeScript 关键词路由。
+```bash
+cd novel-sub/agent && npm run build
+```
 
-工作区文件位于**子应用目录**（如 `apps/novel/workspace-templates/`），不在仓库根。
-
-| 代码允许 | 代码禁止 |
-|----------|----------|
-| BFF 拼 `## 近期对话`、`## 当前项目` | `if "分镜" in msg` 强制 agent_name |
-| outbox `message_type` 白名单与 persist | 正则替 Pi 选 agent_name |
-| Pi 无 outbox → 通用补写 + fallback | Python / LangGraph 子 Agent 进程 |
-| `llmProfiles` 解析 Ollama / 云端 | Pi 直接 write PostgreSQL 业务表 |
-
-## 改完必跑
-
-| 范围 | 命令 |
-|------|------|
-| `apps/agent-server/src/**` | `cd apps/agent-server && npm run build` |
-| 主/子应用前端 | 对应 app 的 `npm run build` |
-| 数据库 schema 变更 | 同步 migration + 文档 |
-
-## 参考
-
-- `docs-project/Agent开发方案.md`
-- [cartoon-agent/workspace-templates/creator/AGENTS.md](E:/AI Tools/projects/cartoon-agent/workspace-templates/creator/AGENTS.md)
+Docker 构建见 `novel-sub/deploy/config/Dockerfile.agent`。

@@ -7,6 +7,12 @@ alwaysApply: true
 
 本文件定义 admin-management-station 项目的通用开发约束。**所有参与者（包括开发者与 AI 助手）在编写、修改或审查代码时均须遵循。**
 
+## 自包含应用（最高优先级）
+
+**每个主应用、子应用必须是可独立拆出的完整项目**，自带 frontend、backend、（可选）agent、database、deploy；PostgreSQL/Redis 由各应用自己的 compose 管理，**禁止**仓库级共享 infra。
+
+详见 **[`app-self-contained.mdc`](./app-self-contained.mdc)**。与本节冲突的旧约定（如 `apps/`、`deploy/compose/infra.yml`、独立 `agent-server`）一律以自包含规则为准。
+
 ## 基本原则
 
 - **最小改动**：只修改与当前任务直接相关的内容，不做无关重构或功能扩展。
@@ -39,13 +45,14 @@ alwaysApply: true
 
 | 规则文件 | 适用范围 |
 |---------|---------|
+| **`app-self-contained.mdc`** | **自包含应用架构（必读）** |
 | **`app-registry.mdc`** | **多应用端口、数据库名、容器名（并行开发必读）** |
-| `pi-v3-agent.mdc` | Pi Agent（BFF + Pi，对齐 cartoon-agent） |
+| `pi-v3-agent.mdc` | 子应用内 `{app}/agent/` Pi 开发 |
 | `pi-minimal-design.mdc` | Pi 极简原则 |
 | `deploy-cli.mdc` | **各应用 `ams-{app_key}` CLI 与 `{app}/deploy/`** |
 | **`windows-console.mdc`** | **Windows PowerShell 中文 I/O（UTF-8 BOM）** |
 | `docker.mdc` | 容器与镜像 |
-| **`docker-compose.mdc`** | **每应用独立 `deploy/`（对齐 cartoon-agent）** |
+| **`docker-compose.mdc`** | **每应用自包含 `deploy/docker-compose.yml`** |
 | `react-web.mdc` | React Web SPA 主应用与子应用前端 |
 | `egg-backend.mdc` | Egg.js BFF 后端 |
 | `postgresql.mdc` | 数据库表结构与 ORM |
