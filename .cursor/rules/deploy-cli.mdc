@@ -1,0 +1,52 @@
+---
+description: 部署 CLI 与指令执行规范（对齐 cartoon-agent deploy/）
+globs: ["deploy/**/*"]
+alwaysApply: false
+---
+
+# 部署 CLI 规范
+
+## 全局 CLI
+
+- 包名：`deploy/package.json`，bin 命令 **`ams`**（admin-management-station）
+- 每台机器首次：`cd deploy && npm link`
+- 日常：`ams <命令>`；未 link 时：`node deploy/scripts/run.mjs <命令>`
+
+## 命令表（与 cartoon-agent 对齐）
+
+| 命令 | 作用 |
+|------|------|
+| **`ams local`** | 启动本地 Docker 全栈（DB + 各 API + 前端 + agent-server） |
+| **`ams local:frontend`** | 仅启动前端容器（API 走 `apps/*/.env.local` 代理） |
+| **`ams local:infra`** | 仅 DB + Redis（宿主机跑业务代码热更新） |
+| **`ams local:reset`** | 清库重建 + 冒烟（开发用） |
+| **`ams local:down`** | 停止本地 Docker |
+| `ams help` | 命令列表 |
+
+> **Windows**：`ams local` 走 PowerShell（`deploy/scripts/*.ps1`），不依赖 WSL。
+
+## 配置分层
+
+| 场景 | 团队默认（可提交） | 密钥（gitignore） |
+|------|-------------------|-------------------|
+| 本地 Docker | `deploy/config/.env.local` | `apps/*/.env` |
+| 生产 | `deploy/config/.env.prod` | 部署平台密钥 |
+
+加载顺序：**config 默认 → app `.env` 覆盖**。
+
+## 脚本约定
+
+- `deploy/scripts/run.mjs` — 任务调度核心（禁止在 bin 里堆逻辑）
+- `deploy/scripts/compose.ps1` — 统一 `docker compose -f deploy/docker-compose.yml`
+- 新增命令：在 `run.mjs` switch 注册 + 更新 `deploy/README.md` 与根 `README.md`
+
+## Docker Compose
+
+- 编排文件：**`deploy/docker-compose.yml`**（非仓库根）
+- 本地全栈：`docker compose --profile local up -d --build`
+- 容器内互访用 **service 名**，勿用 `localhost`
+
+## 禁止
+
+- 在文档中写仅 bash 可用、Windows 无法执行的启动步骤（须提供 ps1 或 `ams` 封装）
+- 密钥写入 `deploy/config/.env.*` 可提交文件（仅占位符）

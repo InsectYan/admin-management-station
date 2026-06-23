@@ -1,0 +1,39 @@
+---
+description: Pi v3 极简设计原则（对齐 cartoon-agent）
+globs: ["apps/agent-server/**/*", "workspace-templates/**/*", "workspaces/**/*"]
+alwaysApply: false
+---
+
+# Pi 极简设计原则
+
+## 与 `pi-v3-agent.mdc` 的关系
+
+| 文档 | 角色 |
+|------|------|
+| **本文件** | 原则 + 禁止清单 + 改完自检（短） |
+| **`pi-v3-agent.mdc`** | 全链路漫游与文件索引 |
+
+## 核心
+
+**Pi 层 = SOUL.md / AGENTS.md + tools/*.mjs + outbox 契约。**  
+业务决策（写小说、分析、分镜等）由 **大模型读 inbox + format 文件** 完成，**不是** TypeScript 关键词路由。
+
+| 代码允许 | 代码禁止 |
+|----------|----------|
+| BFF 拼 `## 近期对话`、`## 当前项目` | `if "分镜" in msg` 强制 agent_name |
+| outbox `message_type` 白名单与 persist | 正则替 Pi 选 agent_name |
+| Pi 无 outbox → 通用补写 + fallback | Python / LangGraph 子 Agent 进程 |
+| `llmProfiles` 解析 Ollama / 云端 | Pi 直接 write PostgreSQL 业务表 |
+
+## 改完必跑
+
+| 范围 | 命令 |
+|------|------|
+| `apps/agent-server/src/**` | `cd apps/agent-server && npm run build` |
+| 主/子应用前端 | 对应 app 的 `npm run build` |
+| 数据库 schema 变更 | 同步 migration + 文档 |
+
+## 参考
+
+- `docs-project/Agent开发方案.md`
+- [cartoon-agent/workspace-templates/creator/AGENTS.md](E:/AI Tools/projects/cartoon-agent/workspace-templates/creator/AGENTS.md)

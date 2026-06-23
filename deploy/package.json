@@ -1,0 +1,18 @@
+{
+  "name": "admin-management-station-cli",
+  "version": "1.0.0",
+  "private": true,
+  "description": "admin-management-station 本地 Docker CLI（npm link 后使用 ams <命令>）",
+  "type": "module",
+  "bin": {
+    "ams": "./bin/ams.mjs"
+  },
+  "scripts": {
+    "link": "npm link",
+    "local": "node scripts/run.mjs local",
+    "local:infra": "node scripts/run.mjs local:infra",
+    "local:frontend": "node scripts/run.mjs local:frontend",
+    "local:reset": "node scripts/run.mjs local:reset",
+    "local:down": "node scripts/run.mjs local:down"
+  }
+}

@@ -1,0 +1,45 @@
+---
+description: Docker 容器化部署规范（deploy/ + ams CLI）
+globs: "{deploy/**,docker/**,**/Dockerfile*,**/docker-compose*.yml,.env*}"
+alwaysApply: false
+---
+
+# Docker 部署规范
+
+## 原则
+
+- **编排文件位于 `deploy/docker-compose.yml`**，不在仓库根（对齐 cartoon-agent）。
+- 日常启动用 **`ams local`**，不直接记 compose 参数。
+- 配置分层：`deploy/config/.env.local`（团队）+ `apps/*/.env`（个人密钥）。
+- profile：`local` 全栈，`infra` 仅 postgres + redis。
+
+## 目录
+
+```
+deploy/
+  docker-compose.yml
+  config/.env.local
+  scripts/run.mjs
+docker/
+  main-frontend.Dockerfile
+  main-backend.Dockerfile
+  ...
+```
+
+## 镜像
+
+- 前端：多阶段 Node 构建 + Nginx。
+- Egg.js BFF：Node Alpine，`npm ci --omit=dev`。
+- Agent：`deploy/config/Dockerfile.agent`（BFF + Pi）。
+- 数据库：`postgres:16-alpine` + 数据卷。
+
+## 网络
+
+- 容器互访用 **service 名**（如 `postgres`、`agent-server`）。
+- 主应用 Nginx：`/api/` → api-main，`/agent-api/` → agent-server，`/subapps/` → 子应用。
+
+## CLI
+
+见 `.cursor/rules/deploy-cli.mdc`。新增服务时同步更新 `deploy/docker-compose.yml` 与 `ams help`。
+
+详细拓扑：`docs-project/部署与Docker方案.md`

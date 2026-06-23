@@ -1,0 +1,10 @@
+# Pi Agent 服务镜像（实现 apps/agent-server 后生效）
+# 对齐 cartoon-agent deploy/config/Dockerfile
+FROM node:20-alpine
+WORKDIR /app
+# COPY apps/agent-server/package*.json ./
+# RUN npm ci --omit=dev
+# COPY apps/agent-server/ ./
+# ENV NODE_ENV=production
+EXPOSE 7003
+CMD ["node", "-e", "console.log('agent-server placeholder — implement apps/agent-server'); setInterval(()=>{}, 1e9)"]

@@ -1,6 +1,6 @@
 # project-developer
 
-基于 `docs-project/` 设计文档，驱动 admin-management-station 混合架构（Electron-Egg + React + Qiankun + Egg.js + PostgreSQL）的分模块开发。
+基于 `docs-project/` 设计文档，驱动 admin-management-station 的 Web + Docker 架构开发。
 
 ## 用途
 
@@ -39,8 +39,9 @@ skills/project-developer/
 ├── SKILL.md                    # 执行入口（Agent 读取此文件）
 ├── README.md                   # 本说明
 ├── design-doc-workflow.md      # 设计文档分析与缺陷检测
-├── electron-react-main.md      # 主应用前端工作流
-├── electron-react-subapp.md    # 子应用前端工作流
+├── react-web-main.md           # 主应用前端工作流
+├── react-web-subapp.md         # 子应用前端工作流
+├── docker-workflow.md          # Docker 部署工作流
 ├── qiankun-microfrontend.md    # 微前端集成工作流
 ├── egg-backend.md              # 后端工作流
 └── postgresql.md               # 数据库工作流
@@ -51,7 +52,8 @@ skills/project-developer/
 **不在本 skill 中重复编码规范。** 开发时须遵循 [`.cursor/rules/`](../../.cursor/rules/) 下对应规则：
 
 - 通用：`development-standards.mdc`
-- 前端：`electron-react.mdc`、`react-antd.mdc`
+- 前端：`react-web.mdc`、`react-antd.mdc`
+- 部署：`docker.mdc`
 - 后端：`egg-backend.mdc`
 - 数据库：`postgresql.mdc`
 - 微前端：`qiankun-microfrontend.mdc`
@@ -69,3 +71,4 @@ skills/project-developer/
 
 - [私人管理平台主应用设计](../../docs-project/私人管理平台主应用设计.md)
 - [小说管理页面子应用设计](../../docs-project/小说管理页面子应用设计.MD)
+- [部署与Docker方案](../../docs-project/部署与Docker方案.md)

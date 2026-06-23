@@ -1,0 +1,88 @@
+---
+description: Pi v3 Agent 开发规范（对齐 cartoon-agent）
+globs: ["apps/agent-server/**/*", "workspace-templates/**/*", "workspaces/**/*", "data/**/*"]
+alwaysApply: false
+---
+
+# Pi v3 Agent — 平台智能体漫游
+
+> 对齐参考：[cartoon-agent](E:/AI Tools/projects/cartoon-agent) · 定稿见 `docs-project/Agent开发方案.md`  
+> **极简原则**：`.cursor/rules/pi-minimal-design.mdc`
+
+## 拓扑（本平台）
+
+```
+主应用 / 子应用（React + Qiankun）
+        │ HTTP / SSE
+        ▼
+apps/agent-server/（Node，端口 7003）
+  ├── BFF 业务 API（对话 enrichment、artifacts）
+  ├── Pi AgentManager（按业务域工作目录）
+  └── internal API（供 workspace tools 读平台数据）
+        │
+        ├─► data/（artifacts JSON，gitignore）
+        ├─► workspaces/（Pi 会话态，gitignore）
+        └─► PostgreSQL（元数据，与平台库可同实例不同 schema）
+```
+
+平台菜单/鉴权仍由 `apps/main-backend`（Egg.js）负责；**Agent 能力独立进程**，与 cartoon-agent `server/` 同模式。
+
+## 工作目录
+
+| 目录 | 角色 | 核心文件 |
+|------|------|----------|
+| `workspaces/{domain}_{id}/` | 业务域工作区 | SOUL.md, AGENTS.md, USER.md, MEMORY.md, tools/, sessions/ |
+| `workspace-templates/{domain}/` | 模板 | 首次对话从模板复制 |
+
+小说管理域模板：`workspace-templates/novel/`（对应子应用业务）。
+
+## 逻辑子 Agent（agent_name）
+
+**非独立进程**；Pi 单轮内通过 `agent_name` + `message_type` 区分（见各域 `AGENTS.md`）。
+
+小说域示例（与 cartoon-agent creator 对齐）：
+
+| agent_name | 能力 |
+|------------|------|
+| novel_writer | 小说 / 扩写 |
+| outline_planner | 大纲 / 任务拆解 |
+| genre_analyst | 类型分析 |
+| scene_analyst | 场景环境 |
+| character_analyst | 人物形象 |
+| script_adapter | 剧本化 |
+| storyboard_director | 分镜运镜 |
+| prompt_engineer | 提示词 |
+
+## 核心 API（agent-server）
+
+| 路径 | 说明 |
+|------|------|
+| `POST /api/chat` | 对话（SSE） |
+| `GET /api/llm/profiles` | 模型列表 |
+| `GET /api/internal/**` | Pi tools 读平台数据 |
+
+## 单轮管线
+
+```
+前端 → chat route → enrichMessage → runTurn → outboxPersist → SSE
+```
+
+- `inbox.md` = BFF enrichment（含 `## 当前消息`）
+- `outbox.json` = Pi 写出；BFF 落库 / 写 `data/` artifacts
+- 无 outbox → 通用补写 + fallback（见 cartoon-agent `creatorTurnFallback`）
+
+## 改代码索引
+
+| 目标 | 位置（实现后） |
+|------|----------------|
+| SSE 路由 | `apps/agent-server/src/bff/routes/` |
+| enrichment | `apps/agent-server/src/bff/services/enrich*.ts` |
+| Pi 单轮 | `apps/agent-server/src/agent/runTurn.ts` |
+| 落库 | `apps/agent-server/src/bff/services/outboxPersist.ts` |
+| 工作区模板 | `workspace-templates/novel/AGENTS.md` |
+
+## 禁止
+
+- Python LangGraph / 独立 Python Agent 子进程
+- TypeScript 关键词硬编码路由 `agent_name`
+- Pi 层直接 write 业务库（须经 BFF 契约）

@@ -1,0 +1,125 @@
+# 全栈本地 Docker（对齐 cartoon-agent deploy/docker-compose.yml）
+# 启动：ams local  或  docker compose --profile local up -d --build
+# 仅基础设施：ams local:infra  或  docker compose --profile infra up -d
+# 配置：deploy/config/.env.local + apps/*/.env 覆盖
+
+services:
+  postgres:
+    profiles: ["local", "infra"]
+    image: postgres:16-alpine
+    container_name: ams-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      POSTGRES_DB: ${POSTGRES_DB:-admin_platform}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ams_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-admin_platform}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    profiles: ["local", "infra"]
+    image: redis:7-alpine
+    container_name: ams-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ams_redis:/data
+
+  api-main:
+    profiles: ["local"]
+    build:
+      context: ..
+      dockerfile: docker/main-backend.Dockerfile
+    container_name: ams-api-main
+    restart: unless-stopped
+    env_file:
+      - ./config/.env.local
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
+    ports:
+      - "7001:7001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api-novel:
+    profiles: ["local"]
+    build:
+      context: ..
+      dockerfile: docker/novel-backend.Dockerfile
+    container_name: ams-api-novel
+    restart: unless-stopped
+    env_file:
+      - ./config/.env.local
+    environment:
+      POSTGRES_HOST: postgres
+    ports:
+      - "7002:7002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  agent-server:
+    profiles: ["local"]
+    build:
+      context: ..
+      dockerfile: deploy/config/Dockerfile.agent
+    container_name: ams-agent-server
+    restart: unless-stopped
+    env_file:
+      - ./config/.env.local
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin123}@postgres:5432/${POSTGRES_DB:-admin_platform}
+      WORKSPACES_ROOT: /workspaces
+      TEMPLATES_ROOT: /workspace-templates
+      DATA_ROOT: /data
+      PORT: 7003
+    volumes:
+      - ../workspaces:/workspaces
+      - ../workspace-templates:/workspace-templates
+      - ../data:/data
+    ports:
+      - "7003:7003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  main-frontend:
+    profiles: ["local"]
+    build:
+      context: ..
+      dockerfile: docker/main-frontend.Dockerfile
+      args:
+        VITE_API_BASE: /api
+        VITE_AGENT_API: /agent-api
+    container_name: ams-main-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - api-main
+
+  novel-frontend:
+    profiles: ["local"]
+    build:
+      context: ..
+      dockerfile: docker/novel-frontend.Dockerfile
+      args:
+        VITE_API_BASE: /api/novel
+    container_name: ams-novel-frontend
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+
+volumes:
+  ams_pgdata:
+  ams_redis:
