@@ -1,0 +1,54 @@
+---
+description: Electron + React 前端开发规范（主应用与子应用）
+globs: "{electron/**,frontend/**,**/main/**,**/preload/**,**/renderer/**,**/*.tsx,**/*.jsx}"
+alwaysApply: false
+---
+
+# Electron + React 开发规范
+
+## 进程隔离
+
+- 主进程只处理窗口生命周期、系统 API、IPC；业务 UI 在渲染进程。
+- 渲染进程禁止直接使用 Node.js 文件系统 API。
+- 预加载脚本通过 `contextBridge.exposeInMainWorld` 暴露受限 API。
+- `webPreferences` 必须：`nodeIntegration: false`、`contextIsolation: true`。
+
+## 目录结构
+
+**主应用（Electron-Egg）**：
+
+```
+electron/          # 主进程、Egg 后端
+frontend/src/      # React 基座
+  components/      # 可复用组件
+  containers/      # 业务容器
+  hooks/
+  utils/
+  common/enums/    # 公共枚举
+```
+
+**子应用（Vite + React）**：
+
+```
+src/main/          # Electron 主进程（若子应用独立打包）
+src/preload/
+src/renderer/src/
+  components/
+  views/
+  stores/
+  services/
+  router/
+```
+
+## 编码约定
+
+- 组件 PascalCase（如 `UserProfileForm`）；工具/钩子 camelCase。
+- 枚举放 `common/enums`，全大写下划线（如 `USER_STATUS`），ES Module 导出。
+- 全局状态：主应用可用 Redux 或 Context API；子应用独立管理内部状态。
+- 环境变量通过 `process.env` 或构建注入，不硬编码密钥。
+
+## IPC 通信
+
+- 主进程用 `ipcMain.handle` / `ipcMain.on`；渲染进程通过预加载暴露的 API 调用。
+- IPC 通道命名：`domain:action`（如 `menu:getAll`）。
+- 禁止在渲染进程直接使用 `ipcRenderer`（须经预加载桥接）。

@@ -1,0 +1,50 @@
+---
+description: Qiankun 微前端集成规范
+globs: "{frontend/**,**/renderer/**,**/microapp/**,**/qiankun/**}"
+alwaysApply: false
+---
+
+# Qiankun 微前端规范
+
+## 架构原则
+
+- 主应用为基座：菜单渲染、路由管理、子应用容器、全局状态。
+- 一级菜单对应一个子应用；菜单数据与代码解耦，通过 `microapp_name` 绑定。
+- 子应用可独立开发、构建、部署；技术栈不限（本项目子应用为 React）。
+
+## 子应用注册
+
+从菜单 API 动态注册，字段映射：
+
+| 菜单字段 | Qiankun 配置 |
+|---------|-------------|
+| `microapp_name` | `name` |
+| 构建入口 URL | `entry` |
+| `route_prefix` | `activeRule`（如 `/media/${route_prefix}`） |
+
+## 子应用生命周期
+
+必须导出 `bootstrap`、`mount`、`unmount`：
+
+```javascript
+export async function bootstrap() { /* 初始化 */ }
+export async function mount(props) { /* 挂载到 props.container */ }
+export async function unmount() { /* 卸载并清理监听 */ }
+```
+
+## 路由与 basename
+
+- 子应用 Router 必须设置与主应用一致的 `basename`（从 `props` 或全局变量获取）。
+- 独立运行时 fallback：`window.__POWERED_BY_QIANKUN__ ? props.basename : '/'`。
+- 主应用路由：`/:appKey/*` 匹配子应用前缀。
+
+## 通信
+
+- 主 → 子：Qiankun `props` 传递菜单元数据、用户信息、basename。
+- 跨应用：全局事件总线或 Qiankun 全局状态；子应用卸载时清理全部监听。
+- 样式/JS 隔离：启用 Qiankun 沙箱；避免污染 `window` 全局变量。
+
+## 资源加载
+
+- 开发：`entry` 指向本地 dev server（如 `//localhost:3001`）。
+- 生产：HTTP 协议加载构建产物，避免 `file://`。
