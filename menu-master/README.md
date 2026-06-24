@@ -22,7 +22,7 @@ menu-master/
 
 ├── backend/          # Egg.js BFF
 
-├── frontend/         # React + Vite + Qiankun 基座
+├── frontend/         # Vue 3 + Vite + Qiankun 基座
 
 ├── database/         # init.sql
 
@@ -169,7 +169,7 @@ npm run dev
 
 - [egg-backend.mdc](../.cursor/rules/egg-backend.mdc)
 
-- [react-web.mdc](../.cursor/rules/react-web.mdc)
+- [vue-web.mdc](../.cursor/rules/vue-web.mdc)
 
 - [qiankun-microfrontend.mdc](../.cursor/rules/qiankun-microfrontend.mdc)
 

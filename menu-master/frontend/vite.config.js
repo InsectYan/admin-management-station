@@ -1,5 +1,5 @@
 import { defineConfig, loadEnv } from 'vite';
-import react from '@vitejs/plugin-react';
+import vue from '@vitejs/plugin-vue';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
   const apiOrigin = apiBase.replace(/\/api\/?$/, '');
 
   return {
-    plugins: [react()],
+    plugins: [vue()],
     server: {
       host: '0.0.0.0',
       port,
@@ -30,7 +30,7 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks: {
-            antd: ['antd', '@ant-design/icons'],
+            'element-plus': ['element-plus', '@element-plus/icons-vue'],
           },
         },
       },

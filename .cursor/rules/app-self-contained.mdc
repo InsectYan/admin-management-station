@@ -12,7 +12,7 @@ alwaysApply: true
 
 | 模块 | 路径（示例） | 说明 |
 |------|-------------|------|
-| 前端 | `{app}/frontend/` | React + Qiankun（子应用）或主应用 SPA |
+| 前端 | `{app}/frontend/` | Vue 3 + Qiankun（子应用）或主应用 SPA |
 | 服务端 BFF | `{app}/backend/` | Egg.js REST API |
 | Agent（若需要） | `{app}/agent/` | Pi BFF + AgentManager，**不得**拆成仓库级独立服务 |
 | 数据库设计 | `{app}/database/` | `init.sql`、迁移说明；ORM 模型在 `backend/app/model/` |

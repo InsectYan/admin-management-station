@@ -12,7 +12,7 @@ alwaysApply: false
 
 - 主应用为基座：菜单渲染、路由管理、子应用容器、全局状态。
 - 一级菜单对应一个子应用；菜单数据与代码解耦，通过 `microapp_name` 绑定。
-- 子应用可独立开发、构建、部署；技术栈不限（本项目子应用为 React）。
+- 子应用可独立开发、构建、部署；技术栈不限（本项目子应用为 **Vue 3 + Element Plus**）。
 
 ## 子应用注册
 
@@ -61,4 +61,4 @@ alwaysApply: false
 
 ## 相关规则
 
-- `subapp-onboarding.mdc` · `app-registry.mdc` · `react-web.mdc` · `egg-backend.mdc`
+- `subapp-onboarding.mdc` · `app-registry.mdc` · `vue-web.mdc` · `egg-backend.mdc`

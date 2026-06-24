@@ -39,8 +39,8 @@ skills/project-developer/
 ├── SKILL.md                    # 执行入口（Agent 读取此文件）
 ├── README.md                   # 本说明
 ├── design-doc-workflow.md      # 设计文档分析与缺陷检测
-├── react-web-main.md           # 主应用前端工作流
-├── react-web-subapp.md         # 子应用前端工作流
+├── vue-web-main.md           # 主应用前端工作流
+├── vue-web-subapp.md         # 子应用前端工作流
 ├── docker-workflow.md          # Docker 部署工作流
 ├── qiankun-microfrontend.md    # 微前端集成工作流
 ├── egg-backend.md              # 后端工作流
@@ -53,7 +53,7 @@ skills/project-developer/
 
 - 通用：`development-standards.mdc`
 - **多应用端口/库名：`app-registry.mdc`**（[`应用端口与命名注册表.md`](../../docs-project/应用端口与命名注册表.md)）
-- 前端：`react-web.mdc`、`react-antd.mdc`
+- 前端：`vue-web.mdc`、`vue-element-plus.mdc`
 - 部署：`docker.mdc`
 - 后端：`egg-backend.mdc`
 - 数据库：`postgresql.mdc`

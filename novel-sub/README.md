@@ -6,7 +6,7 @@
 
 | 模块 | 路径 | 端口（默认） |
 |------|------|-------------|
-| 前端 | `frontend/` | Vite **5174** |
+| 前端 | `frontend/` | Vue 3 + Element Plus · Vite **5174** |
 | Egg.js BFF | `backend/` | API **7002** |
 | Pi Agent | `agent/` | **7003** |
 | 数据库 | `database/init.sql` | PG 宿主机 **5433** · `novel_db` |

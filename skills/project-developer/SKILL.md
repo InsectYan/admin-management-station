@@ -3,7 +3,7 @@ name: project-developer
 description: >-
   基于 docs-project/ 设计文档驱动 admin-management-station 混合架构开发。
   分析设计文档、按技术栈拆分任务、检测设计缺陷并指导分模块实现。
-  适用于 React Web 主应用、Qiankun 微前端子应用、Egg.js BFF、PostgreSQL、Docker 部署场景。
+  适用于 Vue 3 Web 主应用、Qiankun 微前端子应用、Egg.js BFF、PostgreSQL、Docker 部署场景。
   当用户提供或引用 docs-project/ 设计文档、要求按设计开发、拆分任务或启动子模块开发时使用。
 ---
 
@@ -38,8 +38,8 @@ description: >-
 
 | 技术栈 | 工作流文档 | 编码规范 |
 |-------|-----------|---------|
-| 主应用前端 | [react-web-main.md](react-web-main.md) | `react-web.mdc` |
-| 子应用前端 | [react-web-subapp.md](react-web-subapp.md) | `react-web.mdc` + `react-antd.mdc` |
+| 主应用前端 | [vue-web-main.md](vue-web-main.md) | `vue-web.mdc` |
+| 子应用前端 | [vue-web-subapp.md](vue-web-subapp.md) | `vue-web.mdc` + `vue-element-plus.mdc` |
 | Docker 部署 | [docker-workflow.md](docker-workflow.md) | `docker.mdc` + **`docker-compose.mdc`** + `deploy-cli.mdc` |
 | Pi Agent | [../docs-project/Agent开发方案.md](../../docs-project/Agent开发方案.md) | `pi-v3-agent.mdc` + `pi-minimal-design.mdc` |
 | 微前端集成 | [qiankun-microfrontend.md](qiankun-microfrontend.md) | `qiankun-microfrontend.mdc` |
@@ -90,8 +90,8 @@ tasks/
 | 文档 | 类型 | 说明 |
 |-----|------|------|
 | `docs-project/应用端口与命名注册表.md` | 注册表 | **各应用端口、库名、容器名（并行开发必读）** |
-| `docs-project/私人管理平台主应用设计.md` | 主应用 | React Web + Qiankun 基座、菜单系统 |
-| `docs-project/小说管理页面子应用设计.MD` | 子应用 | React + Ant Design 小说管理微应用（实现目录 **`novel-sub/`**） |
+| `docs-project/私人管理平台主应用设计.md` | 主应用 | Vue 3 Web + Qiankun 基座、菜单系统 |
+| `docs-project/小说管理页面子应用设计.MD` | 子应用 | Vue 3 + Element Plus 小说管理微应用（实现目录 **`novel-sub/`**） |
 | `docs-project/部署与Docker方案.md` | 部署 | Docker Compose 与 Nginx 拓扑 |
 
 ## 禁止事项
