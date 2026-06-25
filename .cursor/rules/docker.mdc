@@ -8,35 +8,25 @@ alwaysApply: false
 
 ## 原则
 
-- **每应用 `deploy/docker-compose.yml` 自带 Postgres**（见 `app-self-contained.mdc`）。
-- 缓存默认 **memory**，无需 Redis 容器（见 `cache-local.mdc`）。
+- 每应用 `deploy/docker-compose.yml` **自带 Postgres**（见 `app-self-contained.mdc`）。
+- 缓存默认 **memory**（见 `cache-local.mdc`）。
 - 日常启动：**`ams-{app_key} local`**。
-- 配置：`{app}/deploy/config/.env.local` + 业务目录 `.env`。
+- 配置：`{app}/deploy/config/.env.local` + `{app}/backend/.env`。
 - 端口以 **`app-registry.mdc`** 为准。
-
-## 目录
-
-```
-menu-master/deploy/     # ams-main · PG :5432
-novel-sub/deploy/       # ams-novel · PG :5433 · agent
-```
-
-**禁止**依赖根 `deploy/compose/infra.yml`。
 
 ## 镜像
 
 | 类型 | Dockerfile | context |
 |------|------------|---------|
-| Egg BFF | `{app}/deploy/config/Dockerfile*` | 应用根 |
-| Agent | `{app}/deploy/config/Dockerfile.agent` | 应用根 |
-| 前端 | `{app}/deploy/config/Dockerfile.frontend` 或 `frontend/Dockerfile` | 应用根 / frontend |
+| Egg BFF | `{app}/deploy/config/Dockerfile.backend` | 应用根 |
+| 前端 | `{app}/deploy/config/Dockerfile.frontend` | 应用根 |
 
 基础镜像：**`node:22-alpine`**。
 
 ## 网络
 
-- 容器互访用 service 名（`postgres`、`api-novel`、`agent`）。
-- 禁止容器内用 `localhost` 访问同栈其他服务。
+- 容器互访用 service 名（`postgres`、`api-*`）。
+- 禁止容器内 `localhost` 访问同栈其他服务。
 
 ## CLI
 

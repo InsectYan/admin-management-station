@@ -1,6 +1,6 @@
 ---
 description: Node.js Egg.js 后端 BFF 开发规范
-globs: "{electron/**,back-end/**,**/app/controller/**,**/app/service/**,**/app/model/**,**/config/**}"
+globs: "{**/backend/**,**/app/controller/**,**/app/service/**,**/app/model/**,**/config/**}"
 alwaysApply: false
 ---
 
@@ -8,15 +8,15 @@ alwaysApply: false
 
 ## 分层职责
 
-- **Controller**：参数校验、调用 Service、组装 HTTP 响应；不含业务逻辑。
+- **Controller**：参数校验、调用 Service、组装 HTTP 响应。
 - **Service**：业务逻辑与事务编排。
-- **Model**：数据模型与 ORM 映射（`app/model/`）。
-- 路由定义在 `app/router.js` 或 `app/route/`，API 前缀 `/api`。
+- **Model**：ORM 映射（`app/model/`）。
+- 路由：`app/router.js`，API 前缀 `/api`。
 
 ## 目录约定
 
 ```
-electron/  或  back-end/
+{app}/backend/
   app/
     controller/
     service/
@@ -30,24 +30,22 @@ electron/  或  back-end/
 
 ## 响应格式
 
-统一 JSON 结构：
-
 ```javascript
 { code: 200, message: 'success', data: /* payload */ }
 ```
 
-错误时：`code` 为 HTTP 语义码（400/403/500），`message` 可读，`data` 可为 `null`。
+错误：`code` 为 HTTP 语义码，`message` 可读，`data` 可为 `null`。
 
 ## 插件与配置
 
 - 数据库：`egg-sequelize` + PostgreSQL（`plugin.js` 须 `enable: true, package: 'egg-sequelize'`）。
 - 子应用 BFF：须 `egg-cors`（Qiankun 跨 origin）。
-- 认证：`egg-jwt`；**主应用**对 `GET /api/menus`、`/api/health` 等配置 `jwt.ignore`（见 `subapp-onboarding.mdc`）。
-- 写操作：JWT + RBAC / `adminAuth`。
-- 时区：`Asia/Shanghai`（在 `app.js` 中设置）。
-- 配置分环境：`config.default.js` + `config.local.js`；敏感项走环境变量。
-- **多应用隔离**：每个 BFF 独立 `PORT` 与 `POSTGRES_DB`（见 `app-registry.mdc`）。
-- **Docker 内 DB**：`POSTGRES_HOST=postgres`、`POSTGRES_PORT=5432`；宿主机 dev 用映射端口（如 5433）。
+- 认证：`egg-jwt`；主应用对公开读接口配置 `jwt.ignore`（见 `subapp-onboarding.mdc`）。
+- 写操作：JWT + RBAC / 权限中间件。
+- 时区：`Asia/Shanghai`（`app.js`）。
+- 配置：`config.default.js` + `config.local.js`；敏感项走环境变量。
+- **多应用**：独立 `PORT` 与 `POSTGRES_DB`（见 `app-registry.mdc`）。
+- **Docker 内 DB**：`POSTGRES_HOST=postgres`、`POSTGRES_PORT=5432`；宿主机 dev 用映射端口。
 
 ## Docker 内启动
 
@@ -60,5 +58,5 @@ CMD ["npx", "egg-scripts", "start", "--title={app}-backend", "--workers=1"]
 ## 安全
 
 - 禁止 SQL 字符串拼接；使用 ORM 或参数化查询。
-- 写接口（POST/PUT/DELETE）必须鉴权与权限校验。
+- 写接口（POST/PUT/DELETE）须鉴权。
 - 日志用 `ctx.app.logger`，不输出密码/令牌。

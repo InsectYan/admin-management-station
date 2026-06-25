@@ -8,9 +8,7 @@
 |------|------|-------------|
 | 前端 | `frontend/` | Vue 3 + Element Plus · Vite **5174** |
 | Egg.js BFF | `backend/` | API **7002** |
-| Pi Agent | `agent/` | **7003** |
 | 数据库 | `database/init.sql` | PG 宿主机 **5433** · `novel_db` |
-| Pi 模板 | `workspace-templates/novel/` | — |
 | 部署 | `deploy/` | `ams-novel` |
 
 ## 接入主应用（Qiankun）
@@ -37,7 +35,6 @@ cd menu-master/backend && npm run dev     # :7001
 # 3. 启动本子应用
 cd novel-sub/frontend && npm run dev      # :5174
 cd novel-sub/backend && npm run dev       # :7002（业务 API）
-cd novel-sub/agent && npm run dev         # :7003（可选，Agent 页）
 ```
 
 浏览器打开 http://localhost:5173 ，点击「小说管理」即可加载本子应用。
@@ -46,7 +43,7 @@ cd novel-sub/agent && npm run dev         # :7003（可选，Agent 页）
 
 ```bash
 cd deploy && npm link
-ams-novel local          # postgres + api + agent + frontend
+ams-novel local          # postgres + api + frontend
 ams-novel local:infra    # 仅 DB，宿主机 npm run dev
 ```
 
@@ -56,14 +53,12 @@ ams-novel local:infra    # 仅 DB，宿主机 npm run dev
 cd backend && npm install && npm run db:init
 cd backend && npm run dev      # :7002
 cd frontend && npm run dev     # :5174
-cd agent && npm install && npm run dev   # :7003
 ```
-
-Agent 配置：`agent/.env.example`（DB 默认 `127.0.0.1:5433/novel_db`）
 
 ## 规范
 
 - [app-self-contained.mdc](../.cursor/rules/app-self-contained.mdc)
 - [cache-local.mdc](../.cursor/rules/cache-local.mdc)
 - [qiankun-microfrontend.mdc](../.cursor/rules/qiankun-microfrontend.mdc)
-- [Agent开发方案.md](../docs-project/Agent开发方案.md)
+- [sub-app-developer 工作流](../skills/sub-app-developer/SKILL.md)
+- [novel-sub 项目 Skill](../skills/project-developer/novel-sub/SKILL.md)

@@ -44,30 +44,6 @@ services:
       postgres:
         condition: service_healthy
 
-  agent:
-    build:
-      context: ..
-      dockerfile: deploy/config/Dockerfile.agent
-    container_name: ams-novel-agent
-    restart: unless-stopped
-    env_file:
-      - ./config/.env.local
-    environment:
-      PORT: ${NOVEL_AGENT_PORT:-7003}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-admin123}@postgres:5432/${NOVEL_POSTGRES_DB:-novel_db}
-      TEMPLATES_ROOT: /app/workspace-templates
-      WORKSPACES_ROOT: /app/workspaces
-      DATA_ROOT: /app/data
-      NOVEL_BFF_URL: http://api-novel:${NOVEL_PORT:-7002}
-      BFF_URL: http://localhost:${NOVEL_AGENT_PORT:-7003}
-    ports:
-      - "${NOVEL_AGENT_PORT:-7003}:${NOVEL_AGENT_PORT:-7003}"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      api-novel:
-        condition: service_started
-
   novel-frontend:
     build:
       context: ..
@@ -80,10 +56,8 @@ services:
       - ./config/.env.local
     environment:
       VITE_API_BASE: http://localhost:7002/api
-      VITE_AGENT_API_BASE: http://localhost:7003
     depends_on:
       - api-novel
-      - agent
 
 networks:
   default:

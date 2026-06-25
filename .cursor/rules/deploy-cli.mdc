@@ -21,8 +21,6 @@ alwaysApply: false
 首次：`cd {app}/deploy && npm link`  
 未 link：`node {app}/deploy/scripts/run.mjs <命令>`
 
-**无独立 `ams-agent`** — Agent 随 `ams-novel local` 启动。
-
 ## 命令表
 
 | 命令 | 作用 |
@@ -38,12 +36,11 @@ alwaysApply: false
 
 | 场景 | 可提交 | gitignore |
 |------|--------|-----------|
-| 本地 Docker | `{app}/deploy/config/.env.local` | `{app}/backend/.env`、`{app}/agent/.env` |
+| 本地 Docker | `{app}/deploy/config/.env.local` | `{app}/backend/.env` |
 
 端口/库名以 [`app-registry.mdc`](./app-registry.mdc) 为准。
 
 ## 禁止
 
 - 根级共享 infra compose 作为应用默认启动方式
-- `apps/agent-server/deploy` 等独立 Agent CLI
 - 文档只写 bash、Windows 无法执行的步骤

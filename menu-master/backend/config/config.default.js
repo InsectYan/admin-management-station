@@ -68,6 +68,7 @@ module.exports = appInfo => {
 
   config.subappEntryEnv = {
     'novel-app': 'SUBAPP_NOVEL_ENTRY',
+    'testgen-app': 'SUBAPP_TESTGEN_ENTRY',
   };
 
   return config;

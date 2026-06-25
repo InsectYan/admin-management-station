@@ -25,17 +25,6 @@ export function resolveNovelApiBase() {
   return normalizeBase(configured || '/api');
 }
 
-export function resolveAgentApiBase() {
-  const configured = import.meta.env.VITE_AGENT_API_BASE;
-  if (configured && isAbsoluteUrl(configured)) {
-    return normalizeBase(configured);
-  }
-  if (qiankunWindow.__POWERED_BY_QIANKUN__) {
-    return normalizeBase(configured || 'http://localhost:7003');
-  }
-  return normalizeBase(configured || '/agent-api');
-}
-
 export function isQiankunEmbedded() {
   return !!qiankunWindow.__POWERED_BY_QIANKUN__;
 }

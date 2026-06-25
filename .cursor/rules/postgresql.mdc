@@ -8,37 +8,36 @@ alwaysApply: false
 
 ## 命名
 
-- 表名：小写复数 + 下划线（如 `menu_items`、`novels`）。
+- 表名：小写复数 + 下划线（如 `users`、`order_items`）。
 - 字段：小写 + 下划线。
 - 主键：`id`，`SERIAL` 或 `BIGSERIAL`。
-- 外键：`{关联表单数}_id`（如 `user_id`、`novel_id`）。
-- 时间戳：每张业务表含 `created_at`、`updated_at`，默认 `CURRENT_TIMESTAMP`。
+- 外键：`{关联表单数}_id`。
+- 时间戳：每张表含 `created_at`、`updated_at`，默认 `CURRENT_TIMESTAMP`。
 
 ## 索引
 
 - 外键、频繁筛选字段建 B-tree 索引。
-- JSONB 查询字段建 GIN 索引（如 `plot`、`profile`）。
-- 复合查询建组合索引（如 `(novel_id, chapter_number)`）。
+- JSONB 查询字段建 GIN 索引。
+- 复合查询建组合索引。
 
 ## 数据类型
 
-- 半结构化数据用 `JSONB`，不用 TEXT 存 JSON。
-- 状态/角色等有限枚举用 `VARCHAR` + 应用层枚举约束。
-- 长文本（章节内容）用 `TEXT`。
+- 半结构化数据用 `JSONB`。
+- 有限枚举用 `VARCHAR` + 应用层约束。
+- 长文本用 `TEXT`。
 
 ## 访问层
 
-- 通过 ORM（Sequelize / TypeORM）定义模型，避免裸 SQL。
-- 多步写操作用事务；读多写少场景使用 `app/lib/cache.js`（默认 memory，见 `cache-local.mdc`）。
-- 生产环境：`synchronize: false`，变更走 migration。
-- 禁止在应用层拼接用户输入到 SQL。
+- 通过 ORM（Sequelize）定义模型于 `app/model/`，避免裸 SQL。
+- 多步写操作用事务；读多写少用 `app/lib/cache.js`（见 `cache-local.mdc`）。
+- 生产：`synchronize: false`，变更走 migration。
+- 禁止拼接用户输入到 SQL。
 
-## 多应用数据库隔离
+## 多应用隔离
 
-- 单 PostgreSQL 实例（`:5432`），**按业务域分 database**，勿混用连接串。
-- 主应用菜单/鉴权 → `admin_platform`；小说业务 → `novel_db`；Agent 元数据 → `admin_platform`。
-- 新增子应用：在 `app-registry.mdc` 登记 `{app_key}_db` 后再建 migration。
+- 每个 `app_key` 使用独立 `POSTGRES_DB`（见 `app-registry.mdc`）。
+- 禁止多个 BFF 混连同一业务库（主库 `subapp_registry` 除外，仅主应用 BFF 访问）。
 
-## 设计文档对照
+## 与设计文档协作
 
-设计文档中每张表须包含：`created_at`、`updated_at`、必要索引与外键约束；缺失时在实现前反馈设计缺陷。
+实现前对照 `docs-project/` 中对应设计文档的 DDL；缺失 `created_at`/`updated_at`/索引/外键时，在编码前反馈设计缺陷（见 `skills/project-developer/{app}/`）。

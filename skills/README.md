@@ -1,27 +1,40 @@
 # Skills 目录
 
-本目录存放 admin-management-station 项目的 Agent Skills。每个 skill 独立成目录，含 `SKILL.md`（执行入口）与 `README.md`（用途说明）。
+admin-management-station 开发流程 Skills。编码规范见 [`.cursor/rules/`](../.cursor/rules/)，Skills 只定义**流程与加载顺序**，不重复 rules 条文。
 
-## 可用 Skills
-
-| Skill | 目录 | 说明 |
-|-------|------|------|
-| project-developer | [project-developer/](project-developer/) | 基于 `docs-project/` 设计文档驱动混合架构开发 |
-
-后续新增 skill 时，在此表追加一行并在对应目录下创建 `SKILL.md` + `README.md`。
-
-## 与开发规范的关系
-
-- **编码规范**： [`.cursor/rules/`](../.cursor/rules/) — 开发时必须遵循（含 **`app-registry.mdc`** 多应用端口/库名）
-- **开发流程**： `skills/{skill-name}/` — 定义如何分析设计、拆分任务、分模块实现
-
-Skill 工作流文档引用 `.cursor/rules/`，不在 skill 中重复编码标准。
-
-## 使用方式
-
-在 Cursor 对话中 @ 引用 skill 入口文件：
+## 结构
 
 ```
-@skills/project-developer/SKILL.md
-请根据 docs-project/私人管理平台主应用设计.md 拆分开发任务
+skills/
+├── main-app-developer/       # 主应用（基座）通用开发
+├── sub-app-developer/        # 子应用脚手架与 Qiankun 接入（通用）
+└── project-developer/        # 按已登记应用扩展（含业务设计文档）
+    └── novel-sub/            # 示例：在 novel-sub 上迭代
+```
+
+## 选用指南
+
+| 场景 | @ 引用 |
+|------|--------|
+| 新建/维护主应用基座 | `@skills/main-app-developer/SKILL.md` |
+| 新建子应用或接入 Qiankun | `@skills/sub-app-developer/SKILL.md` |
+| 在已有子应用上按设计文档开发 | `@skills/project-developer/{app_key}/SKILL.md` |
+
+## 与 docs-project 的关系
+
+- **rules + main/sub skills**：纯技术栈，不含业务域说明。
+- **project-developer/{app}/**：引用 `docs-project/` 中对应设计文档，负责模块拆分与缺陷检测。
+- 设计文档本身不在 skills 中重复；无设计说明的章节不做额外优化。
+
+## 使用示例
+
+```
+@skills/main-app-developer/SKILL.md
+实现菜单 API 与 Qiankun 动态注册
+
+@skills/sub-app-developer/SKILL.md
+复制 novel-sub 骨架登记新 app_key=testgen
+
+@skills/project-developer/novel-sub/SKILL.md
+根据 docs-project/小说管理页面子应用设计.MD 实现列表页 API
 ```

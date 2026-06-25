@@ -1,6 +1,6 @@
 ---
 description: Vue 3 Web SPA 前端开发规范（主应用与子应用）
-globs: "{menu-master/**,novel-sub/**,**/frontend/**,**/*.vue,**/*.ts}"
+globs: "{menu-master/**,novel-sub/**,**/frontend/**,**/*.vue}"
 alwaysApply: false
 ---
 
@@ -8,48 +8,39 @@ alwaysApply: false
 
 ## 架构
 
-- 主应用与子应用均为 **Web SPA**，Vite 构建，Nginx 容器托管静态资源。
-- 前后端通信仅通过 **HTTP RESTful API**（开发时 Vite proxy，生产时 Nginx 反向代理）。
-- 子应用通过 Qiankun 以 HTTP entry 加载，独立 Dockerfile 部署。
+- 主应用与子应用均为 **Web SPA**，Vite 构建。
+- 前后端通信仅通过 **HTTP RESTful API**（dev：Vite proxy；prod：Nginx 反向代理）。
+- 子应用通过 Qiankun 以 HTTP entry 加载。
 
 ## 目录结构
 
-**主应用**：
-
 ```
-menu-master/frontend/src/
+{app}/frontend/src/
   components/
-  composables/
+  views/          # 子应用
+  composables/    # 主应用可选
   router/
-  services/
-  qiankun/
-```
-
-**子应用**：
-
-```
-novel-sub/frontend/src/
-  components/
-  views/
-  router/
-  services/
-  qiankun/
+  services/       # API 封装；子应用须含 apiConfig.js
+  qiankun/        # 生命周期与配置
 ```
 
 ## 编码约定
 
 - 组件 PascalCase（`.vue`）；composable / 工具 camelCase。
-- 枚举放 `common/enums`，全大写下划线，ES Module 导出。
-- API 调用封装在 `services/`；**子应用**须 `services/apiConfig.js` 区分 Qiankun 嵌入与独立运行（见 `subapp-onboarding.mdc`）。
-- 环境变量：`VITE_APP_KEY`、`VITE_API_BASE`、`VITE_DEV_PORT`、`VITE_SUBAPP_*_ENTRY`（主应用）、不硬编码端口。
-- **多应用并行**：主应用 Vite **5173**、小说子应用 **5174**（见 `app-registry.mdc`）；禁止两个前端共用同一 dev 端口。
-- UI 组件库：**Element Plus**；全局中文 locale 在 `main.js` 配置。
+- API 调用封装在 `services/`，不在组件内直接 fetch。
+- 环境变量：`VITE_APP_KEY`、`VITE_API_BASE`、`VITE_DEV_PORT`；主应用另用 `VITE_SUBAPP_*_ENTRY`。
+- **禁止硬编码端口**；读 env 或 `app-registry.mdc`。
+- UI：**Element Plus**；中文 locale 在 `main.js` 配置。
+
+## 子应用 apiConfig
+
+Qiankun 嵌入时 **不得**用相对 `/api` 访问本子应用 BFF（会打到主应用 origin）。须检测 `__POWERED_BY_QIANKUN__` 并使用 **绝对 BFF URL**。详见 `subapp-onboarding.mdc`。
+
+## 构建
+
+- Vite + `@vitejs/plugin-vue`；子应用加 `vite-plugin-qiankun`（`useDevMode: true`）。
+- 生产：多阶段 Docker 构建，构建期注入 `VITE_*`。
 
 ## 草稿与本地状态
 
 - 多步骤表单草稿用 `sessionStorage` 或后端草稿 API。
-
-## Docker
-
-- 前端镜像多阶段构建：Node 构建 + Nginx 运行。
-- 构建参数注入 `VITE_*` 环境变量。

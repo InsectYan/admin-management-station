@@ -1,0 +1,69 @@
+# AI智能测试平台子应用（app_key=testgen）— 自包含
+# 启动：cd testgen-sub/deploy && npm link && ams-testgen local
+
+name: ams-testgen
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ams-testgen-postgres
+    restart: unless-stopped
+    env_file:
+      - ./config/.env.local
+    environment:
+      POSTGRES_DB: ${TESTGEN_POSTGRES_DB:-testgen_db}
+    ports:
+      - "${TESTGEN_POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - testgen_pgdata:/var/lib/postgresql/data
+      - ../database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${TESTGEN_POSTGRES_DB:-testgen_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api-testgen:
+    build:
+      context: ..
+      dockerfile: deploy/config/Dockerfile.backend
+    container_name: ams-api-testgen
+    restart: unless-stopped
+    env_file:
+      - ./config/.env.local
+    environment:
+      APP_KEY: testgen
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      CACHE_DRIVER: memory
+      PORT: ${TESTGEN_PORT:-7003}
+      POSTGRES_DB: ${TESTGEN_POSTGRES_DB:-testgen_db}
+      AGENT_PLATFORM_URL: ${AGENT_PLATFORM_URL:-http://host.docker.internal:3001}
+    ports:
+      - "${TESTGEN_PORT:-7003}:${TESTGEN_PORT:-7003}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  testgen-frontend:
+    build:
+      context: ..
+      dockerfile: deploy/config/Dockerfile.frontend
+    container_name: ams-testgen-frontend
+    restart: unless-stopped
+    ports:
+      - "${TESTGEN_VITE_PORT:-5175}:5175"
+    env_file:
+      - ./config/.env.local
+    environment:
+      VITE_API_BASE: http://localhost:7003/api
+      VITE_DEV_PORT: 5175
+    depends_on:
+      - api-testgen
+
+networks:
+  default:
+    name: ams-testgen-net
+
+volumes:
+  testgen_pgdata:

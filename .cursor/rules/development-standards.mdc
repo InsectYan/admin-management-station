@@ -5,64 +5,56 @@ alwaysApply: true
 
 # 开发规范
 
-本文件定义 admin-management-station 项目的通用开发约束。**所有参与者（包括开发者与 AI 助手）在编写、修改或审查代码时均须遵循。**
+本文件定义 admin-management-station 工作区的通用开发约束。**编写、修改或审查代码时均须遵循。**
 
 ## 自包含应用（最高优先级）
 
-**每个主应用、子应用必须是可独立拆出的完整项目**，自带 frontend、backend、（可选）agent、database、deploy；PostgreSQL 由各应用 compose 管理，缓存默认 **memory**（见 `cache-local.mdc`），**禁止**仓库级共享 infra。
+**每个主应用、子应用必须是可独立拆出的完整项目**，自带 `frontend`、`backend`、`database`、`deploy`；PostgreSQL 由各应用 compose 管理，缓存默认 **memory**（见 `cache-local.mdc`），**禁止**仓库级共享 infra。
 
-详见 **[`app-self-contained.mdc`](./app-self-contained.mdc)**。与本节冲突的旧约定（如 `apps/`、`deploy/compose/infra.yml`、独立 `agent-server`）一律以自包含规则为准。
+详见 **[`app-self-contained.mdc`](./app-self-contained.mdc)**。与本节冲突的旧约定（如 `apps/`、`deploy/compose/infra.yml`）一律以自包含规则为准。
 
 ## 基本原则
 
-- **最小改动**：只修改与当前任务直接相关的内容，不做无关重构或功能扩展。
-- **遵循现有约定**：新增代码应匹配项目已有的命名、目录结构、类型定义与代码风格。
-- **可读优先**：代码应自解释；仅在业务逻辑或技术细节不直观处添加必要注释。
-- **可维护性**：避免过度抽象；优先复用已有模块，而非重复实现相似逻辑。
+- **最小改动**：只修改与当前任务直接相关的内容。
+- **遵循现有约定**：匹配项目已有的命名、目录结构与代码风格。
+- **可读优先**：代码自解释；仅在非直观处添加必要注释。
+- **可维护性**：避免过度抽象；优先复用已有模块。
 
 ## 代码质量
 
-- 提交前确保变更可正常运行，不引入明显错误或 lint 问题。
-- 不提交敏感信息（密钥、密码、令牌、`.env` 等）。
-- 错误处理应明确、可追踪，避免空捕获或静默失败。
-- 仅在任务明确要求或能覆盖真实行为时添加测试。
+- 变更可正常运行，不引入明显错误或 lint 问题。
+- 不提交敏感信息（密钥、`.env` 等）。
+- 错误处理明确、可追踪。
+- 仅在任务明确要求时添加测试。
 
 ## Git 与协作
 
-- 未经明确要求，不主动创建 commit 或 push。
-- commit 信息应简洁、准确，说明变更目的而非仅罗列文件名。
-- 不执行破坏性 git 操作（如 force push、hard reset），除非明确要求。
+- 未经明确要求，不主动 commit 或 push。
+- 不执行破坏性 git 操作，除非明确要求。
 
-## AI 辅助开发
-
-- AI 生成或修改的代码同样受本规范约束，须经过人工审查后再合并。
-- AI 应优先阅读并理解现有代码，再提出与项目一致的实现方案。
-- 规范冲突时，以 `.cursor/rules/` 中的规则为准。
-
-## 技术栈规范
-
-开发时须同时遵循对应技术栈规则（位于 `.cursor/rules/`）：
+## 技术栈规范索引
 
 | 规则文件 | 适用范围 |
 |---------|---------|
-| **`app-self-contained.mdc`** | **自包含应用架构（必读）** |
-| **`app-registry.mdc`** | **多应用端口、数据库名、容器名（并行开发必读）** |
-| **`cache-local.mdc`** | **本地优先缓存（默认 memory，无 Redis 容器）** |
-| **`subapp-onboarding.mdc`** | **新子应用接入主应用（Qiankun）检查清单与避坑** |
-| `pi-v3-agent.mdc` | 子应用内 `{app}/agent/` Pi 开发 |
-| `pi-minimal-design.mdc` | Pi 极简原则 |
-| `deploy-cli.mdc` | **各应用 `ams-{app_key}` CLI 与 `{app}/deploy/`** |
-| **`windows-console.mdc`** | **Windows PowerShell 中文 I/O（UTF-8 BOM）** |
-| `docker.mdc` | 容器与镜像 |
-| **`docker-compose.mdc`** | **每应用自包含 `deploy/docker-compose.yml`** |
-| `vue-web.mdc` | Vue 3 Web SPA 主应用与子应用前端 |
-| `egg-backend.mdc` | Egg.js BFF 后端 |
-| `postgresql.mdc` | 数据库表结构与 ORM |
-| `qiankun-microfrontend.mdc` | 微前端主应用与子应用集成 |
+| **`app-self-contained.mdc`** | 自包含应用目录结构 |
+| **`app-registry.mdc`** | 端口、库名、容器名 |
+| **`cache-local.mdc`** | 进程内缓存（默认 memory） |
+| **`subapp-onboarding.mdc`** | 子应用接入 Qiankun |
+| `deploy-cli.mdc` | `ams-{app_key}` CLI |
+| `docker.mdc` / `docker-compose.mdc` | 容器与 compose |
+| `vue-web.mdc` | Vue 3 前端 |
 | `vue-element-plus.mdc` | Element Plus 子应用 UI |
+| `egg-backend.mdc` | Egg.js BFF |
+| `postgresql.mdc` | PostgreSQL / ORM |
+| `qiankun-microfrontend.mdc` | 微前端集成 |
+| `windows-console.mdc` | Windows PowerShell UTF-8 |
 
-## 规范更新
+## 开发流程 Skills
 
-- 开发规范存放在 `.cursor/rules/` 目录，按 `.mdc` 格式维护。
-- 新增或调整规范时，应说明适用范围（全局或特定文件类型），并保持条目简洁、可执行。
-- 项目开发流程见 `skills/project-developer/`。
+| Skill | 路径 | 用途 |
+|-------|------|------|
+| 主应用 | `skills/main-app-developer/` | 基座 + 菜单 + Qiankun 注册 |
+| 子应用（通用） | `skills/sub-app-developer/` | 自包含子应用脚手架与接入 |
+| 按项目扩展 | `skills/project-developer/{app}/` | 在已有子应用上按设计文档迭代 |
+
+规范冲突时，以 `.cursor/rules/` 为准。

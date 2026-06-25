@@ -23,11 +23,6 @@ export default defineConfig(({ mode }) => {
           target: env.VITE_PROXY_TARGET || apiOrigin,
           changeOrigin: true,
         },
-        '/agent-api': {
-          target: env.VITE_AGENT_API_BASE || 'http://localhost:7003',
-          changeOrigin: true,
-          rewrite: path => path.replace(/^\/agent-api/, ''),
-        },
       },
     },
     base: env.VITE_BASE || '/',

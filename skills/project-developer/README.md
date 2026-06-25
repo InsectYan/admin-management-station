@@ -1,76 +1,37 @@
 # project-developer
 
-基于 `docs-project/` 设计文档，驱动 admin-management-station 的 Web + Docker 架构开发。
+在**已登记、已有骨架**的应用上，按 `docs-project/` 设计文档进行业务模块开发。
 
-## 用途
+## 与 main/sub skill 的分工
 
-- 解析设计文档，提取模块、API、数据库、微前端配置
-- 按技术栈拆分开发任务，生成 `tasks/` 任务目录
-- 检测设计文档缺陷并输出报告
-- 指导 AI 或开发者按规范分模块实现
+| 层级 | Skill | 内容 |
+|------|-------|------|
+| 技术脚手架 | `main-app-developer` / `sub-app-developer` | 端口、Qiankun、compose、分层 |
+| 业务迭代 | `project-developer/{app_key}/` | 设计文档分析、模块/API/表、任务拆分 |
 
-## 何时使用
+## 已登记项目 Skill
 
-- 用户提供或引用 `docs-project/` 下的设计文档
-- 要求「按设计文档开发」「拆分任务」「开始主应用/子应用开发」
-- 需要对照设计实现菜单系统、微前端集成、后端 API 或数据库
+| app_key | 目录 | 应用根目录 | 设计文档 |
+|---------|------|-----------|----------|
+| `novel` | [novel-sub/](novel-sub/) | `novel-sub/` | `docs-project/小说管理页面子应用设计.MD` |
+| `testgen` | [testgen-sub/](testgen-sub/) | `testgen-sub/` | `agent-management-sub/design-docs/testgen/README.md` |
+| `main` | （待增） | `menu-master/` | `docs-project/私人管理平台主应用设计.md` |
 
-## 用法
+新增子应用业务 skill：复制 `novel-sub/` 为模板，改 `app_key`、设计文档路径、端口表。
 
-### 方式一：在 Cursor 中引用 skill
-
-在对话中说明设计文档路径并 @ 引用本 skill：
-
-```
-@skills/project-developer/SKILL.md
-请根据 docs-project/私人管理平台主应用设计.md 拆分任务并开始菜单模块开发
-```
-
-### 方式二：分步骤触发
-
-1. **仅分析**：「分析 docs-project/小说管理页面子应用设计.MD，输出模块清单与缺陷报告」
-2. **仅拆分**：「根据主应用设计文档生成 tasks/ 目录结构」
-3. **按栈开发**：「按 egg-backend 工作流实现菜单 API」
-
-### 文件结构
+## 使用
 
 ```
-skills/project-developer/
-├── SKILL.md                    # 执行入口（Agent 读取此文件）
-├── README.md                   # 本说明
-├── design-doc-workflow.md      # 设计文档分析与缺陷检测
-├── vue-web-main.md           # 主应用前端工作流
-├── vue-web-subapp.md         # 子应用前端工作流
-├── docker-workflow.md          # Docker 部署工作流
-├── qiankun-microfrontend.md    # 微前端集成工作流
-├── egg-backend.md              # 后端工作流
-└── postgresql.md               # 数据库工作流
+@skills/project-developer/novel-sub/SKILL.md
+根据设计文档实现小说列表 API 与页面
 ```
 
-### 编码规范
+## 新增 project skill 模板
 
-**不在本 skill 中重复编码规范。** 开发时须遵循 [`.cursor/rules/`](../../.cursor/rules/) 下对应规则：
-
-- 通用：`development-standards.mdc`
-- **多应用端口/库名：`app-registry.mdc`**（[`应用端口与命名注册表.md`](../../docs-project/应用端口与命名注册表.md)）
-- 前端：`vue-web.mdc`、`vue-element-plus.mdc`
-- 部署：`docker.mdc`
-- 后端：`egg-backend.mdc`
-- 数据库：`postgresql.mdc`
-- 微前端：`qiankun-microfrontend.mdc`
-
-## 输出物
-
-| 阶段 | 产出 |
-|-----|------|
-| 分析 | 模块清单、技术栈映射、缺陷报告（如有） |
-| 拆分 | `tasks/{模块}/README.md` 及子目录 |
-| 开发 | 对应源码、迁移脚本、配置 |
-| 缺陷 | `error/report.md` |
-
-## 相关设计文档
-
-- [私人管理平台主应用设计](../../docs-project/私人管理平台主应用设计.md)
-- [小说管理页面子应用设计](../../docs-project/小说管理页面子应用设计.MD)
-- [部署与Docker方案](../../docs-project/部署与Docker方案.md)
-- [**应用端口与命名注册表**](../../docs-project/应用端口与命名注册表.md)
+```
+project-developer/{app_key}/
+  SKILL.md
+  README.md
+  design-doc-workflow.md
+  modules.md               # 可选：模块与章节映射
+```

@@ -1,0 +1,17 @@
+{
+  "name": "ams-testgen-cli",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI智能测试平台子应用本地 Docker CLI（npm link 后使用 ams-testgen <命令>）",
+  "type": "module",
+  "bin": {
+    "ams-testgen": "./bin/ams-testgen.mjs"
+  },
+  "scripts": {
+    "link": "npm link",
+    "local": "node scripts/run.mjs local",
+    "local:infra": "node scripts/run.mjs local:infra",
+    "local:reset": "node scripts/run.mjs local:reset",
+    "local:down": "node scripts/run.mjs local:down"
+  }
+}

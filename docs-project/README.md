@@ -8,15 +8,13 @@
 
 ```bash
 cd menu-master/deploy && npm link && ams-main local
-cd novel-sub/deploy && npm link && ams-novel local   # 含 Agent
+cd novel-sub/deploy && npm link && ams-novel local
 ```
 
 | CLI | 说明 |
 |-----|------|
 | **`ams-main`** | 主应用：Postgres + API + 前端 |
-| **`ams-novel`** | 小说子应用：Postgres + API + **Agent** + 前端 |
-
-**无 `ams-agent`** — Agent 内置于 `novel-sub/agent/`，随 `ams-novel local` 启动。
+| **`ams-novel`** | 小说子应用：Postgres + API + 前端 |
 
 | 容器 | 地址 | 说明 |
 |------|------|------|
@@ -26,7 +24,6 @@ cd novel-sub/deploy && npm link && ams-novel local   # 含 Agent
 | `ams-novel-frontend` | http://localhost:5174 / Docker 8081 | 小说 UI |
 | `ams-novel-postgres` | localhost:**5433** | `novel_db` |
 | `ams-api-novel` | http://localhost:7002 | 小说 BFF |
-| `ams-novel-agent` | http://localhost:7003 | Pi Agent |
 
 详见 [部署与Docker方案.md](./部署与Docker方案.md) · [应用端口与命名注册表.md](./应用端口与命名注册表.md)
 
@@ -35,7 +32,6 @@ cd novel-sub/deploy && npm link && ams-novel local   # 含 Agent
 | 文档 | 说明 |
 |-----|------|
 | [应用端口与命名注册表.md](./应用端口与命名注册表.md) | 端口、库名 |
-| [Agent开发方案.md](./Agent开发方案.md) | Pi v3（`novel-sub/agent/`） |
 | [部署与Docker方案.md](./部署与Docker方案.md) | 自包含 compose |
 | [私人管理平台主应用设计.md](./私人管理平台主应用设计.md) | 主应用 |
 | [小说管理页面子应用设计.MD](./小说管理页面子应用设计.MD) | 子应用 |
@@ -44,10 +40,12 @@ cd novel-sub/deploy && npm link && ams-novel local   # 含 Agent
 
 ```
 menu-master/          ← 完整主应用（frontend + backend + database + deploy）
-novel-sub/            ← 完整子应用（+ agent + workspace-templates + deploy）
+novel-sub/            ← 完整子应用（frontend + backend + database + deploy）
 ```
 
 两应用各自自带 Postgres，缓存默认 **memory**，**不共享**根级 infra。
+
+**Agent / 智能体**：不在本仓库实现。如需 Skill 插件与 Loop 等 Agent 方案，见 [`agent-management-master`](../../agent-management-master) 与 [`agent-management-sub`](../../agent-management-sub)。
 
 ## 开发规范
 
@@ -55,5 +53,7 @@ novel-sub/            ← 完整子应用（+ agent + workspace-templates + depl
 |------|------|
 | **`app-self-contained.mdc`** | **自包含架构（必读）** |
 | `app-registry.mdc` | 端口与库名 |
-| `pi-v3-agent.mdc` | 子应用内 Agent |
+| `subapp-onboarding.mdc` | 子应用接入 |
 | `deploy-cli.mdc` | 各应用 CLI |
+
+子应用开发工作流：[`skills/`](../skills/)（`main-app-developer` · `sub-app-developer` · `project-developer/{app_key}`）

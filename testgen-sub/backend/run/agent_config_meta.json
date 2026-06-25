@@ -1,0 +1,329 @@
+{
+  "keys": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+  "middleware": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+  "security": {
+    "csrf": {
+      "enable": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+      "type": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "ignoreJSON": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "useSession": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "cookieName": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "sessionName": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "headerName": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "bodyName": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "queryName": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "rotateWhenInvalid": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "supportedRequests": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "refererWhiteList": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "cookieOptions": {
+        "signed": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js"
+      }
+    },
+    "domainWhiteList": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+    "protocolWhiteList": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+    "defaultMiddleware": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+    "xframe": {
+      "enable": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "value": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "hsts": {
+      "enable": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.local.js",
+      "maxAge": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "includeSubdomains": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "dta": {
+      "enable": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "methodnoallow": {
+      "enable": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "noopen": {
+      "enable": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "nosniff": {
+      "enable": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "referrerPolicy": {
+      "enable": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "value": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "xssProtection": {
+      "enable": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "value": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "csp": {
+      "enable": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "policy": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    },
+    "ssrf": {
+      "ipBlackList": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "ipExceptionList": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "hostnameExceptionList": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js",
+      "checkAddress": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js"
+    }
+  },
+  "cors": {
+    "origin": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+    "allowMethods": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js"
+  },
+  "sequelize": {
+    "dialect": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+    "host": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+    "port": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+    "username": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+    "password": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+    "database": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+    "define": {
+      "underscored": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+      "timestamps": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+      "createdAt": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+      "updatedAt": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js"
+    },
+    "timezone": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+    "logging": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js"
+  },
+  "cluster": {
+    "listen": {
+      "port": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+      "hostname": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+      "path": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+    }
+  },
+  "agentPlatform": {
+    "baseUrl": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+    "invokePath": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+    "timeout": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js"
+  },
+  "testgen": {
+    "maxConcurrentJobs": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+    "parseCacheTtl": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+    "uploadDir": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+    "maxUploadBytes": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js"
+  },
+  "internalApiToken": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+  "multipart": {
+    "mode": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+    "fileSize": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+    "fileExtensions": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\config.default.js",
+    "autoFields": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "defaultCharset": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "defaultParamCharset": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "fieldNameSize": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "fieldSize": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "fields": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "files": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "whitelist": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "allowArrayField": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "tmpdir": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+    "cleanSchedule": {
+      "cron": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-multipart\\config\\config.default.js",
+      "disable": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-multipart\\config\\config.default.js"
+    }
+  },
+  "session": {
+    "maxAge": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-session\\config\\config.default.js",
+    "key": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-session\\config\\config.default.js",
+    "httpOnly": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-session\\config\\config.default.js",
+    "encrypt": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-session\\config\\config.default.js",
+    "logValue": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-session\\config\\config.default.js"
+  },
+  "helper": {
+    "shtml": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security\\config\\config.default.js"
+  },
+  "jsonp": {
+    "limit": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-jsonp\\config\\config.default.js",
+    "callback": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-jsonp\\config\\config.default.js",
+    "csrf": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-jsonp\\config\\config.default.js"
+  },
+  "onerror": {
+    "errorPageUrl": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-onerror\\config\\config.default.js",
+    "appErrorFilter": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-onerror\\config\\config.default.js",
+    "templatePath": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-onerror\\config\\config.default.js"
+  },
+  "i18n": {
+    "defaultLocale": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-i18n\\config\\config.default.js",
+    "dirs": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-i18n\\config\\config.default.js",
+    "queryField": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-i18n\\config\\config.default.js",
+    "cookieField": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-i18n\\config\\config.default.js",
+    "cookieDomain": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-i18n\\config\\config.default.js",
+    "cookieMaxAge": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-i18n\\config\\config.default.js"
+  },
+  "watcher": {
+    "type": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-watcher\\config\\config.local.js",
+    "eventSources": {
+      "default": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-watcher\\config\\config.default.js",
+      "development": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-watcher\\config\\config.default.js"
+    }
+  },
+  "customLogger": {
+    "scheduleLogger": {
+      "consoleLevel": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-schedule\\config\\config.default.js",
+      "file": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-schedule\\config\\config.default.js"
+    }
+  },
+  "schedule": {
+    "directory": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-schedule\\config\\config.default.js"
+  },
+  "development": {
+    "watchDirs": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-development\\config\\config.default.js",
+    "ignoreDirs": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-development\\config\\config.default.js",
+    "fastReady": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-development\\config\\config.default.js",
+    "reloadOnDebug": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-development\\config\\config.default.js",
+    "overrideDefault": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-development\\config\\config.default.js",
+    "overrideIgnore": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-development\\config\\config.default.js"
+  },
+  "logrotator": {
+    "filesRotateByHour": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-logrotator\\config\\config.default.js",
+    "hourDelimiter": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-logrotator\\config\\config.default.js",
+    "filesRotateBySize": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-logrotator\\config\\config.default.js",
+    "maxFileSize": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-logrotator\\config\\config.default.js",
+    "maxFiles": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-logrotator\\config\\config.default.js",
+    "rotateDuration": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-logrotator\\config\\config.default.js",
+    "maxDays": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-logrotator\\config\\config.default.js"
+  },
+  "static": {
+    "prefix": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-static\\config\\config.default.js",
+    "dir": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-static\\config\\config.default.js",
+    "dynamic": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-static\\config\\config.default.js",
+    "preload": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-static\\config\\config.default.js",
+    "buffer": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-static\\config\\config.default.js",
+    "maxFiles": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-static\\config\\config.default.js"
+  },
+  "view": {
+    "root": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-view\\config\\config.default.js",
+    "cache": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-view\\config\\config.local.js",
+    "defaultExtension": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-view\\config\\config.default.js",
+    "defaultViewEngine": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-view\\config\\config.default.js",
+    "mapping": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-view\\config\\config.default.js"
+  },
+  "env": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+  "name": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+  "cookies": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+  "proxy": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+  "maxIpsCount": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+  "maxProxyCount": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+  "protocolHeaders": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+  "ipHeaders": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+  "hostHeaders": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+  "pkg": {
+    "name": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "version": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "description": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "private": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "egg": {
+      "declarations": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+    },
+    "scripts": {
+      "dev": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "start": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "stop": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "db:init": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+    },
+    "dependencies": {
+      "dotenv": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "egg": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "egg-cors": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "egg-multipart": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "egg-scripts": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "egg-sequelize": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "pg": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "pg-hstore": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+    },
+    "devDependencies": {
+      "egg-bin": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+    },
+    "engines": {
+      "node": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+    }
+  },
+  "baseDir": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+  "HOME": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+  "rundir": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+  "dump": {
+    "ignore": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "timing": {
+      "slowBootActionMinDuration": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+    }
+  },
+  "confusedConfigurations": {
+    "bodyparser": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "notFound": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "sitefile": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "middlewares": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "httpClient": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+  },
+  "notfound": {
+    "pageUrl": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+  },
+  "siteFile": {
+    "/favicon.ico": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "cacheControl": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+  },
+  "bodyParser": {
+    "enable": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "encoding": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "formLimit": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "jsonLimit": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "textLimit": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "strict": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "queryString": {
+      "arrayLimit": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "depth": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "parameterLimit": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+    },
+    "onerror": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+  },
+  "logger": {
+    "dir": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "encoding": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "env": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "level": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "consoleLevel": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "disableConsoleAfterReady": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "outputJSON": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "buffer": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "appLogName": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "coreLogName": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "agentLogName": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "errorLogName": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "coreLogger": {
+      "consoleLevel": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.local.js"
+    },
+    "allowDebugAtProd": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "enablePerformanceTimer": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "enableFastContextLogger": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+  },
+  "httpclient": {
+    "enableDNSCache": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "dnsCacheLookupInterval": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "dnsCacheMaxLength": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "request": {
+      "timeout": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+    },
+    "httpAgent": {
+      "keepAlive": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "freeSocketTimeout": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "maxSockets": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "maxFreeSockets": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+    },
+    "httpsAgent": {
+      "keepAlive": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "freeSocketTimeout": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "maxSockets": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+      "maxFreeSockets": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+    },
+    "useHttpClientNext": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+  },
+  "meta": {
+    "enable": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "logging": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+  },
+  "coreMiddleware": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+  "workerStartTimeout": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+  "serverTimeout": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+  "clusterClient": {
+    "maxWaitTime": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js",
+    "responseTimeout": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+  },
+  "onClientError": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\config.default.js"
+}

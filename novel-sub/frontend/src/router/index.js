@@ -25,11 +25,6 @@ export function createAppRouter(basename) {
             name: 'novel-detail',
             component: () => import('../views/NovelDetailPage.vue'),
           },
-          {
-            path: 'agent',
-            name: 'agent-chat',
-            component: () => import('../views/AgentChatPage.vue'),
-          },
         ],
       },
     ],
