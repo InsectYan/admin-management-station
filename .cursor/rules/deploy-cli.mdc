@@ -16,7 +16,8 @@ alwaysApply: false
 | app_key | 应用根 | deploy 目录 | 命令 |
 |---------|--------|-------------|------|
 | `main` | `menu-master/` | `menu-master/deploy/` | **`ams-main`** |
-| `novel` | `novel-sub/` | `novel-sub/deploy/` | **`ams-novel`** |
+| `novel` | `project-sub/novel-sub/` | `project-sub/novel-sub/deploy/` | **`ams-novel`** |
+| `testgen` | `project-sub/testgen-sub/` | `project-sub/testgen-sub/deploy/` | **`ams-testgen`** |
 
 首次：`cd {app}/deploy && npm link`  
 未 link：`node {app}/deploy/scripts/run.mjs <命令>`
@@ -30,6 +31,7 @@ alwaysApply: false
 | **`{cli} local:frontend`** | 仅主应用：重建前端容器 |
 | **`{cli} local:reset`** | 清库重建 |
 | **`{cli} local:down`** | 停止本栈 |
+| **`ams-main sync:subapps`** | 扫描 `project-sub/` 同步子应用菜单（`local` 时自动执行） |
 | `{cli} help` | 帮助 |
 
 ## 配置分层

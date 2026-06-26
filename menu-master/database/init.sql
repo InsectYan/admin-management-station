@@ -37,41 +37,5 @@ CREATE TABLE IF NOT EXISTS subapp_registry (
 CREATE INDEX IF NOT EXISTS idx_subapp_app_key ON subapp_registry(app_key);
 CREATE INDEX IF NOT EXISTS idx_subapp_status ON subapp_registry(status);
 
--- 种子：小说子应用（novel-sub）
-INSERT INTO subapp_registry (
-  microapp_name, app_key, display_name, entry_dev, entry_prod,
-  vite_port, api_port, agent_port, status
-)
-SELECT
-  'novel-app', 'novel', '小说管理',
-  'http://localhost:5174', '/subapps/novel-app/',
-  5174, 7002, 7003, 'enabled'
-WHERE NOT EXISTS (
-  SELECT 1 FROM subapp_registry WHERE microapp_name = 'novel-app'
-);
-
--- 种子：一级菜单（幂等）
-INSERT INTO menu_items (name, parent_id, route_prefix, microapp_name, status, "order", icon)
-SELECT '小说管理', NULL, 'novel', 'novel-app', 'enabled', 1, 'icon-novel'
-WHERE NOT EXISTS (
-  SELECT 1 FROM menu_items WHERE microapp_name = 'novel-app' AND route_prefix = 'novel'
-);
-
--- 种子：AI智能测试平台（testgen-sub）
-INSERT INTO subapp_registry (
-  microapp_name, app_key, display_name, entry_dev, entry_prod,
-  vite_port, api_port, agent_port, status
-)
-SELECT
-  'testgen-app', 'testgen', 'AI智能测试平台',
-  'http://localhost:5175', '/subapps/testgen-app/',
-  5175, 7003, 3001, 'enabled'
-WHERE NOT EXISTS (
-  SELECT 1 FROM subapp_registry WHERE microapp_name = 'testgen-app'
-);
-
-INSERT INTO menu_items (name, parent_id, route_prefix, microapp_name, status, "order", icon)
-SELECT 'AI智能测试平台', NULL, 'testgen', 'testgen-app', 'enabled', 2, 'icon-testgen'
-WHERE NOT EXISTS (
-  SELECT 1 FROM menu_items WHERE microapp_name = 'testgen-app' AND route_prefix = 'testgen'
-);
+-- 子应用与一级菜单由 deploy/scripts/sync-subapps.mjs 从 project-sub/*/subapp.manifest.json 同步。
+-- 启动 ams-main local 时会自动执行；也可手动：ams-main sync:subapps

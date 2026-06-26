@@ -1,21 +1,21 @@
 ---
 description: 新子应用接入主应用（Qiankun）检查清单与常见陷阱
-globs: "{menu-master/**,novel-sub/**,**/deploy/**,**/qiankun/**,**/frontend/**,**/backend/**}"
+globs: "{menu-master/**,project-sub/**,**/deploy/**,**/qiankun/**,**/frontend/**,**/backend/**}"
 alwaysApply: false
 ---
 
 # 子应用接入主应用 — 规范与避坑
 
-新增子应用时**须先读本文件**。参考实现见已登记子应用目录（如 `novel-sub/`）及 `menu-master/database/init.sql`。
+新增子应用时**须先读本文件**。参考实现见 `project-sub/novel-sub/` 及 `subapp.manifest.json`。
 
-## 1. 登记与种子数据（主库）
+## 1. 登记与 manifest（主库）
 
 | 步骤 | 位置 | 要求 |
 |------|------|------|
 | 登记端口 | `app-registry.mdc` | API / Vite / PG 宿主机端口 |
-| 子应用注册 | 主库 `init.sql` 或 `migrations/` | `subapp_registry` 一行 |
-| 菜单 | 同上 `menu_items` | `microapp_name`、`route_prefix`、`status=enabled` |
-| 增量迁移 | `migrations/` | 已有 PG 卷时**不能**只改 init.sql |
+| 子应用 manifest | `project-sub/{app}/subapp.manifest.json` | 端口、microapp_name、route_prefix 等 |
+| 自动同步 | `ams-main local` 或 `ams-main sync:subapps` | 写入 `subapp_registry` + 一级 `menu_items` |
+| 增量迁移 | `migrations/` | 仅当需手工 SQL 变更时使用 |
 
 菜单 API 须返回 `entry`、`active_rule`、`basename`。
 
@@ -93,15 +93,15 @@ exports.cors = { enable: true, package: 'egg-cors' };
 ```text
 1. ams-{sub} local
 2. 确认 localhost:{vite} 与 localhost:{api}/api/health
-3. ams-main local
-4. 主库 db:init / migration
-5. 主应用浏览器 → 点击菜单
+3. ams-main local          # 含 sync-subapps 自动注册菜单
+4. 主应用浏览器 → 点击菜单
 ```
 
 ## 9. Checklist
 
 - [ ] `app-registry.mdc` 登记
-- [ ] `subapp_registry` + `menu_items`
+- [ ] `subapp.manifest.json` 已编写
+- [ ] `ams-main sync:subapps` 或 `ams-main local` 已同步
 - [ ] 主应用 JWT ignore 菜单 GET
 - [ ] 子应用 `apiConfig.js` + entry env
 - [ ] compose 端口与 registry 一致

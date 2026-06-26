@@ -73,6 +73,17 @@ function runPs1(ps1Rel, psArgs = []) {
   run(resolvePowerShell(), ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps1, ...psArgs])
 }
 
+function runNode(scriptName) {
+  const script = join(__dirname, scriptName)
+  if (!existsSync(script)) fail(`缺少脚本: ${script}`)
+  run(process.execPath, [script])
+}
+
+function ensureSubappsSynced() {
+  runCompose(appCompose, ['up', '-d', 'postgres'])
+  runNode('sync-subapps.mjs')
+}
+
 function printHelp() {
   console.log(`主应用 (menu-master) — CLI
 
@@ -83,11 +94,14 @@ function printHelp() {
   ams-main <命令>
 
 本地 Docker:
-  ams-main local              启动 Postgres + API + 前端
+  ams-main local              启动 Postgres + 同步子应用 + API + 前端
   ams-main local:frontend     仅重建前端容器
   ams-main local:infra        仅 Postgres（宿主机热更新）
   ams-main local:reset        清库重建
   ams-main local:down         停止本栈
+
+子应用注册:
+  ams-main sync:subapps       扫描 project-sub/ 并同步菜单到主库
 
 未 link:
   node menu-master/deploy/scripts/run.mjs <命令>
@@ -103,7 +117,13 @@ switch (task) {
     break
   case 'local':
     if (isWin) runPs1('start-local.ps1')
-    else runCompose(appCompose, ['up', '-d', '--build'])
+    else {
+      ensureSubappsSynced()
+      runCompose(appCompose, ['up', '-d', '--build'])
+    }
+    break
+  case 'sync:subapps':
+    runNode('sync-subapps.mjs')
     break
   case 'local:frontend':
     if (isWin) runPs1('start-local-frontend.ps1')
@@ -116,6 +136,7 @@ switch (task) {
     if (isWin) runPs1('reset-dev.ps1')
     else {
       runCompose(appCompose, ['down', '-v'])
+      ensureSubappsSynced()
       runCompose(appCompose, ['up', '-d', '--build'])
     }
     break

@@ -23,8 +23,16 @@ if (-not (Test-Path $FrontendEnv) -and (Test-Path $FrontendExample)) {
   Write-Host "==> created frontend/.env.local"
 }
 
+Write-Host "==> docker compose up -d postgres (menu-master)"
+& (Join-Path $PSScriptRoot "compose.ps1") 'up' '-d' 'postgres'
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "==> sync sub-apps from project-sub/"
+& node (Join-Path $PSScriptRoot "sync-subapps.mjs")
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "==> docker compose up -d --build (menu-master)"
-& (Join-Path $PSScriptRoot "compose.ps1") up -d --build
+& (Join-Path $PSScriptRoot "compose.ps1") 'up' '-d' '--build'
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""

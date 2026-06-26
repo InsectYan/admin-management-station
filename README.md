@@ -11,7 +11,8 @@
 | 应用 | 目录 | CLI | 说明 |
 |------|------|-----|------|
 | 主应用 | [`menu-master/`](menu-master/) | `ams-main` | 菜单 + Qiankun 基座 · `:7001` · PG `:5432` |
-| 小说子应用 | [`novel-sub/`](novel-sub/) | `ams-novel` | 前端 + BFF · `:7002` · PG `:5433` |
+| 小说子应用 | [`project-sub/novel-sub/`](project-sub/novel-sub/) | `ams-novel` | 前端 + BFF · `:7002` · PG `:5433` |
+| AI 测试平台 | [`project-sub/testgen-sub/`](project-sub/testgen-sub/) | `ams-testgen` | 前端 + BFF · `:7003` · PG `:5434` |
 
 每个应用 `deploy/docker-compose.yml` **自带 Postgres**；缓存默认 **memory**（见 `cache-local.mdc`），不共享根级 infra。
 
@@ -20,11 +21,12 @@
 ## 快速启动
 
 ```bash
-# 主应用
+# 主应用（启动时自动扫描 project-sub/ 注册子应用菜单）
 cd menu-master/deploy && npm link && ams-main local
 
-# 小说子应用
-cd novel-sub/deploy && npm link && ams-novel local
+# 子应用（按需启动）
+cd project-sub/novel-sub/deploy && npm link && ams-novel local
+cd project-sub/testgen-sub/deploy && npm link && ams-testgen local
 ```
 
 端口详情：[docs-project/应用端口与命名注册表.md](docs-project/应用端口与命名注册表.md)
@@ -34,12 +36,17 @@ cd novel-sub/deploy && npm link && ams-novel local
 | 路径 | 说明 |
 |------|------|
 | `menu-master/` | 主应用完整项目 |
-| `novel-sub/` | 小说子应用完整项目 |
+| `project-sub/` | 子应用聚合目录（各子应用含 `subapp.manifest.json`） |
 | `docs-project/` | 设计文档 |
 | `.cursor/rules/` | 开发规范 |
-| `skills/` | 开发流程 Skills（见 [`skills/README.md`](../skills/README.md)） |
+| `skills/` | 开发流程 Skills |
 | `deploy/` | **已废弃** — 见 [`deploy/README.md`](deploy/README.md) |
-| `apps/` | **已废弃** — 见 [`apps/README.md`](apps/README.md) |
+
+## 子应用动态注册
+
+主应用启动时会执行 `deploy/scripts/sync-subapps.mjs`，扫描 `project-sub/` 下所有含 `subapp.manifest.json` 的子应用，自动注册/更新一级菜单；移除目录或 manifest 后再次启动将自动禁用对应菜单（参考 `agent-management-master` 的 PluginManager 扫描模式）。
+
+手动同步：`ams-main sync:subapps`
 
 ## 开发规范
 

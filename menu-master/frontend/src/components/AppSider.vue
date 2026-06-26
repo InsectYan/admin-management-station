@@ -17,9 +17,9 @@
     />
     <el-menu
       v-else
-      background-color="#001529"
-      text-color="#ffffffa6"
-      active-text-color="#fff"
+      background-color="#545c64"
+      text-color="#fff"
+      active-text-color="#ffd04b"
       :default-active="selectedKey"
       :default-openeds="openKeys"
       @select="handleSelect"
@@ -51,7 +51,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Loading, Grid, Reading } from '@element-plus/icons-vue';
+import { Loading, Grid, Reading, Cpu } from '@element-plus/icons-vue';
 import { buildMenuPath } from '../qiankun/config.js';
 
 const props = defineProps({
@@ -65,6 +65,7 @@ const router = useRouter();
 
 const ICON_MAP = {
   'icon-novel': Reading,
+  'icon-testgen': Cpu,
 };
 
 function resolveIcon(iconName) {
@@ -126,8 +127,13 @@ function handleSelect(key) {
 
 <style scoped>
 .app-sider {
-  background: #001529;
+  background: #545c64;
   min-height: 100vh;
+}
+
+.app-brand {
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .app-brand-text {

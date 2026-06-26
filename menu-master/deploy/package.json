@@ -13,6 +13,7 @@
     "local:frontend": "node scripts/run.mjs local:frontend",
     "local:infra": "node scripts/run.mjs local:infra",
     "local:reset": "node scripts/run.mjs local:reset",
-    "local:down": "node scripts/run.mjs local:down"
+    "local:down": "node scripts/run.mjs local:down",
+    "sync:subapps": "node scripts/run.mjs sync:subapps"
   }
 }

@@ -19,7 +19,7 @@ if (-not (Test-Path $FrontendEnv)) {
 }
 
 Write-Host "==> docker compose up main-frontend -d --build"
-& (Join-Path $PSScriptRoot "compose.ps1") up main-frontend -d --build
+& (Join-Path $PSScriptRoot "compose.ps1") 'up' 'main-frontend' '-d' '--build'
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""

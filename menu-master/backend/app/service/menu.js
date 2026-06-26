@@ -110,7 +110,8 @@ class MenuService extends Service {
 
   resolveSubappMeta(row) {
     const { app } = this;
-    const envKey = app.config.subappEntryEnv[row.microapp_name];
+    const envKey = app.config.subappEntryEnv[row.microapp_name]
+      || `SUBAPP_${String(row.app_key).toUpperCase().replace(/-/g, '_')}_ENTRY`;
     const envEntry = envKey ? process.env[envKey] : null;
     const isProd = process.env.NODE_ENV === 'production';
     const entry = envEntry || (isProd && row.entry_prod ? row.entry_prod : row.entry_dev);

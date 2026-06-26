@@ -8,13 +8,15 @@
 
 ```bash
 cd menu-master/deploy && npm link && ams-main local
-cd novel-sub/deploy && npm link && ams-novel local
+cd project-sub/novel-sub/deploy && npm link && ams-novel local
+cd project-sub/testgen-sub/deploy && npm link && ams-testgen local
 ```
 
 | CLI | 说明 |
 |-----|------|
-| **`ams-main`** | 主应用：Postgres + API + 前端 |
+| **`ams-main`** | 主应用：Postgres + 同步子应用 + API + 前端 |
 | **`ams-novel`** | 小说子应用：Postgres + API + 前端 |
+| **`ams-testgen`** | AI 测试平台：Postgres + API + 前端 |
 
 | 容器 | 地址 | 说明 |
 |------|------|------|
@@ -39,8 +41,10 @@ cd novel-sub/deploy && npm link && ams-novel local
 ## 架构概览
 
 ```
-menu-master/          ← 完整主应用（frontend + backend + database + deploy）
-novel-sub/            ← 完整子应用（frontend + backend + database + deploy）
+menu-master/                    ← 完整主应用
+project-sub/
+  novel-sub/                    ← 小说子应用
+  testgen-sub/                  ← AI 测试平台子应用
 ```
 
 两应用各自自带 Postgres，缓存默认 **memory**，**不共享**根级 infra。
