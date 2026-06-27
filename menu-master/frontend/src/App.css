@@ -19,16 +19,6 @@ body {
 .app-layout {  min-height: 100vh;
 }
 
-.app-brand {
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
 .app-sider.collapsed .app-brand {
   justify-content: center;
   padding-inline: 8px;
