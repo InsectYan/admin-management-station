@@ -14,7 +14,7 @@ export function createAppRouter(basename) {
             path: 'scope',
             name: 'test-scope',
             component: () => import('../views/TestScopePage.vue'),
-            meta: { title: '测试范围配置' },
+            meta: { title: '生成测试用例' },
           },
           {
             path: 'jobs/:id',
@@ -26,7 +26,7 @@ export function createAppRouter(basename) {
             path: 'suite',
             name: 'test-suite',
             component: () => import('../views/TestSuitePage.vue'),
-            meta: { title: '用例管理' },
+            meta: { title: '测试用例管理' },
           },
         ],
       },

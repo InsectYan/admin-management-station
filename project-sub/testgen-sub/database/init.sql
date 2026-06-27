@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS generation_jobs (
   progress        JSONB DEFAULT '{"analyze":0,"functional":0,"edge":0,"review":0}',
   steps_log       JSONB DEFAULT '[]',
   agent_run_id    INT,
+  agent_context   JSONB DEFAULT '{}',
   error_message   TEXT,
   created_by      VARCHAR(100),
   started_at      TIMESTAMPTZ,
@@ -70,6 +71,8 @@ CREATE TABLE IF NOT EXISTS generation_jobs (
 CREATE INDEX IF NOT EXISTS idx_generation_jobs_status ON generation_jobs (status);
 CREATE INDEX IF NOT EXISTS idx_generation_jobs_document ON generation_jobs (document_id);
 CREATE INDEX IF NOT EXISTS idx_generation_jobs_created_at ON generation_jobs (created_at DESC);
+
+-- 已有库升级见 database/migrations/001_add_agent_context.sql
 
 CREATE TABLE IF NOT EXISTS test_cases (
   id              SERIAL PRIMARY KEY,

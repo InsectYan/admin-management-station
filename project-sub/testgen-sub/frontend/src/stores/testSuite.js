@@ -20,15 +20,24 @@ export const useTestSuiteStore = defineStore('testSuite', {
     },
   },
   actions: {
-    async loadCases(params = {}) {
-      this.loading = true;
-      try {
-        const result = await listTestCases(params);
-        this.cases = Array.isArray(result) ? result : result?.items ?? [];
-      } finally {
-        this.loading = false;
+  async loadCases(params = {}) {
+    this.loading = true;
+    try {
+      const result = await listTestCases(params);
+      if (Array.isArray(result)) {
+        this.cases = result;
+        return { total: result.length, page: 1, pageSize: result.length };
       }
-    },
+      this.cases = result?.list ?? [];
+      return {
+        total: result?.total ?? this.cases.length,
+        page: result?.page ?? params.page ?? 1,
+        pageSize: result?.pageSize ?? params.pageSize ?? 20,
+      };
+    } finally {
+      this.loading = false;
+    }
+  },
     setFilters(filters) {
       this.filters = { ...this.filters, ...filters };
     },

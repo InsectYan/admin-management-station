@@ -61,6 +61,22 @@ class TestCaseController extends Controller {
     }
     this.ctx.body = { code: 0, message: 'deleted', data: null };
   }
+
+  async batchDestroy() {
+    const ids = this.ctx.request.body?.ids;
+    if (!Array.isArray(ids) || !ids.length) {
+      this.ctx.status = 400;
+      this.ctx.body = { code: 400, message: 'ids 不能为空', data: null };
+      return;
+    }
+    const data = await this.service.testCase.deleteBatch(ids);
+    this.ctx.body = { code: 0, message: 'ok', data };
+  }
+
+  async destroyAll() {
+    const data = await this.service.testCase.deleteAll();
+    this.ctx.body = { code: 0, message: 'ok', data };
+  }
 }
 
 module.exports = TestCaseController;

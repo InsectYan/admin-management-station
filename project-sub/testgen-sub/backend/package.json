@@ -18,6 +18,7 @@
     "egg-cors": "^3.0.1",
     "egg-scripts": "^3.0.1",
     "egg-sequelize": "^6.0.0",
+    "pdf-parse": "^1.1.1",
     "pg": "^8.13.1",
     "pg-hstore": "^2.3.4"
   },

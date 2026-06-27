@@ -1,6 +1,6 @@
 ---
 description: 多应用并行开发时的应用名、端口、数据库命名注册表
-globs: "{menu-master/**,novel-sub/**,docs-project/**,**/deploy/**}"
+globs: "{menu-master/**,project-sub/**,docs-project/**,**/deploy/**}"
 alwaysApply: false
 ---
 

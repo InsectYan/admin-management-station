@@ -71,6 +71,8 @@ exports.sequelize = { enable: true, package: 'egg-sequelize' };
 exports.cors = { enable: true, package: 'egg-cors' };
 ```
 
+`app.js` 须在 `beforeStart` 调用 `syncSchemaOnStartup`（见 **`database-schema-sync.mdc`**）。
+
 | 场景 | `POSTGRES_PORT` |
 |------|-----------------|
 | 容器内 | **5432** |
@@ -82,11 +84,21 @@ exports.cors = { enable: true, package: 'egg-cors' };
 - Dockerfile：`npx egg-scripts start --workers=1`，禁止 `--daemon`
 - compose 使用 `compose.ps1` + `--env-file config/.env.local`
 - Vite 端口映射与 registry 一致
+- 前端 service **bind-mount 源码** + Vite HMR 配置（见 **`vite-hmr.mdc`**）
+
+## 6.1 开发热更新（HMR）
+
+新增或修改子应用 `vite.config.js` / `docker-compose.yml` 时须满足 **`vite-hmr.mdc`**：
+
+- `server.hmr.clientPort` = 本子应用 Vite 端口
+- `watch.usePolling: true`
+- compose 挂载 `frontend/src`、`index.html`、`vite.config.js`
 
 ## 7. 嵌入态 UI
 
-- `__POWERED_BY_QIANKUN__`：隐藏子应用重复顶栏
-- 内容区与主应用 `#subapp-container` 样式协调
+- `__POWERED_BY_QIANKUN__`：隐藏子应用品牌与垂直侧栏，保留页内水平 `NavMenu`（见 **`nav-layout.mdc`**）
+- **独立 dev**：子应用须实现垂直可折叠侧栏，不得仅用水平顶栏
+- 内容区与主应用 `#subapp-container` 样式协调；子应用须满足 **`subapp-layout.mdc`**（菜单吸顶、内容区内滚动）
 
 ## 8. 联调顺序
 
@@ -107,6 +119,10 @@ exports.cors = { enable: true, package: 'egg-cors' };
 - [ ] compose 端口与 registry 一致
 - [ ] compose 内 `POSTGRES_PORT=5432`
 - [ ] `egg-sequelize`、`egg-cors` 已启用
+- [ ] `app.js` 已注册启动 schema 同步（`database-schema-sync.mdc`）
+- [ ] 样式隔离（`subapp-style-isolation.mdc`）
+- [ ] `NavMenu` + `useNavCollapse` 垂直侧栏（独立 dev）；嵌入态水平 NavMenu
+- [ ] `vite.config.js` HMR + compose 前端源码挂载（见 **`vite-hmr.mdc`**）
 - [ ] README 联调步骤
 
 ## 禁止

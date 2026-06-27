@@ -1,14 +1,33 @@
 import { api, resolveApiBase } from './apiConfig.js';
+import { getLlmProfileId } from '../utils/llmProfileSession.js';
 
 const base = () => resolveApiBase();
 
-export async function startGeneration({ document_id, module, test_types, options }) {
-  const { data } = await api.post(`${base()}/generation-jobs`, {
+function withLlmProfile(body) {
+  const llm_profile = getLlmProfileId();
+  return llm_profile ? { ...body, llm_profile } : body;
+}
+
+export async function startGeneration({
+  staging_id,
+  document_id,
+  document_content,
+  document_title,
+  document_type,
+  module,
+  test_types,
+  options,
+}) {
+  const { data } = await api.post(`${base()}/generation-jobs`, withLlmProfile({
+    staging_id,
     document_id,
+    document_content,
+    document_title,
+    document_type,
     module,
     test_types,
     options,
-  });
+  }));
   return data.data;
 }
 
@@ -33,6 +52,6 @@ export async function cancelJob(jobId) {
 }
 
 export async function retryJob(jobId) {
-  const { data } = await api.post(`${base()}/generation-jobs/${jobId}/retry`);
+  const { data } = await api.post(`${base()}/generation-jobs/${jobId}/retry`, withLlmProfile({}));
   return data.data;
 }

@@ -44,6 +44,7 @@ alwaysApply: false
 - 写操作：JWT + RBAC / 权限中间件。
 - 时区：`Asia/Shanghai`（`app.js`）。
 - 配置：`config.default.js` + `config.local.js`；敏感项走环境变量。
+- **Schema 同步**：`app.js` `beforeStart` 须调用 `syncSchemaOnStartup`（见 `database-schema-sync.mdc`）。
 - **多应用**：独立 `PORT` 与 `POSTGRES_DB`（见 `app-registry.mdc`）。
 - **Docker 内 DB**：`POSTGRES_HOST=postgres`、`POSTGRES_PORT=5432`；宿主机 dev 用映射端口。
 

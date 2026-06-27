@@ -1,0 +1,50 @@
+---
+description: 前端垂直导航菜单布局与折叠规范（主应用与子应用强制）
+globs: "{menu-master/**/frontend/**,project-sub/**/frontend/**,**/frontend/src/components/*Sider*,**/frontend/src/components/NavMenu*,**/frontend/src/components/MainLayout*}"
+alwaysApply: false
+---
+
+# 垂直导航菜单规范
+
+**主应用与 `project-sub/` 下所有子应用均须遵循**，无例外降级。
+
+## 适用范围
+
+| 场景 | 导航形态 | 折叠 |
+|------|---------|------|
+| **主应用**（`menu-master`） | 左侧垂直全局菜单（`AppSider`） | **必须** |
+| **子应用独立 dev** | 左侧垂直侧栏（`NavMenu` + `el-aside`） | **必须** |
+| **子应用 Qiankun 嵌入** | 页内水平 `NavMenu`，无重复侧栏 | 不适用 |
+
+## 必须实现（垂直侧栏）
+
+- `el-menu` 绑定 `:collapse="collapsed"`；展开 **240px**、折叠 **64px**（仅图标）。
+- 品牌区或侧栏底部提供折叠切换，图标用 Element Plus `Fold` / `Expand`。
+- 折叠状态持久化 `localStorage`，键名 **`ams-nav-collapsed`**（`'1'` 折叠 / `'0'` 展开）。
+- 侧栏宽度变化使用 CSS `transition`（建议 0.2–0.3s）。
+- 折叠时 `el-sub-menu` 子项以浮层展示；路由高亮逻辑不变。
+
+## 主应用 AppSider
+
+- 菜单数据来自 `/api/menus`；折叠不影响 Qiankun 子应用注册与路由跳转。
+- 加载/错误态在折叠侧栏内仍可读（图标或 tooltip）。
+
+## 子应用 NavMenu（强制）
+
+- **独立 dev**：`MainLayout` 使用 `el-container` + 左侧 `NavMenu`（垂直、`useNavCollapse`），**禁止**仅用水平顶栏替代侧栏。
+- **嵌入态**（`__POWERED_BY_QIANKUN__`）：`MainLayout` 仅渲染页内水平 `NavMenu`，隐藏品牌与垂直侧栏，不与主应用侧栏重复；水平菜单 **吸顶**，内容区 **固定高度 + 内部滚动**（见 **`subapp-layout.mdc`**）。
+- 每个子应用须有 `frontend/src/composables/useNavCollapse.js`（与主应用同键名约定）。
+
+## 参考实现
+
+| 应用 | 文件 |
+|------|------|
+| 主应用 | `menu-master/frontend/src/components/AppSider.vue` |
+| 子应用 | `project-sub/{app}/frontend/src/components/NavMenu.vue` + `composables/useNavCollapse.js` |
+
+## 禁止
+
+- 子应用独立 dev 仅使用水平顶栏、无垂直可折叠侧栏
+- 固定宽度垂直侧栏且无折叠入口
+- 折叠状态仅存组件内存、刷新后丢失
+- Qiankun 嵌入态再渲染一层与主应用重复的全局垂直侧栏

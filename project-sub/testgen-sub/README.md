@@ -16,6 +16,14 @@
 cd testgen-sub/deploy && npm link && ams-testgen local
 ```
 
+**已有数据库卷升级**（若 `POST /api/generation-jobs` 报 500、`agent_context does not exist`）：
+
+```bash
+docker exec ams-testgen-postgres psql -U admin -d testgen_db -f - < ../database/migrations/001_add_agent_context.sql
+```
+
+或在容器内执行：`ALTER TABLE generation_jobs ADD COLUMN IF NOT EXISTS agent_context JSONB DEFAULT '{}';`
+
 ## 架构
 
 - **frontend/** — Vue 3 + Element Plus + AntV（测试范围 / 进度 / 用例管理）

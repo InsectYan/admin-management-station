@@ -1,17 +1,34 @@
 <template>
-  <el-aside width="240px" class="app-sider">
+  <el-aside :width="asideWidth" :class="['app-sider', { collapsed }]">
     <div class="app-brand">
-      <span class="app-brand-text">私人管理平台</span>
+      <span v-show="!collapsed" class="app-brand-text">私人管理平台</span>
+      <el-tooltip
+        :content="collapsed ? '展开菜单' : '折叠菜单'"
+        placement="right"
+      >
+        <el-button
+          class="collapse-trigger"
+          link
+          :aria-label="collapsed ? '展开菜单' : '折叠菜单'"
+          @click="toggleCollapsed"
+        >
+          <el-icon><component :is="collapsed ? Expand : Fold" /></el-icon>
+        </el-button>
+      </el-tooltip>
     </div>
+    <LlmProfileSelector
+      :collapsed="collapsed"
+      :menu-key="selectedKey"
+    />
     <div v-if="loading" class="menu-status">
       <el-icon class="is-loading"><Loading /></el-icon>
-      <span>菜单加载中…</span>
+      <span v-show="!collapsed">菜单加载中…</span>
     </div>
     <el-alert
       v-else-if="error"
       class="menu-alert"
       type="error"
-      :title="error"
+      :title="collapsed ? '菜单加载失败' : error"
       show-icon
       :closable="false"
     />
@@ -20,12 +37,18 @@
       background-color="#545c64"
       text-color="#fff"
       active-text-color="#ffd04b"
+      :collapse="collapsed"
+      :collapse-transition="false"
       :default-active="selectedKey"
       :default-openeds="openKeys"
       @select="handleSelect"
     >
-      <template v-for="item in menuItems" :key="item.key">
-        <el-sub-menu v-if="item.children?.length" :index="item.key">
+      <template v-for="item in menuItems">
+        <el-sub-menu
+          v-if="item.children?.length"
+          :key="`sub-${item.key}`"
+          :index="item.key"
+        >
           <template #title>
             <el-icon><component :is="item.icon" /></el-icon>
             <span>{{ item.label }}</span>
@@ -39,7 +62,11 @@
             <span>{{ child.label }}</span>
           </el-menu-item>
         </el-sub-menu>
-        <el-menu-item v-else :index="item.key">
+        <el-menu-item
+          v-else
+          :key="`item-${item.key}`"
+          :index="item.key"
+        >
           <el-icon><component :is="item.icon" /></el-icon>
           <span>{{ item.label }}</span>
         </el-menu-item>
@@ -51,8 +78,10 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Loading, Grid, Reading, Cpu } from '@element-plus/icons-vue';
+import { Loading, Grid, Reading, Cpu, Fold, Expand } from '@element-plus/icons-vue';
 import { buildMenuPath } from '../qiankun/config.js';
+import { useNavCollapse } from '../composables/useNavCollapse.js';
+import LlmProfileSelector from './LlmProfileSelector.vue';
 
 const props = defineProps({
   menus: { type: Array, default: () => [] },
@@ -62,6 +91,9 @@ const props = defineProps({
 
 const route = useRoute();
 const router = useRouter();
+const { collapsed, toggleCollapsed } = useNavCollapse();
+
+const asideWidth = computed(() => (collapsed.value ? '64px' : '240px'));
 
 const ICON_MAP = {
   'icon-novel': Reading,
@@ -129,16 +161,33 @@ function handleSelect(key) {
 .app-sider {
   background: #545c64;
   min-height: 100vh;
+  transition: width 0.25s ease;
+  overflow: hidden;
 }
 
 .app-brand {
-  padding: 10px 16px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px;
+  padding-left: 20px;
+  color: #fff;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.app-brand-text {
-  color: #fff;
-  font-size: 16px;
-  font-weight: 600;
+.app-sider.collapsed .menu-status {
+  justify-content: center;
+  padding-inline: 8px;
+}
+
+.collapse-trigger {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 18px;
+}
+
+.collapse-trigger:hover {
+  color: #ffd04b;
 }
 </style>

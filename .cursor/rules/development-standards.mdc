@@ -13,6 +13,18 @@ alwaysApply: true
 
 详见 **[`app-self-contained.mdc`](./app-self-contained.mdc)**。与本节冲突的旧约定（如 `apps/`、`deploy/compose/infra.yml`）一律以自包含规则为准。
 
+## 子应用强制遵循
+
+**`project-sub/` 下所有子应用与主应用适用同一套 `.cursor/rules/` 规范**，不得以「子应用特例」跳过或降级。新建或修改子应用时须至少满足：
+
+- 架构：`app-self-contained.mdc`、`app-registry.mdc`、`cache-local.mdc`
+- 前端：`vue-web.mdc`、`vue-element-plus.mdc`、**`nav-layout.mdc`**、**`subapp-layout.mdc`**、**`subapp-style-isolation.mdc`**、**`vite-hmr.mdc`**
+- 微前端：`subapp-onboarding.mdc`、`qiankun-microfrontend.mdc`
+- 后端：`egg-backend.mdc`、`postgresql.mdc`、**`database-schema-sync.mdc`**（涉及 BFF / 数据库时）
+- 部署：`deploy-cli.mdc`、`docker.mdc`、`docker-compose.mdc`（涉及 `deploy/` 时）
+
+审查子应用 PR 或代码时，按上述清单逐项核对；不符合须修正后再合并。
+
 ## 基本原则
 
 - **最小改动**：只修改与当前任务直接相关的内容。
@@ -40,12 +52,17 @@ alwaysApply: true
 | **`app-registry.mdc`** | 端口、库名、容器名 |
 | **`cache-local.mdc`** | 进程内缓存（默认 memory） |
 | **`subapp-onboarding.mdc`** | 子应用接入 Qiankun |
+| **`nav-layout.mdc`** | 垂直导航菜单与折叠 |
+| **`subapp-layout.mdc`** | 子应用视口高度与内容滚动 |
+| **`subapp-style-isolation.mdc`** | 子应用 CSS 隔离 |
+| **`vite-hmr.mdc`** | Vite 开发热更新（HMR） |
 | `deploy-cli.mdc` | `ams-{app_key}` CLI |
-| `docker.mdc` / `docker-compose.mdc` | 容器与 compose |
+| `docker.mdc` / `docker-compose.mdc` | 容器与 compose（概要 / 目录结构） |
 | `vue-web.mdc` | Vue 3 前端 |
 | `vue-element-plus.mdc` | Element Plus 子应用 UI |
 | `egg-backend.mdc` | Egg.js BFF |
 | `postgresql.mdc` | PostgreSQL / ORM |
+| **`database-schema-sync.mdc`** | 启动时 DB Schema 自动同步 |
 | `qiankun-microfrontend.mdc` | 微前端集成 |
 | `windows-console.mdc` | Windows PowerShell UTF-8 |
 

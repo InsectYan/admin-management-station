@@ -10,13 +10,17 @@ import {
 import App from './App.vue';
 import { createAppRouter } from './router';
 import { setBasename } from './qiankun/config.js';
+import { bindStandaloneScope } from './lib/subappScope.js';
 import './App.css';
 
 let app = null;
 let router = null;
 let pinia = null;
+let unbindStandaloneScope = null;
 
 function render(props = {}) {
+  unbindStandaloneScope?.();
+  unbindStandaloneScope = bindStandaloneScope();
   const container = props.container
     ? props.container.querySelector('#app')
     : document.getElementById('app');
@@ -46,6 +50,8 @@ renderWithQiankun({
     app = null;
     router = null;
     pinia = null;
+    unbindStandaloneScope?.();
+    unbindStandaloneScope = null;
   },
 });
 

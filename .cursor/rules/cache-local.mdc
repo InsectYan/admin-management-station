@@ -1,6 +1,6 @@
 ---
 description: 本地优先缓存策略（默认进程内 memory，无需 Redis 容器）
-globs: "{menu-master/**,novel-sub/**,docs-project/**,**/backend/**}"
+globs: "{menu-master/**,project-sub/**,docs-project/**,**/backend/**}"
 alwaysApply: false
 ---
 

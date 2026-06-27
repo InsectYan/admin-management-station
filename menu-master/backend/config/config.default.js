@@ -23,7 +23,11 @@ module.exports = appInfo => {
     enable: true,
     ignore: ctx => {
       if (ctx.path === '/api/health') return true;
-      if (ctx.method === 'GET' && (ctx.path === '/api/menus' || ctx.path === '/api/menus/root')) {
+      if (ctx.method === 'GET' && (
+        ctx.path === '/api/menus'
+        || ctx.path === '/api/menus/root'
+        || ctx.path === '/api/llm/profiles'
+      )) {
         return true;
       }
       return false;
@@ -69,6 +73,11 @@ module.exports = appInfo => {
   config.subappEntryEnv = {
     'novel-app': 'SUBAPP_NOVEL_ENTRY',
     'testgen-app': 'SUBAPP_TESTGEN_ENTRY',
+  };
+
+  config.agentPlatform = {
+    baseUrl: process.env.AGENT_PLATFORM_URL || 'http://127.0.0.1:3001',
+    timeout: Number(process.env.AGENT_PLATFORM_TIMEOUT || 15000),
   };
 
   return config;

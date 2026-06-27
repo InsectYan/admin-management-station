@@ -1,0 +1,98 @@
+---
+description: 前端 Vite 开发热更新（HMR）规范——主应用与子应用强制
+globs: "{menu-master/**/frontend/**,project-sub/**/frontend/**,**/vite.config.*,**/docker-compose*.yml}"
+alwaysApply: false
+---
+
+# 前端开发热更新（HMR）规范
+
+**主应用与 `project-sub/` 下所有子应用均须配置**，保证本地改代码能即时反映，不得依赖手动 rebuild `dist`。
+
+## 原则
+
+- 本地开发默认跑 **`npm run dev`（Vite dev server）**，不是访问 `dist/` 静态产物。
+- 子应用须启用 `vite-plugin-qiankun` 且 **`useDevMode: true`**（见 `vue-web.mdc`）。
+- Docker `ams-{app} local` 的前端容器同样跑 dev server，**须 bind-mount 源码**，不能只 COPY 进镜像。
+
+## 场景与要求
+
+| 场景 | HMR | 要求 |
+|------|-----|------|
+| 宿主机 `frontend/` 下 `npm run dev` | ✅ | 直接访问 Vite 端口，或经主应用 Qiankun 嵌入 |
+| Qiankun 嵌入主应用开发 | ✅ | 须配置 `server.hmr.clientPort` 为**本子应用 Vite 端口** |
+| `ams-{app} local` Docker 前端 | ✅ | compose bind-mount 源码 + `watch.usePolling` |
+| 仅构建 `dist` / 生产 Nginx | ❌ | 无 HMR，属预期 |
+
+## vite.config.js 必须项
+
+所有含 `frontend/vite.config.js` 的应用（主应用、子应用）须包含：
+
+```javascript
+const port = Number(env.VITE_DEV_PORT || /* 见 app-registry */);
+
+server: {
+  host: '0.0.0.0',
+  port,
+  strictPort: true,
+  cors: true,
+  hmr: {
+    protocol: 'ws',
+    host: 'localhost',
+    port,
+    clientPort: port,  // 嵌入主应用时 WS 不能连主应用端口
+  },
+  watch: {
+    usePolling: true,  // Docker 卷挂载 / Windows 文件监听
+  },
+},
+```
+
+子应用额外：`qiankun('{microapp_name}', { useDevMode: true })`。
+
+### 为何需要 clientPort
+
+浏览器页在主应用 origin（如 `http://localhost:5173`），子应用 dev server 在 `5175`。未设 `clientPort` 时 HMR WebSocket 连错端口 → 热更新失效或只能整页刷新。
+
+## Docker compose 必须项（前端 service）
+
+`{app}/deploy/docker-compose.yml` 的前端 service **须 bind-mount**（与 `menu-master` 主应用一致）：
+
+```yaml
+volumes:
+  - ../frontend/src:/app/src
+  - ../frontend/index.html:/app/index.html
+  - ../frontend/vite.config.js:/app/vite.config.js
+```
+
+前端 Dockerfile 使用 `CMD ["npm", "run", "dev", ...]` 而非仅 serve `dist`。
+
+**禁止**：前端容器仅 COPY 源码、无 volume — 宿主机改文件容器内不可见，HMR 无效。
+
+## 推荐联调流程
+
+```text
+1. 子应用：cd project-sub/{app}/frontend && npm run dev
+2. 主应用：cd menu-master/frontend && npm run dev  （或 ams-main local）
+3. 浏览器打开主应用 → 点击子应用菜单（Qiankun 嵌入调试）
+4. 改子应用 .vue / .css → 应出现 Vite HMR 日志且无整页刷新
+```
+
+独立调试子应用时可直开 `http://localhost:{Vite端口}`。
+
+## 参考实现
+
+| 应用 | 文件 |
+|------|------|
+| 主应用 | `menu-master/frontend/vite.config.js`、`menu-master/deploy/docker-compose.yml` |
+| 子应用 | `project-sub/testgen-sub/frontend/vite.config.js`、`project-sub/testgen-sub/deploy/docker-compose.yml` |
+
+## 禁止
+
+- 子应用 compose 前端无源码 volume 却期望热更新
+- 删除或省略 `server.hmr.clientPort`（有 Qiankun 嵌入时）
+- 本地开发只改 `dist` 不启 dev server
+- 生产构建配置（`vite build`）替代 dev HMR 配置
+
+## 相关规则
+
+`vue-web.mdc` · `subapp-onboarding.mdc` · `docker-compose.mdc` · `qiankun-microfrontend.mdc`

@@ -1,0 +1,104 @@
+---
+description: 子应用 CSS 样式隔离规范（Qiankun 多子应用共存）
+globs: "{project-sub/**/frontend/**,**/qiankun/**,**/App.css,**/App.vue,**/lib/subappScope.js}"
+alwaysApply: false
+---
+
+# 子应用样式隔离
+
+主应用与子应用、子应用之间**不得**因全局 CSS 互相污染。子应用须自行完成隔离；主应用 Qiankun 沙箱为辅助层。
+
+## 双层隔离
+
+| 层级 | 责任方 | 机制 |
+|------|--------|------|
+| 运行时沙箱 | 主应用 | `qiankun` `start({ sandbox: { experimentalStyleIsolation: true } })` |
+| 源码约束 | **各子应用** | 前缀类名 + 根容器 + 禁止裸全局选择器 |
+
+`experimentalStyleIsolation` **不能**替代子应用规范：对 `html/body`、未前缀的 `.el-*` 仍可能泄漏。
+
+## 子应用必须实现
+
+### 1. 根容器 `{prefix}-sub-root`
+
+`App.vue` 包裹 `router-view`：
+
+```vue
+<template>
+  <div :class="SUBAPP_ROOT_CLASS">
+    <router-view />
+  </div>
+</template>
+```
+
+`{prefix}` = `app_key`（如 `testgen`、`novel`）。
+
+### 2. `lib/subappScope.js`
+
+每个子应用复制并改前缀常量：
+
+- `SUBAPP_ROOT_CLASS` — 根容器类
+- `SUBAPP_STANDALONE_HTML_CLASS` — 仅独立 dev 挂到 `document.documentElement`
+- `bindStandaloneScope()` — 在 `main.js` `render` 调用，`unmount` 清理
+
+### 3. 独立 dev 才改 `html/body`
+
+```css
+/* ✅ 仅 standalone */
+html.{prefix}-sub-standalone,
+html.{prefix}-sub-standalone body { margin: 0; height: 100%; }
+
+/* ❌ 禁止 */
+html, body { margin: 0; }
+```
+
+嵌入态高度链：`#subapp-container` → `{prefix}-sub-root` → `{prefix}-sub-layout`（见 `subapp-layout.mdc`）。
+
+### 4. 类名前缀
+
+- 业务/布局类：`{prefix}-*`（如 `testgen-page`、`novel-filter-bar`）
+- 组件 `scoped` 或 BEM；**禁止**无前缀的通用类（`.page`、`.container`）
+
+### 5. 禁止裸全局选择器
+
+| 禁止 | 替代 |
+|------|------|
+| `.el-main { … }` | `.{prefix}-sub-content.el-main { … }` |
+| `.el-menu { … }` | `.{prefix}-sub-nav.el-menu { … }` |
+| `#app { … }`（无 standalone 限定） | `html.{prefix}-sub-standalone #app` |
+| 修改 `body` 字体/背景（嵌入态） | 仅在 `{prefix}-sub-root` 或 layout 内设置 |
+
+### 6. Element Plus
+
+- 可继续全量 `import 'element-plus/dist/index.css'`
+- 覆写 EP 变量/组件样式时**必须**带 `{prefix}-` 父选择器或组件 `scoped`
+- Popper/teleport 挂到 `body` 的浮层由 Qiankun 沙箱处理；避免写死全局 z-index 覆盖其他应用
+
+### 7. 卸载清理
+
+`unmount` 中：`app.unmount()` + `bindStandaloneScope` 返回的清理函数，避免 standalone 类残留。
+
+## 主应用
+
+- 保持 `experimentalStyleIsolation: true`（`registerApps.js`）
+- `#subapp-container` 不写入仅对某一子应用生效的选择器
+- 主应用样式类使用 `app-` 前缀，与子应用 `{prefix}-` 区分
+
+## 参考实现
+
+| 应用 | 文件 |
+|------|------|
+| testgen | `lib/subappScope.js`、`App.vue`、`App.css` |
+| novel | 同上 |
+
+## 自检清单
+
+- [ ] `App.vue` 有 `{prefix}-sub-root`
+- [ ] `App.css` 无裸 `html/body/.el-*`
+- [ ] `main.js` 调用 `bindStandaloneScope` 且 `unmount` 清理
+- [ ] 新增样式均带 `{prefix}-` 前缀
+- [ ] 切换子应用菜单后，上一子应用样式不影响当前页
+
+## 相关规则
+
+`subapp-layout.mdc` · `qiankun-microfrontend.mdc` · `vue-element-plus.mdc`

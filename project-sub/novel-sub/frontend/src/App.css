@@ -1,7 +1,20 @@
+/* novel 子应用样式 — 禁止裸 html/body/.el-* 全局选择器（见 subapp-style-isolation.mdc） */
+
+html.novel-sub-standalone,
+html.novel-sub-standalone body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+html.novel-sub-standalone #app {
+  height: 100%;
+}
+
 .novel-page {
   background: #fff;
   border-radius: 8px;
-  padding: 20px 24px 24px;
+  padding: 0;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
@@ -21,6 +34,9 @@
 
 .novel-page-title {
   margin: 0 !important;
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
 }
 
 .novel-page-extra {
@@ -30,11 +46,16 @@
   flex-wrap: wrap;
 }
 
-.novel-filter-bar {
+.novel-page-body {
+  flex: 1;
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.novel-page--table {
+  display: flex;
+  flex-direction: column;
 }
 
 .novel-status-tag-draft {

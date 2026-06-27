@@ -58,6 +58,10 @@ services:
     environment:
       VITE_API_BASE: http://localhost:7003/api
       VITE_DEV_PORT: 5175
+    volumes:
+      - ../frontend/src:/app/src
+      - ../frontend/index.html:/app/index.html
+      - ../frontend/vite.config.js:/app/vite.config.js
     depends_on:
       - api-testgen
 

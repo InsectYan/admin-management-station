@@ -36,6 +36,43 @@ class DocumentService extends Service {
     return row ? row.toJSON() : null;
   }
 
+  async previewFile(file) {
+    return this.ctx.service.documentStaging.saveFromUpload(file);
+  }
+
+  async getPreviewById(id) {
+    const doc = await this.findById(id);
+    if (!doc) return null;
+    return this.ctx.service.documentStaging.buildPreviewFromDocument(doc);
+  }
+
+  async getStoredFilePath(id) {
+    const doc = await this.findById(id);
+    if (!doc?.file_path) return null;
+    try {
+      await fs.promises.access(doc.file_path);
+      return doc.file_path;
+    } catch {
+      return null;
+    }
+  }
+
+  async createRaw({ title, content, doc_type, metadata, file_path, file_size }) {
+    const row = await this.ctx.model.Document.create({
+      title: title || '未命名文档',
+      doc_type: doc_type || 'markdown',
+      content,
+      file_path: file_path || null,
+      file_size: file_size || null,
+      source: 'upload',
+      tags: [],
+      metadata: metadata || {},
+      parse_status: 'done',
+      parsed_meta: {},
+    });
+    return this.findById(row.id);
+  }
+
   async create(payload) {
     const row = await this.ctx.model.Document.create({
       title: payload.title || '未命名文档',

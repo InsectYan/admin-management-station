@@ -1,33 +1,25 @@
 ---
 description: Docker 容器化部署规范（每应用自包含 deploy/）
-globs: "{menu-master/**,novel-sub/**,**/deploy/**,**/Dockerfile*,**/docker-compose*.yml}"
+globs: "{menu-master/**,project-sub/**,**/deploy/**,**/Dockerfile*,**/docker-compose*.yml}"
 alwaysApply: false
 ---
 
 # Docker 部署规范
 
+compose 目录结构、init SQL、network/volume 命名等细节见 **`docker-compose.mdc`**。
+
 ## 原则
 
 - 每应用 `deploy/docker-compose.yml` **自带 Postgres**（见 `app-self-contained.mdc`）。
 - 缓存默认 **memory**（见 `cache-local.mdc`）。
-- 日常启动：**`ams-{app_key} local`**。
-- 配置：`{app}/deploy/config/.env.local` + `{app}/backend/.env`。
-- 端口以 **`app-registry.mdc`** 为准。
+- 日常启动：**`ams-{app_key} local`**（见 `deploy-cli.mdc`）。
+- 配置：`{app}/deploy/config/.env.local` + `{app}/backend/.env`；端口以 **`app-registry.mdc`** 为准。
 
-## 镜像
+## 镜像与网络
 
-| 类型 | Dockerfile | context |
+| 类型 | Dockerfile | 基础镜像 |
 |------|------------|---------|
-| Egg BFF | `{app}/deploy/config/Dockerfile.backend` | 应用根 |
-| 前端 | `{app}/deploy/config/Dockerfile.frontend` | 应用根 |
+| Egg BFF | `{app}/deploy/config/Dockerfile.backend` | `node:22-alpine` |
+| 前端 | `{app}/deploy/config/Dockerfile.frontend` | 同上 |
 
-基础镜像：**`node:22-alpine`**。
-
-## 网络
-
-- 容器互访用 service 名（`postgres`、`api-*`）。
-- 禁止容器内 `localhost` 访问同栈其他服务。
-
-## CLI
-
-见 `deploy-cli.mdc`。
+- 构建 context 为应用根；容器互访用 Compose **service 名**，禁止同栈内 `localhost`。

@@ -9,6 +9,9 @@ export const useGenerationJobStore = defineStore('generationJob', {
     progress: { analyze: 0, functional: 0, edge: 0, review: 0 },
     steps: [],
     errorMessage: null,
+    agentContext: {},
+    jobOptions: {},
+    testTypes: [],
     pollingTimer: null,
   }),
   getters: {
@@ -28,6 +31,10 @@ export const useGenerationJobStore = defineStore('generationJob', {
       this.progress = job.progress ?? this.progress;
       this.steps = job.steps ?? [];
       this.errorMessage = job.error_message ?? null;
+      this.agentContext = job.agent_context ?? {};
+      this.jobOptions = job.options ?? {};
+      this.testTypes = job.test_types ?? [];
+      if (this.isTerminal) this.stopPolling();
       return job;
     },
     startPolling(jobId, intervalMs = 2000) {

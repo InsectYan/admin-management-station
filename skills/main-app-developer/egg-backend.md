@@ -12,6 +12,7 @@ Model → Service → Controller → Router → Middleware
 
 - `PORT`、`POSTGRES_DB` 读环境变量
 - `egg-sequelize`、`egg-jwt` 在 `plugin.js` 启用
+- `app.js` `beforeStart` → `syncSchemaOnStartup`（见 `database-schema-sync.mdc`）
 - 公开读路由加入 `jwt.ignore`（见 `subapp-onboarding.mdc`）
 - 菜单/注册表读多：可用 `app/lib/cache.js`（memory）
 

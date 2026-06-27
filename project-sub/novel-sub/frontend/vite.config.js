@@ -18,6 +18,15 @@ export default defineConfig(({ mode }) => {
       port,
       strictPort: true,
       cors: true,
+      hmr: {
+        protocol: 'ws',
+        host: 'localhost',
+        port,
+        clientPort: port,
+      },
+      watch: {
+        usePolling: true,
+      },
       proxy: {
         '/api': {
           target: env.VITE_PROXY_TARGET || apiOrigin,

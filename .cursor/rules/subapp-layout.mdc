@@ -1,0 +1,136 @@
+---
+description: 子应用 MainLayout 视口高度与内容滚动规范（与 testgen 对齐）
+globs: "{project-sub/**/frontend/**,**/MainLayout.*,**/PageShell.*,**/App.css}"
+alwaysApply: false
+---
+
+# 子应用布局规范（菜单 + 内容区）
+
+**`project-sub/` 下所有子应用须遵循**，与 `nav-layout.mdc`（导航形态）配合使用。
+
+## 布局目标
+
+| 区域 | 行为 |
+|------|------|
+| **嵌入态水平菜单** | `position: sticky; top: 0`，吸顶不随内容滚走 |
+| **独立 dev 垂直侧栏** | 固定左侧，高度 `100vh`，不参与内容滚动 |
+| **内容区**（`{prefix}-sub-content`） | 高度 = 视口剩余空间，`overflow-y: auto`，**仅内容纵向滚动** |
+| **页面外层**（`html/body/#app`） | 不产生整页滚动条（`height: 100%` + 布局 `overflow: hidden`） |
+
+## DOM 结构（强制）
+
+```vue
+<el-container :class="['{prefix}-sub-layout', { embedded }]">
+  <NavMenu v-if="!embedded" ... />
+  <el-container :class="['{prefix}-sub-main-column', { embedded }]" direction="vertical">
+    <div v-if="embedded" class="{prefix}-sub-embedded-bar">
+      <NavMenu :embedded="embedded" />
+    </div>
+    <el-main :class="['{prefix}-sub-content', { embedded }]">
+      <router-view />
+    </el-main>
+  </el-container>
+</el-container>
+```
+
+`{prefix}` = 应用前缀（如 `testgen`、`novel`）。
+
+## 公共 CSS 模板
+
+复制到 `frontend/src/components/MainLayout.css`，替换 `{prefix}`：
+
+```css
+.{prefix}-sub-layout {
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+  background: #fff;
+  padding: 0;
+}
+
+.{prefix}-sub-layout.embedded {
+  height: 100%;
+  min-height: calc(100vh - var(--subapp-layout-offset, 0px));
+  max-height: 100vh;
+  background: transparent;
+}
+
+.{prefix}-sub-main-column {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.{prefix}-sub-sider {
+  height: 100vh;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.{prefix}-sub-embedded-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-shrink: 0;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.{prefix}-sub-content {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.{prefix}-sub-content.embedded {
+  padding: 16px 24px 24px;
+  background: transparent;
+}
+```
+
+`App.css` 须含：
+
+```css
+html, body { margin: 0; padding: 0; height: 100%; }
+#app { height: 100%; }
+.el-main { padding: 0; }  /* 由 {prefix}-sub-content 控制内边距 */
+```
+
+## PageShell 对齐
+
+- 白底卡片：`border-radius: 8px`；`padding: 0`（内边距由页面区块自行控制）
+- 标题：`18px / 600`
+- 提供 `{prefix}-page-body`（`flex: 1; min-height: 0`）与可选 `table-layout`（表格页配合 `DataTablePanel`）
+
+## 主应用宿主（Qiankun）
+
+主应用 `#subapp-container` 须限制高度并 `overflow: hidden`，使子应用 `%` / `calc(100vh - …)` 生效：
+
+```css
+.subapp-container {
+  height: calc(100vh - var(--subapp-layout-offset, 0px));
+  min-height: 0;
+  overflow: hidden;
+}
+```
+
+## 参考实现
+
+| 应用 | 文件 |
+|------|------|
+| AI 测试 | `project-sub/testgen-sub/frontend/src/components/MainLayout.*` |
+| 小说 | `project-sub/novel-sub/frontend/src/components/MainLayout.*` |
+
+## 禁止
+
+- 内容区使用 `min-height: 100vh` 导致 **整页 + 内容区双滚动条**
+- 嵌入态菜单随 `router-view` 内容一起滚出视口
+- 跳过 `overflow: hidden` 链、仅在 `body` 上滚动
+
+样式隔离见 **`subapp-style-isolation.mdc`**。

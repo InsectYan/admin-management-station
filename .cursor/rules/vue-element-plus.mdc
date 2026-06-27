@@ -1,6 +1,6 @@
 ---
-description: Vue 3 + Element Plus 子应用 UI 开发规范
-globs: "{**/views/**,**/components/**,**/*.vue}"
+description: Vue 3 + Element Plus 子应用 UI 开发规范（project-sub 强制）
+globs: "{project-sub/**/frontend/**,**/views/**,**/components/**,**/*.vue}"
 alwaysApply: false
 ---
 
@@ -8,13 +8,15 @@ alwaysApply: false
 
 ## 适用范围
 
-Qiankun 微前端**子应用** UI 层：Vue 3 + Element Plus + Vite。
+**`project-sub/` 下所有子应用** UI 层：Vue 3 + Element Plus + Vite。与主应用前端规范（`vue-web.mdc`）同级强制，不可省略。
 
 ## 组件与页面
 
 - 页面放 `views/`，可复用组件放 `components/`。
 - 优先使用 Element Plus（`el-table`、`el-form`、`el-steps`、`el-container`）。
-- 表单：`el-form` + `v-model`；列表：`el-table` + 分页/筛选。
+- 表单：`el-form` + `v-model`；**分页列表**：`DataTablePanel` + `el-table`（吸底分页、可切换每页条数），`PageShell` 设 `table-layout`。
+- `DataTablePanel` 默认插槽为**作用域插槽**，可接收 `bodyHeight` 等布局参数绑定 `el-table` 的 `:height`。
+- **样式隔离**：类名 `{app_key}-*` 前缀；禁止裸 `html/body/.el-*`；见 **`subapp-style-isolation.mdc`**。
 
 ## 状态与服务
 
@@ -25,9 +27,11 @@ Qiankun 微前端**子应用** UI 层：Vue 3 + Element Plus + Vite。
 
 - **Vue Router** + `createWebHistory`；`base` 与 Qiankun props.basename 对齐。
 
-## 嵌入态 UI
+## 导航与嵌入态
 
-- `__POWERED_BY_QIANKUN__` 时隐藏子应用独立顶栏/品牌，避免与主应用布局重复。
+- 页内导航：`NavMenu.vue` + `composables/useNavCollapse.js`；**独立 dev 须左侧垂直可折叠侧栏**（见 **`nav-layout.mdc`**，强制）。
+- `MainLayout` 内容区须 **视口固定高 + 内部纵向滚动**（见 **`subapp-layout.mdc`**）。
+- `__POWERED_BY_QIANKUN__` 时隐藏子应用品牌与垂直侧栏，仅保留页内水平 `NavMenu`。
 
 ## 构建
 

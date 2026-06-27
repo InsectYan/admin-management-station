@@ -14,8 +14,23 @@ class AgentProxyService extends Service {
     });
 
     if (res.status !== 200) {
-      const err = new Error(res.data?.message || `Agent 调用失败: ${res.status}`);
+      const err = new Error(
+        res.data?.error || res.data?.message || `Agent 调用失败: ${res.status}`,
+      );
       err.status = res.status >= 500 ? 504 : res.status;
+      throw err;
+    }
+
+    if (res.data?.error) {
+      const err = new Error(res.data.error);
+      err.status = res.status >= 400 ? res.status : 502;
+      throw err;
+    }
+
+    const stoppedReason = res.data?.output?.stoppedReason;
+    if (stoppedReason === 'llm_error') {
+      const err = new Error(res.data?.reply || 'Agent LLM 调用失败');
+      err.status = 502;
       throw err;
     }
 

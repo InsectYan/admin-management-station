@@ -22,6 +22,16 @@ export async function deleteTestCase(id) {
   return data.data;
 }
 
+export async function batchDeleteTestCases(ids) {
+  const { data } = await api.post(`${base()}/test-cases/batch-delete`, { ids });
+  return data.data;
+}
+
+export async function deleteAllTestCases() {
+  const { data } = await api.delete(`${base()}/test-cases/all`);
+  return data.data;
+}
+
 export async function exportTestCases(params = {}) {
   const { data } = await api.get(`${base()}/test-cases/export`, {
     params,

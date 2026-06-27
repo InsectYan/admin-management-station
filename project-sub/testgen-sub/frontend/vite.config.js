@@ -18,6 +18,17 @@ export default defineConfig(({ mode }) => {
       port,
       strictPort: true,
       cors: true,
+      // 嵌入主应用（5173）时，HMR WebSocket 须连子应用端口，否则会整页刷新或无效
+      hmr: {
+        protocol: 'ws',
+        host: 'localhost',
+        port,
+        clientPort: port,
+      },
+      // Docker / Windows 卷挂载时原生 fs 事件不可靠
+      watch: {
+        usePolling: true,
+      },
       proxy: {
         '/api': {
           target: env.VITE_PROXY_TARGET || apiOrigin,

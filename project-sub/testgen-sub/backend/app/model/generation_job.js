@@ -19,6 +19,7 @@ module.exports = app => {
       },
       steps_log: { type: JSONB, defaultValue: [] },
       agent_run_id: { type: INTEGER },
+      agent_context: { type: JSONB, defaultValue: {} },
       error_message: { type: TEXT },
       created_by: { type: STRING(100) },
       started_at: { type: DATE },

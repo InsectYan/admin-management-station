@@ -1,6 +1,6 @@
 ---
 description: Docker Compose 与 deploy 目录规范（每应用自包含栈）
-globs: "{menu-master/**,novel-sub/**,**/deploy/**,**/docker-compose*.yml,**/Dockerfile*}"
+globs: "{menu-master/**,project-sub/**,**/deploy/**,**/docker-compose*.yml,**/Dockerfile*}"
 alwaysApply: false
 ---
 
@@ -35,6 +35,7 @@ alwaysApply: false
 - `postgres` 写在同一文件；`CACHE_DRIVER=memory`（见 `cache-local.mdc`）
 - 容器内 `POSTGRES_PORT=5432`；宿主机映射端口见 `app-registry.mdc`
 - 前端 `ports:` 与 registry Vite 端口一致
+- 前端 dev 容器须 **bind-mount** `frontend/src`、`index.html`、`vite.config.js`（见 **`vite-hmr.mdc`**）
 - `backend`、`frontend` 提交 `package-lock.json`
 - init SQL：`../database/init.sql`
 - 独立 network / volume 名带 app 前缀
@@ -49,4 +50,4 @@ alwaysApply: false
 
 ## 相关规则
 
-`app-self-contained.mdc` · `docker.mdc` · `deploy-cli.mdc` · `app-registry.mdc` · `subapp-onboarding.mdc`
+`app-self-contained.mdc` · `docker.mdc` · `deploy-cli.mdc` · `app-registry.mdc` · `subapp-onboarding.mdc` · **`vite-hmr.mdc`**

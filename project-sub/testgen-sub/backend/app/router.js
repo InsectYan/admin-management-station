@@ -8,6 +8,10 @@ module.exports = app => {
   router.get('/api/documents', controller.document.index);
   router.post('/api/documents', controller.document.create);
   router.post('/api/documents/upload', controller.document.upload);
+  router.post('/api/documents/preview', controller.document.preview);
+  router.get('/api/documents/staging/:id/file', controller.document.serveStagingFile);
+  router.get('/api/documents/:id/preview', controller.document.previewMeta);
+  router.get('/api/documents/:id/file', controller.document.serveFile);
   router.get('/api/documents/:id', controller.document.show);
   router.delete('/api/documents/:id', controller.document.destroy);
 
@@ -22,10 +26,14 @@ module.exports = app => {
   router.post('/api/generation-jobs', controller.generationJob.create);
   router.get('/api/generation-jobs/:id', controller.generationJob.show);
   router.post('/api/generation-jobs/:id/cancel', controller.generationJob.cancel);
+  router.post('/api/generation-jobs/:id/retry', controller.generationJob.retry);
   router.get('/api/generation-jobs/:id/test-cases', controller.generationJob.testCases);
+  router.post('/api/internal/generation-jobs/:id/agent-context', controller.generationJob.updateAgentContext);
 
   router.get('/api/test-cases/export', controller.testCase.export);
   router.get('/api/test-cases', controller.testCase.index);
+  router.post('/api/test-cases/batch-delete', controller.testCase.batchDestroy);
+  router.delete('/api/test-cases/all', controller.testCase.destroyAll);
   router.get('/api/test-cases/:id', controller.testCase.show);
   router.put('/api/test-cases/:id', controller.testCase.update);
   router.delete('/api/test-cases/:id', controller.testCase.destroy);

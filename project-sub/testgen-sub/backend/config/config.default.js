@@ -58,7 +58,7 @@ module.exports = appInfo => {
   config.multipart = {
     mode: 'file',
     fileSize: '20mb',
-    fileExtensions: [ '.md', '.markdown', '.txt', '.pdf', '.json', '.yaml', '.yml' ],
+    fileExtensions: [ '.md', '.markdown', '.txt', '.pdf', '.json', '.yaml', '.yml', '.doc', '.docx' ],
   };
 
   return config;

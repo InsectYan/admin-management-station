@@ -30,7 +30,8 @@ alwaysApply: false
 
 - 通过 ORM（Sequelize）定义模型于 `app/model/`，避免裸 SQL。
 - 多步写操作用事务；读多写少用 `app/lib/cache.js`（见 `cache-local.mdc`）。
-- 生产：`synchronize: false`，变更走 migration。
+- **启动同步**：各 BFF 在 `app.js` `beforeStart` 调用 `app/lib/schemaSync.js`，自动执行 `init.sql`、migrations、`sequelize.sync({ alter: true })` 并清理孤儿表（见 `database-schema-sync.mdc`）。
+- 生产：`synchronize: false`（Egg 配置层），结构变更靠 migration + 启动 schemaSync；禁止 `force: true`。
 - 禁止拼接用户输入到 SQL。
 
 ## 多应用隔离

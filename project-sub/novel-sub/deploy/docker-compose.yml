@@ -56,6 +56,10 @@ services:
       - ./config/.env.local
     environment:
       VITE_API_BASE: http://localhost:7002/api
+    volumes:
+      - ../frontend/src:/app/src
+      - ../frontend/index.html:/app/index.html
+      - ../frontend/vite.config.js:/app/vite.config.js
     depends_on:
       - api-novel
 

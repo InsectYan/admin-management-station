@@ -3,7 +3,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { Graph } from '@antv/x6';
 
 const props = defineProps({
@@ -23,6 +23,14 @@ const PHASE_LABELS = {
   edge: '边界用例',
   review: '合规审查',
 };
+
+function resizeGraph() {
+  if (!graph || !containerRef.value) return;
+  const { clientWidth, clientHeight } = containerRef.value;
+  if (clientWidth > 0 && clientHeight > 0) {
+    graph.resize(clientWidth, clientHeight);
+  }
+}
 
 function buildGraph() {
   if (!graph) return;
@@ -114,21 +122,29 @@ function buildGraph() {
       });
     }
   });
+
+  nextTick(() => {
+    resizeGraph();
+    graph.zoomToFit({ padding: 16, maxScale: 1 });
+  });
 }
 
 onMounted(() => {
   graph = new Graph({
     container: containerRef.value,
-    autoResize: true,
+    autoResize: false,
     panning: true,
     mousewheel: { enabled: true, modifiers: ['ctrl', 'meta'] },
     background: { color: '#fafafa' },
     grid: { visible: true, type: 'dot', args: { color: '#e4e7ed', thickness: 1 } },
   });
+  resizeGraph();
   buildGraph();
+  window.addEventListener('resize', resizeGraph);
 });
 
 onUnmounted(() => {
+  window.removeEventListener('resize', resizeGraph);
   graph?.dispose();
   graph = null;
 });

@@ -9,14 +9,25 @@
       style="margin-bottom: 16px"
     />
 
-    <el-progress
-      :percentage="store.overallPercent"
-      :status="progressStatus"
-      :stroke-width="18"
-      style="margin-bottom: 24px"
-    />
+    <el-card shadow="never" class="testgen-progress-card">
+      <div class="testgen-progress-summary">
+        <span class="testgen-progress-label">整体进度</span>
+        <span class="testgen-progress-percent">{{ store.overallPercent }}%</span>
+      </div>
+      <el-progress
+        :percentage="store.overallPercent"
+        :status="progressStatus"
+        :stroke-width="22"
+        striped
+        striped-flow
+        :duration="10"
+      />
+      <div class="testgen-progress-phase">
+        当前阶段：{{ currentPhaseLabel }}
+      </div>
+    </el-card>
 
-    <el-steps :active="activeStep" finish-status="success" align-center>
+    <el-steps :active="activeStep" finish-status="success" align-center style="margin-top: 24px">
       <el-step title="需求分析" description="analyze" />
       <el-step title="功能用例" description="functional" />
       <el-step title="边界用例" description="edge" />
@@ -52,11 +63,13 @@
       </el-timeline-item>
     </el-timeline>
 
-    <div class="testgen-canvas-wrap" style="margin-top: 24px">
-      <VisualizeCanvas
-        :progress="store.progress"
-      />
-    </div>
+    <AgentConfigPanel
+      :agent-context="store.agentContext"
+      :job-options="store.jobOptions"
+      :test-types="store.testTypes"
+      :error-message="store.errorMessage"
+      style="margin-top: 24px"
+    />
 
     <div class="testgen-progress-actions">
       <el-button
@@ -94,7 +107,7 @@ import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
-import VisualizeCanvas from '../components/VisualizeCanvas.vue';
+import AgentConfigPanel from '../components/AgentConfigPanel.vue';
 import { useJobProgress } from '../composables/useJobProgress';
 
 const route = useRoute();
@@ -112,10 +125,21 @@ const phases = [
 
 const phaseOrder = ['analyze', 'functional', 'edge', 'review'];
 
+const phaseLabelMap = {
+  analyze: '需求分析',
+  functional: '功能用例',
+  edge: '边界用例',
+  review: '合规审查',
+};
+
 const activeStep = computed(() => {
   const idx = phaseOrder.indexOf(store.currentPhase);
   return idx >= 0 ? idx : 0;
 });
+
+const currentPhaseLabel = computed(() =>
+  phaseLabelMap[store.currentPhase] || store.currentPhase,
+);
 
 const progressStatus = computed(() => {
   if (store.status === 'failed') return 'exception';

@@ -15,7 +15,9 @@ class TestCaseService extends Service {
   }
 
   async list({ job_id, module, type, priority, status, page = 1, pageSize = 20, page_size } = {}) {
-    const size = Number(page_size || pageSize);
+    const rawSize = Number(page_size ?? pageSize);
+    const size = Number.isFinite(rawSize) && rawSize > 0 ? Math.min(rawSize, 100) : 20;
+    const pageNum = Math.max(1, Number(page) || 1);
     const where = this.buildFilters({ job_id, module, type, priority, status });
 
     const { count, rows } = await this.ctx.model.TestCase.findAndCountAll({
@@ -25,14 +27,14 @@ class TestCaseService extends Service {
         'priority', 'module', 'type', 'job_id', 'document_id',
       ],
       limit: size,
-      offset: (page - 1) * size,
+      offset: (pageNum - 1) * size,
       order: [[ 'id', 'ASC' ]],
     });
 
     return {
       list: rows.map(r => r.toJSON()),
       total: count,
-      page: Number(page),
+      page: pageNum,
       pageSize: size,
     };
   }
@@ -66,6 +68,23 @@ class TestCaseService extends Service {
     if (!row) return false;
     await row.destroy();
     return true;
+  }
+
+  async deleteBatch(ids) {
+    const uniqueIds = [ ...new Set(
+      (ids || []).map(id => Number(id)).filter(id => Number.isFinite(id) && id > 0),
+    ) ];
+    if (!uniqueIds.length) return { deleted: 0 };
+
+    const deleted = await this.ctx.model.TestCase.destroy({
+      where: { id: { [Op.in]: uniqueIds } },
+    });
+    return { deleted };
+  }
+
+  async deleteAll() {
+    const deleted = await this.ctx.model.TestCase.destroy({ where: {} });
+    return { deleted };
   }
 
   async export({ format = 'markdown', job_id, module, type } = {}) {

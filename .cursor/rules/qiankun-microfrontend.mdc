@@ -49,13 +49,18 @@ alwaysApply: false
 
 ## 嵌入态 UI
 
-- `__POWERED_BY_QIANKUN__` 时隐藏子应用全站 Header，仅保留页内导航。
+- `__POWERED_BY_QIANKUN__` 时隐藏子应用品牌与垂直侧栏，仅保留页内水平导航；独立 dev 垂直侧栏见 **`nav-layout.mdc`**（子应用强制）。
 
 ## 通信
 
 - 主 → 子：Qiankun `props`（`basename`、`menuData` 等）。
 - 跨应用：全局事件或 Qiankun 全局状态；unmount 时清理监听。
 
+## 样式隔离
+
+- 主应用 `start({ sandbox: { experimentalStyleIsolation: true } })`（见 `registerApps.js`）。
+- **各子应用须完成源码级隔离**：`{prefix}-sub-root`、禁止裸 `html/body/.el-*`、类名 `{prefix}-*` 前缀。详见 **`subapp-style-isolation.mdc`**。
+
 ## 相关规则
 
-`subapp-onboarding.mdc` · `app-registry.mdc` · `vue-web.mdc` · `egg-backend.mdc`
+`subapp-onboarding.mdc` · `subapp-layout.mdc` · **`subapp-style-isolation.mdc`** · `app-registry.mdc` · `vue-web.mdc` · **`vite-hmr.mdc`** · `egg-backend.mdc`

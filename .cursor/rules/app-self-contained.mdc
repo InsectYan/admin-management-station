@@ -1,6 +1,6 @@
 ---
 description: 自包含应用架构——每个主应用/子应用均为可独立拆出的完整项目
-globs: "{menu-master/**,novel-sub/**,**/deploy/**,docs-project/**}"
+globs: "{menu-master/**,project-sub/**,**/deploy/**,docs-project/**}"
 alwaysApply: true
 ---
 

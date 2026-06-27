@@ -1,0 +1,47 @@
+---
+description: 启动时数据库 Schema 自动同步规范
+globs: "{**/database/**,**/app/lib/schemaSync.js,**/app/model/**,**/backend/app.js,**/scripts/init-db.js}"
+alwaysApply: false
+---
+
+# 数据库 Schema 启动同步
+
+每次 BFF 重启（`beforeStart`）须自动校验**代码定义**与**数据库实际表结构**的差异，并安全对齐。
+
+## 原则
+
+1. **自动对齐**：缺表则建表；缺列则补列（migration 或 Sequelize `alter`）。
+2. **允许删表**：Model / `init.sql` 中已移除的表，启动时可 `DROP TABLE`（孤儿表清理）。
+3. **禁止删行**：除整表删除外，不得 `TRUNCATE`、不得批量删除业务数据。
+4. **脏数据**：列类型不兼容时，在 `database/migrations/` 写显式清理脚本（注释说明原因）。
+5. **幂等**：`init.sql` 用 `CREATE TABLE IF NOT EXISTS`；增量用 `migrations/*.sql`（`ADD COLUMN IF NOT EXISTS` 等）。
+
+## 实现（各 BFF 一致）
+
+| 文件 | 职责 |
+|------|------|
+| `database/init.sql` | 基线 DDL（新表、索引） |
+| `database/migrations/*.sql` | 已有库增量变更 |
+| `app/model/*` | ORM 真源（表名、字段） |
+| `app/lib/schemaSync.js` | 启动同步逻辑 |
+| `app.js` | `beforeStart` → `syncSchemaOnStartup(app)` |
+
+同步流程：
+
+1. 执行 `init.sql` + 排序后的 `migrations/*.sql`
+2. `sequelize.sync({ alter: true })` 对齐 Model
+3. 删除不在 Model 中的孤儿表
+
+`npm run db:init` 仅用于**空库首次初始化**或排障；日常开发依赖启动自动同步。
+
+## 开发检查清单
+
+- [ ] 改表须同步：`init.sql` + Model + migration（若已有库需升级）
+- [ ] 删表前确认无跨服务依赖
+- [ ] 禁止 `sequelize.sync({ force: true })`
+- [ ] 子应用与主应用均须在 `app.js` 注册 `beforeStart` 同步
+
+## 适用范围
+
+- 主应用：`menu-master/backend`
+- 子应用：`project-sub/*/backend`
