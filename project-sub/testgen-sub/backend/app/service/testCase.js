@@ -59,6 +59,7 @@ class TestCaseService extends Service {
       steps: payload.steps ?? row.steps,
       expected: payload.expected ?? row.expected,
       tags: payload.tags ?? row.tags,
+      http_config: payload.http_config !== undefined ? payload.http_config : row.http_config,
     });
     return row.toJSON();
   }

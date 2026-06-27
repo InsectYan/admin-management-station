@@ -38,6 +38,18 @@ module.exports = app => {
   router.put('/api/test-cases/:id', controller.testCase.update);
   router.delete('/api/test-cases/:id', controller.testCase.destroy);
 
+  router.get('/api/env-configs', controller.envConfig.index);
+  router.post('/api/env-configs', controller.envConfig.create);
+  router.get('/api/env-configs/:id', controller.envConfig.show);
+  router.put('/api/env-configs/:id', controller.envConfig.update);
+  router.delete('/api/env-configs/:id', controller.envConfig.destroy);
+
+  router.post('/api/test-runs', controller.testRun.create);
+  router.get('/api/test-runs', controller.testRun.index);
+  router.get('/api/test-runs/:id', controller.testRun.show);
+  router.post('/api/test-runs/:id/cancel', controller.testRun.cancel);
+  router.get('/api/test-runs/:id/results', controller.testRun.results);
+
   router.post('/api/tools/parse-document', controller.tools.parseDocument);
   router.get('/api/tools/knowledge', controller.tools.knowledge);
 };

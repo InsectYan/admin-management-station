@@ -33,6 +33,7 @@ module.exports = app => {
       expected: { type: TEXT },
       tags: { type: JSONB, defaultValue: [] },
       document_id: { type: INTEGER },
+      http_config: { type: JSONB },
     },
     {
       tableName: 'test_cases',

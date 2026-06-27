@@ -56,6 +56,15 @@
 
     <div class="testgen-action-bar">
       <el-button
+        type="primary"
+        plain
+        :disabled="!selectedRows.length"
+        :loading="runningBatch"
+        @click="openRunDialog(selectedRows)"
+      >
+        执行选中
+      </el-button>
+      <el-button
         type="danger"
         plain
         :disabled="!selectedRows.length"
@@ -127,8 +136,10 @@
               <span v-else>—</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="100" fixed="right">
+          <el-table-column label="操作" width="180" fixed="right">
             <template #default="{ row }">
+              <el-button link type="primary" size="small" @click="openEdit(row)">编辑</el-button>
+              <el-button link type="success" size="small" @click="openRunDialog([row])">执行</el-button>
               <el-popconfirm title="确认删除该用例？" @confirm="handleDelete(row)">
                 <template #reference>
                   <el-button link type="danger" size="small">删除</el-button>
@@ -139,6 +150,17 @@
         </el-table>
       </template>
     </DataTablePanel>
+
+    <TestCaseEditDrawer
+      v-model="editVisible"
+      :case-id="editCaseId"
+      @saved="loadData"
+    />
+
+    <EnvSelector
+      v-model="runDialogVisible"
+      @confirm="handleRunConfirm"
+    />
   </PageShell>
 </template>
 
@@ -148,12 +170,15 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import DataTablePanel from '../components/DataTablePanel.vue';
+import TestCaseEditDrawer from '../components/TestCaseEditDrawer.vue';
+import EnvSelector from '../components/EnvSelector.vue';
 import { useTestSuiteStore } from '../stores/testSuite';
 import {
   deleteTestCase,
   batchDeleteTestCases,
   deleteAllTestCases,
 } from '../services/testCaseService';
+import { createRun } from '../services/testRunService';
 import { resolveApiBase } from '../services/apiConfig';
 
 const route = useRoute();
@@ -164,6 +189,11 @@ const selectedRows = ref([]);
 const exporting = ref(false);
 const batchDeleting = ref(false);
 const deletingAll = ref(false);
+const runningBatch = ref(false);
+const editVisible = ref(false);
+const editCaseId = ref(null);
+const runDialogVisible = ref(false);
+const pendingRunCaseIds = ref([]);
 const page = ref(1);
 const pageSize = ref(20);
 const total = ref(0);
@@ -326,6 +356,37 @@ async function handleExport() {
     ElMessage.error(err.message || '导出失败');
   } finally {
     exporting.value = false;
+  }
+}
+
+function openEdit(row) {
+  editCaseId.value = row.id;
+  editVisible.value = true;
+}
+
+function openRunDialog(rows) {
+  if (!rows?.length) {
+    ElMessage.warning('请先选择用例');
+    return;
+  }
+  pendingRunCaseIds.value = rows.map((r) => r.id);
+  runDialogVisible.value = true;
+}
+
+async function handleRunConfirm(options) {
+  runningBatch.value = true;
+  try {
+    const result = await createRun({
+      case_ids: pendingRunCaseIds.value,
+      ...options,
+    });
+    ElMessage.success('已提交执行');
+    router.push({ name: 'test-run-monitor', params: { runId: result.run_id } });
+  } catch (err) {
+    ElMessage.error(err.message || '执行失败');
+  } finally {
+    runningBatch.value = false;
+    pendingRunCaseIds.value = [];
   }
 }
 

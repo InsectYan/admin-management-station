@@ -79,6 +79,7 @@ const asideWidth = computed(() => (collapsed.value ? '64px' : '240px'));
 
 const activePath = computed(() => {
   if (route.path.startsWith('/jobs')) return '/scope';
+  if (route.path.startsWith('/runs')) return '/suite';
   return route.path.startsWith('/suite') ? '/suite' : '/scope';
 });
 </script>

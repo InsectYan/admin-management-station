@@ -36,6 +36,26 @@ class AgentProxyService extends Service {
 
     return res.data;
   }
+
+  async invokePerfAnalysis(payload) {
+    const { baseUrl, perfInvokePath, timeout } = this.config.agentPlatform;
+    const path = perfInvokePath || '/api/skills/perf-bottleneck-skill/invoke';
+    const res = await this.ctx.curl(`${baseUrl}${path}`, {
+      method: 'POST',
+      contentType: 'json',
+      data: payload,
+      dataType: 'json',
+      timeout: timeout || 120000,
+    });
+
+    if (res.status !== 200) {
+      const err = new Error(res.data?.message || res.data?.error || 'Agent 性能分析调用失败');
+      err.status = res.status >= 500 ? 504 : res.status;
+      throw err;
+    }
+
+    return res.data;
+  }
 }
 
 module.exports = AgentProxyService;
