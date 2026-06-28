@@ -1,0 +1,82 @@
+[
+  {
+    "prd_goal_id": "G01",
+    "goal_no": 1,
+    "goal_name": "听懂用户想干什么（意图）",
+    "linked_item_count": 25,
+    "linked_p0_count": 18,
+    "coverage_note": "OK"
+  },
+  {
+    "prd_goal_id": "G02",
+    "goal_no": 2,
+    "goal_name": "找到正确身份、会员、业务对象",
+    "linked_item_count": 18,
+    "linked_p0_count": 8,
+    "coverage_note": "OK"
+  },
+  {
+    "prd_goal_id": "G03",
+    "goal_no": 3,
+    "goal_name": "进入正确任务流程",
+    "linked_item_count": 19,
+    "linked_p0_count": 17,
+    "coverage_note": "OK"
+  },
+  {
+    "prd_goal_id": "G04",
+    "goal_no": 4,
+    "goal_name": "使用正确上下文",
+    "linked_item_count": 17,
+    "linked_p0_count": 3,
+    "coverage_note": "OK"
+  },
+  {
+    "prd_goal_id": "G05",
+    "goal_no": 5,
+    "goal_name": "选择正确回复策略",
+    "linked_item_count": 18,
+    "linked_p0_count": 12,
+    "coverage_note": "OK"
+  },
+  {
+    "prd_goal_id": "G06",
+    "goal_no": 6,
+    "goal_name": "遵守权限、状态、安全、确认规则",
+    "linked_item_count": 63,
+    "linked_p0_count": 24,
+    "coverage_note": "OK"
+  },
+  {
+    "prd_goal_id": "G07",
+    "goal_no": 7,
+    "goal_name": "返回前端可正确渲染的数据结构",
+    "linked_item_count": 23,
+    "linked_p0_count": 3,
+    "coverage_note": "OK"
+  },
+  {
+    "prd_goal_id": "G08",
+    "goal_no": 8,
+    "goal_name": "不在错误端返回不该返回的业务数据",
+    "linked_item_count": 22,
+    "linked_p0_count": 6,
+    "coverage_note": "OK"
+  },
+  {
+    "prd_goal_id": "G09",
+    "goal_no": 9,
+    "goal_name": "不重复生成、不重复写库",
+    "linked_item_count": 3,
+    "linked_p0_count": 2,
+    "coverage_note": "OK"
+  },
+  {
+    "prd_goal_id": "G10",
+    "goal_no": 10,
+    "goal_name": "关键过程可追踪、可复盘",
+    "linked_item_count": 54,
+    "linked_p0_count": 0,
+    "coverage_note": "OK"
+  }
+]

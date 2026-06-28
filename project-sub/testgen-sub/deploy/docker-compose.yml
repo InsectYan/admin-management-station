@@ -13,7 +13,7 @@ services:
     environment:
       POSTGRES_DB: ${TESTGEN_POSTGRES_DB:-testgen_db}
     ports:
-      - "${TESTGEN_POSTGRES_PORT:-5434}:5432"
+      - "${TESTGEN_POSTGRES_PORT:-5302}:5432"
     volumes:
       - testgen_pgdata:/var/lib/postgresql/data
       - ../database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -36,14 +36,16 @@ services:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       CACHE_DRIVER: memory
-      PORT: ${TESTGEN_PORT:-7003}
+      PORT: ${TESTGEN_PORT:-5202}
       POSTGRES_DB: ${TESTGEN_POSTGRES_DB:-testgen_db}
       AGENT_PLATFORM_URL: ${AGENT_PLATFORM_URL:-http://host.docker.internal:3001}
     ports:
-      - "${TESTGEN_PORT:-7003}:${TESTGEN_PORT:-7003}"
+      - "${TESTGEN_PORT:-5202}:${TESTGEN_PORT:-5202}"
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - ../database:/app/database:ro
 
   testgen-frontend:
     build:
@@ -52,12 +54,12 @@ services:
     container_name: ams-testgen-frontend
     restart: unless-stopped
     ports:
-      - "${TESTGEN_VITE_PORT:-5175}:5175"
+      - "${TESTGEN_VITE_PORT:-5102}:5102"
     env_file:
       - ./config/.env.local
     environment:
-      VITE_API_BASE: http://localhost:7003/api
-      VITE_DEV_PORT: 5175
+      VITE_API_BASE: http://localhost:5202/api
+      VITE_DEV_PORT: 5102
     volumes:
       - ../frontend/src:/app/src
       - ../frontend/index.html:/app/index.html

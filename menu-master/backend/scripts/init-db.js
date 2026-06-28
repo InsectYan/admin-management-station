@@ -20,7 +20,7 @@ async function main() {
 
   const client = new Client({
     host: process.env.POSTGRES_HOST || '127.0.0.1',
-    port: Number(process.env.POSTGRES_PORT || 5432),
+    port: Number(process.env.POSTGRES_PORT || 5300),
     user: process.env.POSTGRES_USER || 'admin',
     password: process.env.POSTGRES_PASSWORD || 'admin123',
     database: process.env.POSTGRES_DB || 'admin_platform',

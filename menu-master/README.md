@@ -2,7 +2,7 @@
 
 
 
-`app_key=main` · API **7001** · Vite dev **5173** · 数据库 **`admin_platform`**
+`app_key=main` · API **5200** · Vite dev **5100** · 数据库 **`admin_platform`**
 
 
 
@@ -56,9 +56,9 @@ ams-main local
 
 |----|--------|------------|
 
-| 前端 | http://localhost:5173 | http://localhost:5173 |
+| 前端 | http://localhost:5100 | http://localhost:5100 |
 
-| API | http://localhost:7001 | 同左 |
+| API | http://localhost:5200 | 同左 |
 
 
 
@@ -94,7 +94,7 @@ npm run dev
 
 
 
-API：`http://localhost:7001/api/health`
+API：`http://localhost:5200/api/health`
 
 
 
@@ -116,7 +116,7 @@ npm run dev
 
 
 
-浏览器：`http://localhost:5173`
+浏览器：`http://localhost:5100`
 
 
 
@@ -153,7 +153,7 @@ npm run dev
 
 菜单响应字段：`entry`、`active_rule`、`basename`、`subapp`。
 
-前端 fallback：`VITE_SUBAPP_NOVEL_ENTRY`（默认 `http://localhost:5174`），见 `frontend/.env.local.example`。
+前端 fallback：`VITE_SUBAPP_NOVEL_ENTRY`（默认 `http://localhost:5101`），见 `frontend/.env.local.example`。
 
 | microapp_name | route_prefix | activeRule |
 |---------------|--------------|------------|

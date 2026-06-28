@@ -10,8 +10,8 @@ function isAbsoluteUrl(value) {
 }
 
 /**
- * Qiankun 嵌入主应用时，相对路径 /api 会打到主应用 BFF（7001）并触发 JWT 401。
- * 子应用业务 API 须指向 testgen BFF（7003）。
+ * Qiankun 嵌入主应用时，相对路径 /api 会打到主应用 BFF（5200）并触发 JWT 401。
+ * 子应用业务 API 须指向 testgen BFF（5202）。
  */
 export function resolveApiBase() {
   const configured = import.meta.env.VITE_API_BASE;
@@ -22,7 +22,7 @@ export function resolveApiBase() {
     return normalizeBase(
       import.meta.env.VITE_TESTGEN_API_ORIGIN
         ? `${import.meta.env.VITE_TESTGEN_API_ORIGIN}/api`
-        : 'http://localhost:7003/api',
+        : 'http://localhost:5202/api',
     );
   }
   return normalizeBase(configured || '/api');

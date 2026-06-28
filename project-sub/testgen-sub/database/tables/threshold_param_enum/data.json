@@ -1,0 +1,114 @@
+[
+  {
+    "param_id": "rate_L",
+    "validation_id": "VS-07-RATE-L",
+    "name": "达标率·低",
+    "unit": "percent",
+    "placeholder": "rate_L = ___%",
+    "validation_name": "达标率·低门槛"
+  },
+  {
+    "param_id": "rate_M",
+    "validation_id": "VS-07-RATE-M",
+    "name": "达标率·中",
+    "unit": "percent",
+    "placeholder": "rate_M = ___%",
+    "validation_name": "达标率·中门槛"
+  },
+  {
+    "param_id": "rate_H",
+    "validation_id": "VS-07-RATE-H",
+    "name": "达标率·高",
+    "unit": "percent",
+    "placeholder": "rate_H = ___%",
+    "validation_name": "达标率·高门槛"
+  },
+  {
+    "param_id": "passk_N",
+    "validation_id": "VS-08-PASSK",
+    "name": "重复次数 N",
+    "unit": "count",
+    "placeholder": "passk_N = ___",
+    "validation_name": "Pass^k稳定"
+  },
+  {
+    "param_id": "passk_M",
+    "validation_id": "VS-08-PASSK",
+    "name": "至少通过 M",
+    "unit": "count",
+    "placeholder": "passk_M = ___",
+    "validation_name": "Pass^k稳定"
+  },
+  {
+    "param_id": "block_L",
+    "validation_id": "VS-09-BLOCK-L",
+    "name": "阻断率·低",
+    "unit": "percent",
+    "placeholder": "block_L = ___%",
+    "validation_name": "安全阻断·低"
+  },
+  {
+    "param_id": "block_M",
+    "validation_id": "VS-09-BLOCK-M",
+    "name": "阻断率·中",
+    "unit": "percent",
+    "placeholder": "block_M = ___%",
+    "validation_name": "安全阻断·中"
+  },
+  {
+    "param_id": "block_H",
+    "validation_id": "VS-09-BLOCK-H",
+    "name": "阻断率·高",
+    "unit": "percent",
+    "placeholder": "block_H = ___%",
+    "validation_name": "安全阻断·高"
+  },
+  {
+    "param_id": "submit_p99_ms_L",
+    "validation_id": "VS-10-SLO-L",
+    "name": "submit p99·低",
+    "unit": "ms",
+    "placeholder": "submit_p99_ms_L",
+    "validation_name": "性能SLO·低"
+  },
+  {
+    "param_id": "submit_p99_ms_M",
+    "validation_id": "VS-10-SLO-M",
+    "name": "submit p99·中",
+    "unit": "ms",
+    "placeholder": "submit_p99_ms_M",
+    "validation_name": "性能SLO·中"
+  },
+  {
+    "param_id": "ttft_ms_M",
+    "validation_id": "VS-10-SLO-M",
+    "name": "TTFT·中",
+    "unit": "ms",
+    "placeholder": "ttft_ms_M",
+    "validation_name": "性能SLO·中"
+  },
+  {
+    "param_id": "error_rate_H",
+    "validation_id": "VS-10-SLO-H",
+    "name": "错误率·高",
+    "unit": "percent",
+    "placeholder": "error_rate_H",
+    "validation_name": "性能SLO·高"
+  },
+  {
+    "param_id": "reviewer_count",
+    "validation_id": "VS-11-MAJORITY",
+    "name": "评审人数",
+    "unit": "count",
+    "placeholder": "reviewer_count",
+    "validation_name": "人工多数"
+  },
+  {
+    "param_id": "majority_rule",
+    "validation_id": "VS-11-MAJORITY",
+    "name": "多数规则",
+    "unit": "text",
+    "placeholder": ">50% 合格",
+    "validation_name": "人工多数"
+  }
+]

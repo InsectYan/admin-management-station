@@ -3,7 +3,8 @@ WORKDIR /app
 COPY backend/package*.json ./
 RUN npm ci --omit=dev 2>/dev/null || npm install --omit=dev
 COPY backend/ .
-EXPOSE 7002
-ENV PORT=7002
+COPY database/ ./database/
+EXPOSE 5201
+ENV PORT=5201
 ENV NODE_ENV=production
 CMD ["npx", "egg-scripts", "start", "--title=novel-sub-backend", "--workers=1"]

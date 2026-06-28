@@ -1,0 +1,22 @@
+[
+  {
+    "automation_status_id": "AUTO_EXISTING",
+    "item_count": 31,
+    "pct_of_all": 8.09
+  },
+  {
+    "automation_status_id": "AUTO_PARTIAL",
+    "item_count": 13,
+    "pct_of_all": 3.39
+  },
+  {
+    "automation_status_id": "AUTO_TODO",
+    "item_count": 335,
+    "pct_of_all": 87.47
+  },
+  {
+    "automation_status_id": "AUTO_MANUAL",
+    "item_count": 4,
+    "pct_of_all": 1.04
+  }
+]

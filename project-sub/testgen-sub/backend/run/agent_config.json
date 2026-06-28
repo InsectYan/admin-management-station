@@ -183,7 +183,7 @@
       "dialect": "postgres",
       "database": "testgen_db",
       "host": "127.0.0.1",
-      "port": 5434,
+      "port": 5302,
       "username": "admin",
       "password": "<String len: 8>",
       "define": {
@@ -336,7 +336,7 @@
     "cluster": {
       "listen": {
         "path": "",
-        "port": 7003,
+        "port": 5202,
         "hostname": "0.0.0.0"
       }
     },

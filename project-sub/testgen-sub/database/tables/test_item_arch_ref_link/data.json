@@ -1,0 +1,412 @@
+[
+  {
+    "link_id": "ARL00002",
+    "item_id": "A1-MEMORY-001",
+    "arch_ref_id": "ARCH_B5"
+  },
+  {
+    "link_id": "ARL00003",
+    "item_id": "A1-OUTBOX-001",
+    "arch_ref_id": "ARCH_B5"
+  },
+  {
+    "link_id": "ARL00005",
+    "item_id": "A1-OUTBOX-002",
+    "arch_ref_id": "ARCH_B5"
+  },
+  {
+    "link_id": "ARL00007",
+    "item_id": "A2-S02-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00009",
+    "item_id": "A2-S02-002",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00010",
+    "item_id": "A2-S02-003",
+    "arch_ref_id": "ARCH_S11"
+  },
+  {
+    "link_id": "ARL00011",
+    "item_id": "A2-S02-003",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00013",
+    "item_id": "A2-S02-004",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00015",
+    "item_id": "A2-S03-001",
+    "arch_ref_id": "ARCH_B3"
+  },
+  {
+    "link_id": "ARL00016",
+    "item_id": "A2-S06-001",
+    "arch_ref_id": "ARCH_S5"
+  },
+  {
+    "link_id": "ARL00017",
+    "item_id": "A2-S06-001",
+    "arch_ref_id": "ARCH_B6"
+  },
+  {
+    "link_id": "ARL00018",
+    "item_id": "A5-CAP-001",
+    "arch_ref_id": "ARCH_S10"
+  },
+  {
+    "link_id": "ARL00020",
+    "item_id": "A5-MULTI-001",
+    "arch_ref_id": "ARCH_S2"
+  },
+  {
+    "link_id": "ARL00021",
+    "item_id": "A5-STALE-001",
+    "arch_ref_id": "ARCH_S11"
+  },
+  {
+    "link_id": "ARL00023",
+    "item_id": "A6-MEDICAL-001",
+    "arch_ref_id": "ARCH_S5"
+  },
+  {
+    "link_id": "ARL00027",
+    "item_id": "A6-SAFETY-001",
+    "arch_ref_id": "ARCH_S4"
+  },
+  {
+    "link_id": "ARL00028",
+    "item_id": "B1-LOADING-001",
+    "arch_ref_id": "ARCH_B1"
+  },
+  {
+    "link_id": "ARL00029",
+    "item_id": "B1-OBS-001",
+    "arch_ref_id": "ARCH_B1"
+  },
+  {
+    "link_id": "ARL00030",
+    "item_id": "B1-RESUME-001",
+    "arch_ref_id": "ARCH_B1"
+  },
+  {
+    "link_id": "ARL00031",
+    "item_id": "B1-SSE-001",
+    "arch_ref_id": "ARCH_B1"
+  },
+  {
+    "link_id": "ARL00032",
+    "item_id": "B1-STREAM-001",
+    "arch_ref_id": "ARCH_B1"
+  },
+  {
+    "link_id": "ARL00034",
+    "item_id": "B2-CIRCUIT-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00037",
+    "item_id": "B2-DUP-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00039",
+    "item_id": "B2-EMPTY-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00041",
+    "item_id": "B2-INFLIGHT-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00043",
+    "item_id": "B2-JOURNEY-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00045",
+    "item_id": "B2-KEY-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00048",
+    "item_id": "B2-LEN-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00050",
+    "item_id": "B2-OBS-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00053",
+    "item_id": "B2-OWN-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00055",
+    "item_id": "B2-RATE-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00056",
+    "item_id": "B3-CANCEL-001",
+    "arch_ref_id": "ARCH_B3"
+  },
+  {
+    "link_id": "ARL00058",
+    "item_id": "B3-CLAIM-001",
+    "arch_ref_id": "ARCH_B3"
+  },
+  {
+    "link_id": "ARL00060",
+    "item_id": "B3-CROSS-001",
+    "arch_ref_id": "ARCH_B3"
+  },
+  {
+    "link_id": "ARL00061",
+    "item_id": "B3-ENQ-001",
+    "arch_ref_id": "ARCH_B3"
+  },
+  {
+    "link_id": "ARL00062",
+    "item_id": "B3-OBS-001",
+    "arch_ref_id": "ARCH_B3"
+  },
+  {
+    "link_id": "ARL00063",
+    "item_id": "B3-RETRY-001",
+    "arch_ref_id": "ARCH_B3"
+  },
+  {
+    "link_id": "ARL00064",
+    "item_id": "B3-STALE-001",
+    "arch_ref_id": "ARCH_B3"
+  },
+  {
+    "link_id": "ARL00066",
+    "item_id": "B3-W-001",
+    "arch_ref_id": "ARCH_B3"
+  },
+  {
+    "link_id": "ARL00068",
+    "item_id": "B4-MEM-001",
+    "arch_ref_id": "ARCH_B4"
+  },
+  {
+    "link_id": "ARL00069",
+    "item_id": "B4-OBS-001",
+    "arch_ref_id": "ARCH_B4"
+  },
+  {
+    "link_id": "ARL00070",
+    "item_id": "B4-PERSIST-001",
+    "arch_ref_id": "ARCH_B4"
+  },
+  {
+    "link_id": "ARL00071",
+    "item_id": "B4-PREP-001",
+    "arch_ref_id": "ARCH_B4"
+  },
+  {
+    "link_id": "ARL00073",
+    "item_id": "B4-PREP-002",
+    "arch_ref_id": "ARCH_B4"
+  },
+  {
+    "link_id": "ARL00074",
+    "item_id": "B5-CONTRACT-001",
+    "arch_ref_id": "ARCH_B5"
+  },
+  {
+    "link_id": "ARL00075",
+    "item_id": "B5-LOCK-001",
+    "arch_ref_id": "ARCH_B5"
+  },
+  {
+    "link_id": "ARL00076",
+    "item_id": "B5-OBS-001",
+    "arch_ref_id": "ARCH_B5"
+  },
+  {
+    "link_id": "ARL00077",
+    "item_id": "B5-TOOL-001",
+    "arch_ref_id": "ARCH_B5"
+  },
+  {
+    "link_id": "ARL00078",
+    "item_id": "B6-HB-001",
+    "arch_ref_id": "ARCH_B6"
+  },
+  {
+    "link_id": "ARL00079",
+    "item_id": "B6-JOURNEY-001",
+    "arch_ref_id": "ARCH_B6"
+  },
+  {
+    "link_id": "ARL00081",
+    "item_id": "B6-OBS-001",
+    "arch_ref_id": "ARCH_B6"
+  },
+  {
+    "link_id": "ARL00082",
+    "item_id": "B6-POLL-001",
+    "arch_ref_id": "ARCH_B6"
+  },
+  {
+    "link_id": "ARL00083",
+    "item_id": "B6-SSE-001",
+    "arch_ref_id": "ARCH_B6"
+  },
+  {
+    "link_id": "ARL00085",
+    "item_id": "B6-TIMEOUT-001",
+    "arch_ref_id": "ARCH_B6"
+  },
+  {
+    "link_id": "ARL00310",
+    "item_id": "D1-CANCEL-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00311",
+    "item_id": "D1-HEALTH-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00312",
+    "item_id": "D1-POLL-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00313",
+    "item_id": "D1-READY-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00315",
+    "item_id": "D1-SESSION-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00317",
+    "item_id": "D2-OUT-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00318",
+    "item_id": "D2-SSE-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00319",
+    "item_id": "D2-SUB-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00320",
+    "item_id": "D2-SUB-002",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00321",
+    "item_id": "D2-SUB-003",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00322",
+    "item_id": "D2-SUB-004",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00323",
+    "item_id": "D2-SUB-005",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00324",
+    "item_id": "D2-SUB-006",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00325",
+    "item_id": "D2-SUB-007",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00332",
+    "item_id": "D5-EVT-001",
+    "arch_ref_id": "ARCH_B6"
+  },
+  {
+    "link_id": "ARL00334",
+    "item_id": "D5-EVT-002",
+    "arch_ref_id": "ARCH_B6"
+  },
+  {
+    "link_id": "ARL00336",
+    "item_id": "D5-EVT-003",
+    "arch_ref_id": "ARCH_B6"
+  },
+  {
+    "link_id": "ARL00338",
+    "item_id": "D5-EVT-004",
+    "arch_ref_id": "ARCH_B6"
+  },
+  {
+    "link_id": "ARL00340",
+    "item_id": "D5-EVT-005",
+    "arch_ref_id": "ARCH_B6"
+  },
+  {
+    "link_id": "ARL00420",
+    "item_id": "H1-S02-001",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00423",
+    "item_id": "H1-S02-002",
+    "arch_ref_id": "ARCH_B2"
+  },
+  {
+    "link_id": "ARL00425",
+    "item_id": "H1-S03-001",
+    "arch_ref_id": "ARCH_B3"
+  },
+  {
+    "link_id": "ARL00428",
+    "item_id": "H1-S03-002",
+    "arch_ref_id": "ARCH_B3"
+  },
+  {
+    "link_id": "ARL00430",
+    "item_id": "H1-S03-003",
+    "arch_ref_id": "ARCH_B3"
+  },
+  {
+    "link_id": "ARL00432",
+    "item_id": "H1-S04-001",
+    "arch_ref_id": "ARCH_B4"
+  },
+  {
+    "link_id": "ARL00435",
+    "item_id": "H1-S04-002",
+    "arch_ref_id": "ARCH_B4"
+  },
+  {
+    "link_id": "ARL00437",
+    "item_id": "H1-S06-001",
+    "arch_ref_id": "ARCH_B6"
+  },
+  {
+    "link_id": "ARL00440",
+    "item_id": "H1-S06-002",
+    "arch_ref_id": "ARCH_B6"
+  }
+]

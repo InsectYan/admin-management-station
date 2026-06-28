@@ -1,0 +1,22 @@
+[
+  {
+    "automation_status_id": "AUTO_EXISTING",
+    "name": "已有自动化",
+    "description": "s0x/smoke/E2E 已覆盖"
+  },
+  {
+    "automation_status_id": "AUTO_PARTIAL",
+    "name": "部分自动化",
+    "description": "部分场景可跑"
+  },
+  {
+    "automation_status_id": "AUTO_TODO",
+    "name": "待建",
+    "description": "尚未脚本化"
+  },
+  {
+    "automation_status_id": "AUTO_MANUAL",
+    "name": "人工",
+    "description": "专家/UAT/代码审查"
+  }
+]

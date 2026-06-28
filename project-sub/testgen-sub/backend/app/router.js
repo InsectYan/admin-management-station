@@ -52,4 +52,43 @@ module.exports = app => {
 
   router.post('/api/tools/parse-document', controller.tools.parseDocument);
   router.get('/api/tools/knowledge', controller.tools.knowledge);
+
+  // Fitness 测试资产库
+  router.get('/api/fitness/dashboard', controller.fitnessAsset.dashboard);
+  router.get('/api/fitness/items/export', controller.fitnessAsset.exportItems);
+  router.get('/api/fitness/items', controller.fitnessAsset.listItems);
+  router.get('/api/fitness/items/:itemId', controller.fitnessAsset.showItem);
+  router.get('/api/fitness/browse', controller.fitnessAsset.browse);
+  router.get('/api/fitness/schemes', controller.fitnessAsset.schemes);
+  router.get('/api/fitness/enums/:table', controller.fitnessAsset.listEnums);
+  router.get('/api/fitness/meta/display/:table?', controller.fitnessAsset.displayMeta);
+  router.get('/api/fitness/views/:view', controller.fitnessAsset.queryView);
+  router.get('/api/fitness/risks', controller.fitnessAsset.listRisks);
+  router.get('/api/fitness/risk-links', controller.fitnessAsset.listRiskLinks);
+
+  // 测试计划
+  router.get('/api/fitness/plans', controller.fitnessPlan.index);
+  router.post('/api/fitness/plans', controller.fitnessPlan.create);
+  router.get('/api/fitness/plans/:id', controller.fitnessPlan.show);
+  router.put('/api/fitness/plans/:id', controller.fitnessPlan.update);
+  router.post('/api/fitness/plans/:id/items', controller.fitnessPlan.appendItems);
+  router.delete('/api/fitness/plans/:id', controller.fitnessPlan.destroy);
+  router.post('/api/fitness/plans/:id/results', controller.fitnessPlan.saveResults);
+  router.post('/api/fitness/plans/:id/export-report', controller.fitnessPlan.exportReport);
+
+  // 执行层（引擎桩）
+  router.get('/api/fitness/environments', controller.fitnessExecution.listEnvs);
+  router.post('/api/fitness/environments', controller.fitnessExecution.createEnv);
+  router.put('/api/fitness/environments/:id', controller.fitnessExecution.updateEnv);
+  router.delete('/api/fitness/environments/:id', controller.fitnessExecution.deleteEnv);
+  router.post('/api/fitness/environments/health-check', controller.fitnessExecution.healthCheck);
+  router.get('/api/fitness/samples', controller.fitnessExecution.listSampleSets);
+  router.post('/api/fitness/samples', controller.fitnessExecution.createSampleSet);
+  router.get('/api/fitness/runs', controller.fitnessExecution.listRuns);
+  router.get('/api/fitness/runs/:runId', controller.fitnessExecution.showRun);
+  router.post('/api/fitness/runs/:runId/cancel', controller.fitnessExecution.cancelRun);
+  router.get('/api/fitness/run-config/:itemId', controller.fitnessExecution.getRunConfig);
+  router.post('/api/fitness/run-config/:itemId', controller.fitnessExecution.saveRunConfig);
+  router.post('/api/fitness/run/:itemId/launch', controller.fitnessExecution.launch);
+  router.post('/api/fitness/engines/:scheme/execute', controller.fitnessExecution.executeEngine);
 };

@@ -1,12 +1,13 @@
 /**
  * @file schemaSync.js
- * @description 启动时校验 ORM 模型与数据库差异：执行 init.sql/migrations、Sequelize alter、删除孤儿表。
+ * @description 启动时校验 ORM 模型与数据库差异：执行 init.sql/migrations、Fitness 表 DDL、Sequelize alter、删除孤儿表。
  */
 
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
+const { syncTableColumnsFromInitSql } = require('../../scripts/lib/schema-column-sync');
 
 const SYSTEM_TABLES = new Set([
   'schema_migrations',
@@ -30,24 +31,90 @@ function resolveDatabaseDir(app) {
 }
 
 /**
+ * @param {string} sql
+ * @returns {string}
+ */
+function stripInsertStatements(sql) {
+  return sql
+    .split('\n')
+    .filter(line => !/^\s*INSERT\s+/i.test(line.trim()))
+    .join('\n');
+}
+
+/**
+ * @param {string} dbDir
+ * @returns {string[]}
+ */
+function loadTablesOrder(dbDir) {
+  const orderFile = path.join(dbDir, 'tables-order.json');
+  if (!fs.existsSync(orderFile)) return [];
+  return JSON.parse(fs.readFileSync(orderFile, 'utf8'));
+}
+
+/**
+ * @param {string} dbDir
+ * @returns {Record<string, { pk: string|string[], type: string }>}
+ */
+function loadTablesMeta(dbDir) {
+  const metaFile = path.join(dbDir, 'tables-meta.json');
+  if (!fs.existsSync(metaFile)) return {};
+  return JSON.parse(fs.readFileSync(metaFile, 'utf8'));
+}
+
+/**
  * @param {import('sequelize').Sequelize} sequelize
  * @param {string} dbDir
  * @param {import('egg').EggLogger} logger
+ * @param {{ beforeTables?: boolean, afterTables?: boolean }} scope
  */
-async function runSqlBootstrap(sequelize, dbDir, logger) {
+async function runSqlBootstrap(sequelize, dbDir, logger, scope = {}) {
   const files = [ path.join(dbDir, 'init.sql') ];
   const migrationsDir = path.join(dbDir, 'migrations');
   if (fs.existsSync(migrationsDir)) {
     fs.readdirSync(migrationsDir)
       .filter(name => name.endsWith('.sql'))
       .sort()
-      .forEach(name => files.push(path.join(migrationsDir, name)));
+      .forEach(name => {
+        const isLate = name.startsWith('003_') || name.startsWith('004_') || name.startsWith('005_');
+        if (scope.beforeTables && isLate) return;
+        if (scope.afterTables && !isLate) return;
+        if (!scope.beforeTables && !scope.afterTables) {
+          files.push(path.join(migrationsDir, name));
+          return;
+        }
+        files.push(path.join(migrationsDir, name));
+      });
   }
 
   for (const file of files) {
     const sql = fs.readFileSync(file, 'utf8');
     await sequelize.query(sql);
     logger.info('[SchemaSync] Applied %s', path.basename(file));
+  }
+}
+
+/**
+ * @param {import('sequelize').Sequelize} sequelize
+ * @param {string} dbDir
+ * @param {import('egg').EggLogger} logger
+ */
+async function runTablesBootstrap(sequelize, dbDir, logger) {
+  const tablesDir = path.join(dbDir, 'tables');
+  if (!fs.existsSync(tablesDir)) return;
+
+  const order = loadTablesOrder(dbDir);
+  const dirs = order.length
+    ? order
+    : fs.readdirSync(tablesDir).filter(name => fs.statSync(path.join(tablesDir, name)).isDirectory());
+
+  for (const name of dirs) {
+    if (name.startsWith('v_')) continue;
+    const initFile = path.join(tablesDir, name, 'init.sql');
+    if (!fs.existsSync(initFile)) continue;
+    const sql = stripInsertStatements(fs.readFileSync(initFile, 'utf8'));
+    if (!sql.trim()) continue;
+    await sequelize.query(sql);
+    logger.info('[SchemaSync] Applied tables/%s/init.sql', name);
   }
 }
 
@@ -61,6 +128,15 @@ function collectModelTableNames(app) {
     const tableName = model.getTableName();
     return typeof tableName === 'string' ? tableName : tableName.tableName;
   });
+}
+
+/**
+ * @param {string} dbDir
+ * @returns {string[]}
+ */
+function collectFitnessBaseTableNames(dbDir) {
+  const meta = loadTablesMeta(dbDir);
+  return Object.keys(meta).filter(name => meta[name].type === 'table');
 }
 
 /**
@@ -117,7 +193,13 @@ async function syncSchemaOnStartup(app) {
 
   const dbDir = resolveDatabaseDir(app);
   if (dbDir) {
-    await runSqlBootstrap(sequelize, dbDir, logger);
+    await runSqlBootstrap(sequelize, dbDir, logger, { beforeTables: true });
+    await runTablesBootstrap(sequelize, dbDir, logger);
+    const colSync = await syncTableColumnsFromInitSql(sequelize, dbDir, { logger });
+    if (colSync.added) {
+      logger.info('[SchemaSync] 自动补列 %d 个（%d 表）', colSync.added, colSync.tables);
+    }
+    await runSqlBootstrap(sequelize, dbDir, logger, { afterTables: true });
   } else {
     logger.warn('[SchemaSync] database/init.sql not found under %s', app.baseDir);
   }
@@ -125,7 +207,10 @@ async function syncSchemaOnStartup(app) {
   await sequelize.sync({ alter: true });
   logger.info('[SchemaSync] Sequelize sync (alter) completed');
 
-  const expected = collectModelTableNames(app);
+  const expected = [
+    ...collectModelTableNames(app),
+    ...(dbDir ? collectFitnessBaseTableNames(dbDir) : []),
+  ];
   await dropOrphanTables(sequelize, expected, logger);
   logger.info('[SchemaSync] Completed, model tables=%j', expected);
 }
@@ -134,4 +219,7 @@ module.exports = {
   syncSchemaOnStartup,
   resolveDatabaseDir,
   collectModelTableNames,
+  loadTablesMeta,
+  loadTablesOrder,
+  stripInsertStatements,
 };

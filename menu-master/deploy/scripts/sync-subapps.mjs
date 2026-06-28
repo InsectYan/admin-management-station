@@ -81,7 +81,7 @@ function resolveDbConfig() {
 
   return {
     host: merged.POSTGRES_HOST || '127.0.0.1',
-    port: Number(merged.MAIN_POSTGRES_PORT || merged.POSTGRES_PORT || 5432),
+    port: Number(merged.MAIN_POSTGRES_PORT || merged.POSTGRES_PORT || 5300),
     user: merged.POSTGRES_USER || 'admin',
     password: merged.POSTGRES_PASSWORD || 'admin123',
     database: merged.MAIN_POSTGRES_DB || merged.POSTGRES_DB || 'admin_platform',

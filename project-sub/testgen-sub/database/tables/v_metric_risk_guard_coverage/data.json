@@ -1,0 +1,322 @@
+[
+  {
+    "risk_item_id": "E-RISK-001",
+    "risk_name": "[E-RISK-001] GENERAL — 问答误判为正式生成",
+    "risk_category": "E_AGENT",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 1,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "E-RISK-002",
+    "risk_name": "[E-RISK-002] GENERAL — 会话草案当正式草稿",
+    "risk_category": "E_AGENT",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 1,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "E-RISK-003",
+    "risk_name": "[E-RISK-003] GENERAL — 通用入口直接执行会员任务",
+    "risk_category": "E_AGENT",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 1,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "E-RISK-004",
+    "risk_name": "[E-RISK-004] GENERAL — 同名未消歧直接生成",
+    "risk_category": "E_AGENT",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 1,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "E-RISK-005",
+    "risk_name": "[E-RISK-005] GENERAL — A/B 会员上下文串",
+    "risk_category": "E_AGENT",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 1,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "E-RISK-006",
+    "risk_name": "[E-RISK-006] GENERAL — 「好的/可以」触发写库",
+    "risk_category": "E_AGENT",
+    "priority_id": "P1",
+    "guard_link_count": 3,
+    "primary_guard_count": 1,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "E-RISK-007",
+    "risk_name": "[E-RISK-007] GENERAL — 多个待确认「确认」随机执行",
+    "risk_category": "E_AGENT",
+    "priority_id": "P1",
+    "guard_link_count": 1,
+    "primary_guard_count": 1,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "E-RISK-008",
+    "risk_name": "[E-RISK-008] GENERAL — 疼痛仍高强度生成",
+    "risk_category": "E_AGENT",
+    "priority_id": "P1",
+    "guard_link_count": 4,
+    "primary_guard_count": 1,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "E-RISK-009",
+    "risk_name": "[E-RISK-009] GENERAL — 编造指标/体测表",
+    "risk_category": "E_AGENT",
+    "priority_id": "P1",
+    "guard_link_count": 3,
+    "primary_guard_count": 2,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "E-RISK-010",
+    "risk_name": "[E-RISK-010] GENERAL — AI 伪造事实（非建议）",
+    "risk_category": "E_AGENT",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 1,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "C2-RISK-001",
+    "risk_name": "[C2-RISK-001] 会员端生成训练计划 — 会员端生成训练计划",
+    "risk_category": "C2_MEMBER",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 1,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "C2-RISK-002",
+    "risk_name": "[C2-RISK-002] 返回 plan_form — 返回 plan_form",
+    "risk_category": "C2_MEMBER",
+    "priority_id": "P1",
+    "guard_link_count": 3,
+    "primary_guard_count": 2,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "C2-RISK-003",
+    "risk_name": "[C2-RISK-003] 疼痛仍建议继续练 — 疼痛仍建议继续练",
+    "risk_category": "C2_MEMBER",
+    "priority_id": "P1",
+    "guard_link_count": 3,
+    "primary_guard_count": 1,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "C2-RISK-004",
+    "risk_name": "[C2-RISK-004] 反馈直接改计划 — 反馈直接改计划",
+    "risk_category": "C2_MEMBER",
+    "priority_id": "P1",
+    "guard_link_count": 1,
+    "primary_guard_count": 1,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "C2-RISK-005",
+    "risk_name": "[C2-RISK-005] 拒绝后错误覆盖 active — 拒绝后错误覆盖 active",
+    "risk_category": "C2_MEMBER",
+    "priority_id": "P1",
+    "guard_link_count": 1,
+    "primary_guard_count": 1,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "C2-RISK-006",
+    "risk_name": "[C2-RISK-006] 出现教练端专用组件 — 出现教练端专用组件",
+    "risk_category": "C2_MEMBER",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 1,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "C2-RISK-007",
+    "risk_name": "[C2-RISK-007] 无确认/拒绝日志 — 无确认/拒绝日志",
+    "risk_category": "C2_MEMBER",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "C3-RISK-001",
+    "risk_name": "[C3-RISK-001] 返回训练计划表单 — 返回训练计划表单",
+    "risk_category": "C3_MANAGER",
+    "priority_id": "P1",
+    "guard_link_count": 3,
+    "primary_guard_count": 2,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "C3-RISK-002",
+    "risk_name": "[C3-RISK-002] 替会员确认计划 — 替会员确认计划",
+    "risk_category": "C3_MANAGER",
+    "priority_id": "P1",
+    "guard_link_count": 1,
+    "primary_guard_count": 1,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "C3-RISK-003",
+    "risk_name": "[C3-RISK-003] 越权其他门店 — 越权其他门店",
+    "risk_category": "C3_MANAGER",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 1,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "C3-RISK-004",
+    "risk_name": "[C3-RISK-004] 对象不清时猜测 — 对象不清时猜测",
+    "risk_category": "C3_MANAGER",
+    "priority_id": "P1",
+    "guard_link_count": 3,
+    "primary_guard_count": 2,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "C3-RISK-005",
+    "risk_name": "[C3-RISK-005] 查询结果是 AI 编造 — 查询结果是 AI 编造",
+    "risk_category": "C3_MANAGER",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 1,
+    "has_primary_guard": true,
+    "coverage_status": "COVERED"
+  },
+  {
+    "risk_item_id": "C3-RISK-006",
+    "risk_name": "[C3-RISK-006] 无 interaction_log_id — 无 interaction_log_id",
+    "risk_category": "C3_MANAGER",
+    "priority_id": "P1",
+    "guard_link_count": 3,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-001",
+    "risk_name": "[F5-SYM-001] 排队久 — turn_jobs pending",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-002",
+    "risk_name": "[F5-SYM-002] 503 系统繁忙 — pending≥max",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-003",
+    "risk_name": "[F5-SYM-003] 503 熔断 — circuit open",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-004",
+    "risk_name": "[F5-SYM-004] LLM 429/failed — error_text",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-005",
+    "risk_name": "[F5-SYM-005] RDS 连接耗尽 — 连接数",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-006",
+    "risk_name": "[F5-SYM-006] 前台 p99 慢 — BFF vs Pi",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 1,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-007",
+    "risk_name": "[F5-SYM-007] 冷启动误接流 — /ready",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 1,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-008",
+    "risk_name": "[F5-SYM-008] stream 断 — 网关 SSE 超时",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-009",
+    "risk_name": "[F5-SYM-009] 前端卡顿 — BFF/Worker 争 CPU",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 1,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  }
+]

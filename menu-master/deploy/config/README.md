@@ -30,7 +30,7 @@ POSTGRES_IMAGE=docker.1ms.run/library/postgres:16-alpine
 ## 缓存与子应用 entry
 
 - **缓存**：默认 `CACHE_DRIVER=memory`（进程内，无需 Redis 容器），见 `.cursor/rules/cache-local.mdc`。
-- **子应用 entry**：`SUBAPP_NOVEL_ENTRY` 指向 novel-sub Vite（Docker 内默认 `http://host.docker.internal:5174`）。
+- **子应用 entry**：`SUBAPP_NOVEL_ENTRY` 指向 novel-sub Vite（Docker 内默认 `http://host.docker.internal:5101`）。
 
 ```bash
 cp menu-master/backend/.env.example menu-master/backend/.env

@@ -23,16 +23,16 @@
 | 容器 | 端口 | 说明 |
 |------|------|------|
 | `ams-main-postgres` | 5432 | `admin_platform` + `subapp_registry` |
-| `ams-api-main` | 7001 | Egg.js BFF |
-| `ams-main-frontend` | 5173 | Vite dev |
+| `ams-api-main` | 5200 | Egg.js BFF |
+| `ams-main-frontend` | 5100 | Vite dev |
 
 ### novel-sub（app_key=novel）
 
 | 容器 | 端口 | 说明 |
 |------|------|------|
-| `ams-novel-postgres` | **5433** | `novel_db` |
-| `ams-api-novel` | 7002 | Egg.js BFF |
-| `ams-novel-frontend` | 8081 / dev 5174 | 子应用 UI |
+| `ams-novel-postgres` | **5301** | `novel_db` |
+| `ams-api-novel` | 5201 | Egg.js BFF |
+| `ams-novel-frontend` | 8081 / dev 5101 | 子应用 UI |
 
 ## 3. 目录结构
 
@@ -74,7 +74,7 @@ cd novel-sub/frontend && npm run dev
 
 ```bash
 cd menu-master/backend && npm run db:init   # subapp_registry + menu_items
-# 主应用 :5173/:7001 + novel-sub frontend :5174
+# 主应用 :5100/:5200 + novel-sub frontend :5101
 ```
 
 ### 停止
@@ -92,7 +92,7 @@ ams-novel local:down
 
 ```nginx
 location /api/ {
-  proxy_pass http://ams-api-main:7001/api/;
+  proxy_pass http://ams-api-main:5200/api/;
 }
 
 location /subapps/novel-app/ {
@@ -101,4 +101,4 @@ location /subapps/novel-app/ {
 }
 ```
 
-开发时子应用 entry 由菜单 API `entry` 字段提供（默认 `http://localhost:5174`）。
+开发时子应用 entry 由菜单 API `entry` 字段提供（默认 `http://localhost:5101`）。

@@ -23,16 +23,16 @@ ams-main local
 
 | 容器 | 地址 | 说明 |
 |------|------|------|
-| `ams-main-frontend` | http://localhost:5173 | Vite dev |
-| `ams-api-main` | http://localhost:7001 | Egg.js · `admin_platform` |
-| `ams-main-postgres` | localhost:5432 | 本应用专用 |
+| `ams-main-frontend` | http://localhost:5100 | Vite dev |
+| `ams-api-main` | http://localhost:5200 | Egg.js · `admin_platform` |
+| `ams-main-postgres` | localhost:5300 | 本应用专用 |
 
 ## 联调 novel-sub
 
 1. 主库执行 `npm run db:init`（或 `ams-main local:reset`）写入 `subapp_registry` + 菜单种子
-2. 启动 novel-sub：`cd novel-sub/frontend && npm run dev`（`:5174`）
-3. 主应用访问 http://localhost:5173 → 侧栏「小说管理」加载 Qiankun 子应用
+2. 启动 novel-sub：`cd novel-sub/frontend && npm run dev`（`:5101`）
+3. 主应用访问 http://localhost:5100 → 侧栏「小说管理」加载 Qiankun 子应用
 
-`SUBAPP_NOVEL_ENTRY` / `VITE_SUBAPP_NOVEL_ENTRY` 默认 `http://localhost:5174`（Docker 内为 `host.docker.internal:5174`）。
+`SUBAPP_NOVEL_ENTRY` / `VITE_SUBAPP_NOVEL_ENTRY` 默认 `http://localhost:5101`（Docker 内为 `host.docker.internal:5101`）。
 
 业务说明见 [../README.md](../README.md)。

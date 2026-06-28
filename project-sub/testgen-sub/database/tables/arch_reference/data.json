@@ -1,0 +1,72 @@
+[
+  {
+    "arch_ref_id": "ARCH_B1",
+    "station": "B1",
+    "title": "前端 submit/stream"
+  },
+  {
+    "arch_ref_id": "ARCH_B2",
+    "station": "B2",
+    "title": "门禁 guard"
+  },
+  {
+    "arch_ref_id": "ARCH_B3",
+    "station": "B3",
+    "title": "队列入队 Worker"
+  },
+  {
+    "arch_ref_id": "ARCH_B4",
+    "station": "B4",
+    "title": "Pipeline prepare/gates/persist"
+  },
+  {
+    "arch_ref_id": "ARCH_B5",
+    "station": "B5",
+    "title": "Pi outbox/tools"
+  },
+  {
+    "arch_ref_id": "ARCH_B6",
+    "station": "B6",
+    "title": "SSE 回传 journey"
+  },
+  {
+    "arch_ref_id": "ARCH_S5",
+    "section": "§5",
+    "title": "六站观测指标"
+  },
+  {
+    "arch_ref_id": "ARCH_S6",
+    "section": "§6",
+    "title": "同session串行/跨session并行"
+  },
+  {
+    "arch_ref_id": "ARCH_S10",
+    "section": "§10",
+    "title": "503/429/症状调参"
+  },
+  {
+    "arch_ref_id": "ARCH_S11",
+    "section": "§11",
+    "title": "幂等/可取消/可恢复"
+  },
+  {
+    "arch_ref_id": "ARCH_S2",
+    "section": "§2",
+    "title": "多实例 N×W"
+  },
+  {
+    "arch_ref_id": "ARCH_S4",
+    "section": "§4",
+    "title": "async 主链"
+  },
+  {
+    "arch_ref_id": "ARCH_PI",
+    "section": "pi-arch",
+    "title": "Pi 边界"
+  },
+  {
+    "arch_ref_id": "ARCH_REL",
+    "section": "reliability",
+    "title": "可靠性法则"
+  }
+]

@@ -3,7 +3,7 @@
  * AI智能测试平台子应用（自包含）任务调度。日常：ams-testgen <命令>
  */
 import { spawnSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -58,6 +58,27 @@ function runPs1(ps1Rel) {
   run(resolvePowerShell(), ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps1])
 }
 
+function runNodeBackendScript(scriptArgs) {
+  const backendDir = join(appRoot, 'backend')
+  const envLocal = join(deployDir, 'config', '.env.local')
+  const env = { ...process.env }
+  if (existsSync(envLocal)) {
+    try {
+      const text = readFileSync(envLocal, 'utf8')
+      for (const line of text.split('\n')) {
+        const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/)
+        if (m && env[m[1]] === undefined) env[m[1]] = m[2].replace(/^["']|["']$/g, '')
+      }
+    } catch { /* ignore */ }
+  }
+  if (!env.POSTGRES_PORT && env.TESTGEN_POSTGRES_PORT) {
+    env.POSTGRES_PORT = env.TESTGEN_POSTGRES_PORT
+  }
+  const r = spawnSync(process.execPath, scriptArgs, { cwd: backendDir, env, stdio: 'inherit', shell: false })
+  if (r.error) fail(r.error.message)
+  process.exit(r.status ?? 1)
+}
+
 function printHelp() {
   console.log(`AI智能测试平台 (testgen-sub) — 自包含 CLI
 
@@ -69,6 +90,15 @@ function printHelp() {
   ams-testgen local:infra        仅 Postgres（宿主机热更新业务代码）
   ams-testgen local:reset        清库重建
   ams-testgen local:down         停止本栈
+
+Fitness 数据库（须 Postgres 已启动，默认端口见 deploy/config/.env.local）:
+  ams-testgen db                 同步 Schema（含自动补列）+ 全量注入
+  ams-testgen db:seed            同上（全量）
+  ams-testgen db:seed <表名>     同步 Schema + 仅注入指定表
+  ams-testgen db:sync            仅同步 Schema（不含数据）
+
+db 流程：对比 init.sql 自动 ADD COLUMN → enrich data.json 中文名 → 外键顺序注入
+字段中文标签：database/display-labels.json
 
 未 link:
   node testgen-sub/deploy/scripts/run.mjs <命令>
@@ -99,6 +129,19 @@ switch (task) {
   case 'local:down':
     runCompose(['down'])
     break
+  case 'db':
+    runNodeBackendScript([join('scripts', 'db-cli.js'), 'all'])
+    break
+  case 'db:sync':
+    runNodeBackendScript([join('scripts', 'db-cli.js'), 'sync'])
+    break
+  case 'db:seed': {
+    const tableName = process.argv[3]
+    const args = [ join('scripts', 'db-cli.js'), 'seed' ]
+    if (tableName) args.push(tableName)
+    runNodeBackendScript(args)
+    break
+  }
   default:
     fail(`未知任务: ${task}\n运行 ams-testgen help 查看命令列表`)
 }

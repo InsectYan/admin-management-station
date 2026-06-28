@@ -10,9 +10,9 @@
 
 | 应用 | 目录 | CLI | 说明 |
 |------|------|-----|------|
-| 主应用 | [`menu-master/`](menu-master/) | `ams-main` | 菜单 + Qiankun 基座 · `:7001` · PG `:5432` |
-| 小说子应用 | [`project-sub/novel-sub/`](project-sub/novel-sub/) | `ams-novel` | 前端 + BFF · `:7002` · PG `:5433` |
-| AI 测试平台 | [`project-sub/testgen-sub/`](project-sub/testgen-sub/) | `ams-testgen` | 前端 + BFF · `:7003` · PG `:5434` |
+| 主应用 | [`menu-master/`](menu-master/) | `ams-main` | 菜单 + Qiankun 基座 · `:5200` · PG `:5432` |
+| 小说子应用 | [`project-sub/novel-sub/`](project-sub/novel-sub/) | `ams-novel` | 前端 + BFF · `:5201` · PG `:5301` |
+| AI 测试平台 | [`project-sub/testgen-sub/`](project-sub/testgen-sub/) | `ams-testgen` | 前端 + BFF · `:5202` · PG `:5302` |
 
 每个应用 `deploy/docker-compose.yml` **自带 Postgres**；缓存默认 **memory**（见 `cache-local.mdc`），不共享根级 infra。
 

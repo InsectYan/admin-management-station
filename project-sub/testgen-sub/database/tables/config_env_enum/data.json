@@ -1,0 +1,158 @@
+[
+  {
+    "config_env_id": "TURN_SESSION_MAX_INFLIGHT",
+    "name": "同 session 在途上限",
+    "domain": "guard",
+    "default_value": "1"
+  },
+  {
+    "config_env_id": "TURN_COACH_SUBMIT_MAX",
+    "name": "教练 submit 窗口限流",
+    "domain": "guard",
+    "default_value": "10/window"
+  },
+  {
+    "config_env_id": "TURN_QUEUE_MAX_PENDING",
+    "name": "全店 pending 硬顶",
+    "domain": "queue",
+    "default_value": "项目配置"
+  },
+  {
+    "config_env_id": "TURN_QUEUE_WARN_PENDING",
+    "name": "排队软提示阈值",
+    "domain": "queue",
+    "default_value": "项目配置"
+  },
+  {
+    "config_env_id": "TURN_QUEUE_AVG_TURN_SEC",
+    "name": "平均 turn 耗时估算",
+    "domain": "queue",
+    "default_value": "项目配置"
+  },
+  {
+    "config_env_id": "DB_CIRCUIT_FAILURE_THRESHOLD",
+    "name": "DB 熔断失败阈值",
+    "domain": "guard",
+    "default_value": "项目配置"
+  },
+  {
+    "config_env_id": "INTERNAL_API_KEY",
+    "name": "Internal API Key",
+    "domain": "security",
+    "default_value": "生产必填"
+  },
+  {
+    "config_env_id": "COACH_TURN_WORKER_CONCURRENCY",
+    "name": "Worker Pi 并发 W",
+    "domain": "worker",
+    "default_value": "项目配置"
+  },
+  {
+    "config_env_id": "COACH_TURN_POLL_MS",
+    "name": "Worker 抢单轮询",
+    "domain": "worker",
+    "default_value": "项目配置"
+  },
+  {
+    "config_env_id": "TURN_JOB_STALE_MINUTES",
+    "name": "僵尸 processing 回收",
+    "domain": "worker",
+    "default_value": "项目配置"
+  },
+  {
+    "config_env_id": "TURN_JOB_RETRY_MAX",
+    "name": "LLM 失败重试次数",
+    "domain": "worker",
+    "default_value": "项目配置"
+  },
+  {
+    "config_env_id": "PG_POOL_MAX",
+    "name": "RDS 连接池上限",
+    "domain": "infra",
+    "default_value": "项目配置"
+  },
+  {
+    "config_env_id": "WORKSPACES_ROOT",
+    "name": "NAS workspace 根",
+    "domain": "infra",
+    "default_value": "项目配置"
+  },
+  {
+    "config_env_id": "TURN_STREAM_MAX_WAIT_MS",
+    "name": "SSE 最长等待",
+    "domain": "sse",
+    "default_value": "项目配置"
+  },
+  {
+    "config_env_id": "SSE_HEARTBEAT_MS",
+    "name": "SSE 心跳间隔",
+    "domain": "sse",
+    "default_value": "项目配置"
+  },
+  {
+    "config_env_id": "READY_DELAY_MS",
+    "name": "就绪探针延迟",
+    "domain": "deploy",
+    "default_value": "5000"
+  },
+  {
+    "config_env_id": "SHUTDOWN_GRACE_MS",
+    "name": "优雅停机宽限",
+    "domain": "deploy",
+    "default_value": "项目配置"
+  },
+  {
+    "config_env_id": "TURN_MESSAGE_MAX_LENGTH",
+    "name": "消息最大长度",
+    "domain": "guard",
+    "default_value": "8000"
+  },
+  {
+    "config_env_id": "TURN_DUPLICATE_MESSAGE_MS",
+    "name": "重复文案窗口",
+    "domain": "guard",
+    "default_value": "5000"
+  },
+  {
+    "config_env_id": "BFF_HISTORY_TURNS",
+    "name": "BFF 历史轮数",
+    "domain": "pipeline",
+    "default_value": "项目配置"
+  },
+  {
+    "config_env_id": "TURN_THINKING_APPEND_MS",
+    "name": "thinking 节流",
+    "domain": "pipeline",
+    "default_value": "项目配置"
+  },
+  {
+    "config_env_id": "KNOWLEDGE_SEARCH_LIMIT",
+    "name": "知识库检索 limit",
+    "domain": "pi",
+    "default_value": "项目配置"
+  },
+  {
+    "config_env_id": "COACH_MEMORY_WAKE",
+    "name": "记忆 wake 开关",
+    "domain": "memory",
+    "default_value": "项目配置"
+  },
+  {
+    "config_env_id": "OTEL_ENABLED",
+    "name": "OpenTelemetry",
+    "domain": "obs",
+    "default_value": "0/1"
+  },
+  {
+    "config_env_id": "DEPLOY_MODE",
+    "name": "部署模式",
+    "domain": "deploy",
+    "default_value": "local/agentrun"
+  },
+  {
+    "config_env_id": "CORS_ORIGIN",
+    "name": "CORS 域名",
+    "domain": "shell",
+    "default_value": "项目配置"
+  }
+]

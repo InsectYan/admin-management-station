@@ -18,12 +18,12 @@ CREATE TABLE IF NOT EXISTS env_configs (
 
 CREATE INDEX IF NOT EXISTS idx_env_configs_name ON env_configs (name);
 
-INSERT INTO env_configs (name, description, base_url, headers_template)
-SELECT 'local', '本地开发环境', 'http://localhost:8080', '{}'
+INSERT INTO env_configs (name, description, base_url, headers_template, created_at, updated_at)
+SELECT 'local', '本地开发环境', 'http://localhost:8080', '{}', NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM env_configs WHERE name = 'local');
 
-INSERT INTO env_configs (name, description, base_url, headers_template)
-SELECT 'staging', '预发环境', 'http://staging.internal', '{}'
+INSERT INTO env_configs (name, description, base_url, headers_template, created_at, updated_at)
+SELECT 'staging', '预发环境', 'http://staging.internal', '{}', NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM env_configs WHERE name = 'staging');
 
 CREATE TABLE IF NOT EXISTS test_runs (

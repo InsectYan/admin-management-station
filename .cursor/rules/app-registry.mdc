@@ -16,9 +16,9 @@ alwaysApply: false
 |------|------|
 | `app_key` | 小写英文，全局唯一 |
 | 应用根目录 | 完整项目目录（见 `app-self-contained.mdc`） |
-| API 端口 | 7001 起递增 |
-| Vite dev | 5173 起递增 |
-| Postgres 宿主机端口 | 5432 起递增（容器内仍为 5432） |
+| API 端口 | 5200 起递增 |
+| Vite dev | 5100 起递增 |
+| Postgres 宿主机端口 | 5300 起递增（容器内仍为 5432） |
 | 数据库名 | 语义名或 `{app_key}_db` |
 | 容器名 | `ams-{role}-{app_key}` |
 | CLI | `ams-{app_key}`，位于 `{app}/deploy/` |

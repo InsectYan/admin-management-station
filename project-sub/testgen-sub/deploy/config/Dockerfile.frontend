@@ -3,6 +3,6 @@ WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm ci 2>/dev/null || npm install
 COPY frontend/ .
-EXPOSE 5175
-ENV VITE_DEV_PORT=5175
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5175"]
+EXPOSE 5102
+ENV VITE_DEV_PORT=5102
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5102"]

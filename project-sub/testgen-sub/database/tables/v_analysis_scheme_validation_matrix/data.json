@@ -1,0 +1,184 @@
+[
+  {
+    "scheme_id": "TS-01-DET",
+    "scheme_name": "确定性单次",
+    "validation_id": "VS-01-EXACT",
+    "validation_name": "精确匹配",
+    "item_count": 31
+  },
+  {
+    "scheme_id": "TS-01-DET",
+    "scheme_name": "确定性单次",
+    "validation_id": "VS-02-CONTRACT",
+    "validation_name": "契约通过",
+    "item_count": 7
+  },
+  {
+    "scheme_id": "TS-01-DET",
+    "scheme_name": "确定性单次",
+    "validation_id": "VS-03-ZERO",
+    "validation_name": "零违规",
+    "item_count": 1
+  },
+  {
+    "scheme_id": "TS-02-BND",
+    "scheme_name": "边界/等价类矩阵",
+    "validation_id": "VS-01-EXACT",
+    "validation_name": "精确匹配",
+    "item_count": 3
+  },
+  {
+    "scheme_id": "TS-02-BND",
+    "scheme_name": "边界/等价类矩阵",
+    "validation_id": "VS-02-CONTRACT",
+    "validation_name": "契约通过",
+    "item_count": 6
+  },
+  {
+    "scheme_id": "TS-03-REP",
+    "scheme_name": "同用例重复抽样",
+    "validation_id": "VS-07-RATE-L",
+    "validation_name": "达标率·低门槛",
+    "item_count": 3
+  },
+  {
+    "scheme_id": "TS-03-REP",
+    "scheme_name": "同用例重复抽样",
+    "validation_id": "VS-07-RATE-M",
+    "validation_name": "达标率·中门槛",
+    "item_count": 7
+  },
+  {
+    "scheme_id": "TS-03-REP",
+    "scheme_name": "同用例重复抽样",
+    "validation_id": "VS-08-PASSK",
+    "validation_name": "Pass^k稳定",
+    "item_count": 4
+  },
+  {
+    "scheme_id": "TS-04-SET",
+    "scheme_name": "固定样本集批量",
+    "validation_id": "VS-03-ZERO",
+    "validation_name": "零违规",
+    "item_count": 27
+  },
+  {
+    "scheme_id": "TS-04-SET",
+    "scheme_name": "固定样本集批量",
+    "validation_id": "VS-07-RATE-M",
+    "validation_name": "达标率·中门槛",
+    "item_count": 7
+  },
+  {
+    "scheme_id": "TS-04-SET",
+    "scheme_name": "固定样本集批量",
+    "validation_id": "VS-07-RATE-H",
+    "validation_name": "达标率·高门槛",
+    "item_count": 24
+  },
+  {
+    "scheme_id": "TS-04-SET",
+    "scheme_name": "固定样本集批量",
+    "validation_id": "VS-09-BLOCK-H",
+    "validation_name": "安全阻断·高",
+    "item_count": 12
+  },
+  {
+    "scheme_id": "TS-04-SET",
+    "scheme_name": "固定样本集批量",
+    "validation_id": "VS-11-MAJORITY",
+    "validation_name": "人工多数",
+    "item_count": 1
+  },
+  {
+    "scheme_id": "TS-05-CHAIN",
+    "scheme_name": "多步链路串联",
+    "validation_id": "VS-02-CONTRACT",
+    "validation_name": "契约通过",
+    "item_count": 5
+  },
+  {
+    "scheme_id": "TS-05-CHAIN",
+    "scheme_name": "多步链路串联",
+    "validation_id": "VS-10-SLO-M",
+    "validation_name": "性能SLO·中",
+    "item_count": 1
+  },
+  {
+    "scheme_id": "TS-06-PAIR",
+    "scheme_name": "对照/跨端对比",
+    "validation_id": "VS-01-EXACT",
+    "validation_name": "精确匹配",
+    "item_count": 1
+  },
+  {
+    "scheme_id": "TS-06-PAIR",
+    "scheme_name": "对照/跨端对比",
+    "validation_id": "VS-03-ZERO",
+    "validation_name": "零违规",
+    "item_count": 20
+  },
+  {
+    "scheme_id": "TS-07-NEG",
+    "scheme_name": "异常/对抗专项",
+    "validation_id": "VS-03-ZERO",
+    "validation_name": "零违规",
+    "item_count": 1
+  },
+  {
+    "scheme_id": "TS-07-NEG",
+    "scheme_name": "异常/对抗专项",
+    "validation_id": "VS-09-BLOCK-H",
+    "validation_name": "安全阻断·高",
+    "item_count": 5
+  },
+  {
+    "scheme_id": "TS-08-OBS",
+    "scheme_name": "可观测稽核",
+    "validation_id": "VS-05-PRESENCE",
+    "validation_name": "存在性",
+    "item_count": 18
+  },
+  {
+    "scheme_id": "TS-08-OBS",
+    "scheme_name": "可观测稽核",
+    "validation_id": "VS-06-COMPLETE",
+    "validation_name": "完整性",
+    "item_count": 23
+  },
+  {
+    "scheme_id": "TS-08-OBS",
+    "scheme_name": "可观测稽核",
+    "validation_id": "VS-07-RATE-L",
+    "validation_name": "达标率·低门槛",
+    "item_count": 1
+  },
+  {
+    "scheme_id": "TS-08-OBS",
+    "scheme_name": "可观测稽核",
+    "validation_id": "VS-10-SLO-M",
+    "validation_name": "性能SLO·中",
+    "item_count": 6
+  },
+  {
+    "scheme_id": "TS-09-LOAD",
+    "scheme_name": "压测/容量",
+    "validation_id": "VS-01-EXACT",
+    "validation_name": "精确匹配",
+    "item_count": 1
+  },
+  {
+    "scheme_id": "TS-09-LOAD",
+    "scheme_name": "压测/容量",
+    "validation_id": "VS-10-SLO-M",
+    "validation_name": "性能SLO·中",
+    "item_count": 11
+  },
+  {
+    "scheme_id": "TS-09-LOAD",
+    "scheme_name": "压测/容量",
+    "validation_id": "VS-10-SLO-H",
+    "validation_name": "性能SLO·高",
+    "item_count": 6
+  }
+]

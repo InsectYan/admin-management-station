@@ -4,8 +4,8 @@ import qiankun from 'vite-plugin-qiankun';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const port = Number(env.VITE_DEV_PORT || 5174);
-  const apiBase = env.VITE_API_BASE || 'http://localhost:7002/api';
+  const port = Number(env.VITE_DEV_PORT || 5101);
+  const apiBase = env.VITE_API_BASE || 'http://localhost:5201/api';
   const apiOrigin = apiBase.replace(/\/api\/?$/, '');
 
   return {

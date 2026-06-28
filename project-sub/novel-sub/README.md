@@ -6,9 +6,9 @@
 
 | 模块 | 路径 | 端口（默认） |
 |------|------|-------------|
-| 前端 | `frontend/` | Vue 3 + Element Plus · Vite **5174** |
-| Egg.js BFF | `backend/` | API **7002** |
-| 数据库 | `database/init.sql` | PG 宿主机 **5433** · `novel_db` |
+| 前端 | `frontend/` | Vue 3 + Element Plus · Vite **5101** |
+| Egg.js BFF | `backend/` | API **5201** |
+| 数据库 | `database/init.sql` | PG 宿主机 **5301** · `novel_db` |
 | 部署 | `deploy/` | `ams-novel` |
 
 ## 接入主应用（Qiankun）
@@ -20,7 +20,7 @@
 | `subapp_registry` | `microapp_name` | `novel-app` |
 | `menu_items` | `route_prefix` | `novel` |
 
-主应用菜单 API 返回 `entry`（默认 `http://localhost:5174`），Qiankun `activeRule` 为 `/media/novel`。
+主应用菜单 API 返回 `entry`（默认 `http://localhost:5101`），Qiankun `activeRule` 为 `/media/novel`。
 
 **联调步骤**：
 
@@ -29,15 +29,15 @@
 cd menu-master/backend && npm run db:init
 
 # 2. 启动主应用
-cd menu-master/frontend && npm run dev    # :5173
-cd menu-master/backend && npm run dev     # :7001
+cd menu-master/frontend && npm run dev    # :5100
+cd menu-master/backend && npm run dev     # :5200
 
 # 3. 启动本子应用
-cd novel-sub/frontend && npm run dev      # :5174
-cd novel-sub/backend && npm run dev       # :7002（业务 API）
+cd novel-sub/frontend && npm run dev      # :5101
+cd novel-sub/backend && npm run dev       # :5201（业务 API）
 ```
 
-浏览器打开 http://localhost:5173 ，点击「小说管理」即可加载本子应用。
+浏览器打开 http://localhost:5100 ，点击「小说管理」即可加载本子应用。
 
 ## 一键 Docker
 
@@ -51,8 +51,8 @@ ams-novel local:infra    # 仅 DB，宿主机 npm run dev
 
 ```bash
 cd backend && npm install && npm run db:init
-cd backend && npm run dev      # :7002
-cd frontend && npm run dev     # :5174
+cd backend && npm run dev      # :5201
+cd frontend && npm run dev     # :5101
 ```
 
 ## 规范

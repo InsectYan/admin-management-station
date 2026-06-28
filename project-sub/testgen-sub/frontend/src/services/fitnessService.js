@@ -1,0 +1,147 @@
+import { api, resolveApiBase } from './apiConfig.js';
+
+api.defaults.baseURL = resolveApiBase();
+
+export async function fetchDashboard() {
+  const { data } = await api.get('/fitness/dashboard');
+  return data.data;
+}
+
+export async function fetchTestItems(params) {
+  const { data } = await api.get('/fitness/items', { params });
+  return data.data;
+}
+
+export async function exportTestItems(params, format = 'json') {
+  if (format === 'csv') {
+    const res = await api.get('/fitness/items/export', {
+      params: { ...params, format: 'csv' },
+      responseType: 'blob',
+    });
+    return res.data;
+  }
+  const { data } = await api.get('/fitness/items/export', { params: { ...params, format: 'json' } });
+  return data.data;
+}
+
+export async function fetchTestItem(itemId) {
+  const { data } = await api.get(`/fitness/items/${encodeURIComponent(itemId)}`);
+  return data.data;
+}
+
+export async function fetchBrowseTree() {
+  const { data } = await api.get('/fitness/browse');
+  return data.data;
+}
+
+export async function fetchSchemes(params) {
+  const { data } = await api.get('/fitness/schemes', { params });
+  return data.data;
+}
+
+export async function fetchView(viewName, params) {
+  const { data } = await api.get(`/fitness/views/${viewName}`, { params });
+  return data.data;
+}
+
+export async function fetchEnums(table, params) {
+  const { data } = await api.get(`/fitness/enums/${table}`, { params });
+  return data.data;
+}
+
+export async function fetchRisks(params) {
+  const { data } = await api.get('/fitness/risks', { params });
+  return data.data;
+}
+
+export async function fetchRiskLinks(params) {
+  const { data } = await api.get('/fitness/risk-links', { params });
+  return data.data;
+}
+
+export async function fetchPlans(params) {
+  const { data } = await api.get('/fitness/plans', { params });
+  return data.data;
+}
+
+export async function fetchPlan(id) {
+  const { data } = await api.get(`/fitness/plans/${id}`);
+  return data.data;
+}
+
+export async function createPlan(payload) {
+  const { data } = await api.post('/fitness/plans', payload);
+  return data.data;
+}
+
+export async function updatePlan(id, payload) {
+  const { data } = await api.put(`/fitness/plans/${id}`, payload);
+  return data.data;
+}
+
+export async function appendPlanItems(planId, itemIds) {
+  const { data } = await api.post(`/fitness/plans/${planId}/items`, { item_ids: itemIds });
+  return data.data;
+}
+
+export async function deletePlan(id) {
+  const { data } = await api.delete(`/fitness/plans/${id}`);
+  return data.data;
+}
+
+export async function savePlanResults(id, results) {
+  const { data } = await api.post(`/fitness/plans/${id}/results`, { results });
+  return data.data;
+}
+
+export async function exportPlanReport(id) {
+  const { data } = await api.post(`/fitness/plans/${id}/export-report`);
+  return data.data;
+}
+
+export async function fetchEnvironments(params) {
+  const { data } = await api.get('/fitness/environments', { params });
+  return data.data;
+}
+
+export async function fetchSampleSets(params) {
+  const { data } = await api.get('/fitness/samples', { params });
+  return data.data;
+}
+
+export async function fetchFtRuns(params) {
+  const { data } = await api.get('/fitness/runs', { params });
+  return data.data;
+}
+
+export async function fetchFtRun(runId) {
+  const { data } = await api.get(`/fitness/runs/${runId}`);
+  return data.data;
+}
+
+export async function saveRunConfig(itemId, payload) {
+  const { data } = await api.post(`/fitness/run-config/${encodeURIComponent(itemId)}`, payload);
+  return data.data;
+}
+
+export async function launchRun(itemId, payload) {
+  const { data } = await api.post(`/fitness/run/${encodeURIComponent(itemId)}/launch`, payload);
+  return data.data;
+}
+
+export const SCHEME_CONFIG_ROUTES = {
+  'TS-01-DET': 'det',
+  'TS-02-BND': 'bnd',
+  'TS-03-REP': 'rep',
+  'TS-04-SET': 'set',
+  'TS-05-CHAIN': 'chain',
+  'TS-06-PAIR': 'pair',
+  'TS-07-NEG': 'neg',
+  'TS-08-OBS': 'obs',
+  'TS-09-LOAD': 'load',
+  'TS-10-MAN': 'man',
+};
+
+export function schemeToConfigPath(schemeId) {
+  return SCHEME_CONFIG_ROUTES[schemeId] || 'det';
+}

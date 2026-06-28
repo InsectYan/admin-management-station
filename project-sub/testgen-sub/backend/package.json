@@ -10,7 +10,10 @@
     "dev": "egg-bin dev",
     "start": "egg-scripts start --daemon --title=testgen-sub-backend",
     "stop": "egg-scripts stop --title=testgen-sub-backend",
-    "db:init": "node scripts/init-db.js"
+    "db:init": "node scripts/init-db.js",
+    "db:sync": "node scripts/sync-schema.js",
+    "db:seed": "node scripts/seed-data.js",
+    "db": "node scripts/db-cli.js all"
   },
   "dependencies": {
     "axios": "^1.18.1",

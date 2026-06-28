@@ -13,7 +13,7 @@ services:
     environment:
       POSTGRES_DB: ${MAIN_POSTGRES_DB:-admin_platform}
     ports:
-      - "${MAIN_POSTGRES_PORT:-5432}:5432"
+      - "${MAIN_POSTGRES_PORT:-5300}:5432"
     volumes:
       - main_pgdata:/var/lib/postgresql/data
       - ../database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -35,14 +35,15 @@ services:
     environment:
       APP_KEY: main
       POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
       CACHE_DRIVER: memory
-      PORT: ${MAIN_PORT:-7001}
+      PORT: ${MAIN_PORT:-5200}
       POSTGRES_DB: ${MAIN_POSTGRES_DB:-admin_platform}
-      SUBAPP_NOVEL_ENTRY: ${SUBAPP_NOVEL_ENTRY:-http://localhost:5174}
-      SUBAPP_TESTGEN_ENTRY: ${SUBAPP_TESTGEN_ENTRY:-http://localhost:5175}
+      SUBAPP_NOVEL_ENTRY: ${SUBAPP_NOVEL_ENTRY:-http://localhost:5101}
+      SUBAPP_TESTGEN_ENTRY: ${SUBAPP_TESTGEN_ENTRY:-http://localhost:5102}
       AGENT_PLATFORM_URL: ${AGENT_PLATFORM_URL:-http://host.docker.internal:3001}
     ports:
-      - "${MAIN_PORT:-7001}:${MAIN_PORT:-7001}"
+      - "${MAIN_PORT:-5200}:${MAIN_PORT:-5200}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -56,12 +57,12 @@ services:
     container_name: ams-main-frontend
     restart: unless-stopped
     ports:
-      - "${MAIN_VITE_PORT:-5173}:5173"
+      - "${MAIN_VITE_PORT:-5100}:5100"
     env_file:
       - ../frontend/.env.local
     environment:
-      VITE_SUBAPP_NOVEL_ENTRY: ${SUBAPP_NOVEL_ENTRY:-http://localhost:5174}
-      VITE_SUBAPP_TESTGEN_ENTRY: ${SUBAPP_TESTGEN_ENTRY:-http://localhost:5175}
+      VITE_SUBAPP_NOVEL_ENTRY: ${SUBAPP_NOVEL_ENTRY:-http://localhost:5101}
+      VITE_SUBAPP_TESTGEN_ENTRY: ${SUBAPP_TESTGEN_ENTRY:-http://localhost:5102}
     volumes:
       - ../frontend/src:/app/src
       - ../frontend/public:/app/public

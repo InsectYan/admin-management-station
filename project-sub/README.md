@@ -26,10 +26,10 @@
   "microapp_name": "novel-app",
   "display_name": "小说管理",
   "route_prefix": "novel",
-  "entry_dev": "http://localhost:5174",
+  "entry_dev": "http://localhost:5101",
   "entry_prod": "/subapps/novel-app/",
-  "vite_port": 5174,
-  "api_port": 7002,
+  "vite_port": 5101,
+  "api_port": 5201,
   "menu_order": 1,
   "icon": "icon-novel",
   "entry_env": "SUBAPP_NOVEL_ENTRY"

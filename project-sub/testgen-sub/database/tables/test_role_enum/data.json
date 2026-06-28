@@ -1,0 +1,27 @@
+[
+  {
+    "role_scope_id": "COACH",
+    "name": "教练端",
+    "description": "核心 Agent 主链"
+  },
+  {
+    "role_scope_id": "MEMBER",
+    "name": "会员端",
+    "description": "轻问答+确认/反馈"
+  },
+  {
+    "role_scope_id": "MANAGER",
+    "name": "管理端",
+    "description": "查询+分配"
+  },
+  {
+    "role_scope_id": "ALL",
+    "name": "三端/横切",
+    "description": "多端对照或通用"
+  },
+  {
+    "role_scope_id": "SYSTEM",
+    "name": "系统/探针",
+    "description": "health/ready/infra"
+  }
+]

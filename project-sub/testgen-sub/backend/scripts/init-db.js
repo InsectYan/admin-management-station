@@ -8,7 +8,7 @@ require('dotenv').config();
 async function main() {
   const adminClient = new Client({
     host: process.env.POSTGRES_HOST || '127.0.0.1',
-    port: Number(process.env.POSTGRES_PORT || 5434),
+    port: Number(process.env.POSTGRES_PORT || 5302),
     user: process.env.POSTGRES_USER || 'admin',
     password: process.env.POSTGRES_PASSWORD || 'admin123',
     database: 'postgres',
@@ -26,7 +26,7 @@ async function main() {
 
   const client = new Client({
     host: process.env.POSTGRES_HOST || '127.0.0.1',
-    port: Number(process.env.POSTGRES_PORT || 5434),
+    port: Number(process.env.POSTGRES_PORT || 5302),
     user: process.env.POSTGRES_USER || 'admin',
     password: process.env.POSTGRES_PASSWORD || 'admin123',
     database: dbName,

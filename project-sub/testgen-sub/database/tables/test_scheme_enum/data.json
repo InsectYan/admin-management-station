@@ -1,0 +1,62 @@
+[
+  {
+    "scheme_id": "TS-01-DET",
+    "name": "确定性单次",
+    "description": "接口、HTTP 码、探针、单次 gate",
+    "sort_order": 1
+  },
+  {
+    "scheme_id": "TS-02-BND",
+    "name": "边界/等价类矩阵",
+    "description": "入参边界、状态机转移、多端载荷",
+    "sort_order": 2
+  },
+  {
+    "scheme_id": "TS-03-REP",
+    "name": "同用例重复抽样",
+    "description": "Agent 意图、策略、Pass^k",
+    "sort_order": 3
+  },
+  {
+    "scheme_id": "TS-04-SET",
+    "name": "固定样本集批量",
+    "description": "Golden Eval、咨询 skill 回归、对抗集",
+    "sort_order": 4
+  },
+  {
+    "scheme_id": "TS-05-CHAIN",
+    "name": "多步链路串联",
+    "description": "计划全链、课时 commit、E2E chain",
+    "sort_order": 5
+  },
+  {
+    "scheme_id": "TS-06-PAIR",
+    "name": "对照/跨端对比",
+    "description": "三端载荷边界、会员 vs 教练同句",
+    "sort_order": 6
+  },
+  {
+    "scheme_id": "TS-07-NEG",
+    "name": "异常/对抗专项",
+    "description": "注入、医学越界、恶意 tool",
+    "sort_order": 7
+  },
+  {
+    "scheme_id": "TS-08-OBS",
+    "name": "可观测稽核",
+    "description": "journey、日志 19 项、SLS 字段",
+    "sort_order": 8
+  },
+  {
+    "scheme_id": "TS-09-LOAD",
+    "name": "压测/容量",
+    "description": "并发、队列硬顶、多实例幂等",
+    "sort_order": 9
+  },
+  {
+    "scheme_id": "TS-10-MAN",
+    "name": "人工评审",
+    "description": "专家按 rubric 打分",
+    "sort_order": 10
+  }
+]

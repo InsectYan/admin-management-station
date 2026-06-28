@@ -1,0 +1,112 @@
+[
+  {
+    "risk_item_id": "C2-RISK-007",
+    "risk_name": "[C2-RISK-007] 无确认/拒绝日志 — 无确认/拒绝日志",
+    "risk_category": "C2_MEMBER",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "C3-RISK-006",
+    "risk_name": "[C3-RISK-006] 无 interaction_log_id — 无 interaction_log_id",
+    "risk_category": "C3_MANAGER",
+    "priority_id": "P1",
+    "guard_link_count": 3,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-001",
+    "risk_name": "[F5-SYM-001] 排队久 — turn_jobs pending",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-002",
+    "risk_name": "[F5-SYM-002] 503 系统繁忙 — pending≥max",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-003",
+    "risk_name": "[F5-SYM-003] 503 熔断 — circuit open",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-004",
+    "risk_name": "[F5-SYM-004] LLM 429/failed — error_text",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-005",
+    "risk_name": "[F5-SYM-005] RDS 连接耗尽 — 连接数",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-006",
+    "risk_name": "[F5-SYM-006] 前台 p99 慢 — BFF vs Pi",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 1,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-007",
+    "risk_name": "[F5-SYM-007] 冷启动误接流 — /ready",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 1,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-008",
+    "risk_name": "[F5-SYM-008] stream 断 — 网关 SSE 超时",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 2,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  },
+  {
+    "risk_item_id": "F5-SYM-009",
+    "risk_name": "[F5-SYM-009] 前端卡顿 — BFF/Worker 争 CPU",
+    "risk_category": "F5_SYMPTOM",
+    "priority_id": "P1",
+    "guard_link_count": 1,
+    "primary_guard_count": 0,
+    "has_primary_guard": false,
+    "coverage_status": "PARTIAL"
+  }
+]

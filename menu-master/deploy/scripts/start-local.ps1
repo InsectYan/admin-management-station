@@ -37,9 +37,9 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""
 Write-Host "Local stack started"
-Write-Host "  Frontend  http://localhost:5173"
-Write-Host "  Main API  http://localhost:7001/api/health"
-Write-Host "  PostgreSQL localhost:5432"
+Write-Host "  Frontend  http://localhost:5100"
+Write-Host "  Main API  http://localhost:5200/api/health"
+Write-Host "  PostgreSQL localhost:5300"
 Write-Host "  Cache       memory (进程内，无需 Redis)"
 Write-Host ""
 Write-Host "Frontend only: ams-main local:frontend"

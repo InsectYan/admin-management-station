@@ -1,0 +1,146 @@
+[
+  {
+    "pair_id": "P01",
+    "scheme_id": "TS-01-DET",
+    "validation_id": "VS-01-EXACT",
+    "is_primary": true,
+    "scheme_name": "确定性单次",
+    "validation_name": "精确匹配"
+  },
+  {
+    "pair_id": "P02",
+    "scheme_id": "TS-01-DET",
+    "validation_id": "VS-02-CONTRACT",
+    "is_primary": false,
+    "scheme_name": "确定性单次",
+    "validation_name": "契约通过"
+  },
+  {
+    "pair_id": "P03",
+    "scheme_id": "TS-02-BND",
+    "validation_id": "VS-01-EXACT",
+    "is_primary": true,
+    "scheme_name": "边界/等价类矩阵",
+    "validation_name": "精确匹配"
+  },
+  {
+    "pair_id": "P04",
+    "scheme_id": "TS-02-BND",
+    "validation_id": "VS-02-CONTRACT",
+    "is_primary": true,
+    "scheme_name": "边界/等价类矩阵",
+    "validation_name": "契约通过"
+  },
+  {
+    "pair_id": "P05",
+    "scheme_id": "TS-03-REP",
+    "validation_id": "VS-08-PASSK",
+    "is_primary": true,
+    "scheme_name": "同用例重复抽样",
+    "validation_name": "Pass^k稳定"
+  },
+  {
+    "pair_id": "P06",
+    "scheme_id": "TS-03-REP",
+    "validation_id": "VS-07-RATE-M",
+    "is_primary": false,
+    "scheme_name": "同用例重复抽样",
+    "validation_name": "达标率·中门槛"
+  },
+  {
+    "pair_id": "P07",
+    "scheme_id": "TS-04-SET",
+    "validation_id": "VS-07-RATE-M",
+    "is_primary": true,
+    "scheme_name": "固定样本集批量",
+    "validation_name": "达标率·中门槛"
+  },
+  {
+    "pair_id": "P08",
+    "scheme_id": "TS-04-SET",
+    "validation_id": "VS-07-RATE-H",
+    "is_primary": false,
+    "scheme_name": "固定样本集批量",
+    "validation_name": "达标率·高门槛"
+  },
+  {
+    "pair_id": "P09",
+    "scheme_id": "TS-05-CHAIN",
+    "validation_id": "VS-04-CHAIN-OK",
+    "is_primary": true,
+    "scheme_name": "多步链路串联",
+    "validation_name": "链路全过"
+  },
+  {
+    "pair_id": "P10",
+    "scheme_id": "TS-06-PAIR",
+    "validation_id": "VS-03-ZERO",
+    "is_primary": true,
+    "scheme_name": "对照/跨端对比",
+    "validation_name": "零违规"
+  },
+  {
+    "pair_id": "P11",
+    "scheme_id": "TS-06-PAIR",
+    "validation_id": "VS-01-EXACT",
+    "is_primary": false,
+    "scheme_name": "对照/跨端对比",
+    "validation_name": "精确匹配"
+  },
+  {
+    "pair_id": "P12",
+    "scheme_id": "TS-07-NEG",
+    "validation_id": "VS-09-BLOCK-H",
+    "is_primary": true,
+    "scheme_name": "异常/对抗专项",
+    "validation_name": "安全阻断·高"
+  },
+  {
+    "pair_id": "P13",
+    "scheme_id": "TS-07-NEG",
+    "validation_id": "VS-03-ZERO",
+    "is_primary": false,
+    "scheme_name": "异常/对抗专项",
+    "validation_name": "零违规"
+  },
+  {
+    "pair_id": "P14",
+    "scheme_id": "TS-08-OBS",
+    "validation_id": "VS-05-PRESENCE",
+    "is_primary": true,
+    "scheme_name": "可观测稽核",
+    "validation_name": "存在性"
+  },
+  {
+    "pair_id": "P15",
+    "scheme_id": "TS-08-OBS",
+    "validation_id": "VS-06-COMPLETE",
+    "is_primary": false,
+    "scheme_name": "可观测稽核",
+    "validation_name": "完整性"
+  },
+  {
+    "pair_id": "P16",
+    "scheme_id": "TS-09-LOAD",
+    "validation_id": "VS-10-SLO-M",
+    "is_primary": true,
+    "scheme_name": "压测/容量",
+    "validation_name": "性能SLO·中"
+  },
+  {
+    "pair_id": "P17",
+    "scheme_id": "TS-09-LOAD",
+    "validation_id": "VS-01-EXACT",
+    "is_primary": false,
+    "scheme_name": "压测/容量",
+    "validation_name": "精确匹配"
+  },
+  {
+    "pair_id": "P18",
+    "scheme_id": "TS-10-MAN",
+    "validation_id": "VS-11-MAJORITY",
+    "is_primary": true,
+    "scheme_name": "人工评审",
+    "validation_name": "人工多数"
+  }
+]

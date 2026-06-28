@@ -14,9 +14,9 @@
 
 | 用途 | 值 |
 |------|-----|
-| API | 7002 |
-| Vite | 5174 |
-| PG 宿主机 | 5433 |
+| API | 5201 |
+| Vite | 5101 |
+| PG 宿主机 | 5301 |
 | 库名 | `novel_db` |
 | microapp_name | `novel-app` |
 

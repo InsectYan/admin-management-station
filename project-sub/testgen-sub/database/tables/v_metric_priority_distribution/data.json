@@ -1,0 +1,22 @@
+[
+  {
+    "priority_id": "P0",
+    "item_count": 120,
+    "pct_of_all": 31.33
+  },
+  {
+    "priority_id": "P1",
+    "item_count": 240,
+    "pct_of_all": 62.66
+  },
+  {
+    "priority_id": "P2",
+    "item_count": 19,
+    "pct_of_all": 4.96
+  },
+  {
+    "priority_id": "P3",
+    "item_count": 4,
+    "pct_of_all": 1.04
+  }
+]

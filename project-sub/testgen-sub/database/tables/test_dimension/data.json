@@ -1,0 +1,98 @@
+[
+  {
+    "dimension_id": "A",
+    "name": "测试层级",
+    "sort_order": 1,
+    "doc": "A-测试层级.md",
+    "description": "单元→站级→HTTP→E2E→压测→UAT 金字塔",
+    "default_scheme_id": "TS-01-DET",
+    "default_validation_id": "VS-01-EXACT",
+    "item_count": 19,
+    "default_scheme_name": "确定性单次",
+    "default_validation_name": "精确匹配"
+  },
+  {
+    "dimension_id": "B",
+    "name": "六站流水线",
+    "sort_order": 2,
+    "doc": "B-六站流水线.md",
+    "description": "async 主链 S01–S06 + 可靠性法则",
+    "default_scheme_id": "TS-01-DET",
+    "default_validation_id": "VS-01-EXACT",
+    "item_count": 38,
+    "default_scheme_name": "确定性单次",
+    "default_validation_name": "精确匹配"
+  },
+  {
+    "dimension_id": "C",
+    "name": "业务功能",
+    "sort_order": 3,
+    "doc": "C1/C2/C3/C4",
+    "description": "三端业务+状态机+载荷矩阵",
+    "default_scheme_id": "TS-05-CHAIN",
+    "default_validation_id": "VS-04-CHAIN-OK",
+    "item_count": 147,
+    "default_scheme_name": "多步链路串联",
+    "default_validation_name": "链路全过"
+  },
+  {
+    "dimension_id": "D",
+    "name": "接口与套壳",
+    "sort_order": 4,
+    "doc": "D-接口与套壳.md",
+    "description": "HTTP/SSE/套壳/JWT",
+    "default_scheme_id": "TS-01-DET",
+    "default_validation_id": "VS-01-EXACT",
+    "item_count": 28,
+    "default_scheme_name": "确定性单次",
+    "default_validation_name": "精确匹配"
+  },
+  {
+    "dimension_id": "E",
+    "name": "Agent智能质量",
+    "sort_order": 5,
+    "doc": "E-Agent智能质量.md",
+    "description": "意图/工具/记忆/Eval/高风险",
+    "default_scheme_id": "TS-04-SET",
+    "default_validation_id": "VS-07-RATE-H",
+    "item_count": 40,
+    "default_scheme_name": "固定样本集批量",
+    "default_validation_name": "达标率·高门槛"
+  },
+  {
+    "dimension_id": "F",
+    "name": "非功能",
+    "sort_order": 6,
+    "doc": "F-非功能.md",
+    "description": "性能/可靠性/部署/容量",
+    "default_scheme_id": "TS-09-LOAD",
+    "default_validation_id": "VS-10-SLO-M",
+    "item_count": 30,
+    "default_scheme_name": "压测/容量",
+    "default_validation_name": "性能SLO·中"
+  },
+  {
+    "dimension_id": "G",
+    "name": "用户体验",
+    "sort_order": 7,
+    "doc": "G-用户体验.md",
+    "description": "阶段文案/排队/续传/结构化UI",
+    "default_scheme_id": "TS-03-REP",
+    "default_validation_id": "VS-07-RATE-M",
+    "item_count": 31,
+    "default_scheme_name": "同用例重复抽样",
+    "default_validation_name": "达标率·中门槛"
+  },
+  {
+    "dimension_id": "H",
+    "name": "可观测与排障",
+    "sort_order": 8,
+    "doc": "H-可观测与排障.md",
+    "description": "六站指标/日志19项/journey/SLS",
+    "default_scheme_id": "TS-08-OBS",
+    "default_validation_id": "VS-05-PRESENCE",
+    "item_count": 50,
+    "default_scheme_name": "可观测稽核",
+    "default_validation_name": "存在性"
+  }
+]

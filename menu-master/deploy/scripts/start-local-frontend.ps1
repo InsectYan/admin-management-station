@@ -24,7 +24,7 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""
 Write-Host "Frontend only (Docker)"
-Write-Host "  UI     http://localhost:5173"
+Write-Host "  UI     http://localhost:5100"
 Write-Host "  Proxy  frontend/.env.local -> VITE_PROXY_TARGET"
 Write-Host ""
 Write-Host "Full stack: ams-main local"

@@ -1,0 +1,2 @@
+function c(n,e){const o=new Blob([JSON.stringify(e,null,2)],{type:"application/json;charset=utf-8"});a(n,o)}function r(n,e){a(n,e)}function a(n,e){const o=URL.createObjectURL(e),t=document.createElement("a");t.href=o,t.download=n,t.click(),URL.revokeObjectURL(o)}const l={GUARD:{label:"防护",type:"success"},DETECT:{label:"检测",type:"warning"},VERIFY:{label:"验证",type:"info"},SYMPTOM:{label:"症状",type:"danger"}};function i(n){return l[n]||{label:n,type:"info"}}export{r as a,c as d,i as r};
+//# sourceMappingURL=fitnessExport-Dkr5cZu_.js.map

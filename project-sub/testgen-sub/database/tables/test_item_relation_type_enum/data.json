@@ -1,0 +1,22 @@
+[
+  {
+    "relation_type_id": "GUARD",
+    "name": "防护验证",
+    "description": "主项直接验证该风险不发生或应被阻断"
+  },
+  {
+    "relation_type_id": "DETECT",
+    "name": "可观测检测",
+    "description": "日志/journey/字段可检测风险是否发生"
+  },
+  {
+    "relation_type_id": "VERIFY",
+    "name": "专项验证",
+    "description": "与风险同主题的非 RISK 前缀专项用例"
+  },
+  {
+    "relation_type_id": "SYMPTOM",
+    "name": "症状关联",
+    "description": "F5 症状与 B 站/接口项关联"
+  }
+]

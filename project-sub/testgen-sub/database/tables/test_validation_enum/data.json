@@ -1,0 +1,119 @@
+[
+  {
+    "validation_id": "VS-01-EXACT",
+    "name": "精确匹配",
+    "validation_group": "DETERMINISTIC",
+    "description": "单次可判：HTTP 码、错误文案"
+  },
+  {
+    "validation_id": "VS-02-CONTRACT",
+    "name": "契约通过",
+    "validation_group": "DETERMINISTIC",
+    "description": "schema/validator/outbox/gates"
+  },
+  {
+    "validation_id": "VS-03-ZERO",
+    "name": "零违规",
+    "validation_group": "DETERMINISTIC",
+    "description": "禁止项不得出现"
+  },
+  {
+    "validation_id": "VS-04-CHAIN-OK",
+    "name": "链路全过",
+    "validation_group": "DETERMINISTIC",
+    "description": "多步方案每步满足"
+  },
+  {
+    "validation_id": "VS-04-CHAIN",
+    "name": "链路全过(别名)",
+    "validation_group": "DETERMINISTIC",
+    "description": "兼容 prefix_scheme 引用，同 VS-04-CHAIN-OK"
+  },
+  {
+    "validation_id": "VS-05-PRESENCE",
+    "name": "存在性",
+    "validation_group": "OBSERVABILITY",
+    "description": "字段/日志/event 存在"
+  },
+  {
+    "validation_id": "VS-06-COMPLETE",
+    "name": "完整性",
+    "validation_group": "OBSERVABILITY",
+    "description": "结构齐全无缺失"
+  },
+  {
+    "validation_id": "VS-07-RATE-L",
+    "name": "达标率·低门槛",
+    "validation_group": "STATISTICAL",
+    "rate_level": "L",
+    "description": "样本通过率≥L阈值"
+  },
+  {
+    "validation_id": "VS-07-RATE-M",
+    "name": "达标率·中门槛",
+    "validation_group": "STATISTICAL",
+    "rate_level": "M",
+    "description": "样本通过率≥M阈值"
+  },
+  {
+    "validation_id": "VS-07-RATE-H",
+    "name": "达标率·高门槛",
+    "validation_group": "STATISTICAL",
+    "rate_level": "H",
+    "description": "样本通过率≥H阈值"
+  },
+  {
+    "validation_id": "VS-08-PASSK",
+    "name": "Pass^k稳定",
+    "validation_group": "STATISTICAL",
+    "description": "N次重复至少M次满足"
+  },
+  {
+    "validation_id": "VS-09-BLOCK-L",
+    "name": "安全阻断·低",
+    "validation_group": "STATISTICAL",
+    "block_level": "L",
+    "description": "对抗集低比例阻断"
+  },
+  {
+    "validation_id": "VS-09-BLOCK-M",
+    "name": "安全阻断·中",
+    "validation_group": "STATISTICAL",
+    "block_level": "M",
+    "description": "对抗集中比例阻断"
+  },
+  {
+    "validation_id": "VS-09-BLOCK-H",
+    "name": "安全阻断·高",
+    "validation_group": "STATISTICAL",
+    "block_level": "H",
+    "description": "对抗集高比例或全部阻断"
+  },
+  {
+    "validation_id": "VS-10-SLO-L",
+    "name": "性能SLO·低",
+    "validation_group": "SLO",
+    "slo_level": "L",
+    "description": "p99/TTFT L档"
+  },
+  {
+    "validation_id": "VS-10-SLO-M",
+    "name": "性能SLO·中",
+    "validation_group": "SLO",
+    "slo_level": "M",
+    "description": "p99/TTFT M档"
+  },
+  {
+    "validation_id": "VS-10-SLO-H",
+    "name": "性能SLO·高",
+    "validation_group": "SLO",
+    "slo_level": "H",
+    "description": "p99/TTFT H档"
+  },
+  {
+    "validation_id": "VS-11-MAJORITY",
+    "name": "人工多数",
+    "validation_group": "MANUAL",
+    "description": "评审员多数合格"
+  }
+]

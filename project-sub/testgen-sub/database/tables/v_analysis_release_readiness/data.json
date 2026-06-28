@@ -1,0 +1,17 @@
+[
+  {
+    "snapshot_at": "2026-06-28T08:52:57.471Z",
+    "total_items": 383,
+    "p0_total": 120,
+    "p0_auto_todo": 89,
+    "p0_auto_todo_pct": 74.17,
+    "risk_total": 32,
+    "risk_gap_count": 0,
+    "risk_partial_count": 11,
+    "risk_covered_count": 21,
+    "prd_goal_low_count": 0,
+    "prd_goal_gap_count": 0,
+    "release_signal": "RED",
+    "blockers_summary": "P0待建89项；风险缺口0项；PRD目标缺口0项"
+  }
+]

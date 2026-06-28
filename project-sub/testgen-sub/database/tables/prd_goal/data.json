@@ -1,0 +1,62 @@
+[
+  {
+    "prd_goal_id": "G01",
+    "goal_no": 1,
+    "name": "听懂用户想干什么（意图）",
+    "primary_dimension": "E,C1"
+  },
+  {
+    "prd_goal_id": "G02",
+    "goal_no": 2,
+    "name": "找到正确身份、会员、业务对象",
+    "primary_dimension": "C1,C3,D3"
+  },
+  {
+    "prd_goal_id": "G03",
+    "goal_no": 3,
+    "name": "进入正确任务流程",
+    "primary_dimension": "C1,C4,B4"
+  },
+  {
+    "prd_goal_id": "G04",
+    "goal_no": 4,
+    "name": "使用正确上下文",
+    "primary_dimension": "E3,C1"
+  },
+  {
+    "prd_goal_id": "G05",
+    "goal_no": 5,
+    "name": "选择正确回复策略",
+    "primary_dimension": "C1,E1"
+  },
+  {
+    "prd_goal_id": "G06",
+    "goal_no": 6,
+    "name": "遵守权限、状态、安全、确认规则",
+    "primary_dimension": "B2,C2,C3,C1"
+  },
+  {
+    "prd_goal_id": "G07",
+    "goal_no": 7,
+    "name": "返回前端可正确渲染的数据结构",
+    "primary_dimension": "C4,D5,G5"
+  },
+  {
+    "prd_goal_id": "G08",
+    "goal_no": 8,
+    "name": "不在错误端返回不该返回的业务数据",
+    "primary_dimension": "C2,C3,C4"
+  },
+  {
+    "prd_goal_id": "G09",
+    "goal_no": 9,
+    "name": "不重复生成、不重复写库",
+    "primary_dimension": "B3,C1,D2"
+  },
+  {
+    "prd_goal_id": "G10",
+    "goal_no": 10,
+    "name": "关键过程可追踪、可复盘",
+    "primary_dimension": "H"
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "preserve",
+    "lib": ["ESNext", "DOM"]
+  },
+  "include": ["src/**/*.js", "src/**/*.vue", "src/**/*.ts"]
+}

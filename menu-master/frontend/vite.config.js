@@ -3,8 +3,8 @@ import vue from '@vitejs/plugin-vue';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const port = Number(env.VITE_DEV_PORT || 5173);
-  const apiBase = env.VITE_API_BASE || 'http://localhost:7001/api';
+  const port = Number(env.VITE_DEV_PORT || 5100);
+  const apiBase = env.VITE_API_BASE || 'http://localhost:5200/api';
   const apiOrigin = apiBase.replace(/\/api\/?$/, '');
 
   return {

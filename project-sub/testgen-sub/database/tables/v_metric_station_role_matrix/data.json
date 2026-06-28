@@ -1,0 +1,62 @@
+[
+  {
+    "station_id": "NONE",
+    "role_scope_id": "ALL",
+    "item_count": 162
+  },
+  {
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "item_count": 72
+  },
+  {
+    "station_id": "NONE",
+    "role_scope_id": "MEMBER",
+    "item_count": 41
+  },
+  {
+    "station_id": "NONE",
+    "role_scope_id": "MANAGER",
+    "item_count": 33
+  },
+  {
+    "station_id": "S01",
+    "role_scope_id": "ALL",
+    "item_count": 5
+  },
+  {
+    "station_id": "S02",
+    "role_scope_id": "ALL",
+    "item_count": 19
+  },
+  {
+    "station_id": "S02",
+    "role_scope_id": "COACH",
+    "item_count": 9
+  },
+  {
+    "station_id": "S02",
+    "role_scope_id": "SYSTEM",
+    "item_count": 2
+  },
+  {
+    "station_id": "S03",
+    "role_scope_id": "ALL",
+    "item_count": 12
+  },
+  {
+    "station_id": "S04",
+    "role_scope_id": "ALL",
+    "item_count": 7
+  },
+  {
+    "station_id": "S05",
+    "role_scope_id": "ALL",
+    "item_count": 7
+  },
+  {
+    "station_id": "S06",
+    "role_scope_id": "ALL",
+    "item_count": 14
+  }
+]

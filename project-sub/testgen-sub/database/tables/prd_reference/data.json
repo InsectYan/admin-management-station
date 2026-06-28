@@ -1,0 +1,182 @@
+[
+  {
+    "prd_ref_id": "PRD_2",
+    "section": "§2",
+    "title": "三端定位"
+  },
+  {
+    "prd_ref_id": "PRD_4_1",
+    "section": "§4.1",
+    "title": "教练入口与会员上下文"
+  },
+  {
+    "prd_ref_id": "PRD_4_2",
+    "section": "§4.2",
+    "title": "意图识别"
+  },
+  {
+    "prd_ref_id": "PRD_4_3",
+    "section": "§4.3",
+    "title": "生成类对象清单"
+  },
+  {
+    "prd_ref_id": "PRD_4_4",
+    "section": "§4.4",
+    "title": "训练计划生成"
+  },
+  {
+    "prd_ref_id": "PRD_4_5",
+    "section": "§4.5",
+    "title": "单次训练内容"
+  },
+  {
+    "prd_ref_id": "PRD_4_6",
+    "section": "§4.6",
+    "title": "训练总结"
+  },
+  {
+    "prd_ref_id": "PRD_4_7",
+    "section": "§4.7",
+    "title": "回复策略"
+  },
+  {
+    "prd_ref_id": "PRD_4_8",
+    "section": "§4.8",
+    "title": "安全审查"
+  },
+  {
+    "prd_ref_id": "PRD_4_9",
+    "section": "§4.9",
+    "title": "AI影响分析"
+  },
+  {
+    "prd_ref_id": "PRD_4_10",
+    "section": "§4.10",
+    "title": "写库确认"
+  },
+  {
+    "prd_ref_id": "PRD_4_11",
+    "section": "§4.11",
+    "title": "删除与幂等"
+  },
+  {
+    "prd_ref_id": "PRD_4_12",
+    "section": "§4.12",
+    "title": "速度与阶段反馈"
+  },
+  {
+    "prd_ref_id": "PRD_5_1",
+    "section": "§5.1–5.2",
+    "title": "会员能力边界"
+  },
+  {
+    "prd_ref_id": "PRD_5_6",
+    "section": "§5.6",
+    "title": "会员反馈"
+  },
+  {
+    "prd_ref_id": "PRD_5_7",
+    "section": "§5.7",
+    "title": "会员医疗安全"
+  },
+  {
+    "prd_ref_id": "PRD_5_8",
+    "section": "§5.8",
+    "title": "会员载荷边界"
+  },
+  {
+    "prd_ref_id": "PRD_5_9",
+    "section": "§5.9",
+    "title": "健康问卷"
+  },
+  {
+    "prd_ref_id": "PRD_5_10",
+    "section": "§5.10",
+    "title": "会员速度与异常"
+  },
+  {
+    "prd_ref_id": "PRD_5_11",
+    "section": "§5.11",
+    "title": "会员专用日志"
+  },
+  {
+    "prd_ref_id": "PRD_5_12",
+    "section": "§5.12",
+    "title": "会员高风险清单"
+  },
+  {
+    "prd_ref_id": "PRD_5_13",
+    "section": "§5.13",
+    "title": "会员验收口径"
+  },
+  {
+    "prd_ref_id": "PRD_6_1",
+    "section": "§6.1",
+    "title": "管理能力矩阵"
+  },
+  {
+    "prd_ref_id": "PRD_6_3",
+    "section": "§6.3",
+    "title": "管理查询场景"
+  },
+  {
+    "prd_ref_id": "PRD_6_6",
+    "section": "§6.6",
+    "title": "管理提醒"
+  },
+  {
+    "prd_ref_id": "PRD_6_7",
+    "section": "§6.7",
+    "title": "管理载荷边界"
+  },
+  {
+    "prd_ref_id": "PRD_6_8",
+    "section": "§6.8–6.9",
+    "title": "权限与消歧"
+  },
+  {
+    "prd_ref_id": "PRD_6_10",
+    "section": "§6.10",
+    "title": "管理专用日志"
+  },
+  {
+    "prd_ref_id": "PRD_6_12",
+    "section": "§6.12",
+    "title": "管理高风险清单"
+  },
+  {
+    "prd_ref_id": "PRD_6_13",
+    "section": "§6.13",
+    "title": "管理验收口径"
+  },
+  {
+    "prd_ref_id": "PRD_7_1",
+    "section": "§7.1",
+    "title": "三端载荷矩阵"
+  },
+  {
+    "prd_ref_id": "PRD_7_2",
+    "section": "§7.2",
+    "title": "业务状态机"
+  },
+  {
+    "prd_ref_id": "PRD_7_3",
+    "section": "§7.3",
+    "title": "必查日志字段"
+  },
+  {
+    "prd_ref_id": "PRD_7_PAYLOAD",
+    "section": "§7",
+    "title": "载荷契约"
+  },
+  {
+    "prd_ref_id": "PRD_8",
+    "section": "§8",
+    "title": "Agent高风险误判"
+  },
+  {
+    "prd_ref_id": "PRD_6_PERM",
+    "section": "§6",
+    "title": "管理端权限"
+  }
+]

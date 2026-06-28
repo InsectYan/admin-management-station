@@ -1,11 +1,12 @@
 import { defineConfig, loadEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import qiankun from 'vite-plugin-qiankun';
+import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const port = Number(env.VITE_DEV_PORT || 5175);
-  const apiBase = env.VITE_API_BASE || 'http://localhost:7003/api';
+  const port = Number(env.VITE_DEV_PORT || 5102);
+  const apiBase = env.VITE_API_BASE || 'http://localhost:5202/api';
   const apiOrigin = apiBase.replace(/\/api\/?$/, '');
 
   return {
@@ -13,12 +14,17 @@ export default defineConfig(({ mode }) => {
       vue(),
       qiankun('testgen-app', { useDevMode: true }),
     ],
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+      },
+    },
     server: {
       host: '0.0.0.0',
       port,
       strictPort: true,
       cors: true,
-      // 嵌入主应用（5173）时，HMR WebSocket 须连子应用端口，否则会整页刷新或无效
+      // 嵌入主应用（5100）时，HMR WebSocket 须连子应用端口，否则会整页刷新或无效
       hmr: {
         protocol: 'ws',
         host: 'localhost',

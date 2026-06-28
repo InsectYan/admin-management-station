@@ -20,12 +20,12 @@ cd project-sub/testgen-sub/deploy && npm link && ams-testgen local
 
 | 容器 | 地址 | 说明 |
 |------|------|------|
-| `ams-main-frontend` | http://localhost:5173 | 主应用 |
+| `ams-main-frontend` | http://localhost:5100 | 主应用 |
 | `ams-main-postgres` | localhost:**5432** | `admin_platform` |
-| `ams-api-main` | http://localhost:7001 | 平台 BFF |
-| `ams-novel-frontend` | http://localhost:5174 / Docker 8081 | 小说 UI |
-| `ams-novel-postgres` | localhost:**5433** | `novel_db` |
-| `ams-api-novel` | http://localhost:7002 | 小说 BFF |
+| `ams-api-main` | http://localhost:5200 | 平台 BFF |
+| `ams-novel-frontend` | http://localhost:5101 / Docker 8081 | 小说 UI |
+| `ams-novel-postgres` | localhost:**5301** | `novel_db` |
+| `ams-api-novel` | http://localhost:5201 | 小说 BFF |
 
 详见 [部署与Docker方案.md](./部署与Docker方案.md) · [应用端口与命名注册表.md](./应用端口与命名注册表.md)
 

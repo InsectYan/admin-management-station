@@ -51,7 +51,7 @@ server: {
 
 ### 为何需要 clientPort
 
-浏览器页在主应用 origin（如 `http://localhost:5173`），子应用 dev server 在 `5175`。未设 `clientPort` 时 HMR WebSocket 连错端口 → 热更新失效或只能整页刷新。
+浏览器页在主应用 origin（如 `http://localhost:5100`），子应用 dev server 在 `5102`。未设 `clientPort` 时 HMR WebSocket 连错端口 → 热更新失效或只能整页刷新。
 
 ## Docker compose 必须项（前端 service）
 

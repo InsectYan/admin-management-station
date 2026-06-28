@@ -1,0 +1,298 @@
+{
+  "tables": {
+    "test_dimension": {
+      "label": "测试维度",
+      "columns": {
+        "dimension_id": "维度编码",
+        "name": "维度名称",
+        "sort_order": "排序",
+        "doc": "文档",
+        "description": "说明",
+        "default_scheme_id": "默认方案",
+        "default_validation_id": "默认验证",
+        "item_count": "用例数"
+      },
+      "fk": {
+        "default_scheme_id": { "ref": "test_scheme_enum", "key": "scheme_id", "label": "name" },
+        "default_validation_id": { "ref": "test_validation_enum", "key": "validation_id", "label": "name" }
+      }
+    },
+    "test_category_major": {
+      "label": "测试大类",
+      "columns": {
+        "category_major_id": "大类编码",
+        "dimension_id": "维度",
+        "name": "大类名称",
+        "description": "说明",
+        "item_count": "用例数",
+        "default_scheme_id": "默认方案",
+        "default_validation_id": "默认验证"
+      },
+      "fk": {
+        "dimension_id": { "ref": "test_dimension", "key": "dimension_id", "label": "name" },
+        "default_scheme_id": { "ref": "test_scheme_enum", "key": "scheme_id", "label": "name" },
+        "default_validation_id": { "ref": "test_validation_enum", "key": "validation_id", "label": "name" }
+      }
+    },
+    "test_category_minor_scheme": {
+      "label": "子类默认方案",
+      "columns": {
+        "category_minor_id": "子类编码",
+        "item_prefix": "ID前缀",
+        "scheme_primary_id": "主方案",
+        "scheme_secondary_id": "辅方案",
+        "validation_primary_id": "主验证",
+        "validation_secondary_id": "辅验证",
+        "sample_execution_note": "执行说明",
+        "mapping_source": "映射来源"
+      },
+      "fk": {
+        "category_minor_id": { "ref": "test_category_minor", "key": "category_minor_id", "label": "name" },
+        "scheme_primary_id": { "ref": "test_scheme_enum", "key": "scheme_id", "label": "name", "as": "scheme_primary_name" },
+        "scheme_secondary_id": { "ref": "test_scheme_enum", "key": "scheme_id", "label": "name", "as": "scheme_secondary_name" },
+        "validation_primary_id": { "ref": "test_validation_enum", "key": "validation_id", "label": "name", "as": "validation_primary_name" },
+        "validation_secondary_id": { "ref": "test_validation_enum", "key": "validation_id", "label": "name", "as": "validation_secondary_name" }
+      }
+    },
+    "test_category_minor": {
+      "label": "测试子类",
+      "columns": {
+        "category_minor_id": "子类编码",
+        "category_major_id": "大类",
+        "name": "子类名称",
+        "sort_order": "排序"
+      },
+      "fk": {
+        "category_major_id": { "ref": "test_category_major", "key": "category_major_id", "label": "name" }
+      }
+    },
+    "test_scheme_enum": {
+      "label": "测试方案 TS",
+      "columns": {
+        "scheme_id": "方案编码",
+        "name": "方案名称",
+        "description": "说明",
+        "sort_order": "排序"
+      }
+    },
+    "test_validation_enum": {
+      "label": "验证标准 VS",
+      "columns": {
+        "validation_id": "验证编码",
+        "name": "验证名称",
+        "validation_group": "分组",
+        "rate_level": "达标率档",
+        "block_level": "阻塞档",
+        "slo_level": "SLO档",
+        "description": "说明"
+      }
+    },
+    "test_scheme_validation_pair": {
+      "label": "TS↔VS 推荐配对",
+      "columns": {
+        "pair_id": "配对编码",
+        "scheme_id": "方案",
+        "validation_id": "验证",
+        "scheme_name": "方案名称",
+        "validation_name": "验证名称",
+        "is_primary": "主配对"
+      },
+      "fk": {
+        "scheme_id": { "ref": "test_scheme_enum", "key": "scheme_id", "label": "name", "as": "scheme_name" },
+        "validation_id": { "ref": "test_validation_enum", "key": "validation_id", "label": "name", "as": "validation_name" }
+      }
+    },
+    "test_priority_enum": {
+      "label": "优先级",
+      "columns": {
+        "priority_id": "优先级编码",
+        "name": "优先级名称",
+        "sort_order": "排序"
+      }
+    },
+    "test_automation_status_enum": {
+      "label": "自动化状态",
+      "columns": {
+        "automation_status_id": "状态编码",
+        "name": "状态名称",
+        "sort_order": "排序"
+      }
+    },
+    "test_station_enum": {
+      "label": "六站",
+      "columns": {
+        "station_id": "站点编码",
+        "station_no": "序号",
+        "name": "站点名称",
+        "description": "说明",
+        "arch_ref_id": "架构引用"
+      },
+      "fk": {
+        "arch_ref_id": { "ref": "arch_reference", "key": "arch_ref_id", "label": "title", "as": "arch_ref_title" }
+      }
+    },
+    "test_role_enum": {
+      "label": "三端角色",
+      "columns": {
+        "role_scope_id": "角色编码",
+        "name": "角色名称",
+        "description": "说明"
+      }
+    },
+    "config_env_enum": {
+      "label": "配置项",
+      "columns": {
+        "config_env_id": "配置编码",
+        "name": "配置名称",
+        "domain": "域",
+        "default_value": "默认值"
+      }
+    },
+    "automation_entry_enum": {
+      "label": "自动化入口",
+      "columns": {
+        "automation_entry_id": "入口编码",
+        "name": "入口名称",
+        "command_template": "命令模板",
+        "description": "说明"
+      }
+    },
+    "threshold_param_enum": {
+      "label": "阈值参数",
+      "columns": {
+        "param_id": "参数编码",
+        "validation_id": "验证标准",
+        "validation_name": "验证名称",
+        "name": "参数名称",
+        "unit": "单位",
+        "placeholder": "占位符"
+      },
+      "fk": {
+        "validation_id": { "ref": "test_validation_enum", "key": "validation_id", "label": "name", "as": "validation_name" }
+      }
+    },
+    "prd_goal": {
+      "label": "PRD 目标",
+      "columns": {
+        "prd_goal_id": "目标编码",
+        "name": "目标名称",
+        "description": "说明"
+      }
+    },
+    "prd_reference": {
+      "label": "PRD 章节",
+      "columns": {
+        "prd_ref_id": "章节编码",
+        "title": "章节标题",
+        "section": "节号"
+      }
+    },
+    "arch_reference": {
+      "label": "架构引用",
+      "columns": {
+        "arch_ref_id": "引用编码",
+        "station": "站点",
+        "section": "章节",
+        "title": "标题"
+      }
+    },
+    "test_item_prefix_scheme": {
+      "label": "前缀方案映射",
+      "columns": {
+        "mapping_id": "映射编码",
+        "item_prefix": "前缀",
+        "scheme_primary_id": "主方案",
+        "scheme_primary_name": "主方案名称",
+        "validation_primary_id": "主验证",
+        "validation_primary_name": "主验证名称",
+        "mapping_source": "来源"
+      },
+      "fk": {
+        "scheme_primary_id": { "ref": "test_scheme_enum", "key": "scheme_id", "label": "name", "as": "scheme_primary_name" },
+        "validation_primary_id": { "ref": "test_validation_enum", "key": "validation_id", "label": "name", "as": "validation_primary_name" }
+      }
+    },
+    "test_item_relation_type_enum": {
+      "label": "风险关系类型",
+      "columns": {
+        "relation_type_id": "类型编码",
+        "name": "类型名称",
+        "description": "说明"
+      }
+    },
+    "test_item_detail": {
+      "label": "测试项",
+      "columns": {
+        "item_id": "用例编码",
+        "item_name": "用例名称",
+        "dimension_id": "维度",
+        "dimension_name": "维度名称",
+        "category_major_id": "大类",
+        "category_major_name": "大类名称",
+        "category_minor_id": "子类",
+        "category_minor_name": "子类名称",
+        "priority_id": "优先级",
+        "priority_name": "优先级名称",
+        "scheme_primary_id": "主方案",
+        "scheme_primary_name": "主方案名称",
+        "validation_primary_id": "主验证",
+        "validation_primary_name": "主验证名称",
+        "automation_status_id": "自动化",
+        "automation_status_name": "自动化状态",
+        "station_id": "六站",
+        "station_name": "站点名称",
+        "role_scope_id": "三端",
+        "role_scope_name": "角色名称",
+        "detail_summary": "核心细节"
+      }
+    },
+    "test_item_risk_link": {
+      "label": "风险关联",
+      "columns": {
+        "link_id": "关联编码",
+        "risk_item_id": "风险项",
+        "risk_item_name": "风险项名称",
+        "main_item_id": "主项",
+        "main_item_name": "主项名称",
+        "relation_type_id": "关系类型",
+        "relation_type_name": "关系名称",
+        "risk_category": "风险分类",
+        "description": "说明"
+      },
+      "fk": {
+        "risk_item_id": { "ref": "test_item_detail", "key": "item_id", "label": "item_name", "as": "risk_item_name" },
+        "main_item_id": { "ref": "test_item_detail", "key": "item_id", "label": "item_name", "as": "main_item_name" },
+        "relation_type_id": { "ref": "test_item_relation_type_enum", "key": "relation_type_id", "label": "name", "as": "relation_type_name" }
+      }
+    },
+    "v_risk_link_bidirectional": {
+      "label": "风险双向关联",
+      "columns": {
+        "source_item_id": "源用例",
+        "source_item_name": "源用例名称",
+        "target_item_id": "目标用例",
+        "target_item_name": "目标用例名称",
+        "relation_type_id": "关系类型",
+        "relation_type_name": "关系名称",
+        "direction": "方向"
+      },
+      "fk": {
+        "source_item_id": { "ref": "test_item_detail", "key": "item_id", "label": "item_name", "as": "source_item_name" },
+        "target_item_id": { "ref": "test_item_detail", "key": "item_id", "label": "item_name", "as": "target_item_name" },
+        "relation_type_id": { "ref": "test_item_relation_type_enum", "key": "relation_type_id", "label": "name", "as": "relation_type_name" }
+      }
+    },
+    "v_metric_dimension_summary": {
+      "label": "维度指标",
+      "columns": {
+        "dimension_id": "维度编码",
+        "dimension_name": "维度名称",
+        "total_items": "用例总数",
+        "pct_of_all": "占比%",
+        "p0_count": "P0数",
+        "auto_coverage_pct": "自动化覆盖率%"
+      }
+    }
+  },
+  "defaultColumnLabel": "字段"
+}

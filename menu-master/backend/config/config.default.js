@@ -37,7 +37,7 @@ module.exports = appInfo => {
   config.sequelize = {
     dialect: 'postgres',
     host: process.env.POSTGRES_HOST || '127.0.0.1',
-    port: Number(process.env.POSTGRES_PORT || 5432),
+    port: Number(process.env.POSTGRES_PORT || 5300),
     username: process.env.POSTGRES_USER || 'admin',
     password: process.env.POSTGRES_PASSWORD || 'admin123',
     database: process.env.POSTGRES_DB || 'admin_platform',
@@ -53,7 +53,7 @@ module.exports = appInfo => {
 
   config.cluster = {
     listen: {
-      port: Number(process.env.PORT || process.env.MAIN_PORT || 7001),
+      port: Number(process.env.PORT || process.env.MAIN_PORT || 5200),
       hostname: '0.0.0.0',
     },
   };

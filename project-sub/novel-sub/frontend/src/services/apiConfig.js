@@ -9,8 +9,8 @@ function isAbsoluteUrl(value) {
 }
 
 /**
- * Qiankun 嵌入主应用时，相对路径 /api 会打到主应用 BFF（7001）并触发 JWT 401。
- * 子应用业务 API 须指向 novel BFF（7002）。
+ * Qiankun 嵌入主应用时，相对路径 /api 会打到主应用 BFF（5200）并触发 JWT 401。
+ * 子应用业务 API 须指向 novel BFF（5201）。
  */
 export function resolveNovelApiBase() {
   const configured = import.meta.env.VITE_API_BASE;
@@ -20,7 +20,7 @@ export function resolveNovelApiBase() {
   if (qiankunWindow.__POWERED_BY_QIANKUN__) {
     return normalizeBase(import.meta.env.VITE_NOVEL_API_ORIGIN
       ? `${import.meta.env.VITE_NOVEL_API_ORIGIN}/api`
-      : 'http://localhost:7002/api');
+      : 'http://localhost:5201/api');
   }
   return normalizeBase(configured || '/api');
 }

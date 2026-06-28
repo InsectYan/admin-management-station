@@ -1,0 +1,74 @@
+[
+  {
+    "dimension_id": "A",
+    "total": 19,
+    "existing": 9,
+    "partial": 1,
+    "todo": 8,
+    "manual": 1,
+    "automation_ready_pct": 57.89
+  },
+  {
+    "dimension_id": "B",
+    "total": 38,
+    "existing": 10,
+    "partial": 3,
+    "todo": 25,
+    "manual": 0,
+    "automation_ready_pct": 34.21
+  },
+  {
+    "dimension_id": "C",
+    "total": 147,
+    "existing": 3,
+    "partial": 6,
+    "todo": 135,
+    "manual": 3,
+    "automation_ready_pct": 8.16
+  },
+  {
+    "dimension_id": "D",
+    "total": 28,
+    "existing": 5,
+    "partial": 3,
+    "todo": 20,
+    "manual": 0,
+    "automation_ready_pct": 28.57
+  },
+  {
+    "dimension_id": "E",
+    "total": 40,
+    "existing": 1,
+    "partial": 0,
+    "todo": 39,
+    "manual": 0,
+    "automation_ready_pct": 2.5
+  },
+  {
+    "dimension_id": "F",
+    "total": 30,
+    "existing": 0,
+    "partial": 0,
+    "todo": 30,
+    "manual": 0,
+    "automation_ready_pct": 0
+  },
+  {
+    "dimension_id": "G",
+    "total": 31,
+    "existing": 3,
+    "partial": 0,
+    "todo": 28,
+    "manual": 0,
+    "automation_ready_pct": 9.68
+  },
+  {
+    "dimension_id": "H",
+    "total": 50,
+    "existing": 0,
+    "partial": 0,
+    "todo": 50,
+    "manual": 0,
+    "automation_ready_pct": 0
+  }
+]
