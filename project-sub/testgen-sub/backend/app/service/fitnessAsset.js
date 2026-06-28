@@ -12,7 +12,8 @@ const ALLOWED_TABLES = new Set([
   'test_dimension', 'test_category_major', 'test_category_minor',
   'test_scheme_enum', 'test_validation_enum', 'test_scheme_validation_pair',
   'test_priority_enum', 'test_automation_status_enum', 'test_station_enum', 'test_role_enum',
-  'config_env_enum', 'automation_entry_enum', 'threshold_param_enum',
+  'config_env_enum', 'automation_entry_enum', 'test_exec_env_enum', 'test_env_tier_enum',
+  'threshold_param_enum',
   'prd_goal', 'prd_reference', 'arch_reference',
   'test_item_prefix_scheme', 'test_item_relation_type_enum',
   'test_item_detail', 'test_item_prd_goal_link', 'test_item_prd_ref_link',
@@ -42,6 +43,8 @@ const ITEM_LIST_JOINS = `
   LEFT JOIN test_automation_status_enum ast ON ast.automation_status_id = t.automation_status_id
   LEFT JOIN test_station_enum st ON st.station_id = t.station_id
   LEFT JOIN test_role_enum rl ON rl.role_scope_id = t.role_scope_id
+  LEFT JOIN test_exec_env_enum ee ON ee.exec_env_id = t.exec_env_id
+  LEFT JOIN test_env_tier_enum et ON et.env_tier_id = t.env_tier_id
 `;
 
 const ITEM_LIST_SELECT = `
@@ -51,10 +54,43 @@ const ITEM_LIST_SELECT = `
   p.name AS priority_name,
   ts.name AS scheme_primary_name,
   vs.name AS validation_primary_name,
+  vs.rate_level AS validation_rate_level,
   ast.name AS automation_status_name,
   st.name AS station_name,
-  rl.name AS role_scope_name
+  rl.name AS role_scope_name,
+  ee.name AS exec_env_name,
+  et.name AS env_tier_name
 `;
+
+const EXECUTION_STATUS_LABELS = {
+  pending: '等待中',
+  running: '运行中',
+  success: '已完成',
+  failed: '失败',
+  cancelled: '已取消',
+  not_run: '未执行',
+};
+
+/** @param {unknown} progress */
+function pickPassRateFromProgress(progress) {
+  if (!progress || typeof progress !== 'object') return null;
+  for (const key of [ 'pass_rate', 'pass_pct', 'current_pass_rate', 'rate' ]) {
+    if (progress[key] == null || progress[key] === '') continue;
+    const n = Number(progress[key]);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+/** @param {unknown} thresholdJson @param {string | null | undefined} rateLevel */
+function pickTargetPassRate(thresholdJson, rateLevel) {
+  if (!thresholdJson || typeof thresholdJson !== 'object' || !rateLevel) return null;
+  const key = `rate_${rateLevel}`;
+  const raw = thresholdJson[key] ?? thresholdJson[key.toLowerCase()];
+  if (raw == null || raw === '') return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
 
 /** @param {Record<string, unknown>} query */
 function buildTestItemWhere(query) {
@@ -100,6 +136,64 @@ function escapeCsvCell(v) {
 }
 
 class FitnessAssetService extends require('egg').Service {
+  async enrichItemsWithExecutionMetrics(rows) {
+    if (!rows.length) return rows;
+
+    const itemIds = rows.map(r => r.item_id);
+    const [ latestRuns ] = await this.app.model.query(`
+      SELECT DISTINCT ON (item_id) item_id, id AS ft_run_id, status, progress
+      FROM ft_run
+      WHERE item_id IN (:itemIds)
+      ORDER BY item_id, created_at DESC
+    `, { replacements: { itemIds } });
+
+    const runByItem = Object.fromEntries(latestRuns.map(r => [ r.item_id, r ]));
+    const runIds = latestRuns.map(r => r.ft_run_id).filter(Boolean);
+
+    /** @type {Record<number, number | null>} */
+    let passRateByRun = {};
+    if (runIds.length) {
+      const [ rateRows ] = await this.app.model.query(`
+        SELECT ft_run_id,
+          ROUND(
+            100.0 * COUNT(*) FILTER (WHERE sub_verdict IN ('pass', 'success', 'ok'))
+            / NULLIF(COUNT(*), 0)::numeric,
+            2
+          ) AS pass_rate
+        FROM ft_run_result
+        WHERE ft_run_id IN (:runIds)
+        GROUP BY ft_run_id
+      `, { replacements: { runIds } });
+      passRateByRun = Object.fromEntries(
+        rateRows.map(r => [ r.ft_run_id, r.pass_rate != null ? Number(r.pass_rate) : null ]),
+      );
+    }
+
+    const [ configs ] = await this.app.model.query(`
+      SELECT DISTINCT ON (fc.item_id) fc.item_id, fc.threshold_json
+      FROM ft_run_config fc
+      INNER JOIN test_item_detail t ON t.item_id = fc.item_id AND fc.scheme_id = t.scheme_primary_id
+      WHERE fc.item_id IN (:itemIds)
+      ORDER BY fc.item_id, fc.updated_at DESC
+    `, { replacements: { itemIds } });
+    const configByItem = Object.fromEntries(configs.map(c => [ c.item_id, c.threshold_json ]));
+
+    return rows.map(row => {
+      const run = runByItem[row.item_id];
+      const status = run?.status || 'not_run';
+      const fromProgress = pickPassRateFromProgress(run?.progress);
+      const fromResults = run ? passRateByRun[run.ft_run_id] : null;
+
+      return {
+        ...row,
+        execution_status: status,
+        execution_status_name: EXECUTION_STATUS_LABELS[status] || status,
+        current_pass_rate: fromProgress ?? fromResults ?? null,
+        target_pass_rate: pickTargetPassRate(configByItem[row.item_id], row.validation_rate_level),
+      };
+    });
+  }
+
   assertTable(name) {
     if (!ALLOWED_TABLES.has(name)) {
       const err = new Error(`表 ${name} 不在允许列表`);
@@ -182,7 +276,8 @@ class FitnessAssetService extends require('egg').Service {
       LIMIT :limit OFFSET :offset
     `;
     const [ rows ] = await this.app.model.query(listSql, { replacements });
-    return { list: rows, total, page: Number(page), pageSize: Number(pageSize) };
+    const list = await this.enrichItemsWithExecutionMetrics(rows);
+    return { list, total, page: Number(page), pageSize: Number(pageSize) };
   }
 
   async exportTestItems(query = {}) {
@@ -199,6 +294,7 @@ class FitnessAssetService extends require('egg').Service {
       LIMIT :limit
     `;
     const [ rows ] = await this.app.model.query(listSql, { replacements });
+    const enriched = await this.enrichItemsWithExecutionMetrics(rows);
 
     const columns = [
       { key: 'item_id', label: '用例编码' },
@@ -208,16 +304,27 @@ class FitnessAssetService extends require('egg').Service {
       { key: 'priority_name', label: '优先级' },
       { key: 'scheme_primary_name', label: '主方案' },
       { key: 'validation_primary_name', label: '主验证' },
+      { key: 'exec_env_name', label: '可执行环境' },
+      { key: 'env_tier_name', label: '环境分层' },
+      { key: 'execution_status_name', label: '执行状态' },
+      { key: 'current_pass_rate', label: '当前达标率' },
+      { key: 'target_pass_rate', label: '目标达标率' },
       { key: 'automation_status_name', label: '自动化' },
       { key: 'station_name', label: '六站' },
       { key: 'role_scope_name', label: '三端' },
       { key: 'automation_command', label: '自动化命令' },
     ];
     const header = columns.map(c => c.label).join(',');
-    const lines = rows.map(row => columns.map(c => escapeCsvCell(row[c.key])).join(','));
+    const lines = enriched.map(row => columns.map(c => {
+      const v = row[c.key];
+      if (c.key === 'current_pass_rate' || c.key === 'target_pass_rate') {
+        return escapeCsvCell(v == null ? '' : `${v}%`);
+      }
+      return escapeCsvCell(v);
+    }).join(','));
     const csv = `\uFEFF${[ header, ...lines ].join('\n')}`;
 
-    return { list: rows, csv, total: rows.length };
+    return { list: enriched, csv, total: enriched.length };
   }
 
   async getTestItem(itemId) {

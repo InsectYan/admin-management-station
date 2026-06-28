@@ -24,15 +24,51 @@
       @update:page-size="pageSize = $event"
       @change="loadData"
       @selection-change="selectedRows = $event"
-      @row-click="goDetail"
     >
       <template #prefix>
         <el-table-column type="selection" width="48" reserve-selection />
       </template>
+      <template #col-execution_status="{ row }">
+        <el-tag :type="executionStatusTagType(row.execution_status)" size="small">
+          {{ row.execution_status_name || '未执行' }}
+        </el-tag>
+      </template>
+      <template #col-dimension_name="{ row }">
+        <el-tag v-bind="dimensionTagProps(row)" size="small">
+          {{ itemTagLabel(row, 'dimension') }}
+        </el-tag>
+      </template>
+      <template #col-category_major_name="{ row }">
+        <el-tag v-bind="categoryMajorTagProps(row)" size="small">
+          {{ itemTagLabel(row, 'major') }}
+        </el-tag>
+      </template>
+      <template #col-priority_name="{ row }">
+        <el-tag v-bind="priorityTagProps(row)" size="small">
+          {{ itemTagLabel(row, 'priority') }}
+        </el-tag>
+      </template>
+      <template #col-exec_env_name="{ row }">
+        <el-tag v-bind="execEnvTagProps(row)" size="small">
+          {{ itemTagLabel(row, 'exec_env') }}
+        </el-tag>
+      </template>
+      <template #col-env_tier_name="{ row }">
+        <el-tag v-bind="envTierTagProps(row)" size="small">
+          {{ itemTagLabel(row, 'env_tier') }}
+        </el-tag>
+      </template>
+      <template #col-current_pass_rate="{ row }">
+        {{ formatPassRate(row.current_pass_rate) }}
+      </template>
+      <template #col-target_pass_rate="{ row }">
+        {{ formatPassRate(row.target_pass_rate) }}
+      </template>
       <template #suffix>
-        <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" size="small" @click.stop="copyOneCommand(row)">复制命令</el-button>
+            <el-button link type="primary" size="small" @click="goDetail(row)">查看详情</el-button>
+            <el-button link type="warning" size="small" @click="copyOneCommand(row)">复制命令</el-button>
           </template>
         </el-table-column>
       </template>
@@ -64,6 +100,14 @@ import {
   fetchTestItems,
 } from '@/services/fitnessService.js';
 import { downloadBlob, downloadJson } from '@/utils/fitnessExport.js';
+import {
+  categoryMajorTagProps,
+  dimensionTagProps,
+  envTierTagProps,
+  execEnvTagProps,
+  itemTagLabel,
+  priorityTagProps,
+} from '@/utils/fitnessItemTags.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -95,17 +139,44 @@ const planDialogVisible = ref(false);
 const planOptions = ref([]);
 const targetPlanId = ref(null);
 
+const EXECUTION_STATUS_TAG = {
+  pending: 'info',
+  running: 'warning',
+  success: 'success',
+  failed: 'danger',
+  cancelled: 'info',
+  not_run: '',
+};
+
+function executionStatusTagType(status) {
+  return EXECUTION_STATUS_TAG[status] || 'info';
+}
+
+function formatPassRate(value) {
+  if (value == null || value === '') return '—';
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '—';
+  return `${n}%`;
+}
+
 const itemColumns = [
-  { prop: 'item_id', label: '用例编码', width: 140 },
-  { prop: 'item_name', label: '名称', minWidth: 200 },
-  { prop: 'dimension_name', label: '维度', width: 100 },
-  { prop: 'category_major_name', label: '大类', width: 120 },
-  { prop: 'priority_name', label: '优先级', width: 90 },
-  { prop: 'scheme_primary_name', label: '主方案', width: 120 },
-  { prop: 'validation_primary_name', label: '主验证', width: 120 },
-  { prop: 'automation_status_name', label: '自动化', width: 100 },
-  { prop: 'station_name', label: '六站', width: 100 },
-  { prop: 'role_scope_name', label: '三端', width: 90 },
+  { prop: 'item_id', label: '用例编码', width: 180 },
+  { prop: 'detail_summary', label: '名称', minWidth: 220 },
+  { prop: 'dimension_name', label: '维度', width: 88 },
+  { prop: 'category_major_name', label: '大类', width: 100 },
+  { prop: 'priority_name', label: '优先级', width: 88 },
+  { prop: 'exec_env_name', label: '可执行环境', width: 100 },
+  { prop: 'env_tier_name', label: '环境分层', width: 100 },
+  { prop: 'sub_class', label: '子类标签', width: 110 },
+  { prop: 'expected_observation', label: '期望观测', minWidth: 180 },
+  { prop: 'scheme_primary_name', label: '主方案', width: 110 },
+  { prop: 'validation_primary_name', label: '主验证', width: 110 },
+  { prop: 'execution_status', label: '执行状态', width: 96 },
+  { prop: 'current_pass_rate', label: '当前达标率', width: 100 },
+  { prop: 'target_pass_rate', label: '目标达标率', width: 100 },
+  { prop: 'automation_status_name', label: '自动化', width: 96 },
+  { prop: 'station_name', label: '六站', width: 140 },
+  { prop: 'role_scope_name', label: '三端', width: 80 },
 ];
 
 function parseQueryFilters(q = {}) {

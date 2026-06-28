@@ -12,6 +12,8 @@
   "test_role_enum": { "pk": "role_scope_id", "type": "table" },
   "config_env_enum": { "pk": "config_env_id", "type": "table" },
   "automation_entry_enum": { "pk": "automation_entry_id", "type": "table" },
+  "test_exec_env_enum": { "pk": "exec_env_id", "type": "table" },
+  "test_env_tier_enum": { "pk": "env_tier_id", "type": "table" },
   "threshold_param_enum": { "pk": "param_id", "type": "table" },
   "prd_goal": { "pk": "prd_goal_id", "type": "table" },
   "prd_reference": { "pk": "prd_ref_id", "type": "table" },

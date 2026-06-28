@@ -2,7 +2,7 @@
   <PageShell :title="item?.item_name || '测试项详情'" v-loading="loading">
     <template #extra>
       <el-button @click="router.push('/fitness/assets/items')">返回列表</el-button>
-      <el-button v-if="item?.automation_command" @click="copyCommand">复制命令</el-button>
+      <el-button v-if="item?.automation_command" type="warning" @click="copyCommand">复制命令</el-button>
       <el-button @click="router.push(`/fitness/execution/run/${itemId}/config/${configPath}`)">配置</el-button>
       <el-button type="primary" @click="router.push(`/fitness/execution/run/${itemId}/launch`)">执行</el-button>
       <el-button @click="router.push({ path: '/fitness/execution/center', query: { itemId } })">历史</el-button>

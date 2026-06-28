@@ -12,6 +12,8 @@
   "test_role_enum",
   "config_env_enum",
   "automation_entry_enum",
+  "test_exec_env_enum",
+  "test_env_tier_enum",
   "threshold_param_enum",
   "prd_goal",
   "prd_reference",

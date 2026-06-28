@@ -1,0 +1,204 @@
+{
+  "test_dimension": {
+    "title": "测试维度枚举",
+    "summary": "A–H 八大测试维度，定义测试范围金字塔与维度级默认 TS/VS。",
+    "purpose": "顶层分类轴，对应 `A-测试层级.md` 至 `H-可观测与排障.md`。大类 `test_category_major` 归属本表；维度默认方案在 prefix 规则未命中时作为兜底。"
+  },
+  "test_category_major": {
+    "title": "测试大类",
+    "summary": "52 个大类（A1、C1、B2、E_RISK…），归属维度并携带默认 TS/VS。",
+    "purpose": "连接维度与子类的中层分类。`item_id` 前缀通常含大类段（如 C1-MACRO-001 的 C1）。"
+  },
+  "test_category_minor": {
+    "title": "测试子类",
+    "summary": "88 个标准子类 key（如 C1_MACRO、B2_GUARD），归属大类。",
+    "purpose": "细粒度业务/技术节划分；`test_item_detail.category_minor_id` 由 item_id 解析写入。"
+  },
+  "test_category_minor_scheme": {
+    "title": "子类默认方案映射",
+    "summary": "88 条子类 → 默认 TS/VS，来源于 scheme-map.json。",
+    "purpose": "在 `test_item_prefix_scheme` 未命中时，按子类为测试项补全主/辅方案与验证标准；供 `resolve-item-schemes.js` 注入使用。"
+  },
+  "test_scheme_enum": {
+    "title": "测试方案 TS",
+    "summary": "10 种测试方案 TS-01-DET … TS-10-MAN。",
+    "purpose": "定义「怎么测」：单次、矩阵、样本集、链路、对照、对抗、可观测、压测、人工评审等。"
+  },
+  "test_validation_enum": {
+    "title": "验证标准 VS",
+    "summary": "17 种验证标准，含 DETERMINISTIC / STATISTICAL / SLO / MANUAL 分组。",
+    "purpose": "定义「怎么判」：精确匹配、契约、零违规、达标率 L/M/H、Pass^k、阻断率、SLO、人工多数等。VS-04-CHAIN 为 VS-04-CHAIN-OK 别名。"
+  },
+  "test_scheme_validation_pair": {
+    "title": "TS↔VS 推荐配对",
+    "summary": "18 条推荐主/辅 TS 与 VS 配对。",
+    "purpose": "文档级推荐组合，供计划向导与方案百科参考；测试项实际绑定以 item 四列 TS/VS 为准。"
+  },
+  "test_priority_enum": {
+    "title": "优先级",
+    "summary": "P0–P3 四级优先级。",
+    "purpose": "发版阻塞、计划筛选与 `v_analysis_p0_blockers_todo` 分析的基础枚举。"
+  },
+  "test_automation_status_enum": {
+    "title": "自动化状态",
+    "summary": "AUTO_EXISTING / AUTO_PARTIAL / AUTO_TODO / AUTO_MANUAL。",
+    "purpose": "标记用例自动化覆盖情况，驱动自动化覆盖率指标与发版就绪分析。"
+  },
+  "test_station_enum": {
+    "title": "六站流水线",
+    "summary": "NONE + S01–S06 六站编码与架构引用。",
+    "purpose": "标记用例主要验证的 async 流水线站点（前端→门禁→队列→Pipeline→Pi→回传）。"
+  },
+  "test_role_enum": {
+    "title": "三端角色",
+    "summary": "COACH / MEMBER / MANAGER / ALL / SYSTEM。",
+    "purpose": "标记用例适用的产品端或全端/系统级场景。"
+  },
+  "config_env_enum": {
+    "title": "配置项枚举",
+    "summary": "26 项架构 appSettings / 门禁 / 队列相关配置 key。",
+    "purpose": "规范化 `test_item_detail.config_env_id`；压测与门禁用例常引用 TURN_*、DB_CIRCUIT_* 等。"
+  },
+  "automation_entry_enum": {
+    "title": "自动化入口",
+    "summary": "26 项 npm test:stations / e2e / ops 命令模板。",
+    "purpose": "与 `automation_command` 配合，标识标准自动化入口类型（如 AUTO_S02、AUTO_E2E_GENERIC）。"
+  },
+  "test_exec_env_enum": {
+    "title": "可执行环境",
+    "summary": "本地 / 测试 / 双环境 三档。",
+    "purpose": "标识测试项可在哪些运行环境执行；`test_item_detail.exec_env_id` 外键引用。"
+  },
+  "test_env_tier_enum": {
+    "title": "环境分层",
+    "summary": "随处等价 / 本地模拟 / 测试预发 / 生产人工 四档。",
+    "purpose": "标识测试项建议的最低环境层级；与可执行环境配合指导 Runner 选型。"
+  },
+  "threshold_param_enum": {
+    "title": "阈值参数占位",
+    "summary": "14 项发版阈值占位符（rate_M、passk_N、block_H…）。",
+    "purpose": "关联 VS 统计类验证；**具体数值在测试计划填写，不入库**。计划报告对比时使用。"
+  },
+  "prd_goal": {
+    "title": "PRD 测试目标",
+    "summary": "G01–G10 Agent/产品级测试目标。",
+    "purpose": "与 `test_item_prd_goal_link` 多对多关联，支撑 PRD 十条目标覆盖率统计。"
+  },
+  "prd_reference": {
+    "title": "PRD 章节引用",
+    "summary": "33 条 PRD § 章节索引。",
+    "purpose": "主表冗余 `prd_ref_id` + 关联表 `test_item_prd_ref_link` 双轨引用 PRD 溯源。"
+  },
+  "arch_reference": {
+    "title": "架构文档引用",
+    "summary": "14 条六站 / 架构 § 引用。",
+    "purpose": "关联测试项与架构文档章节；`test_station_enum.arch_ref_id` 可指向本站架构说明。"
+  },
+  "test_item_prefix_scheme": {
+    "title": "测试项前缀方案规则",
+    "summary": "168 条 item_id 前缀 → TS/VS 最长前缀匹配规则。",
+    "purpose": "从 A–H `*-方案映射.md` 解析；优先级高于 scheme-map 与大类/维度默认。"
+  },
+  "test_item_relation_type_enum": {
+    "title": "风险关系类型",
+    "summary": "GUARD / DETECT / VERIFY / SYMPTOM 四种风险↔主项关系。",
+    "purpose": "定义 `test_item_risk_link.relation_type_id` 语义：防护、检测、验证、症状映射。"
+  },
+  "test_item_detail": {
+    "title": "测试核心细节主表",
+    "summary": "383 条可执行测试项，汇聚分类、步骤、TS/VS、六站、自动化与 PRD/架构引用。",
+    "purpose": "Fitness 测试体系核心主数据；列表/详情/导出/计划批量加入均读写本表。关联表扩展多对多 PRD/架构/风险关系。"
+  },
+  "test_item_prd_goal_link": {
+    "title": "测试项↔PRD目标",
+    "summary": "262 条多对多链接。",
+    "purpose": "规范化 PRD 目标覆盖统计；一条用例可覆盖多个 G0x 目标。"
+  },
+  "test_item_prd_ref_link": {
+    "title": "测试项↔PRD章节",
+    "summary": "162 条多对多链接。",
+    "purpose": "支持按 PRD § 章节反查用例与覆盖率分析。"
+  },
+  "test_item_arch_ref_link": {
+    "title": "测试项↔架构引用",
+    "summary": "82 条多对多链接。",
+    "purpose": "关联架构文档与测试项，支撑六站/可观测类用例溯源。"
+  },
+  "test_item_risk_link": {
+    "title": "风险项↔主项关联",
+    "summary": "66 条 canonical 方向 risk → main。",
+    "purpose": "存储 E/C2/C3 高风险清单与 F5 症状项对主链用例的 GUARD/DETECT 关系；双向查询用视图 `v_risk_link_bidirectional`。"
+  },
+  "v_metric_dimension_summary": {
+    "title": "维度指标汇总",
+    "type": "view",
+    "summary": "各维度用例数、P0 数、自动化覆盖率等。",
+    "purpose": "指标中心 / 仪表盘维度 Tab；基于 `test_dimension` LEFT JOIN `test_item_detail` 聚合。"
+  },
+  "v_metric_prd_goal_coverage": {
+    "title": "PRD目标覆盖率",
+    "type": "view",
+    "summary": "G01–G10 每项链接用例数与 OK/LOW/GAP 状态。",
+    "purpose": "PRD 十条目标覆盖看板；JOIN `test_item_prd_goal_link`。"
+  },
+  "v_metric_automation_coverage": {
+    "title": "自动化覆盖率",
+    "type": "view",
+    "summary": "按自动化状态统计占比。",
+    "purpose": "自动化建设进度总览。"
+  },
+  "v_metric_risk_guard_coverage": {
+    "title": "风险防护覆盖率",
+    "type": "view",
+    "summary": "高风险项 GUARD 链接 COVERED/PARTIAL/GAP。",
+    "purpose": "风险中心指标 Tab。"
+  },
+  "v_metric_priority_distribution": {
+    "title": "优先级分布",
+    "type": "view",
+    "summary": "P0–P3 用例数量与占比。",
+    "purpose": "计划优先级结构分析。"
+  },
+  "v_metric_station_role_matrix": {
+    "title": "六站×三端矩阵",
+    "type": "view",
+    "summary": "站点与角色交叉的用例计数。",
+    "purpose": "覆盖矩阵热力图数据源。"
+  },
+  "v_analysis_release_readiness": {
+    "title": "发版就绪分析",
+    "type": "view",
+    "summary": "单行 GREEN/YELLOW/RED 发版信号。",
+    "purpose": "综合 P0 待建自动化、风险缺口、PRD 缺口生成发版建议。"
+  },
+  "v_analysis_risk_gap": {
+    "title": "风险覆盖缺口",
+    "type": "view",
+    "summary": "无 GUARD 或 PARTIAL 的高风险项清单。",
+    "purpose": "风险中心缺口 Tab、发版就绪输入。"
+  },
+  "v_analysis_scheme_validation_matrix": {
+    "title": "TS×VS 组合矩阵",
+    "type": "view",
+    "summary": "主 TS 与主 VS 组合的用例计数。",
+    "purpose": "方案百科与计划范围分析。"
+  },
+  "v_analysis_dimension_automation": {
+    "title": "维度自动化就绪",
+    "type": "view",
+    "summary": "各维度 AUTO_TODO 占比与就绪率。",
+    "purpose": "分析中心自动化 Tab。"
+  },
+  "v_analysis_p0_blockers_todo": {
+    "title": "P0待建自动化清单",
+    "type": "view",
+    "summary": "is_p0_blocker 且 AUTO_TODO 的用例列表。",
+    "purpose": "发版阻塞项清单，可跳转执行配置。"
+  },
+  "v_risk_link_bidirectional": {
+    "title": "风险双向关联视图",
+    "type": "view",
+    "summary": "将 risk_link 展开为 RISK_TO_MAIN 与 MAIN_TO_RISK 双向行。",
+    "purpose": "测试项详情「风险关系」Tab；支持从主项或风险项双向浏览图谱。"
+  }
+}

@@ -175,8 +175,9 @@
       "label": "PRD 目标",
       "columns": {
         "prd_goal_id": "目标编码",
+        "goal_no": "目标序号",
         "name": "目标名称",
-        "description": "说明"
+        "primary_dimension": "主要维度"
       }
     },
     "prd_reference": {
@@ -225,25 +226,90 @@
       "columns": {
         "item_id": "用例编码",
         "item_name": "用例名称",
+        "sub_class": "子类标签",
         "dimension_id": "维度",
         "dimension_name": "维度名称",
         "category_major_id": "大类",
         "category_major_name": "大类名称",
         "category_minor_id": "子类",
         "category_minor_name": "子类名称",
+        "detail_summary": "核心细节",
+        "expected_observation": "期望观测",
+        "test_input_example": "输入示例",
+        "preconditions": "前置条件",
+        "test_steps": "测试步骤",
+        "assertion_points": "断言点",
         "priority_id": "优先级",
         "priority_name": "优先级名称",
         "scheme_primary_id": "主方案",
         "scheme_primary_name": "主方案名称",
+        "scheme_secondary_id": "辅方案",
         "validation_primary_id": "主验证",
         "validation_primary_name": "主验证名称",
+        "validation_secondary_id": "辅验证",
+        "execution_status": "执行状态",
+        "execution_status_name": "执行状态名称",
+        "current_pass_rate": "当前达标率",
+        "target_pass_rate": "目标达标率",
+        "validation_rate_level": "达标率档",
+        "exec_env_id": "可执行环境",
+        "exec_env_name": "可执行环境名称",
+        "env_tier_id": "环境分层",
+        "env_tier_name": "环境分层名称",
         "automation_status_id": "自动化",
         "automation_status_name": "自动化状态",
+        "automation_entry_id": "自动化入口",
+        "automation_command": "自动化命令",
+        "config_env": "配置项文本",
+        "config_env_id": "配置项",
         "station_id": "六站",
         "station_name": "站点名称",
         "role_scope_id": "三端",
         "role_scope_name": "角色名称",
-        "detail_summary": "核心细节"
+        "endpoint_path": "接口路径",
+        "http_method": "HTTP方法",
+        "http_status_expected": "期望状态码",
+        "sample_execution_note": "执行说明",
+        "scheme_mapping_source": "方案映射来源",
+        "is_risk_flag": "风险项",
+        "is_observability_audit": "可观测稽核",
+        "is_p0_blocker": "P0阻塞",
+        "failure_symptom": "失败症状",
+        "code_reference": "代码引用",
+        "tags": "标签",
+        "notes": "备注",
+        "source_doc": "来源文档",
+        "source_section": "来源节",
+        "is_active": "启用",
+        "created_at": "创建时间",
+        "updated_at": "更新时间",
+        "prd_ref_id": "PRD章节",
+        "prd_ref_ids": "PRD章节列表",
+        "arch_ref_id": "架构引用",
+        "arch_ref_ids": "架构引用列表",
+        "prd_goal_ids": "PRD目标列表"
+      },
+      "fk": {
+        "exec_env_id": { "ref": "test_exec_env_enum", "key": "exec_env_id", "label": "name", "as": "exec_env_name" },
+        "env_tier_id": { "ref": "test_env_tier_enum", "key": "env_tier_id", "label": "name", "as": "env_tier_name" }
+      }
+    },
+    "test_exec_env_enum": {
+      "label": "可执行环境",
+      "columns": {
+        "exec_env_id": "环境编码",
+        "name": "环境名称",
+        "description": "说明",
+        "sort_order": "排序"
+      }
+    },
+    "test_env_tier_enum": {
+      "label": "环境分层",
+      "columns": {
+        "env_tier_id": "分层编码",
+        "name": "分层名称",
+        "description": "说明",
+        "sort_order": "排序"
       }
     },
     "test_item_risk_link": {

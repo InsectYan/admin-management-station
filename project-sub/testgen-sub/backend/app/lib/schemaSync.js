@@ -36,9 +36,8 @@ function resolveDatabaseDir(app) {
  */
 function stripInsertStatements(sql) {
   return sql
-    .split('\n')
-    .filter(line => !/^\s*INSERT\s+/i.test(line.trim()))
-    .join('\n');
+    .replace(/^\s*INSERT[\s\S]*?;\s*(?:\r?\n|$)/gim, '')
+    .trim();
 }
 
 /**
@@ -75,7 +74,7 @@ async function runSqlBootstrap(sequelize, dbDir, logger, scope = {}) {
       .filter(name => name.endsWith('.sql'))
       .sort()
       .forEach(name => {
-        const isLate = name.startsWith('003_') || name.startsWith('004_') || name.startsWith('005_');
+        const isLate = /^00[3-9]_/.test(name);
         if (scope.beforeTables && isLate) return;
         if (scope.afterTables && !isLate) return;
         if (!scope.beforeTables && !scope.afterTables) {

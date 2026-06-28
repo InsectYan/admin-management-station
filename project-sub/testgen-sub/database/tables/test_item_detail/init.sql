@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS test_item_detail (
   source_doc VARCHAR(128) NOT NULL,
   source_section VARCHAR(32),
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  exec_env_id VARCHAR(32) NOT NULL DEFAULT 'EXEC_BOTH' REFERENCES test_exec_env_enum(exec_env_id),
+  env_tier_id VARCHAR(32) NOT NULL DEFAULT 'TIER_STAGING' REFERENCES test_env_tier_enum(env_tier_id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -55,6 +57,8 @@ CREATE INDEX IF NOT EXISTS idx_test_item_station ON test_item_detail(station_id)
 CREATE INDEX IF NOT EXISTS idx_test_item_role ON test_item_detail(role_scope_id);
 CREATE INDEX IF NOT EXISTS idx_test_item_risk ON test_item_detail(is_risk_flag) WHERE is_risk_flag;
 CREATE INDEX IF NOT EXISTS idx_test_item_p0 ON test_item_detail(is_p0_blocker) WHERE is_p0_blocker;
+CREATE INDEX IF NOT EXISTS idx_test_item_exec_env ON test_item_detail(exec_env_id);
+CREATE INDEX IF NOT EXISTS idx_test_item_env_tier ON test_item_detail(env_tier_id);
 
 -- 数据导入（383 条）
 INSERT INTO test_item_detail (item_id, dimension_id, category_major_id, category_minor_id, sub_class, item_name, detail_summary, expected_observation, test_input_example, preconditions, test_steps, assertion_points, priority_id, prd_ref_id, prd_ref_ids, arch_ref_id, arch_ref_ids, prd_goal_ids, automation_status_id, automation_entry_id, automation_command, config_env, config_env_id, station_id, role_scope_id, endpoint_path, http_method, http_status_expected, scheme_primary_id, scheme_secondary_id, validation_primary_id, validation_secondary_id, sample_execution_note, scheme_mapping_source, is_risk_flag, is_observability_audit, is_p0_blocker, failure_symptom, code_reference, tags, notes, source_doc, source_section, is_active) VALUES ('A1-MEMORY-001', 'A', 'A1', 'A1_UNIT', 'memory_ops', '[A1-MEMORY-001] memory_ops — junk 流水账 op', 'junk 流水账 op', 'sanitize 拒绝 + 审计', NULL, '["local 全栈或 AgentRun 环境可用"]'::jsonb, '["调用纯函数/validator 或 s05 单测","断言：sanitize 拒绝 + 审计"]'::jsonb, '["sanitize 拒绝 + 审计"]'::jsonb, 'P1', 'PRD_7_2', '["PRD_7_2"]'::jsonb, 'ARCH_B5', '["ARCH_B5"]'::jsonb, '[]'::jsonb, 'AUTO_EXISTING', 'AUTO_S05', 'cd server && npm run test:stations -- s05', NULL, NULL, 'S05', 'ALL', NULL, NULL, NULL, NULL, NULL, NULL, NULL, '单次构造+断言', 'scheme-map.json', FALSE, FALSE, FALSE, NULL, NULL, '["A1"]'::jsonb, NULL, 'A-测试层级.md', 'A1', TRUE) ON CONFLICT (item_id) DO NOTHING;
