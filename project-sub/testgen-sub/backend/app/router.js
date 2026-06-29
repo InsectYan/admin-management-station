@@ -30,6 +30,11 @@ module.exports = app => {
   router.get('/api/generation-jobs/:id/test-cases', controller.generationJob.testCases);
   router.post('/api/internal/generation-jobs/:id/agent-context', controller.generationJob.updateAgentContext);
 
+  router.get('/api/internal/fitness/items/suggest', controller.internalFitness.suggestItems);
+  router.post('/api/internal/fitness/samples/bulk', controller.internalFitness.bulkSamples);
+  router.patch('/api/internal/fitness/items/:itemId', controller.internalFitness.patchItem);
+  router.post('/api/internal/fitness/run/:itemId/dry-run', controller.internalFitness.dryRunLaunch);
+
   router.get('/api/test-cases/export', controller.testCase.export);
   router.get('/api/test-cases', controller.testCase.index);
   router.post('/api/test-cases/batch-delete', controller.testCase.batchDestroy);
@@ -97,6 +102,8 @@ module.exports = app => {
   router.get('/api/fitness/runs/:runId', controller.fitnessExecution.showRun);
   router.get('/api/fitness/runs/:runId/stream', controller.fitnessExecution.streamRun);
   router.post('/api/fitness/runs/:runId/cancel', controller.fitnessExecution.cancelRun);
+  router.post('/api/fitness/runs/:runId/explain', controller.fitnessExecution.explainRun);
+  router.post('/api/fitness/samples/generate', controller.fitnessExecution.generateSamples);
   router.get('/api/fitness/run-config/:itemId', controller.fitnessExecution.getRunConfig);
   router.post('/api/fitness/run-config/:itemId', controller.fitnessExecution.saveRunConfig);
   router.post('/api/fitness/run/:itemId/launch', controller.fitnessExecution.launch);

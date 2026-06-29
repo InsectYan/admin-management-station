@@ -1,231 +1,340 @@
-# Fitness 执行体系 — Agent 开发方向说明
+# Fitness 测试体系 — Agent 开发设计
 
-> **版本**：v0.1 · 2026-06-30  
-> **背景**：执行引擎 E1～E5（TS-01～TS-08 + VS-01～VS-09）已落地；本说明仅覆盖 **Fitness 执行链路** 尚缺的 Agent 能力。  
+> **版本**：v0.2 · 2026-06-30  
+> **背景**：执行引擎 E1～E5（TS-01～TS-08 + VS-01～VS-09）已落地；本文定义 **testgen-sub 全链路** 所需的 Agent 能力、嵌入方式与协作关系。  
 > **关联**：[nodes.md](./nodes.md) · [FITNESS_EXECUTION_TECH.md](./FITNESS_EXECUTION_TECH.md)
 
 ---
 
-## 1. 现状与边界
+## 1. 设计原则（v0.2 修订）
 
-### 1.1 已完成（不依赖 Agent）
+### 1.1 取消的旧边界
 
-| 层级 | 范围 | 说明 |
-|------|------|------|
-| TS 引擎 | TS-01～TS-08 | CliRunner / HttpRunner / JourneyCollector 确定性执行 |
-| VS 判定 | VS-01～VS-09 | 契约、达标率、Pass^k、零违规、阻断率、可观测 |
-| 编排 | RunOrchestrator · jobQueue · SSE | 单条 / 计划批量 launch |
+以下 v0.1「互不侵犯」约束 **全部作废**：
 
-主路径 **P-A（CLI）** 与 **P-B（HTTP/E2E）** 均不调用 LLM。
+| 旧原则 | 新策略 |
+|--------|--------|
+| Agent 不参与执行（不调 CLI / SUT） | Agent **可嵌入 TS 引擎**（规划步骤、生成样本、探索调用），经 BFF 白名单 Runner 落地 |
+| testgen-skill 与 Fitness 执行隔离 | testgen-skill **可调用 Fitness BFF**（读测试项、写样本集、触发 dry-run / launch） |
+| fitness-judge-skill 禁止 `call_fitness_api` | 各 Skill 经 **agentProxy / internal API** 访问 BFF，统一鉴权与审计 |
+| Agent 生成链路（`/scope`、`/jobs`）本迭代不改 | **纳入同一 Agent 路线图**，与 E6/E7 联调 |
+| 探索式 Agent（CH-ARCH-01）单独立项、延后 | 作为 **TS-05 可选 hook** 或独立 Skill，按场景启用 |
+| BFF 内禁止内嵌 LLM SDK | 仍推荐走 Agent 平台；**应急降级**可保留，非架构禁令 |
 
-### 1.2 已有但不在本 Fitness 迭代范围的 Agent
+### 1.2 新核心原则
 
-| Skill | 用途 | 策略 |
-|-------|------|------|
-| `testgen-skill` | `/scope`、`/jobs` 测试用例文档生成 | 已存在；nodes.md 明确 **本迭代不改** |
-| `perf-bottleneck-skill` | 旧 suite 性能分析报告 | 已接入 `agentProxy.invokePerfAnalysis`；与 `ft_run` 执行无关 |
-
-### 1.3 缺口概览
-
-```
-Runner 产出 SubRunResult（事实）
-        │
-        ▼
-  VsEngine.judge ──► 确定性 VS ✅
-        │
-        └──► 需 rubric / 语义 / 人工辅助时 ──► ❌ fitness-judge-skill 未建
-                                              ❌ vsAgentJudge.js 未建
-                                              ❌ agentProxy 无 judge 入口
-```
-
-**设计原则（不变）**：Agent **不参与执行**（不调 CLI、不调 SUT）；只在 **判定步（P-C）** 或 **控制台解读（explain）** 插入。
+1. **统一代理层**：testgen BFF 的 `agentProxy.js` 是唯一对外 Skill 网关；Skill 回写 BFF 走 internal token 路由。
+2. **引擎可插 Agent**：TS / VS 引擎通过 `config_json.agent_hook` 声明嵌入点，Orchestrator 在固定步骤间调用 Agent，**不绕过 Runner**。
+3. **Skill 可互调场景**：testgen-skill 在生成阶段可拉取 Fitness 资产（`ft_test_item`、`ft_sample_item`、scheme 元数据），必要时触发验证性执行。
+4. **可观测与降级**：所有 Agent 调用携带 `run_id` / `job_id` / `item_id`；平台不可用时 **fail 或 pending**，禁止静默 pass。
 
 ---
 
-## 2. 需开发的 Agent（按优先级）
+## 2. Agent 全景（按 Skill 划分）
 
-### 2.1 【P0 · E6】fitness-judge-skill（变更 ID：**CH-AG-01**）
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     testgen-sub BFF (agentProxy)                 │
+├──────────────┬──────────────────┬───────────────────────────────┤
+│ 生成链路      │ 执行链路          │ 分析与 UX                      │
+│ /scope /jobs │ ft_run launch    │ 控制台 explain · 计划报告摘要   │
+└──────┬───────┴────────┬─────────┴───────────────┬───────────────┘
+       │                │                         │
+       ▼                ▼                         ▼
+ testgen-skill    fitness-judge-skill      fitness-sample-skill (新)
+ (扩展 action)    (judge · explain)        (样本 · 矩阵 · 对抗集)
+       │                │                         │
+       └────────────────┴─────────────────────────┘
+                        │
+              Agent 平台 (agent-management-sub/plugins)
+                        │
+       ┌────────────────┼────────────────┐
+       ▼                ▼                ▼
+  读 BFF 资产      嵌入 TS/VS hook     可选：fitness-explore-skill
+  写样本/用例      语义判定             (CH-ARCH-01 探索步骤)
+```
 
-**仓库**：`agent-management-sub/plugins/fitness-judge-skill`（新建，与 `testgen-skill` 分离）
+### 2.1 Agent 清单
 
-**定位**：Fitness 专用 **语义判定 Agent**，react 短步（maxSteps ≤ 2），输出结构化 JSON。
+| ID | Skill | 优先级 | 变更 ID | 职责 | 嵌入 / 调用场景 |
+|----|-------|--------|---------|------|-----------------|
+| **A1** | `testgen-skill`（扩展） | P0 | CH-AG-02 | 文档 → 结构化用例；**新增** Fitness 场景联动 | `/scope` · `/jobs`；review 步可调 BFF 查 `ft_test_item`、写 `ft_sample_item` |
+| **A2** | `fitness-judge-skill` | P0 | CH-AG-01 | rubric 语义判定 · 控制台解读 | VS hook（P-C）；TS-10 人审辅助；`explain` |
+| **A3** | `fitness-sample-skill` | P1 | CH-AG-03 | 从 PRD / `test_input_example` 生成样本、矩阵行、对抗 case | 样本集页「AI 生成」；testgen-skill `enrich_samples` action |
+| **A4** | `fitness-explore-skill` | P2 | CH-ARCH-01 | 探索式多步 HTTP/CLI 意图（逐步经 Runner） | TS-05 `agent_hook: explore`；长尾 E2E |
+| **A5** | `perf-bottleneck-skill` | 已有 | — | 旧 suite 性能报告 | `/suite` 分析；**可选** 挂接 TS-09 结果解读 |
+
+---
+
+## 3. 各 Agent 详细设计
+
+### 3.1 【A1 · P0】testgen-skill 扩展（CH-AG-02）
+
+**仓库**：`agent-management-sub/plugins/testgen-skill`（在现有 Loop 上扩展，**不新建平行 Skill**）
+
+#### 新增 / 扩展 Action
+
+| action | 说明 | BFF 场景调用 |
+|--------|------|--------------|
+| `generate` | 现有 Loop 生成 | 不变 |
+| `generate_for_fitness` | 指定 `module` + `scheme_id`，输出对齐 TS 配置的用例 | `POST /api/internal/fitness/items/suggest` |
+| `enrich_samples` | 根据 `item_id` + `test_input_example` 批量生成 `ft_sample_item` | `POST /api/fitness/samples/bulk`（internal） |
+| `validate_draft` | 对生成草案触发 **dry-run** 或单条 launch | `POST /api/fitness/run/:itemId/launch?dryRun=1` |
+| `sync_to_item` | 将生成结果写入测试项备注 / 期望观测字段 | `PATCH /api/internal/fitness/items/:id` |
+
+#### 与 Fitness 的协作链
+
+```text
+用户 /scope 提交 PRD
+  → generationJob → agentProxy.invokeTestgen({ action: 'generate_for_fitness', module, scheme_id })
+  → testgen-skill Loop (analyze → functional → edge → review)
+       review 步可选: enrich_samples → BFF 写样本集
+       review 步可选: validate_draft → dry-run 反馈写入 agent-context
+  → BFF 落库 generation_job + 可选 ft_sample_item
+  → 前端 /jobs/:id 展示 Agent 上下文与 Fitness 校验结果
+```
+
+#### BFF 交付物
+
+| 路径 | 职责 |
+|------|------|
+| `service/generationJob.js` | 传入 `fitness_context: { scheme_id, item_ids, auto_sample }` |
+| `router/internal/fitnessAgent.js` | internal 路由：样本 bulk、item suggest、dry-run 代理 |
+| `service/agentProxy.js` | 统一 payload 字段，透传 `trace_id` |
+
+---
+
+### 3.2 【A2 · P0】fitness-judge-skill（CH-AG-01）
+
+**仓库**：`agent-management-sub/plugins/fitness-judge-skill`（新建）
+
+**定位**：语义判定 Agent；react 短步（maxSteps ≤ 2），输出结构化 JSON。
 
 #### 目录骨架
 
 ```text
 plugins/fitness-judge-skill/
-├── index.js                 # scheme: react
+├── index.js
 ├── SKILL.md
 ├── templates/judge-system.md
-└── lib/rubricRegistry.js    # rubric_id → 评分维度与通过条件
+├── lib/rubricRegistry.js
+└── lib/bffClient.js          # 可选：拉 item 元数据 / 历史 run 摘要
 ```
 
-#### 对外 Action
+#### Action
 
 | action | 入参 | 出参 | 调用方 |
 |--------|------|------|--------|
-| `judge` | `rubric_id`, `observations[]`, `threshold_json?` | `{ pass, score, reasons[] }` | `vsAgentJudge.js` |
-| `explain` | `run_id`, `item_id`, `observations[]` | 自然语言摘要 | 控制台「AI 解读」按钮 |
+| `judge` | `rubric_id`, `observations[]`, `threshold_json?` | `{ pass, score, reasons[] }` | `vsAgentJudge.js` · TS-10 |
+| `explain` | `run_id`, `item_id`, `observations[]` | Markdown 摘要 | 控制台 · 计划报告 |
+| `pre_review` | 同人审材料 | `{ score, checklist[] }` | TS-10 人工队列「AI 预审」 |
 
-**禁止能力**：`execute_test` · `spawn_cli` · `call_fitness_api`（执行仍走 Runner）。
+#### 引擎嵌入（VS hook）
 
-#### 触发场景（与已实现的 TS/VS 配对）
+| 场景 | TS | VS / 配置 | Agent 职责 |
+|------|-----|-----------|------------|
+| 样本语义回归 | TS-04-SET | VS-07 + `rubric_id` | 每条样本 response / journey 按 rubric 判 pass |
+| 重复语义稳定 | TS-03-REP | VS-08 + rubric | 单次重复的语义满足度 |
+| 对抗语义阻断 | TS-07-NEG | VS-09 + rubric | 补充 HTTP 层 zero/block 的语义边界 |
+| 人工评审 | TS-10-MAN | VS-11 | AI 评审员分数与人审聚合 |
+| E6 专项 | TS-04 + TS-10 | VS-11 | `sample_execution_note: "LLM-as-judge"` |
 
-| 场景 | TS 方案 | VS / 配置 | Agent 职责 |
-|------|---------|-----------|------------|
-| 样本语义回归 | TS-04-SET | VS-07 + `config_json.rubric_id` | 对每条样本的 response / journey 摘要按 rubric 判 pass |
-| 重复抽样稳定性 | TS-03-REP | VS-08 + rubric | 单次重复结果的语义是否满足预期（非仅 HTTP 码） |
-| 对抗语义阻断 | TS-07-NEG | VS-09 + rubric | 判定「应阻断」的语义边界（补充 HTTP 层 zero/block） |
-| 人工评审辅助 | TS-10-MAN | VS-11-MAJORITY | 作为「AI 评审员」之一输出 score，与人审结果聚合 |
-| E6 专项 | TS-04 + TS-10 组合 | VS-11 | 数据集中 `sample_execution_note: "LLM-as-judge"` 的用例 |
+**配置开关**：`ft_run_config.config_json.use_agent_judge: true` 或 `validation_group ∈ { MANUAL, AGENT }`。
 
-> **说明**：VS-10（SLO / p99 / TTFT）归属 **TS-09-LOAD** 压测指标，首版走 **确定性数值比较**，不经过本 Skill。Agent 聚焦 **无法写死规则** 的 rubric 判定。
+#### BFF 交付物
 
-#### rubric 数据来源（建议）
+| 路径 | 职责 |
+|------|------|
+| `service/agentProxy.js` | `invokeFitnessJudge(payload)` |
+| `service/execution/validators/vsAgentJudge.js` | SubRunResult → Agent → `assertion_detail.agent_judge` |
+| `service/execution/vsRegistry.js` | 注册 AGENT / MANUAL 路由 |
+| `service/execution/engines/ts10ManEngine.js` | 待评审 SubRunResult + 可选 AI 预审 |
 
-1. **短期**：`rubricRegistry.js` 内置 E6 文档中的标准 rubric（如咨询质量、安全拒绝、意图理解）。
-2. **中期**：`ft_run_config.config_json.rubric_id` 指向 DB 或 registry；testgen BFF 只传 id + 观测摘要。
+---
 
-#### 观测入参 `observations[]` 建议字段
+### 3.3 【A3 · P1】fitness-sample-skill（CH-AG-03）
+
+**定位**：专注 **执行层数据准备**，减轻 testgen-skill 在样本格式上的负担；可被 A1 **委托调用**（Skill 间 `POST /api/skills/.../invoke` 或 BFF 编排）。
+
+#### Action
+
+| action | 说明 | 产出 |
+|--------|------|------|
+| `from_example` | 输入 `test_input_example` + `scheme_id` | `ft_sample_item[]` 或矩阵行 JSON |
+| `expand_matrix` | TS-02 边界维度描述 | HTTP/CLI 行数组 |
+| `gen_adversarial` | TS-07 对抗目标描述 | cases + `forbidden_patterns` 建议 |
+
+#### 嵌入场景
+
+- 前端样本集页：「从 example AI 生成」「CSV 智能补全」
+- testgen-skill review 步：`delegate_sample_skill: true` 时 BFF 链式调用
+- TS-04 引擎 **pre-hook**：`config_json.agent_sample_expand: true` 在执行前补齐样本
+
+---
+
+### 3.4 【A4 · P2】fitness-explore-skill（CH-ARCH-01）
+
+**定位**：固定 TS-05 无法覆盖的长尾探索；**Agent 只产出下一步意图**，BFF 逐步调用 HttpRunner / CliRunner。
+
+#### 引擎嵌入（TS hook）
+
+```text
+Ts05ChainEngine.execute()
+  → 固定 steps 执行完毕
+  → 若 config_json.agent_hook === 'explore'
+       → fitness-explore-skill.plan({ history, goal })
+       → BFF 执行单步 Runner → 结果追加 history
+       → 循环至 max_explore_steps 或 done
+  → SubRunResult[] → VS
+```
+
+| 配置项 | 说明 |
+|--------|------|
+| `agent_hook: 'explore'` | 启用探索 |
+| `max_explore_steps` | 默认 5 |
+| `explore_goal` | 来自 `test_item_detail.expected_observation` |
+
+安全：仅允许 `config_env` 白名单 host；须配合 CH-SUT-03（TEST_MODE mock）。
+
+---
+
+### 3.5 【A5 · 已有】perf-bottleneck-skill
+
+保持现有 `agentProxy.invokePerfAnalysis`；E7 TS-09-LOAD 落地后可增加 `analyze_load_run` action，解读 k6 指标（数值判定仍走 VS-10，Agent 仅解读报告）。
+
+---
+
+## 4. 引擎嵌入机制（统一约定）
+
+### 4.1 嵌入点枚举
+
+| hook | 阶段 | 适用 TS | 典型 Agent |
+|------|------|---------|------------|
+| `pre_execute` | Runner 前 | TS-02/04/07 | A3 扩样本 / 矩阵 |
+| `post_sub_run` | 单次 Runner 后 | TS-03/04/07 | A2 逐条 judge |
+| `explore` | 链路扩展 | TS-05 | A4 探索步骤 |
+| `vs_agent` | 判定 | 全 VS（配置驱动） | A2 judge |
+| `explain` | 运行后 UX | — | A2 explain |
+
+### 4.2 Orchestrator 伪代码
+
+```text
+RunOrchestrator.executeRun(ctx)
+  if config.agent_hook.pre_execute → agentProxy.invoke(...)
+  subResults = TsEngine.execute(ctx)    # 内部可含 explore 循环
+  if config.agent_hook.post_sub_run → 逐条 agentProxy.invokeFitnessJudge
+  verdict = VsEngine.judge(subResults)  # vsAgentJudge 或确定性 VS
+  SSE progress + 可选 explain
+```
+
+### 4.3 `config_json` 示例
 
 ```json
 {
-  "sub_run_index": 0,
-  "http_status": 200,
-  "response_excerpt": "…≤2KB…",
-  "journey_summary": { "stations": ["intent", "plan"], "latency_ms": 820 },
-  "expected_hint": "来自 test_item_detail.expected_observation"
+  "use_agent_judge": true,
+  "rubric_id": "consult_quality_v1",
+  "agent_hook": {
+    "pre_execute": "fitness-sample-skill:from_example",
+    "post_sub_run": "fitness-judge-skill:judge",
+    "explore": null
+  }
 }
 ```
 
-PII 与超长正文在 BFF 侧截断后再送 Agent（见 FITNESS_EXECUTION_TECH §8）。
+---
+
+## 5. BFF API 与 internal 路由（Agent 专用）
+
+| 方法 | 路径 | 用途 |
+|------|------|------|
+| POST | `/api/skills/*/invoke` | Agent 平台统一入口（BFF 代理） |
+| POST | `/api/internal/generation-jobs/:id/agent-context` | 已有 · 生成进度 |
+| POST | `/api/internal/fitness/samples/bulk` | A1/A3 写样本 |
+| GET | `/api/internal/fitness/items/suggest` | A1 拉测试项模板 |
+| POST | `/api/fitness/run/:itemId/launch?dryRun=1` | A1 草案校验 |
+| POST | `/api/fitness/runs/:runId/explain` | A2 控制台解读 |
+
+鉴权：`X-Internal-Token` + 审计日志（`run_id` / `job_id` / `skill` / `action`）。
 
 ---
 
-### 2.2 【P0 · E6】testgen-sub BFF 侧 Judge 适配（非 Skill，但与 Agent 联调一体）
+## 6. 不需要单独新建的 Agent
 
-**仓库**：`testgen-sub/backend`
+| 名称 | 处理方式 |
+|------|----------|
+| 重复的执行型 Agent | 合并进 A4 explore hook + 现有 Runner |
+| Fitness 内第二套用例生成 Skill | 扩展 A1，不复制 Loop |
+| SLO / k6 数值判定 | VS-10 确定性比较；A5 只做报告解读 |
+| 文档同步 | CH-DOC-01 脚本流水线；可选 A1 `sync_to_item` 轻量联动 |
 
-| 交付物 | 路径 | 职责 |
-|--------|------|------|
-| Judge 代理 | `service/agentProxy.js` | 新增 `invokeFitnessJudge(payload)` → `POST /api/skills/fitness-judge/invoke` |
-| VS 引擎 | `service/execution/validators/vsAgentJudge.js` | 聚合 SubRunResult → 调 Agent → 写 `assertion_detail.agent_judge` |
-| 注册 | `service/execution/vsRegistry.js` | 路由 `validation_group ∈ { MANUAL, AGENT }` 或 `config_json.use_agent_judge` |
-| 配置 | `config.default.js` | `judgeInvokePath`、超时（建议 60～120s） |
+---
 
-**协作链**：
+## 7. 实施顺序
+
+> 逐项任务与完成状态见 [AGENT_TASKS.md](./AGENT_TASKS.md)
 
 ```text
-RunOrchestrator.executeRun
-  → TsEngine.execute()          # 仍 deterministic
-  → vsAgentJudge.judge()
-       → agentProxy.invokeFitnessJudge({ action: 'judge', ... })
-       → ft_run_result.assertion_detail.agent_judge
-  → SSE progress + 控制台展示
+Phase 0 — 基础设施
+  agentProxy 统一 invoke 方法 + internal 路由骨架 + 审计字段
+
+Phase 1 — E6 判定闭环 (A2)
+  fitness-judge-skill → vsAgentJudge → 1～2 条 rubric 用例联调
+
+Phase 2 — 生成 × Fitness 联动 (A1)
+  testgen-skill generate_for_fitness / enrich_samples
+  /jobs 页展示 dry-run 反馈
+
+Phase 3 — 样本 AI (A3)
+  样本集页 + TS-04 pre_execute hook
+
+Phase 4 — 人工流 (A2 + TS-10)
+  ts10ManEngine + VS-11 + pre_review
+
+Phase 5 — UX (A2 explain)
+  控制台 + 计划报告 AI 摘要
+
+Phase 6 — 探索 (A4)
+  TS-05 explore hook + TEST_MODE 联调
+
+Phase 7 — E7 (A5 + k6)
+  TS-09 + 可选 perf 解读
 ```
 
-#### TS-10-MAN 引擎（与 Agent 配套，非 Agent 本体）
+### 验收标准（最小集）
 
-| 组件 | 说明 |
-|------|------|
-| `engines/ts10ManEngine.js` | 无自动 Runner；创建「待评审」SubRunResult，附 rubric 与原始材料 |
-| 前端 | 人工打分 UI + 可选「请求 AI 预审」→ 调 `explain` / `judge` |
-| VS-11 | 聚合人审 + Agent 分数 → majority 判定 |
-
----
-
-### 2.3 【P1 · E6】控制台 Explain Agent（同一 Skill，不同 action）
-
-**前端**：`FitnessRunConsolePage` 增加「AI 解读失败原因」
-
-- 输入：当前 run 的 SubRunResult 摘要 + item 元数据  
-- 调用：BFF `POST /api/fitness/runs/:runId/explain` → `fitness-judge-skill` · `explain`  
-- 输出：只读 Markdown 区块，**不改变 verdict**
-
-不影响 CI 确定性：explain 为可选 UX，不参与 pass/fail。
+1. `use_agent_judge: true` 的 `ft_run` 含 `assertion_detail.agent_judge`。  
+2. `generate_for_fitness` 可从 PRD 生成用例并 **可选** 写入样本集 / dry-run。  
+3. Agent 调用全链路可追溯 `run_id` / `job_id` / `item_id`。  
+4. Agent 宕机时 verdict 为 **fail 或 pending_judge**，不静默 pass。  
+5. 同一输入 judge 输出 schema 稳定，可回归。
 
 ---
 
-### 2.4 【P2 · 应急】平台降级（变更 ID：**CH-ARCH-02**）
+## 8. 与 nodes.md 对照
 
-**非新 Skill**：当 agent 平台不可用时
-
-- BFF 将 judge 请求 **排队重试** 或标记 `verdict: pending_judge`  
-- **禁止** 在 testgen BFF 内嵌 LLM SDK 作为长期方案  
-
-仅运维应急，不在 E6 首版实现。
-
----
-
-### 2.5 【P3 · E7+】探索式执行 Agent（变更 ID：**CH-ARCH-01**）
-
-**暂不开发**。触发条件：固定 TS-05 链路无法覆盖长尾探索场景。
-
-| 能力 | 说明 |
-|------|------|
-| Agent 规划步骤 | LLM 产出下一步 HTTP/CLI 意图 |
-| BFF 逐步调 Runner | 每步仍经白名单 Runner，Agent 不直连 SUT |
-| 安全 / 成本 | 需单独评审；与 CH-SUT-03（TEST_MODE mock）组合 |
-
-与当前「执行引擎已完成」阶段 **无阻塞关系**，单独立项。
+| nodes.md 条目 | 本文 |
+|---------------|------|
+| LLM Judge（E6） | §3.2 A2 + §4 vs_agent hook |
+| 样本集从 test_input_example 生成 | §3.3 A3 + §3.1 enrich_samples |
+| Agent 平台 Skill · CH-AG-01 | §3.2 |
+| testgen-skill 扩展 · CH-AG-02 | §3.1 |
+| fitness-sample-skill · CH-AG-03 | §3.3 |
+| CH-ARCH-01 探索式 TS | §3.4 A4 |
+| 模块边界（原「本迭代不改」） | **已取消**，见 §1.1 |
 
 ---
 
-## 3. 不需要开发的 Agent
-
-| 名称 | 原因 |
-|------|------|
-| 执行型 Agent（替 Runner 调 API） | 违反 Agent/引擎分离；TS 引擎已覆盖 |
-| 用例生成 Agent（Fitness 内） | 已有 `testgen-skill`；Fitness 执行读 DB 用例，不 Loop 生成 |
-| SLO / k6 判定 Agent | VS-10 走 TS-09 数值阈值；E7 再建 k6 集成即可 |
-| 文档同步 Agent | 属 CH-DOC-01 脚本流水线，非对话 Agent |
-
----
-
-## 4. 建议实施顺序
-
-```text
-E6-A  agent-management-sub  fitness-judge-skill（judge + rubricRegistry 最小集）
-  ↓
-E6-B  testgen  agentProxy + vsAgentJudge + vsRegistry 注册
-  ↓
-E6-C  选 1～2 条 E6 用例（如 LLM-as-judge / TS-04+VS-07+rubric）联调闭环
-  ↓
-E6-D  ts10ManEngine + 人工队列 UI + VS-11 聚合（可选 AI 预审）
-  ↓
-E6-E  控制台 explain action + BFF 路由
-```
-
-**验收标准（E6 Agent 最小集）**：
-
-1. 单条 `ft_run` 在配置 `use_agent_judge: true` 时，verdict 含 `assertion_detail.agent_judge`。  
-2. Agent 平台日志可追溯 `run_id` / `item_id`。  
-3. Agent 宕机时 run 明确失败或 pending，**不静默 pass**。  
-4. 同一 SubRunResult 输入，judge 输出 schema 稳定（便于回归）。
-
----
-
-## 5. 与 nodes.md 对照
-
-| nodes.md 条目 | 本说明对应 |
-|---------------|------------|
-| LLM Judge（E6） | §2.1 fitness-judge-skill + §2.2 vsAgentJudge |
-| agent 平台 Skill · CH-AG-01 | §2.1 |
-| E6 TS-10 人工 + judge 流 | §2.2 TS-10 引擎 + §2.3 explain |
-| Agent 生成链路不改 | §1.2 testgen-skill 排除 |
-| CH-ARCH-01 探索式 TS | §2.5 延后 |
-
----
-
-## 6. 术语速查
+## 9. 术语速查
 
 | 术语 | 含义 |
 |------|------|
-| P-C 路径 | 语义判定路径：Runner 出事实 → Agent 出 verdict |
-| rubric_id | 评分量表标识，映射到 judge prompt 与通过条件 |
-| SubRunResult | 单次 HTTP/CLI/journey 执行的原始结果 |
-| vsAgentJudge | testgen 侧调用 fitness-judge-skill 的 VS 引擎实现 |
+| Agent hook | TS/VS 引擎内声明的 Agent 嵌入点 |
+| P-C 路径 | Runner 出事实 → Agent 出 verdict（可与其他 hook 组合） |
+| rubric_id | 评分量表，映射 judge prompt 与通过条件 |
+| SubRunResult | 单次 HTTP/CLI/journey 执行结果 |
+| internal API | Skill 回写 BFF 的 token 保护路由 |
+| dry-run | 不持久化 verdict 或标记 `dry_run` 的 launch |
 
 ---
 
-*执行引擎进度以 [nodes.md](./nodes.md) 为准；Agent Skill 以 `agent-management-sub` 仓库 PR + 本文 §4 验收为准。*
+*执行引擎进度以 [nodes.md](./nodes.md) 为准；Agent 以 `agent-management-sub` PR + 本文 §7 验收为准。*

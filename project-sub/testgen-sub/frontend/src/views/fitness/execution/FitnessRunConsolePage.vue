@@ -74,6 +74,19 @@
         </el-collapse>
       </el-tab-pane>
     </el-tabs>
+
+    <el-card v-if="run && isTerminal" shadow="never" style="margin-top:16px">
+      <template #header>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span>AI 解读</span>
+          <el-button size="small" type="primary" :loading="explainLoading" @click="loadExplain">
+            解读失败原因
+          </el-button>
+        </div>
+      </template>
+      <div v-if="explainMarkdown" class="explain-md">{{ explainMarkdown }}</div>
+      <el-empty v-else description="点击按钮生成解读（不改变 verdict）" />
+    </el-card>
   </PageShell>
 </template>
 
@@ -82,7 +95,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import PageShell from '@/components/PageShell.vue';
 import PassFailChart from '@/components/fitness/PassFailChart.vue';
-import { fetchFtRun, streamFtRun } from '@/services/fitnessService.js';
+import { fetchFtRun, streamFtRun, explainFtRun } from '@/services/fitnessService.js';
 
 const TERMINAL = new Set([ 'success', 'failed', 'cancelled' ]);
 
@@ -91,6 +104,8 @@ const loading = ref(false);
 const run = ref(null);
 const liveProgress = ref(null);
 const resultTab = ref('subs');
+const explainLoading = ref(false);
+const explainMarkdown = ref('');
 /** @type {EventSource | null} */
 let es = null;
 
@@ -173,6 +188,18 @@ async function reloadRun() {
   run.value = await fetchFtRun(route.params.runId);
 }
 
+async function loadExplain() {
+  explainLoading.value = true;
+  try {
+    const data = await explainFtRun(route.params.runId);
+    explainMarkdown.value = data.markdown || '';
+  } catch (e) {
+    explainMarkdown.value = e?.response?.data?.message || e.message || '解读失败';
+  } finally {
+    explainLoading.value = false;
+  }
+}
+
 function closeStream() {
   if (es) {
     es.close();
@@ -222,5 +249,10 @@ onBeforeUnmount(closeStream);
   font-size: 12px;
   overflow: auto;
   max-height: 320px;
+}
+.explain-md {
+  white-space: pre-wrap;
+  font-size: 14px;
+  line-height: 1.6;
 }
 </style>

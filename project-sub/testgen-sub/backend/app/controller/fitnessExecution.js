@@ -250,6 +250,33 @@ class FitnessExecutionController extends Controller {
       throw err;
     }
   }
+
+  async explainRun() {
+    try {
+      const data = await this.service.fitnessExecution.explainRun(this.ctx.params.runId);
+      if (!data) {
+        this.ctx.status = 404;
+        this.ctx.body = { code: 404, message: '运行记录不存在', data: null };
+        return;
+      }
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      if (this.handleError(err)) return;
+      throw err;
+    }
+  }
+
+  async generateSamples() {
+    try {
+      const data = await this.service.fitnessExecution.generateSamples(
+        this.ctx.request.body || {},
+      );
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      if (this.handleError(err)) return;
+      throw err;
+    }
+  }
 }
 
 module.exports = FitnessExecutionController;

@@ -210,6 +210,16 @@ export async function healthCheckEnv(payload) {
   return data.data;
 }
 
+export async function explainFtRun(runId) {
+  const { data } = await api.post(`/fitness/runs/${runId}/explain`);
+  return data.data;
+}
+
+export async function generateFitnessSamples(payload) {
+  const { data } = await api.post('/fitness/samples/generate', payload);
+  return data.data;
+}
+
 export const SCHEME_CONFIG_ROUTES = {
   'TS-01-DET': 'det',
   'TS-02-BND': 'bnd',
@@ -237,6 +247,7 @@ export const LAUNCHABLE_SCHEMES = new Set([
   'TS-06-PAIR',
   'TS-07-NEG',
   'TS-08-OBS',
+  'TS-10-MAN',
 ]);
 
 export function schemeToConfigPath(schemeId) {

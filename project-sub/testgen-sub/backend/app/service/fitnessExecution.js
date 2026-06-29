@@ -209,6 +209,56 @@ class FitnessExecutionService extends require('egg').Service {
   async executeSchemeEngine(schemeId, body = {}) {
     return this.orchestrator().executeSchemeDebug(schemeId, body);
   }
+
+  async explainRun(runId) {
+    const runData = await this.getRun(runId);
+    if (!runData) return null;
+
+    const item = await this.orchestrator().loadItem(runData.item_id);
+    const observations = (runData.results || []).map(r => ({
+      sub_run_index: r.sub_index,
+      input_summary: r.input_summary,
+      output_summary: r.output_summary,
+      sub_verdict: r.sub_verdict,
+      assertion_detail: r.assertion_detail,
+    }));
+
+    const agentRes = await this.ctx.service.agentProxy.invokeFitnessJudge({
+      action: 'explain',
+      run_id: runId,
+      item_id: runData.item_id,
+      observations,
+      trace: { run_id: runId, item_id: runData.item_id },
+    });
+
+    return {
+      run_id: runId,
+      markdown: agentRes.output?.markdown || agentRes.reply || '',
+      meta: agentRes.meta || {},
+    };
+  }
+
+  async generateSamples(body = {}) {
+    const agentRes = await this.ctx.service.agentProxy.invokeFitnessSample({
+      action: body.action || 'from_example',
+      item_id: body.item_id,
+      scheme_id: body.scheme_id,
+      sample_set_id: body.sample_set_id,
+      test_input_example: body.test_input_example,
+      trace: { item_id: body.item_id },
+    });
+
+    const samples = agentRes.output?.samples || agentRes.output?.items || [];
+    if (body.sample_set_id && samples.length && body.persist !== false) {
+      const bulk = await this.ctx.service.internalFitness.bulkCreateSampleItems({
+        sample_set_id: body.sample_set_id,
+        items: samples,
+      });
+      return { ...agentRes.output, bulk };
+    }
+
+    return agentRes.output || agentRes;
+  }
 }
 
 module.exports = FitnessExecutionService;

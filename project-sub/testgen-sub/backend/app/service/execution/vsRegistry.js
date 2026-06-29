@@ -7,6 +7,8 @@ const VsChainEngine = require('./validators/vsChain');
 const VsObsEngine = require('./validators/vsObs');
 const VsZeroEngine = require('./validators/vsZero');
 const VsBlockRateEngine = require('./validators/vsBlockRate');
+const VsAgentJudgeEngine = require('./validators/vsAgentJudge');
+const VsMajorityEngine = require('./validators/vsMajority');
 
 const contractEngine = new VsContractEngine();
 const rateEngine = new VsRateEngine();
@@ -15,6 +17,8 @@ const chainEngine = new VsChainEngine();
 const obsEngine = new VsObsEngine();
 const zeroEngine = new VsZeroEngine();
 const blockRateEngine = new VsBlockRateEngine();
+const agentJudgeEngine = new VsAgentJudgeEngine();
+const majorityEngine = new VsMajorityEngine();
 
 /** VS 分组与 VS-02 契约判定（E1 默认走契约引擎） */
 const CONTRACT_IDS = new Set([
@@ -55,7 +59,14 @@ const OBS_IDS = new Set([
   'VS-06-COMPLETE',
 ]);
 
-function get(validationId) {
+function get(validationId, runConfig) {
+  const cfg = runConfig?.config_json || {};
+  if (cfg.use_agent_judge === true) {
+    return agentJudgeEngine;
+  }
+  if (validationId === 'VS-11-MAJORITY' || String(validationId || '').startsWith('VS-11')) {
+    return majorityEngine;
+  }
   if (!validationId || CONTRACT_IDS.has(validationId) || CONTRACT_EXTRA.has(validationId) || String(validationId).startsWith('VS-02')) {
     return contractEngine;
   }

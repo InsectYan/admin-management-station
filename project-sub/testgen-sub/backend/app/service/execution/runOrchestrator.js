@@ -4,6 +4,7 @@ const { emitProgress } = require('../../lib/fitnessRunEvents');
 const engineRegistry = require('./engineRegistry');
 const vsRegistry = require('./vsRegistry');
 const jobQueue = require('./jobQueue');
+const { AgentHookRunner } = require('./agentHook');
 
 /**
  * @typedef {object} ExecutionContext
@@ -176,6 +177,10 @@ class RunOrchestrator {
       }
     }
 
+    if (body.dry_run) {
+      return this.executeDryRun(itemId, body);
+    }
+
     const run = await this.ctx.model.FtRun.create({
       item_id: itemId,
       run_config_id: runConfig?.id || null,
@@ -234,9 +239,12 @@ class RunOrchestrator {
     emitProgress(runId, { phase: 'running', percent: 5, run_id: runId });
 
     try {
-      const engine = engineRegistry.get(run.scheme_id);
       /** @type {ExecutionContext} */
       const execCtx = { item, runConfig, env, run, ctx: this.ctx };
+      const hookRunner = new AgentHookRunner(this.ctx);
+      await hookRunner.runPreExecute(execCtx);
+
+      const engine = engineRegistry.get(run.scheme_id);
       emitProgress(runId, {
         phase: 'running',
         percent: 20,
@@ -244,7 +252,11 @@ class RunOrchestrator {
         log_tail: [ `TsEngine: ${run.scheme_id}` ],
       });
 
-      const subResults = await engine.execute(execCtx);
+      let subResults = await engine.execute(execCtx);
+
+      if (hookRunner.shouldApplyAgentJudge(runConfig)) {
+        subResults = await hookRunner.applyPostSubRunJudge(execCtx, subResults);
+      }
 
       await this.ctx.model.FtRunResult.destroy({ where: { ft_run_id: runId } });
       for (const sub of subResults) {
@@ -267,12 +279,13 @@ class RunOrchestrator {
         sub_count: subResults.length,
       });
 
-      const vsEngine = vsRegistry.get(run.validation_id);
+      const vsEngine = vsRegistry.get(run.validation_id, runConfig);
       const verdictResult = await vsEngine.judge(
         subResults,
         runConfig?.threshold_json || {},
         item,
         run.validation_id,
+        execCtx,
       );
 
       const finalStatus = verdictResult.pass ? 'success' : 'failed';
@@ -351,14 +364,80 @@ class RunOrchestrator {
       run: fakeRun,
       ctx: this.ctx,
     });
-    const vsEngine = vsRegistry.get(body.validation_id || item.validation_primary_id);
+    const vsEngine = vsRegistry.get(body.validation_id || item.validation_primary_id, runConfig);
     const verdictResult = await vsEngine.judge(
       subResults,
       runConfig?.threshold_json || {},
       item,
       body.validation_id || item.validation_primary_id,
+      { item, runConfig, env, run: fakeRun, ctx: this.ctx },
     );
     return { sub_results: subResults, ...verdictResult };
+  }
+
+  /**
+   * dry-run：同步执行，不写 ft_run 持久化记录
+   * @param {string} itemId
+   * @param {object} body
+   */
+  async executeDryRun(itemId, body = {}) {
+    const item = await this.loadItem(itemId);
+    if (!item) {
+      const err = new Error('测试项不存在');
+      err.status = 404;
+      throw err;
+    }
+    const schemeId = body.scheme_id || item.scheme_primary_id;
+    const validationId = body.validation_id || item.validation_primary_id;
+    engineRegistry.get(schemeId);
+
+    const env = await this.resolveEnv(body.env_id);
+    if (!env) {
+      const err = new Error('未配置执行环境');
+      err.status = 400;
+      throw err;
+    }
+
+    const runConfig = await this.ctx.model.FtRunConfig.findOne({
+      where: { item_id: itemId, scheme_id: schemeId },
+    });
+
+    const fakeRun = {
+      id: 0,
+      item_id: itemId,
+      scheme_id: schemeId,
+      validation_id: validationId,
+      dry_run: true,
+    };
+
+    /** @type {ExecutionContext} */
+    const execCtx = { item, runConfig, env, run: fakeRun, ctx: this.ctx };
+    const hookRunner = new AgentHookRunner(this.ctx);
+    await hookRunner.runPreExecute(execCtx);
+
+    const engine = engineRegistry.get(schemeId);
+    let subResults = await engine.execute(execCtx);
+    if (hookRunner.shouldApplyAgentJudge(runConfig)) {
+      subResults = await hookRunner.applyPostSubRunJudge(execCtx, subResults);
+    }
+
+    const vsEngine = vsRegistry.get(validationId, runConfig);
+    const verdictResult = await vsEngine.judge(
+      subResults,
+      runConfig?.threshold_json || {},
+      item,
+      validationId,
+      execCtx,
+    );
+
+    return {
+      dry_run: true,
+      item_id: itemId,
+      scheme_id: schemeId,
+      validation_id: validationId,
+      sub_results: subResults,
+      ...verdictResult,
+    };
   }
 
   /** @param {object} body */

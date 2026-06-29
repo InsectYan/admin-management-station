@@ -9,5 +9,5 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 Write-Host ""
 Write-Host "Testgen stack started"
 Write-Host "  Frontend  http://localhost:5175"
-Write-Host "  API       http://localhost:7003"
+Write-Host "  API       http://localhost:5202"
 Write-Host "Stop: ams-testgen local:down"

@@ -43,8 +43,14 @@ module.exports = appInfo => {
   config.agentPlatform = {
     baseUrl: process.env.AGENT_PLATFORM_URL || 'http://127.0.0.1:4001',
     invokePath: '/api/skills/testgen-skill/invoke',
+    judgeInvokePath: process.env.FITNESS_JUDGE_INVOKE_PATH || '/api/skills/fitness-judge-skill/invoke',
+    sampleInvokePath: process.env.FITNESS_SAMPLE_INVOKE_PATH || '/api/skills/fitness-sample-skill/invoke',
+    exploreInvokePath: process.env.FITNESS_EXPLORE_INVOKE_PATH || '/api/skills/fitness-explore-skill/invoke',
     perfInvokePath: process.env.PERF_SKILL_INVOKE_PATH || '/api/skills/perf-bottleneck-skill/invoke',
     timeout: Number(process.env.AGENT_PLATFORM_TIMEOUT || 300000),
+    judgeTimeoutMs: Number(process.env.FITNESS_JUDGE_TIMEOUT_MS || 120000),
+    sampleTimeoutMs: Number(process.env.FITNESS_SAMPLE_TIMEOUT_MS || 120000),
+    exploreTimeoutMs: Number(process.env.FITNESS_EXPLORE_TIMEOUT_MS || 90000),
   };
 
   config.testRun = {

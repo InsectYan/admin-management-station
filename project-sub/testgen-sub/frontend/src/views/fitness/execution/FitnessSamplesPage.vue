@@ -38,8 +38,9 @@
     </el-dialog>
 
     <el-drawer v-model="showItems" :title="activeSet?.name || '样本条目'" size="640px">
-      <div style="margin-bottom:12px">
+      <div style="margin-bottom:12px;display:flex;gap:8px">
         <el-button type="primary" size="small" @click="openItemForm()">添加 HTTP 样本</el-button>
+        <el-button size="small" :loading="aiLoading" @click="aiGenerateSamples">AI 从 example 生成</el-button>
       </div>
       <el-table v-loading="itemsLoading" :data="items" size="small" border>
         <el-table-column prop="sort_order" label="#" width="50" />
@@ -87,12 +88,14 @@ import {
   deleteSampleSet,
   fetchSampleItems,
   fetchSampleSets,
+  generateFitnessSamples,
   updateSampleItem,
   updateSampleSet,
 } from '@/services/fitnessService.js';
 
 const loading = ref(false);
 const itemsLoading = ref(false);
+const aiLoading = ref(false);
 const sets = ref([]);
 const items = ref([]);
 const total = ref(0);
@@ -230,6 +233,27 @@ async function removeItem(row) {
   await deleteSampleItem(activeSet.value.id, row.id);
   await openItems(activeSet.value);
   await load();
+}
+
+async function aiGenerateSamples() {
+  if (!activeSet.value) return;
+  aiLoading.value = true;
+  try {
+    await generateFitnessSamples({
+      action: 'from_example',
+      sample_set_id: activeSet.value.id,
+      item_id: activeSet.value.item_id,
+      scheme_id: 'TS-04-SET',
+      persist: true,
+    });
+    ElMessage.success('AI 样本已生成');
+    await openItems(activeSet.value);
+    await load();
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || e.message || '生成失败');
+  } finally {
+    aiLoading.value = false;
+  }
 }
 
 onMounted(load);

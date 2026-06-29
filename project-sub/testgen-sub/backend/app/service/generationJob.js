@@ -72,6 +72,7 @@ class GenerationJobService extends Service {
       document_title: resolvedTitle,
       document_type: resolvedType,
       llm_profile,
+      fitness_context: payload.fitness_context || options?.fitness_context || null,
     };
 
     const job = await this.ctx.model.GenerationJob.create({
@@ -110,7 +111,16 @@ class GenerationJobService extends Service {
   }
 
   async executeJob(jobId, payload) {
-    const { document_id, module, test_types, options, document_content, llm_profile } = payload;
+    const {
+      document_id,
+      module,
+      test_types,
+      options,
+      document_content,
+      llm_profile,
+      fitness_context: fitnessContextRaw,
+    } = payload;
+    const fitnessContext = fitnessContextRaw || options?.fitness_context || null;
     const job = await this.ctx.model.GenerationJob.findByPk(jobId);
     if (!job) return;
 
@@ -158,17 +168,21 @@ class GenerationJobService extends Service {
       }, 3000);
 
       const rawContent = document_content || doc.content;
+      const agentAction = fitnessContext?.scheme_id ? 'generate_for_fitness' : 'generate';
 
       agentRes = await this.ctx.service.agentProxy.invokeTestgen({
-        action: 'generate',
+        action: agentAction,
         doc_id: document_id,
         doc_title: doc.title,
         document_content: rawContent,
         module,
         test_types: test_types || [],
         options: options || {},
+        fitness_context: fitnessContext,
+        scheme_id: fitnessContext?.scheme_id,
         job_id: jobId,
         llm_profile,
+        trace: { job_id: jobId },
       });
 
       if (progressTimer) clearInterval(progressTimer);
@@ -177,6 +191,10 @@ class GenerationJobService extends Service {
       if (job.status === 'cancelled') return;
 
       await this.syncFromAgentOutput(jobId, agentRes, document_id, module);
+
+      if (fitnessContext) {
+        await this.applyFitnessPostProcess(jobId, fitnessContext, agentRes);
+      }
 
       const caseCount = await this.ctx.model.TestCase.count({ where: { job_id: jobId } });
       if (caseCount === 0) {
@@ -544,6 +562,47 @@ class GenerationJobService extends Service {
       if (PHASES.includes(last) && progress[last] < 100) progress[last] = 50;
     }
     return progress;
+  }
+
+  async applyFitnessPostProcess(jobId, fitnessContext, agentRes) {
+    const patch = { fitness_context: fitnessContext };
+
+    if (fitnessContext.auto_sample && fitnessContext.sample_set_id && fitnessContext.item_id) {
+      try {
+        const sampleRes = await this.ctx.service.agentProxy.invokeFitnessSample({
+          action: 'from_example',
+          item_id: fitnessContext.item_id,
+          sample_set_id: fitnessContext.sample_set_id,
+          scheme_id: fitnessContext.scheme_id,
+          test_input_example: fitnessContext.test_input_example,
+          test_cases: agentRes.output?.testCases || [],
+          trace: { job_id: jobId, item_id: fitnessContext.item_id },
+        });
+        patch.fitness_samples = sampleRes.output || sampleRes;
+      } catch (err) {
+        patch.fitness_samples_error = err.message;
+        this.ctx.app.logger.warn('[generationJob] enrich_samples job=%s %s', jobId, err.message);
+      }
+    }
+
+    if (fitnessContext.auto_dry_run && fitnessContext.item_id) {
+      try {
+        const dry = await this.ctx.service.internalFitness.dryRunLaunch(fitnessContext.item_id, {
+          scheme_id: fitnessContext.scheme_id,
+          dry_run: true,
+        });
+        patch.fitness_dry_run = {
+          verdict: dry.verdict,
+          pass: dry.pass,
+          sub_count: dry.sub_results?.length || 0,
+        };
+      } catch (err) {
+        patch.fitness_dry_run_error = err.message;
+        this.ctx.app.logger.warn('[generationJob] dry-run job=%s %s', jobId, err.message);
+      }
+    }
+
+    await this.updateAgentContext(jobId, patch);
   }
 }
 
