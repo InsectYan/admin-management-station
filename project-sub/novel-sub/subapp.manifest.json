@@ -7,7 +7,7 @@
   "entry_prod": "/subapps/novel-app/",
   "vite_port": 5101,
   "api_port": 5201,
-  "agent_port": 5202,
+  "agent_port": 4001,
   "menu_order": 1,
   "icon": "icon-novel",
   "entry_env": "SUBAPP_NOVEL_ENTRY"

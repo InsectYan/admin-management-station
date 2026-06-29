@@ -41,7 +41,7 @@ module.exports = appInfo => {
   };
 
   config.agentPlatform = {
-    baseUrl: process.env.AGENT_PLATFORM_URL || 'http://127.0.0.1:3001',
+    baseUrl: process.env.AGENT_PLATFORM_URL || 'http://127.0.0.1:4001',
     invokePath: '/api/skills/testgen-skill/invoke',
     perfInvokePath: process.env.PERF_SKILL_INVOKE_PATH || '/api/skills/perf-bottleneck-skill/invoke',
     timeout: Number(process.env.AGENT_PLATFORM_TIMEOUT || 300000),

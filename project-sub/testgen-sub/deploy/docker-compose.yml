@@ -38,7 +38,7 @@ services:
       CACHE_DRIVER: memory
       PORT: ${TESTGEN_PORT:-5202}
       POSTGRES_DB: ${TESTGEN_POSTGRES_DB:-testgen_db}
-      AGENT_PLATFORM_URL: ${AGENT_PLATFORM_URL:-http://host.docker.internal:3001}
+      AGENT_PLATFORM_URL: ${AGENT_PLATFORM_URL:-http://host.docker.internal:4001}
     ports:
       - "${TESTGEN_PORT:-5202}:${TESTGEN_PORT:-5202}"
     depends_on:

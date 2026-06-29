@@ -347,7 +347,7 @@
     "onClientError": null,
     "middleware": [],
     "agentPlatform": {
-      "baseUrl": "http://127.0.0.1:3001",
+      "baseUrl": "http://127.0.0.1:4001",
       "invokePath": "/api/skills/testgen-skill/invoke",
       "timeout": 300000
     },

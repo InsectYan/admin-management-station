@@ -41,7 +41,7 @@ services:
       POSTGRES_DB: ${MAIN_POSTGRES_DB:-admin_platform}
       SUBAPP_NOVEL_ENTRY: ${SUBAPP_NOVEL_ENTRY:-http://localhost:5101}
       SUBAPP_TESTGEN_ENTRY: ${SUBAPP_TESTGEN_ENTRY:-http://localhost:5102}
-      AGENT_PLATFORM_URL: ${AGENT_PLATFORM_URL:-http://host.docker.internal:3001}
+      AGENT_PLATFORM_URL: ${AGENT_PLATFORM_URL:-http://host.docker.internal:4001}
     ports:
       - "${MAIN_PORT:-5200}:${MAIN_PORT:-5200}"
     depends_on:

@@ -7,7 +7,7 @@
   "entry_prod": "/subapps/testgen-app/",
   "vite_port": 5102,
   "api_port": 5202,
-  "agent_port": 3001,
+  "agent_port": 4001,
   "menu_order": 2,
   "icon": "icon-testgen",
   "entry_env": "SUBAPP_TESTGEN_ENTRY"
