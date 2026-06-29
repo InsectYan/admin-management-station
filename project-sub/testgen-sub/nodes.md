@@ -1,36 +1,31 @@
 # Fitness 测试体系 — 待开发节点
 
 > 更新：2026-06-28  
-> 范围：testgen-sub Fitness 模块（不含 Agent、不含已有 scope/suite 页面）
+> 范围：testgen-sub Fitness 模块（不含 Agent 生成链路 `/scope`、`/jobs`；不含旧 `/suite`）  
+> **详细技术方案**：[FITNESS_EXECUTION_TECH.md](./FITNESS_EXECUTION_TECH.md)（执行引擎 / Runner / Agent 分离 / 前后端目录 / API 契约）
 
 ---
 
-## 一、执行引擎（全部未实现）
+## 一、执行引擎（E1 部分已实现）
 
-接口已挂载，调用返回 `501 ENGINE_NOT_IMPLEMENTED`。
+| 方案 ID | 引擎能力 | 状态 |
+|---------|----------|------|
+| TS-01-DET | HTTP/CLI 断言 | **E1 ✅** |
+| TS-02-BND | 矩阵循环断言 | ❌ E3+ |
+| TS-03-REP | 重复 + Pass^k | ❌ E3 |
+| TS-04-SET | 样本集 + 达标率 | ❌ E2 |
+| TS-05-CHAIN | 轻量编排 | ❌ E4/E5 |
+| TS-06～10 | 其余 | ❌ |
 
-| 方案 ID | 引擎能力 | API | 前端配置页 |
-|---------|----------|-----|------------|
-| TS-01-DET | HTTP/CLI 断言代理 | `POST /api/fitness/engines/TS-01-DET/execute` | `/fitness/execution/run/:id/config/det` |
-| TS-02-BND | 矩阵循环断言 | 同上 pattern | `config/bnd` |
-| TS-03-REP | Agent × N + Pass^k | 同上 | `config/rep` |
-| TS-04-SET | 样本集批量 + 达标率统计 | 同上 | `config/set` |
-| TS-05-CHAIN | 轻量编排 + 变量池 | 同上 | `config/chain` |
-| TS-06-PAIR | 跨端并行 diff | 同上 | `config/pair` |
-| TS-07-NEG | 对抗集 + 阻断率 | 同上 | `config/neg` |
-| TS-08-OBS | SLS/RDS/OTel 查询 | 同上 | `config/obs` |
-| TS-09-LOAD | k6/locust 压测 Job | 同上 | `config/load` |
-| TS-10-MAN | 评审工作流 | 同上 | `config/man` |
+### 执行链路
 
-### 执行链路缺失
-
-- [ ] `POST /api/fitness/run/:itemId/launch` 创建 run 后的异步 Job 调度
-- [ ] WebSocket/SSE 进度推送至 `/fitness/execution/runs/:runId`
-- [ ] VS 判定引擎（RATE/PASSK/BLOCK/SLO/MAJORITY）
-- [ ] LLM Judge（TS-03/04/07 可选）
-- [ ] `POST /api/fitness/environments/health-check` 环境探活代理
+- [x] `POST /api/fitness/run/:itemId/launch` 异步 Job（runInBackground）
+- [x] SSE `/api/fitness/runs/:runId/stream`
+- [x] VS-02-CONTRACT（CLI exit / HTTP 断言）
+- [x] `POST /api/fitness/environments/health-check`
 - [ ] dry-run 单条（launch 页）
 - [ ] 重跑失败项、导出 JSON 日志（控制台）
+- [ ] LLM Judge（E6）
 
 ---
 
@@ -84,21 +79,25 @@
 
 ---
 
-## 五、与已有模块边界
+## 五、模块边界与跨仓变更
 
-| 模块 | 状态 |
-|------|------|
-| Agent 生成链路 (`/scope`, `/jobs`) | **未改动** |
-| 旧测试用例管理 (`/suite`, `test_cases`) | **未改动** |
-| 旧执行监控 (`/runs/:runId`) | **未改动** |
-| Fitness 执行 (`ft_run`, `/fitness/execution/*`) | 新体系，与 test_runs 独立 |
+> 原则：**为测试服务，全链路均可改**；跨 testgen-sub 的改动须登记 [FITNESS_EXECUTION_TECH.md §1.5](./FITNESS_EXECUTION_TECH.md#15-跨仓库--跨模块变更清单变更内容--计划) 变更 ID。
+
+| 模块 | 默认策略 | 变更 ID（若测试仍不满足） |
+|------|----------|---------------------------|
+| Agent 生成链路 (`/scope`, `/jobs`) | 本迭代不改 | — |
+| 旧 suite / `test_runs` | 与 `ft_run` 并行 | CH-TG-01 |
+| fitness-agent SUT | 首版只消费 API | CH-SUT-01～03 |
+| fitness-agent-test-docs | 不改 testgen 内编辑 | CH-DOC-01 |
+| agent 平台 Skill | 新增 judge，不改 testgen-skill | CH-AG-01 |
+| Fitness 执行 (`ft_run`) | **本方案重心** | CH-INFRA-02/03 |
 
 ---
 
-## 六、建议开发顺序（参考文档 §八）
+## 六、建议开发顺序（参考文档 §9）
 
-1. E0 环境 + 控制台壳层 ✅（UI 壳层完成，引擎 ❌）
-2. E1 TS-01 DET 引擎
+1. E0 环境 + 控制台壳层 ✅
+2. **E1 TS-01 DET + Orchestrator + SSE ✅**（需 `FITNESS_AGENT_ROOT`）
 3. E2 TS-04 SET + 样本集 + 达标率
 4. E3 TS-02 BND 矩阵
 5. E4 TS-05 CHAIN

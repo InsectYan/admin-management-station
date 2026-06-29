@@ -86,6 +86,7 @@ module.exports = app => {
   router.post('/api/fitness/samples', controller.fitnessExecution.createSampleSet);
   router.get('/api/fitness/runs', controller.fitnessExecution.listRuns);
   router.get('/api/fitness/runs/:runId', controller.fitnessExecution.showRun);
+  router.get('/api/fitness/runs/:runId/stream', controller.fitnessExecution.streamRun);
   router.post('/api/fitness/runs/:runId/cancel', controller.fitnessExecution.cancelRun);
   router.get('/api/fitness/run-config/:itemId', controller.fitnessExecution.getRunConfig);
   router.post('/api/fitness/run-config/:itemId', controller.fitnessExecution.saveRunConfig);

@@ -1,0 +1,2 @@
+import{G as t}from"./GenericSchemePanel-Bj4sICMZ.js";import{c as r,d as a}from"./index-DIp1-gA3.js";import"./_plugin-vue_export-helper-DlAUqK2U.js";const l={__name:"ConfigSetPanel",props:{item:Object,modelValue:Object},setup(e){return(c,m)=>(r(),a(t,{item:e.item,title:"固定样本集批量 (TS-04-SET)",hint:"绑定样本集 + rate_L/M/H 阈值"},null,8,["item"]))}};export{l as default};
+//# sourceMappingURL=ConfigSetPanel-BQjA-nEF.js.map

@@ -1,12 +1,19 @@
 'use strict';
 
+const { PassThrough } = require('stream');
 const Controller = require('egg').Controller;
+const { subscribe, emitProgress } = require('../lib/fitnessRunEvents');
 
 class FitnessExecutionController extends Controller {
   handleError(err) {
-    if (err.status === 501) {
-      this.ctx.status = 501;
-      this.ctx.body = { code: 501, message: err.message, data: { code: err.code } };
+    const status = err.status || 500;
+    if (status >= 400 && status < 600) {
+      this.ctx.status = status;
+      this.ctx.body = {
+        code: err.code || status,
+        message: err.message,
+        data: null,
+      };
       return true;
     }
     return false;
@@ -44,7 +51,8 @@ class FitnessExecutionController extends Controller {
 
   async healthCheck() {
     try {
-      await this.service.fitnessExecution.healthCheck();
+      const data = await this.service.fitnessExecution.healthCheck(this.ctx.request.body || {});
+      this.ctx.body = { code: 0, message: 'ok', data };
     } catch (err) {
       if (this.handleError(err)) return;
       throw err;
@@ -74,6 +82,39 @@ class FitnessExecutionController extends Controller {
       return;
     }
     this.ctx.body = { code: 0, message: 'ok', data };
+  }
+
+  async streamRun() {
+    const runId = Number(this.ctx.params.runId);
+    const run = await this.service.fitnessExecution.getRun(runId);
+    if (!run) {
+      this.ctx.status = 404;
+      this.ctx.body = { code: 404, message: '运行记录不存在', data: null };
+      return;
+    }
+
+    const stream = new PassThrough();
+    this.ctx.set({
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    this.ctx.status = 200;
+    this.ctx.body = stream;
+
+    subscribe(runId, stream);
+    emitProgress(runId, {
+      run_id: runId,
+      phase: run.progress?.phase || run.status,
+      percent: run.progress?.percent ?? 0,
+      status: run.status,
+      verdict: run.verdict,
+    });
+
+    if ([ 'success', 'failed', 'cancelled' ].includes(run.status)) {
+      setTimeout(() => stream.end(), 100);
+    }
   }
 
   async getRunConfig() {
@@ -116,7 +157,11 @@ class FitnessExecutionController extends Controller {
 
   async executeEngine() {
     try {
-      await this.service.fitnessExecution.executeSchemeEngine(this.ctx.params.scheme);
+      const data = await this.service.fitnessExecution.executeSchemeEngine(
+        this.ctx.params.scheme,
+        this.ctx.request.body || {},
+      );
+      this.ctx.body = { code: 0, message: 'ok', data };
     } catch (err) {
       if (this.handleError(err)) return;
       throw err;

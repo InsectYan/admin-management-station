@@ -1,2 +1,0 @@
-import{G as t}from"./GenericSchemePanel-0b_ZNZQo.js";import{c as a,d as c}from"./index-B84P_zNa.js";import"./_plugin-vue_export-helper-DlAUqK2U.js";const l={__name:"ConfigRepPanel",props:{item:Object,modelValue:Object},setup(e){return(m,o)=>(a(),c(t,{item:e.item,title:"同用例重复抽样 (TS-03-REP)",hint:"重复次数 N、通过次数 M (passk_N/M)"},null,8,["item"]))}};export{l as default};
-//# sourceMappingURL=ConfigRepPanel-m4BPloGp.js.map

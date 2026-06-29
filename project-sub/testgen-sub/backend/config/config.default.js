@@ -51,6 +51,14 @@ module.exports = appInfo => {
     maxConcurrentRuns: Number(process.env.MAX_CONCURRENT_RUNS || 5),
   };
 
+  config.fitnessExecution = {
+    fitnessAgentRoot: process.env.FITNESS_AGENT_ROOT || '',
+    cliAllowlist: [ 'npm run test:stations', 'npm run test:e2e' ],
+    maxConcurrentRuns: Number(process.env.FT_MAX_CONCURRENT_RUNS || 3),
+    cliTimeoutMs: Number(process.env.FT_CLI_TIMEOUT_MS || 600000),
+    httpTimeoutMs: Number(process.env.FT_HTTP_TIMEOUT_MS || 120000),
+  };
+
   config.testgen = {
     maxConcurrentJobs: Number(process.env.MAX_CONCURRENT_JOBS || 3),
     parseCacheTtl: Number(process.env.PARSE_CACHE_TTL || 3600),

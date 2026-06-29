@@ -1,13 +1,10 @@
 'use strict';
 
-const NOT_IMPLEMENTED = '执行引擎尚未开发，详见 nodes.md';
+const RunOrchestrator = require('./execution/runOrchestrator');
 
 class FitnessExecutionService extends require('egg').Service {
-  notImplemented(feature) {
-    const err = new Error(`${NOT_IMPLEMENTED} — ${feature}`);
-    err.status = 501;
-    err.code = 'ENGINE_NOT_IMPLEMENTED';
-    throw err;
+  orchestrator() {
+    return new RunOrchestrator(this.ctx);
   }
 
   async listEnvs(query = {}) {
@@ -40,8 +37,8 @@ class FitnessExecutionService extends require('egg').Service {
     return true;
   }
 
-  async healthCheck() {
-    this.notImplemented('环境探活代理');
+  async healthCheck(body = {}) {
+    return this.orchestrator().healthCheck(body);
   }
 
   async listSampleSets(query = {}) {
@@ -107,19 +104,21 @@ class FitnessExecutionService extends require('egg').Service {
   }
 
   async launchRun(itemId, body) {
-    const config = await this.getRunConfig(itemId, body.scheme_id);
-    this.notImplemented(`TS 执行引擎 (${body.scheme_id})`);
+    return this.orchestrator().launch(itemId, body);
   }
 
   async cancelRun(id) {
     const run = await this.ctx.model.FtRun.findByPk(id);
     if (!run) return null;
+    if (run.status === 'running') {
+      /* E1：标记取消；进行中的 CLI 进程暂不 kill */
+    }
     await run.update({ status: 'cancelled', finished_at: new Date() });
     return run;
   }
 
-  async executeSchemeEngine(schemeId) {
-    this.notImplemented(`方案引擎 ${schemeId}`);
+  async executeSchemeEngine(schemeId, body = {}) {
+    return this.orchestrator().executeSchemeDebug(schemeId, body);
   }
 }
 

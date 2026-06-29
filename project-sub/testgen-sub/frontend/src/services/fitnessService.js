@@ -119,6 +119,11 @@ export async function fetchFtRun(runId) {
   return data.data;
 }
 
+export async function cancelFtRun(runId) {
+  const { data } = await api.post(`/fitness/runs/${runId}/cancel`);
+  return data.data;
+}
+
 export async function saveRunConfig(itemId, payload) {
   const { data } = await api.post(`/fitness/run-config/${encodeURIComponent(itemId)}`, payload);
   return data.data;
@@ -126,6 +131,25 @@ export async function saveRunConfig(itemId, payload) {
 
 export async function launchRun(itemId, payload) {
   const { data } = await api.post(`/fitness/run/${encodeURIComponent(itemId)}/launch`, payload);
+  return data.data;
+}
+
+/** @param {number|string} runId @param {(payload: object) => void} onMessage */
+export function streamFtRun(runId, onMessage) {
+  const url = `${resolveApiBase()}/fitness/runs/${encodeURIComponent(runId)}/stream`;
+  const es = new EventSource(url);
+  es.onmessage = ev => {
+    try {
+      onMessage(JSON.parse(ev.data));
+    } catch {
+      /* ignore */
+    }
+  };
+  return es;
+}
+
+export async function healthCheckEnv(payload) {
+  const { data } = await api.post('/fitness/environments/health-check', payload);
   return data.data;
 }
 
