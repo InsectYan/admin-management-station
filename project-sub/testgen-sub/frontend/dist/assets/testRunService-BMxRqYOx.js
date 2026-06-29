@@ -1,0 +1,2 @@
+import{a as s,r as e}from"./index-eswQmeQT.js";const n=()=>e();async function r(t){const{data:a}=await s.post(`${n()}/test-runs`,t);return a.data}async function u(t){const{data:a}=await s.get(`${n()}/test-runs/${t}`);return a.data}async function o(t){const{data:a}=await s.post(`${n()}/test-runs/${t}/cancel`);return a.data}async function i(t){const{data:a}=await s.get(`${n()}/test-runs/${t}/results`);return a.data}export{o as a,u as b,r as c,i as g};
+//# sourceMappingURL=testRunService-BMxRqYOx.js.map

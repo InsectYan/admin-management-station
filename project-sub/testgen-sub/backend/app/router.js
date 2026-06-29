@@ -75,6 +75,8 @@ module.exports = app => {
   router.delete('/api/fitness/plans/:id', controller.fitnessPlan.destroy);
   router.post('/api/fitness/plans/:id/results', controller.fitnessPlan.saveResults);
   router.post('/api/fitness/plans/:id/export-report', controller.fitnessPlan.exportReport);
+  router.post('/api/fitness/plans/:id/launch', controller.fitnessPlan.launch);
+  router.get('/api/fitness/plans/:id/runs', controller.fitnessPlan.planRuns);
 
   // 执行层（引擎桩）
   router.get('/api/fitness/environments', controller.fitnessExecution.listEnvs);
@@ -84,6 +86,13 @@ module.exports = app => {
   router.post('/api/fitness/environments/health-check', controller.fitnessExecution.healthCheck);
   router.get('/api/fitness/samples', controller.fitnessExecution.listSampleSets);
   router.post('/api/fitness/samples', controller.fitnessExecution.createSampleSet);
+  router.get('/api/fitness/samples/:setId', controller.fitnessExecution.showSampleSet);
+  router.put('/api/fitness/samples/:setId', controller.fitnessExecution.updateSampleSet);
+  router.delete('/api/fitness/samples/:setId', controller.fitnessExecution.deleteSampleSet);
+  router.get('/api/fitness/samples/:setId/items', controller.fitnessExecution.listSampleItems);
+  router.post('/api/fitness/samples/:setId/items', controller.fitnessExecution.createSampleItem);
+  router.put('/api/fitness/samples/:setId/items/:itemId', controller.fitnessExecution.updateSampleItem);
+  router.delete('/api/fitness/samples/:setId/items/:itemId', controller.fitnessExecution.deleteSampleItem);
   router.get('/api/fitness/runs', controller.fitnessExecution.listRuns);
   router.get('/api/fitness/runs/:runId', controller.fitnessExecution.showRun);
   router.get('/api/fitness/runs/:runId/stream', controller.fitnessExecution.streamRun);

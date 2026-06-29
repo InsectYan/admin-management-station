@@ -71,6 +71,29 @@ class FitnessPlanController extends Controller {
     }
     this.ctx.body = { code: 0, message: 'deleted', data: null };
   }
+
+  async launch() {
+    try {
+      const data = await this.service.fitnessPlan.launchPlan(
+        Number(this.ctx.params.id),
+        this.ctx.request.body || {},
+      );
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: err.status || 500, message: err.message, data: null };
+    }
+  }
+
+  async planRuns() {
+    const data = await this.service.fitnessPlan.getPlanRunSummary(Number(this.ctx.params.id));
+    if (!data) {
+      this.ctx.status = 404;
+      this.ctx.body = { code: 404, message: '计划不存在', data: null };
+      return;
+    }
+    this.ctx.body = { code: 0, message: 'ok', data };
+  }
 }
 
 module.exports = FitnessPlanController;

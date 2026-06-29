@@ -3,6 +3,7 @@
 const { emitProgress } = require('../../lib/fitnessRunEvents');
 const engineRegistry = require('./engineRegistry');
 const vsRegistry = require('./vsRegistry');
+const jobQueue = require('./jobQueue');
 
 /**
  * @typedef {object} ExecutionContext
@@ -32,10 +33,22 @@ class RunOrchestrator {
 
   async loadItem(itemId) {
     const [ rows ] = await this.app.model.query(
-      `SELECT * FROM test_item_detail WHERE item_id = :itemId AND is_active = TRUE LIMIT 1`,
+      `SELECT t.*,
+        cms.scheme_primary_id AS _fallback_scheme_id,
+        cms.validation_primary_id AS _fallback_validation_id
+       FROM test_item_detail t
+       LEFT JOIN test_category_minor_scheme cms ON cms.category_minor_id = t.category_minor_id
+       WHERE t.item_id = :itemId AND t.is_active = TRUE
+       LIMIT 1`,
       { replacements: { itemId } },
     );
-    return rows[0] || null;
+    const item = rows[0];
+    if (!item) return null;
+    if (!item.scheme_primary_id) item.scheme_primary_id = item._fallback_scheme_id;
+    if (!item.validation_primary_id) item.validation_primary_id = item._fallback_validation_id;
+    delete item._fallback_scheme_id;
+    delete item._fallback_validation_id;
+    return item;
   }
 
   async resolveEnv(envId) {
@@ -81,6 +94,88 @@ class RunOrchestrator {
       });
     }
 
+    if (schemeId === 'TS-04-SET') {
+      if (!runConfig?.sample_set_id) {
+        const err = new Error('TS-04-SET 需要绑定样本集，请先在方案配置页保存');
+        err.status = 400;
+        err.code = 'SAMPLE_SET_REQUIRED';
+        throw err;
+      }
+      const sampleCount = await this.ctx.model.FtSampleItem.count({
+        where: { sample_set_id: runConfig.sample_set_id },
+      });
+      if (sampleCount === 0) {
+        const err = new Error('绑定的样本集为空');
+        err.status = 400;
+        err.code = 'SAMPLE_SET_EMPTY';
+        throw err;
+      }
+    }
+
+    if (schemeId === 'TS-02-BND') {
+      const matrix = runConfig?.config_json?.matrix;
+      if (!Array.isArray(matrix) || !matrix.length) {
+        const err = new Error('TS-02-BND 需要 config_json.matrix 非空');
+        err.status = 400;
+        err.code = 'MATRIX_REQUIRED';
+        throw err;
+      }
+    }
+
+    if (schemeId === 'TS-03-REP') {
+      const cfg = runConfig?.config_json || {};
+      const thr = runConfig?.threshold_json || {};
+      const repeatN = Number(cfg.repeat_count ?? thr.passk_N ?? cfg.passk_N);
+      if (!Number.isFinite(repeatN) || repeatN < 1) {
+        const err = new Error('TS-03-REP 需要 repeat_count 或 passk_N ≥ 1');
+        err.status = 400;
+        err.code = 'REPEAT_COUNT_INVALID';
+        throw err;
+      }
+    }
+
+    if (schemeId === 'TS-05-CHAIN') {
+      const steps = runConfig?.config_json?.steps;
+      if (!Array.isArray(steps) || !steps.length) {
+        const err = new Error('TS-05-CHAIN 需要 config_json.steps 非空');
+        err.status = 400;
+        err.code = 'CHAIN_STEPS_REQUIRED';
+        throw err;
+      }
+    }
+
+    if (schemeId === 'TS-08-OBS') {
+      const cfg = runConfig?.config_json || {};
+      const hasChecks = Array.isArray(cfg.checks) && cfg.checks.length;
+      const hasSingle = cfg.mode || cfg.path || cfg.required_fields;
+      if (!hasChecks && !hasSingle) {
+        const err = new Error('TS-08-OBS 需要 checks 或 mode/path/required_fields 配置');
+        err.status = 400;
+        err.code = 'OBS_CONFIG_REQUIRED';
+        throw err;
+      }
+    }
+
+    if (schemeId === 'TS-06-PAIR') {
+      const pairs = runConfig?.config_json?.pairs;
+      if (pairs != null && (!Array.isArray(pairs) || !pairs.length)) {
+        const err = new Error('TS-06-PAIR 需要 config_json.pairs 非空');
+        err.status = 400;
+        err.code = 'PAIR_ARMS_REQUIRED';
+        throw err;
+      }
+    }
+
+    if (schemeId === 'TS-07-NEG') {
+      const cases = runConfig?.config_json?.cases;
+      if (!Array.isArray(cases) || !cases.length) {
+        const err = new Error('TS-07-NEG 需要 config_json.cases 非空');
+        err.status = 400;
+        err.code = 'NEG_CASES_REQUIRED';
+        throw err;
+      }
+    }
+
     const run = await this.ctx.model.FtRun.create({
       item_id: itemId,
       run_config_id: runConfig?.id || null,
@@ -93,7 +188,7 @@ class RunOrchestrator {
 
     const app = this.app;
     const runId = run.id;
-    this.ctx.runInBackground(async () => {
+    jobQueue.enqueue(app, async () => {
       const bgCtx = app.createAnonymousContext();
       try {
         await new RunOrchestrator(bgCtx).executeRun(runId);
@@ -158,7 +253,9 @@ class RunOrchestrator {
           sub_index: sub.sub_index,
           input_summary: sub.input_summary,
           output_summary: sub.output_summary,
-          assertion_detail: sub.assertion_detail || [],
+          assertion_detail: sub.artifacts
+            ? { assertions: sub.assertion_detail || [], artifacts: sub.artifacts }
+            : (sub.assertion_detail || []),
           sub_verdict: sub.sub_verdict,
         });
       }
@@ -175,6 +272,7 @@ class RunOrchestrator {
         subResults,
         runConfig?.threshold_json || {},
         item,
+        run.validation_id,
       );
 
       const finalStatus = verdictResult.pass ? 'success' : 'failed';
@@ -182,6 +280,11 @@ class RunOrchestrator {
         phase: 'done',
         percent: 100,
         pass_rate: verdictResult.current_rate,
+        target_rate: verdictResult.target_rate,
+        rate_level: verdictResult.rate_level,
+        passk_N: verdictResult.passk_N,
+        passk_M: verdictResult.passk_M,
+        pass_count: verdictResult.pass_count,
         verdict: verdictResult.verdict,
         log_tail: [ `Verdict: ${verdictResult.verdict}` ],
       };
@@ -253,6 +356,7 @@ class RunOrchestrator {
       subResults,
       runConfig?.threshold_json || {},
       item,
+      body.validation_id || item.validation_primary_id,
     );
     return { sub_results: subResults, ...verdictResult };
   }

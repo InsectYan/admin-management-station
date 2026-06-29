@@ -58,6 +58,58 @@ async function syncSchema() {
  * @param {import('pg').Client} client
  * @param {Record<string, { pk: string|string[] }>} meta
  */
+/**
+ * init.sql 种子未写入 scheme 列时，从 data.json / 子类映射表回填 DB
+ * @param {import('pg').Client} client
+ * @param {string} tablesDir
+ */
+async function syncItemSchemesAfterSeed(client, tablesDir) {
+  const check = assertSeedable(tablesDir, 'test_item_detail');
+  if (!check.ok) return { fromDataJson: 0, fromMinorScheme: 0 };
+
+  const rawRows = JSON.parse(require('fs').readFileSync(check.dataFile, 'utf8'));
+  let fromDataJson = 0;
+  for (const row of rawRows) {
+    if (!row.item_id || (!row.scheme_primary_id && !row.validation_primary_id)) continue;
+    const res = await client.query(`
+      UPDATE test_item_detail SET
+        scheme_primary_id = COALESCE(scheme_primary_id, $2),
+        scheme_secondary_id = COALESCE(scheme_secondary_id, $3),
+        validation_primary_id = COALESCE(validation_primary_id, $4),
+        validation_secondary_id = COALESCE(validation_secondary_id, $5),
+        sample_execution_note = COALESCE(sample_execution_note, $6),
+        scheme_mapping_source = COALESCE(scheme_mapping_source, $7)
+      WHERE item_id = $1
+        AND (scheme_primary_id IS NULL OR validation_primary_id IS NULL)
+    `, [
+      row.item_id,
+      row.scheme_primary_id ?? null,
+      row.scheme_secondary_id ?? null,
+      row.validation_primary_id ?? null,
+      row.validation_secondary_id ?? null,
+      row.sample_execution_note ?? null,
+      row.scheme_mapping_source ?? null,
+    ]);
+    fromDataJson += res.rowCount;
+  }
+
+  const minorRes = await client.query(`
+    UPDATE test_item_detail t
+    SET
+      scheme_primary_id = cms.scheme_primary_id,
+      scheme_secondary_id = COALESCE(t.scheme_secondary_id, cms.scheme_secondary_id),
+      validation_primary_id = cms.validation_primary_id,
+      validation_secondary_id = COALESCE(t.validation_secondary_id, cms.validation_secondary_id),
+      sample_execution_note = COALESCE(t.sample_execution_note, cms.sample_execution_note),
+      scheme_mapping_source = COALESCE(t.scheme_mapping_source, cms.mapping_source)
+    FROM test_category_minor_scheme cms
+    WHERE t.category_minor_id = cms.category_minor_id
+      AND t.scheme_primary_id IS NULL
+  `);
+
+  return { fromDataJson, fromMinorScheme: minorRes.rowCount };
+}
+
 async function seedTable(tablesDir, tableName, client, meta, { failFast = false } = {}) {
   const check = assertSeedable(tablesDir, tableName);
   if (!check.ok) {
@@ -174,12 +226,27 @@ async function seedData(targetTable, opts = {}) {
     }
   }
 
-  await client.end();
   const failed = results.filter(r => r.status === 'fail').length;
   const ok = results.filter(r => r.status === 'ok').length;
   const partial = results.filter(r => r.status === 'ok' && r.failed > 0).length;
   console.log(`\n[db] 数据注入: ${results.length} 表, 成功 ${ok}, 失败 ${failed}${partial ? `, 部分跳过 ${partial} 表` : ''}`);
-  if (failed) process.exit(1);
+  if (failed) {
+    await client.end();
+    process.exit(1);
+  }
+
+  try {
+    const schemeSync = await syncItemSchemesAfterSeed(client, tablesDir);
+    if (schemeSync.fromDataJson || schemeSync.fromMinorScheme) {
+      console.log(
+        `[db] 用例方案回填: data.json ${schemeSync.fromDataJson} 条, 子类映射 ${schemeSync.fromMinorScheme} 条`,
+      );
+    }
+  } catch (err) {
+    console.warn('[db] 用例方案回填跳过:', err.message);
+  }
+
+  await client.end();
 
   console.log('[db] 创建/更新分析视图…');
   const sequelize = new Sequelize(

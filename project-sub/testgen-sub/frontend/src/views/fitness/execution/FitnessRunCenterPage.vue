@@ -7,6 +7,16 @@
           <el-table-column prop="item_id" label="用例编码" width="140" />
           <el-table-column prop="scheme_id" label="方案" width="100" />
           <el-table-column prop="status" label="状态" width="100" />
+          <el-table-column label="进度" min-width="180">
+            <template #default="{ row }">
+              <el-progress
+                :percentage="rowProgress(row).percent"
+                :status="rowProgress(row).status"
+                :stroke-width="10"
+              />
+              <span class="progress-text">{{ rowProgress(row).label }}</span>
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="160" fixed="right">
             <template #default="{ row }">
               <el-button link @click="router.push(`/fitness/execution/runs/${row.id}`)">控制台</el-button>
@@ -28,6 +38,11 @@
           @change="loadHistory"
         >
           <template #suffix>
+            <el-table-column label="达标率" width="90">
+              <template #default="{ row }">
+                {{ row.progress?.pass_rate != null ? `${row.progress.pass_rate}%` : '-' }}
+              </template>
+            </el-table-column>
             <el-table-column label="操作" width="100" fixed="right">
               <template #default="{ row }">
                 <el-button link @click="router.push(`/fitness/execution/runs/${row.id}`)">控制台</el-button>
@@ -41,12 +56,12 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '@/components/PageShell.vue';
 import FitnessLabeledTable from '@/components/fitness/FitnessLabeledTable.vue';
-import { cancelFtRun, fetchFtRuns } from '@/services/fitnessService.js';
+import { cancelFtRun, fetchFtRuns, streamFtRun } from '@/services/fitnessService.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -58,6 +73,12 @@ const activeRuns = ref([]);
 const total = ref(0);
 const page = ref(1);
 const pageSize = ref(20);
+/** @type {Map<number, object>} */
+const liveMap = ref(new Map());
+/** @type {Map<number, EventSource>} */
+const streamMap = new Map();
+/** @type {ReturnType<typeof setInterval> | null} */
+let pollTimer = null;
 
 const runColumns = [
   { prop: 'id', label: 'Run ID', width: 80 },
@@ -66,6 +87,41 @@ const runColumns = [
   { prop: 'status', label: '状态', width: 100 },
   { prop: 'verdict', label: '判定', width: 80 },
 ];
+
+function rowProgress(row) {
+  const live = liveMap.value.get(row.id);
+  const p = live?.percent ?? row.progress?.percent ?? 0;
+  const rate = live?.pass_rate ?? row.progress?.pass_rate;
+  const completed = live?.completed;
+  const totalCount = live?.total;
+  let label = row.status;
+  if (completed && totalCount) label = `${completed}/${totalCount}`;
+  else if (rate != null) label = `达标率 ${rate}%`;
+  return {
+    percent: Number.isFinite(Number(p)) ? Number(p) : 0,
+    label,
+    status: row.status === 'failed' ? 'exception' : undefined,
+  };
+}
+
+function closeStreams() {
+  for (const es of streamMap.values()) es.close();
+  streamMap.clear();
+}
+
+function attachStreams(rows) {
+  closeStreams();
+  for (const row of rows) {
+    const es = streamFtRun(row.id, payload => {
+      liveMap.value.set(row.id, payload);
+      liveMap.value = new Map(liveMap.value);
+      if ([ 'success', 'failed', 'cancelled' ].includes(payload.status)) {
+        loadActive();
+      }
+    });
+    streamMap.set(row.id, es);
+  }
+}
 
 async function loadHistory() {
   loading.value = true;
@@ -90,6 +146,7 @@ async function loadActive() {
       fetchFtRuns({ status: 'running', pageSize: 50 }),
     ]);
     activeRuns.value = [ ...(pending.list || []), ...(running.list || []) ];
+    if (tab.value === 'running') attachStreams(activeRuns.value);
   } finally {
     activeLoading.value = false;
   }
@@ -102,9 +159,29 @@ async function cancelRun(runId) {
 }
 
 function onTabChange(name) {
-  if (name === 'running') loadActive();
-  if (name === 'history') loadHistory();
+  if (name === 'running') {
+    loadActive();
+    pollTimer = setInterval(loadActive, 8000);
+  } else {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = null;
+    closeStreams();
+    loadHistory();
+  }
 }
 
 onMounted(loadHistory);
+onBeforeUnmount(() => {
+  if (pollTimer) clearInterval(pollTimer);
+  closeStreams();
+});
 </script>
+
+<style scoped>
+.progress-text {
+  display: block;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  margin-top: 4px;
+}
+</style>

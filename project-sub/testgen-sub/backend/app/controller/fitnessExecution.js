@@ -69,6 +69,89 @@ class FitnessExecutionController extends Controller {
     this.ctx.body = { code: 0, message: 'ok', data };
   }
 
+  async showSampleSet() {
+    const data = await this.service.fitnessExecution.getSampleSet(this.ctx.params.setId);
+    if (!data) {
+      this.ctx.status = 404;
+      this.ctx.body = { code: 404, message: '样本集不存在', data: null };
+      return;
+    }
+    this.ctx.body = { code: 0, message: 'ok', data };
+  }
+
+  async updateSampleSet() {
+    const data = await this.service.fitnessExecution.updateSampleSet(
+      this.ctx.params.setId,
+      this.ctx.request.body || {},
+    );
+    if (!data) {
+      this.ctx.status = 404;
+      this.ctx.body = { code: 404, message: '样本集不存在', data: null };
+      return;
+    }
+    this.ctx.body = { code: 0, message: 'ok', data };
+  }
+
+  async deleteSampleSet() {
+    const ok = await this.service.fitnessExecution.deleteSampleSet(this.ctx.params.setId);
+    if (!ok) {
+      this.ctx.status = 404;
+      this.ctx.body = { code: 404, message: '样本集不存在', data: null };
+      return;
+    }
+    this.ctx.body = { code: 0, message: 'deleted', data: null };
+  }
+
+  async listSampleItems() {
+    const data = await this.service.fitnessExecution.listSampleItems(this.ctx.params.setId);
+    if (!data) {
+      this.ctx.status = 404;
+      this.ctx.body = { code: 404, message: '样本集不存在', data: null };
+      return;
+    }
+    this.ctx.body = { code: 0, message: 'ok', data };
+  }
+
+  async createSampleItem() {
+    try {
+      const data = await this.service.fitnessExecution.createSampleItem(
+        this.ctx.params.setId,
+        this.ctx.request.body || {},
+      );
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      if (this.handleError(err)) return;
+      throw err;
+    }
+  }
+
+  async updateSampleItem() {
+    const data = await this.service.fitnessExecution.updateSampleItem(
+      this.ctx.params.setId,
+      this.ctx.params.itemId,
+      this.ctx.request.body || {},
+    );
+    if (!data) {
+      this.ctx.status = 404;
+      this.ctx.body = { code: 404, message: '样本不存在', data: null };
+      return;
+    }
+    this.ctx.body = { code: 0, message: 'ok', data };
+  }
+
+  async deleteSampleItem() {
+    const ok = await this.service.fitnessExecution.deleteSampleItem(
+      this.ctx.params.setId,
+      this.ctx.params.itemId,
+    );
+    if (!ok) {
+      this.ctx.status = 404;
+      this.ctx.body = { code: 404, message: '样本不存在', data: null };
+      return;
+    }
+    this.ctx.body = { code: 0, message: 'deleted', data: null };
+  }
+
   async listRuns() {
     const data = await this.service.fitnessExecution.listRuns(this.ctx.query);
     this.ctx.body = { code: 0, message: 'ok', data };

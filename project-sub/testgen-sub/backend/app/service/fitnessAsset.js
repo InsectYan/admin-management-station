@@ -7,6 +7,12 @@ const {
   loadDisplayLabels,
   paginateRows,
 } = require('../lib/fitnessDisplay');
+const {
+  ITEM_SCHEME_FALLBACK_JOINS,
+  ITEM_SCHEME_FALLBACK_SELECT,
+  applyMinorSchemeFallback,
+  applyMinorSchemeFallbackAll,
+} = require('../lib/itemSchemeResolve');
 
 const ALLOWED_TABLES = new Set([
   'test_dimension', 'test_category_major', 'test_category_minor',
@@ -45,6 +51,7 @@ const ITEM_LIST_JOINS = `
   LEFT JOIN test_role_enum rl ON rl.role_scope_id = t.role_scope_id
   LEFT JOIN test_exec_env_enum ee ON ee.exec_env_id = t.exec_env_id
   LEFT JOIN test_env_tier_enum et ON et.env_tier_id = t.env_tier_id
+  ${ITEM_SCHEME_FALLBACK_JOINS}
 `;
 
 const ITEM_LIST_SELECT = `
@@ -59,7 +66,8 @@ const ITEM_LIST_SELECT = `
   st.name AS station_name,
   rl.name AS role_scope_name,
   ee.name AS exec_env_name,
-  et.name AS env_tier_name
+  et.name AS env_tier_name,
+  ${ITEM_SCHEME_FALLBACK_SELECT}
 `;
 
 const EXECUTION_STATUS_LABELS = {
@@ -172,8 +180,10 @@ class FitnessAssetService extends require('egg').Service {
     const [ configs ] = await this.app.model.query(`
       SELECT DISTINCT ON (fc.item_id) fc.item_id, fc.threshold_json
       FROM ft_run_config fc
-      INNER JOIN test_item_detail t ON t.item_id = fc.item_id AND fc.scheme_id = t.scheme_primary_id
+      INNER JOIN test_item_detail t ON t.item_id = fc.item_id
+      LEFT JOIN test_category_minor_scheme cms ON cms.category_minor_id = t.category_minor_id
       WHERE fc.item_id IN (:itemIds)
+        AND fc.scheme_id = COALESCE(t.scheme_primary_id, cms.scheme_primary_id)
       ORDER BY fc.item_id, fc.updated_at DESC
     `, { replacements: { itemIds } });
     const configByItem = Object.fromEntries(configs.map(c => [ c.item_id, c.threshold_json ]));
@@ -276,7 +286,7 @@ class FitnessAssetService extends require('egg').Service {
       LIMIT :limit OFFSET :offset
     `;
     const [ rows ] = await this.app.model.query(listSql, { replacements });
-    const list = await this.enrichItemsWithExecutionMetrics(rows);
+    const list = await this.enrichItemsWithExecutionMetrics(applyMinorSchemeFallbackAll(rows));
     return { list, total, page: Number(page), pageSize: Number(pageSize) };
   }
 
@@ -294,7 +304,7 @@ class FitnessAssetService extends require('egg').Service {
       LIMIT :limit
     `;
     const [ rows ] = await this.app.model.query(listSql, { replacements });
-    const enriched = await this.enrichItemsWithExecutionMetrics(rows);
+    const enriched = await this.enrichItemsWithExecutionMetrics(applyMinorSchemeFallbackAll(rows));
 
     const columns = [
       { key: 'item_id', label: '用例编码' },
@@ -343,7 +353,7 @@ class FitnessAssetService extends require('egg').Service {
     );
     if (!rows.length) return null;
 
-    const item = rows[0];
+    const item = applyMinorSchemeFallback(rows[0]);
     const [ prdGoals, prdRefs, archRefs, riskLinks ] = await Promise.all([
       this.app.model.query(
         `SELECT l.*, g.name AS goal_name FROM test_item_prd_goal_link l

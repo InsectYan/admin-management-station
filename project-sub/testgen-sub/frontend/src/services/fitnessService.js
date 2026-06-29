@@ -99,6 +99,16 @@ export async function exportPlanReport(id) {
   return data.data;
 }
 
+export async function launchPlan(planId, payload) {
+  const { data } = await api.post(`/fitness/plans/${planId}/launch`, payload);
+  return data.data;
+}
+
+export async function fetchPlanRuns(planId) {
+  const { data } = await api.get(`/fitness/plans/${planId}/runs`);
+  return data.data;
+}
+
 export async function fetchEnvironments(params) {
   const { data } = await api.get('/fitness/environments', { params });
   return data.data;
@@ -106,6 +116,53 @@ export async function fetchEnvironments(params) {
 
 export async function fetchSampleSets(params) {
   const { data } = await api.get('/fitness/samples', { params });
+  return data.data;
+}
+
+export async function fetchSampleSet(setId) {
+  const { data } = await api.get(`/fitness/samples/${setId}`);
+  return data.data;
+}
+
+export async function createSampleSet(payload) {
+  const { data } = await api.post('/fitness/samples', payload);
+  return data.data;
+}
+
+export async function updateSampleSet(setId, payload) {
+  const { data } = await api.put(`/fitness/samples/${setId}`, payload);
+  return data.data;
+}
+
+export async function deleteSampleSet(setId) {
+  const { data } = await api.delete(`/fitness/samples/${setId}`);
+  return data.data;
+}
+
+export async function fetchSampleItems(setId) {
+  const { data } = await api.get(`/fitness/samples/${setId}/items`);
+  return data.data;
+}
+
+export async function createSampleItem(setId, payload) {
+  const { data } = await api.post(`/fitness/samples/${setId}/items`, payload);
+  return data.data;
+}
+
+export async function updateSampleItem(setId, itemId, payload) {
+  const { data } = await api.put(`/fitness/samples/${setId}/items/${itemId}`, payload);
+  return data.data;
+}
+
+export async function deleteSampleItem(setId, itemId) {
+  const { data } = await api.delete(`/fitness/samples/${setId}/items/${itemId}`);
+  return data.data;
+}
+
+export async function fetchRunConfig(itemId, schemeId) {
+  const { data } = await api.get(`/fitness/run-config/${encodeURIComponent(itemId)}`, {
+    params: { scheme_id: schemeId },
+  });
   return data.data;
 }
 
@@ -165,6 +222,22 @@ export const SCHEME_CONFIG_ROUTES = {
   'TS-09-LOAD': 'load',
   'TS-10-MAN': 'man',
 };
+
+export const SCHEME_TYPE_TO_ID = Object.fromEntries(
+  Object.entries(SCHEME_CONFIG_ROUTES).map(([ id, type ]) => [ type, id ]),
+);
+
+/** E2/E3/E4/E5 已实现的方案 */
+export const LAUNCHABLE_SCHEMES = new Set([
+  'TS-01-DET',
+  'TS-02-BND',
+  'TS-03-REP',
+  'TS-04-SET',
+  'TS-05-CHAIN',
+  'TS-06-PAIR',
+  'TS-07-NEG',
+  'TS-08-OBS',
+]);
 
 export function schemeToConfigPath(schemeId) {
   return SCHEME_CONFIG_ROUTES[schemeId] || 'det';

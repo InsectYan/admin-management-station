@@ -45,7 +45,10 @@ class FitnessExecutionService extends require('egg').Service {
     const page = Number(query.page) || 1;
     const pageSize = Number(query.pageSize) || 20;
     const offset = (page - 1) * pageSize;
+    const where = {};
+    if (query.item_id) where.item_id = query.item_id;
     const { count, rows } = await this.ctx.model.FtSampleSet.findAndCountAll({
+      where,
       order: [[ 'id', 'DESC' ]],
       limit: pageSize,
       offset,
@@ -54,7 +57,93 @@ class FitnessExecutionService extends require('egg').Service {
   }
 
   async createSampleSet(body) {
-    return this.ctx.model.FtSampleSet.create(body);
+    const row = await this.ctx.model.FtSampleSet.create(body);
+    return row;
+  }
+
+  async getSampleSet(id) {
+    const set = await this.ctx.model.FtSampleSet.findByPk(id);
+    if (!set) return null;
+    const items = await this.ctx.model.FtSampleItem.findAll({
+      where: { sample_set_id: id },
+      order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
+    });
+    return { ...set.toJSON(), items };
+  }
+
+  async updateSampleSet(id, body) {
+    const row = await this.ctx.model.FtSampleSet.findByPk(id);
+    if (!row) return null;
+    await row.update(body);
+    return row;
+  }
+
+  async deleteSampleSet(id) {
+    const row = await this.ctx.model.FtSampleSet.findByPk(id);
+    if (!row) return false;
+    await row.destroy();
+    return true;
+  }
+
+  async syncSampleCount(sampleSetId) {
+    const count = await this.ctx.model.FtSampleItem.count({ where: { sample_set_id: sampleSetId } });
+    await this.ctx.model.FtSampleSet.update(
+      { sample_count: count },
+      { where: { id: sampleSetId } },
+    );
+    return count;
+  }
+
+  async listSampleItems(setId) {
+    const set = await this.ctx.model.FtSampleSet.findByPk(setId);
+    if (!set) return null;
+    const items = await this.ctx.model.FtSampleItem.findAll({
+      where: { sample_set_id: setId },
+      order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
+    });
+    return { set, items };
+  }
+
+  async createSampleItem(setId, body) {
+    const set = await this.ctx.model.FtSampleSet.findByPk(setId);
+    if (!set) {
+      const err = new Error('样本集不存在');
+      err.status = 404;
+      throw err;
+    }
+    const row = await this.ctx.model.FtSampleItem.create({
+      sample_set_id: setId,
+      input_data: body.input_data || {},
+      expected_data: body.expected_data,
+      metadata: body.metadata || {},
+      sort_order: body.sort_order ?? 0,
+    });
+    await this.syncSampleCount(setId);
+    return row;
+  }
+
+  async updateSampleItem(setId, itemId, body) {
+    const row = await this.ctx.model.FtSampleItem.findOne({
+      where: { id: itemId, sample_set_id: setId },
+    });
+    if (!row) return null;
+    await row.update({
+      input_data: body.input_data ?? row.input_data,
+      expected_data: body.expected_data ?? row.expected_data,
+      metadata: body.metadata ?? row.metadata,
+      sort_order: body.sort_order ?? row.sort_order,
+    });
+    return row;
+  }
+
+  async deleteSampleItem(setId, itemId) {
+    const row = await this.ctx.model.FtSampleItem.findOne({
+      where: { id: itemId, sample_set_id: setId },
+    });
+    if (!row) return false;
+    await row.destroy();
+    await this.syncSampleCount(setId);
+    return true;
   }
 
   async listRuns(query = {}) {

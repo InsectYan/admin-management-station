@@ -1,7 +1,7 @@
 ﻿<template>
   <PageShell title="样本集库" table-layout>
     <template #extra>
-      <el-button type="primary" @click="showForm = true">新建样本集</el-button>
+      <el-button type="primary" @click="openCreateSet">新建样本集</el-button>
     </template>
     <FitnessLabeledTable
       :data="sets"
@@ -13,14 +13,63 @@
       @update:page="page = $event"
       @update:page-size="pageSize = $event"
       @change="load"
-    />
-    <el-dialog v-model="showForm" title="新建样本集" width="400px">
-      <el-form label-width="80px">
-        <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
-        <el-form-item label="用例 ID"><el-input v-model="form.item_id" /></el-form-item>
+    >
+      <template #suffix>
+        <el-table-column label="操作" width="200" fixed="right">
+          <template #default="{ row }">
+            <el-button link @click="openItems(row)">条目</el-button>
+            <el-button link @click="editSet(row)">编辑</el-button>
+            <el-button link type="danger" @click="removeSet(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </template>
+    </FitnessLabeledTable>
+
+    <el-dialog v-model="showSetForm" :title="setForm.id ? '编辑样本集' : '新建样本集'" width="440px">
+      <el-form label-width="90px">
+        <el-form-item label="名称"><el-input v-model="setForm.name" /></el-form-item>
+        <el-form-item label="用例 ID"><el-input v-model="setForm.item_id" placeholder="可选" /></el-form-item>
+        <el-form-item label="标签"><el-input v-model="tagsText" placeholder="逗号分隔" /></el-form-item>
       </el-form>
       <template #footer>
-        <el-button type="primary" @click="create">保存</el-button>
+        <el-button @click="showSetForm = false">取消</el-button>
+        <el-button type="primary" @click="saveSet">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-drawer v-model="showItems" :title="activeSet?.name || '样本条目'" size="640px">
+      <div style="margin-bottom:12px">
+        <el-button type="primary" size="small" @click="openItemForm()">添加 HTTP 样本</el-button>
+      </div>
+      <el-table v-loading="itemsLoading" :data="items" size="small" border>
+        <el-table-column prop="sort_order" label="#" width="50" />
+        <el-table-column label="请求" min-width="200">
+          <template #default="{ row }">{{ formatInput(row.input_data) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="120">
+          <template #default="{ row }">
+            <el-button link @click="openItemForm(row)">编辑</el-button>
+            <el-button link type="danger" @click="removeItem(row)">删</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-drawer>
+
+    <el-dialog v-model="showItemForm" :title="itemForm.id ? '编辑样本' : '添加样本'" width="480px">
+      <el-form label-width="100px">
+        <el-form-item label="Path"><el-input v-model="itemForm.path" placeholder="/health" /></el-form-item>
+        <el-form-item label="Method">
+          <el-select v-model="itemForm.method" style="width:120px">
+            <el-option label="GET" value="GET" />
+            <el-option label="POST" value="POST" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="期望 Status"><el-input-number v-model="itemForm.expect_status" :min="100" :max="599" /></el-form-item>
+        <el-form-item label="排序"><el-input-number v-model="itemForm.sort_order" :min="0" /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showItemForm = false">取消</el-button>
+        <el-button type="primary" @click="saveItem">保存</el-button>
       </template>
     </el-dialog>
   </PageShell>
@@ -28,25 +77,53 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import PageShell from '@/components/PageShell.vue';
 import FitnessLabeledTable from '@/components/fitness/FitnessLabeledTable.vue';
-import { api } from '@/services/apiConfig.js';
-import { fetchSampleSets } from '@/services/fitnessService.js';
+import {
+  createSampleItem,
+  createSampleSet,
+  deleteSampleItem,
+  deleteSampleSet,
+  fetchSampleItems,
+  fetchSampleSets,
+  updateSampleItem,
+  updateSampleSet,
+} from '@/services/fitnessService.js';
 
 const loading = ref(false);
+const itemsLoading = ref(false);
 const sets = ref([]);
+const items = ref([]);
 const total = ref(0);
 const page = ref(1);
 const pageSize = ref(20);
-const showForm = ref(false);
-const form = reactive({ name: '', item_id: '' });
+const showSetForm = ref(false);
+const showItems = ref(false);
+const showItemForm = ref(false);
+const activeSet = ref(null);
+const setForm = reactive({ id: null, name: '', item_id: '' });
+const tagsText = ref('');
+const itemForm = reactive({
+  id: null,
+  path: '/health',
+  method: 'GET',
+  expect_status: 200,
+  sort_order: 0,
+});
 
 const sampleColumns = [
+  { prop: 'id', label: 'ID', width: 60 },
   { prop: 'name', label: '样本集名称', minWidth: 160 },
   { prop: 'item_id', label: '关联用例', width: 140 },
   { prop: 'sample_count', label: '条数', width: 80 },
   { prop: 'tags', label: '标签', minWidth: 120 },
 ];
+
+function formatInput(d) {
+  d = d || {};
+  return `${d.method || 'GET'} ${d.path || '?'} → ${d.expect_status ?? 200}`;
+}
 
 async function load() {
   loading.value = true;
@@ -59,9 +136,99 @@ async function load() {
   }
 }
 
-async function create() {
-  await api.post('/fitness/samples', form);
-  showForm.value = false;
+function openCreateSet() {
+  setForm.id = null;
+  setForm.name = '';
+  setForm.item_id = '';
+  tagsText.value = '';
+  showSetForm.value = true;
+}
+
+function editSet(row) {
+  setForm.id = row.id;
+  setForm.name = row.name;
+  setForm.item_id = row.item_id || '';
+  tagsText.value = Array.isArray(row.tags) ? row.tags.join(',') : '';
+  showSetForm.value = true;
+}
+
+async function saveSet() {
+  const tags = tagsText.value
+    ? tagsText.value.split(',').map(s => s.trim()).filter(Boolean)
+    : [];
+  const payload = { name: setForm.name, item_id: setForm.item_id || null, tags };
+  if (setForm.id) {
+    await updateSampleSet(setForm.id, payload);
+  } else {
+    await createSampleSet(payload);
+  }
+  showSetForm.value = false;
+  ElMessage.success('已保存');
+  await load();
+}
+
+async function removeSet(row) {
+  await ElMessageBox.confirm(`删除样本集「${row.name}」？`, '确认');
+  await deleteSampleSet(row.id);
+  ElMessage.success('已删除');
+  await load();
+}
+
+async function openItems(row) {
+  activeSet.value = row;
+  showItems.value = true;
+  itemsLoading.value = true;
+  try {
+    const data = await fetchSampleItems(row.id);
+    items.value = data.items || [];
+  } finally {
+    itemsLoading.value = false;
+  }
+}
+
+function openItemForm(row) {
+  if (row) {
+    const d = row.input_data || {};
+    itemForm.id = row.id;
+    itemForm.path = d.path || '/health';
+    itemForm.method = d.method || 'GET';
+    itemForm.expect_status = d.expect_status ?? 200;
+    itemForm.sort_order = row.sort_order ?? 0;
+  } else {
+    itemForm.id = null;
+    itemForm.path = '/health';
+    itemForm.method = 'GET';
+    itemForm.expect_status = 200;
+    itemForm.sort_order = items.value.length;
+  }
+  showItemForm.value = true;
+}
+
+async function saveItem() {
+  const payload = {
+    sort_order: itemForm.sort_order,
+    input_data: {
+      runner: 'http',
+      path: itemForm.path,
+      method: itemForm.method,
+      expect_status: itemForm.expect_status,
+    },
+  };
+  if (itemForm.id) {
+    await updateSampleItem(activeSet.value.id, itemForm.id, payload);
+  } else {
+    await createSampleItem(activeSet.value.id, payload);
+  }
+  showItemForm.value = false;
+  ElMessage.success('已保存');
+  await openItems(activeSet.value);
+  await load();
+}
+
+async function removeItem(row) {
+  await ElMessageBox.confirm('删除该样本？', '确认');
+  await deleteSampleItem(activeSet.value.id, row.id);
+  await openItems(activeSet.value);
   await load();
 }
 

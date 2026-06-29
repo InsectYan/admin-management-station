@@ -21,7 +21,32 @@ class FitnessPlanService extends require('egg').Service {
       this.ctx.model.TestPlanItem.findAll({ where: { plan_id: id }, order: [[ 'sort_order', 'ASC' ]] }),
       this.ctx.model.TestPlanItemResult.findAll({ where: { plan_id: id } }),
     ]);
-    return { ...plan.toJSON(), scope, thresholds, items, results };
+
+    const itemIds = items.map(i => i.item_id);
+    let schemeByItem = {};
+    if (itemIds.length) {
+      const [ rows ] = await this.app.model.query(`
+        SELECT t.item_id,
+          COALESCE(t.scheme_primary_id, cms.scheme_primary_id) AS scheme_primary_id
+        FROM test_item_detail t
+        LEFT JOIN test_category_minor_scheme cms ON cms.category_minor_id = t.category_minor_id
+        WHERE t.item_id IN (:itemIds)
+      `, { replacements: { itemIds } });
+      schemeByItem = Object.fromEntries(rows.map(r => [ r.item_id, r.scheme_primary_id ]));
+    }
+
+    const enrichedItems = items.map(row => ({
+      ...row.toJSON(),
+      scheme_primary_id: schemeByItem[row.item_id] || null,
+    }));
+
+    return {
+      ...plan.toJSON(),
+      scope,
+      thresholds,
+      items: enrichedItems,
+      results: results.map(r => r.toJSON()),
+    };
   }
 
   async create(payload) {
@@ -131,7 +156,8 @@ class FitnessPlanService extends require('egg').Service {
     ];
     for (const item of plan.items) {
       const result = plan.results.find(r => r.plan_item_id === item.id);
-      lines.push(`- ${item.item_id}: ${result?.result_status || 'pending'}`);
+      const runHint = result?.ft_run_id ? ` (run #${result.ft_run_id})` : '';
+      lines.push(`- ${item.item_id}: ${result?.result_status || 'pending'}${runHint}`);
     }
     const content = lines.join('\n');
     await this.ctx.model.TestPlanReport.create({
@@ -140,6 +166,16 @@ class FitnessPlanService extends require('egg').Service {
       content,
     });
     return { content, plan };
+  }
+
+  async launchPlan(planId, body = {}) {
+    const PlanBatchRunner = require('./execution/planBatchRunner');
+    return new PlanBatchRunner(this.ctx).launchPlan(planId, body);
+  }
+
+  async getPlanRunSummary(planId) {
+    const PlanBatchRunner = require('./execution/planBatchRunner');
+    return new PlanBatchRunner(this.ctx).getPlanRunSummary(planId);
   }
 }
 
