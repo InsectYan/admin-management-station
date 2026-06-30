@@ -1,7 +1,7 @@
 ﻿<template>
-  <PageShell :title="`方案配置 — ${schemeType?.toUpperCase()}`" v-loading="loading">
+  <div v-loading="loading">
     <el-alert type="info" :closable="false" style="margin-bottom:16px">
-      配置页预填来自 test_item_detail；保存后可在执行确认页一键执行。E5 支持 TS-01～08（不含 LOAD/MAN）。
+      配置页预填来自 test_item_detail；保存后可在执行页一键执行。E5 支持 TS-01～08（不含 LOAD/MAN）。
     </el-alert>
     <component
       :is="configComponent"
@@ -11,19 +11,19 @@
       v-model:threshold="thresholdJson"
     />
     <el-button type="primary" style="margin-top:16px" @click="save">保存配置</el-button>
-  </PageShell>
+  </div>
 </template>
 
 <script setup>
-import { computed, defineAsyncComponent, onMounted, ref } from 'vue';
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import PageShell from '@/components/PageShell.vue';
 import {
   SCHEME_TYPE_TO_ID,
   fetchRunConfig,
   fetchTestItem,
   saveRunConfig,
+  schemeToConfigPath,
 } from '@/services/fitnessService.js';
 
 const COMPONENTS = {
@@ -40,8 +40,8 @@ const COMPONENTS = {
 };
 
 const route = useRoute();
-const itemId = route.params.itemId;
-const schemeType = computed(() => route.params.schemeType);
+const itemId = computed(() => route.params.itemId);
+const schemeType = computed(() => route.params.schemeType || schemeToConfigPath(item.value?.scheme_primary_id));
 const schemeId = computed(() => SCHEME_TYPE_TO_ID[schemeType.value] || 'TS-01-DET');
 const configComponent = computed(() => COMPONENTS[schemeType.value] || COMPONENTS.det);
 const loading = ref(false);
@@ -49,11 +49,11 @@ const item = ref(null);
 const configJson = ref({});
 const thresholdJson = ref({});
 
-onMounted(async () => {
+async function loadConfig() {
   loading.value = true;
   try {
-    item.value = await fetchTestItem(itemId);
-    const saved = await fetchRunConfig(itemId, schemeId.value);
+    item.value = await fetchTestItem(itemId.value);
+    const saved = await fetchRunConfig(itemId.value, schemeId.value);
     configJson.value = saved?.config_json || {
       http_method: item.value.http_method,
       endpoint_path: item.value.endpoint_path,
@@ -68,10 +68,10 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
-});
+}
 
 async function save() {
-  await saveRunConfig(itemId, {
+  await saveRunConfig(itemId.value, {
     scheme_id: schemeId.value,
     config_json: configJson.value,
     threshold_json: thresholdJson.value,
@@ -79,4 +79,8 @@ async function save() {
   });
   ElMessage.success('配置已保存');
 }
+
+watch(itemId, loadConfig);
+
+onMounted(loadConfig);
 </script>

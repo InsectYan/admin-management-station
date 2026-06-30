@@ -1,13 +1,5 @@
 ﻿<template>
-  <PageShell :title="item?.item_name || '测试项详情'" v-loading="loading">
-    <template #extra>
-      <el-button @click="router.push('/fitness/assets/items')">返回列表</el-button>
-      <el-button v-if="item?.automation_command" type="warning" @click="copyCommand">复制命令</el-button>
-      <el-button @click="router.push(`/fitness/execution/run/${itemId}/config/${configPath}`)">配置</el-button>
-      <el-button type="primary" @click="router.push(`/fitness/execution/run/${itemId}/launch`)">执行</el-button>
-      <el-button @click="router.push({ path: '/fitness/execution/center', query: { itemId } })">历史</el-button>
-    </template>
-
+  <div v-loading="loading">
     <el-descriptions v-if="item" :column="2" border>
       <el-descriptions-item label="ID">{{ item.item_id }}</el-descriptions-item>
       <el-descriptions-item label="优先级">{{ item.priority_name || item.priority_id }}</el-descriptions-item>
@@ -68,49 +60,43 @@
         </el-table>
       </el-tab-pane>
     </el-tabs>
-  </PageShell>
+  </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
-import PageShell from '@/components/PageShell.vue';
-import { fetchTestItem, schemeToConfigPath } from '@/services/fitnessService.js';
+import { fetchTestItem } from '@/services/fitnessService.js';
 import { riskRelationTag } from '@/utils/fitnessExport.js';
 
 const route = useRoute();
 const router = useRouter();
-const itemId = computed(() => route.params.itemId);
 const loading = ref(false);
 const item = ref(null);
-const configPath = computed(() => schemeToConfigPath(item.value?.scheme_primary_id));
 
 function relationTag(typeId) {
   return riskRelationTag(typeId);
 }
 
 function goRelatedItem(row) {
-  const peerId = row.source_item_id === itemId.value ? row.target_item_id : row.source_item_id;
-  if (peerId && peerId !== itemId.value) {
+  const peerId = row.source_item_id === route.params.itemId ? row.target_item_id : row.source_item_id;
+  if (peerId && peerId !== route.params.itemId) {
     router.push(`/fitness/assets/items/${encodeURIComponent(peerId)}`);
   }
 }
 
-async function copyCommand() {
-  if (!item.value?.automation_command) return;
-  await navigator.clipboard.writeText(item.value.automation_command);
-  ElMessage.success('已复制自动化命令');
-}
-
-onMounted(async () => {
+async function loadItem() {
   loading.value = true;
   try {
-    item.value = await fetchTestItem(itemId.value);
+    item.value = await fetchTestItem(route.params.itemId);
   } finally {
     loading.value = false;
   }
-});
+}
+
+watch(() => route.params.itemId, loadItem);
+
+onMounted(loadItem);
 </script>
 
 <style scoped>

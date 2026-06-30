@@ -8,7 +8,6 @@
     />
     <div class="items-toolbar">
       <el-button :disabled="!selectedRows.length" @click="openAddToPlan">加入计划 ({{ selectedRows.length || 0 }})</el-button>
-      <el-button :disabled="!selectedRows.length" @click="copyCommands">复制自动化命令</el-button>
       <el-button :loading="exporting" @click="exportJson">导出 JSON</el-button>
       <el-button :loading="exporting" @click="exportCsv">导出 CSV</el-button>
     </div>
@@ -65,10 +64,11 @@
         {{ formatPassRate(row.target_pass_rate) }}
       </template>
       <template #suffix>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" size="small" @click="goDetail(row)">查看详情</el-button>
-            <el-button link type="warning" size="small" @click="copyOneCommand(row)">复制命令</el-button>
+            <el-button link type="primary" size="small" @click="goDetail(row)">详情</el-button>
+            <el-button link size="small" @click="goConfig(row)">配置</el-button>
+            <el-button link type="primary" size="small" @click="goLaunch(row)">执行</el-button>
           </template>
         </el-table-column>
       </template>
@@ -239,32 +239,21 @@ async function loadData() {
   }
 }
 
+function itemPath(row, module) {
+  const base = `/fitness/assets/items/${encodeURIComponent(row.item_id)}`;
+  return module ? `${base}/${module}` : base;
+}
+
 function goDetail(row) {
-  router.push(`/fitness/assets/items/${encodeURIComponent(row.item_id)}`);
+  router.push(itemPath(row));
 }
 
-async function copyText(text) {
-  if (!text) {
-    ElMessage.warning('无自动化命令可复制');
-    return;
-  }
-  await navigator.clipboard.writeText(text);
-  ElMessage.success('已复制到剪贴板');
+function goConfig(row) {
+  router.push(itemPath(row, 'config'));
 }
 
-function copyOneCommand(row) {
-  copyText(row.automation_command || '');
-}
-
-function copyCommands() {
-  const lines = selectedRows.value
-    .map(r => r.automation_command)
-    .filter(Boolean);
-  if (!lines.length) {
-    ElMessage.warning('选中项均无 automation_command');
-    return;
-  }
-  copyText(lines.join('\n'));
+function goLaunch(row) {
+  router.push(itemPath(row, 'launch'));
 }
 
 async function exportJson() {

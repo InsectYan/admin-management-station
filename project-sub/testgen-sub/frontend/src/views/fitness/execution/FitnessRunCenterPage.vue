@@ -170,7 +170,13 @@ function onTabChange(name) {
   }
 }
 
-onMounted(loadHistory);
+onMounted(() => {
+  if (route.query.itemId) {
+    router.replace(`/fitness/assets/items/${encodeURIComponent(route.query.itemId)}/history`);
+    return;
+  }
+  loadHistory();
+});
 onBeforeUnmount(() => {
   if (pollTimer) clearInterval(pollTimer);
   closeStreams();

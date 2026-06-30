@@ -62,9 +62,34 @@ export function createAppRouter(basename) {
           },
           {
             path: 'fitness/assets/items/:itemId',
-            name: 'fitness-item-detail',
-            component: () => import('../views/fitness/assets/FitnessItemDetailPage.vue'),
+            component: () => import('../views/fitness/assets/FitnessItemLayout.vue'),
             meta: { title: '测试项详情', group: 'fitness' },
+            children: [
+              {
+                path: '',
+                name: 'fitness-item-detail',
+                component: () => import('../views/fitness/assets/FitnessItemDetailPage.vue'),
+                meta: { title: '测试项详情', group: 'fitness' },
+              },
+              {
+                path: 'config',
+                name: 'fitness-item-config',
+                component: () => import('../views/fitness/execution/FitnessRunConfigPage.vue'),
+                meta: { title: '方案配置', group: 'fitness' },
+              },
+              {
+                path: 'launch',
+                name: 'fitness-item-launch',
+                component: () => import('../views/fitness/execution/FitnessRunLaunchPage.vue'),
+                meta: { title: '执行确认', group: 'fitness' },
+              },
+              {
+                path: 'history',
+                name: 'fitness-item-history',
+                component: () => import('../views/fitness/assets/FitnessItemHistoryTab.vue'),
+                meta: { title: '执行历史', group: 'fitness' },
+              },
+            ],
           },
           {
             path: 'fitness/assets/browse',
@@ -156,15 +181,11 @@ export function createAppRouter(basename) {
           },
           {
             path: 'fitness/execution/run/:itemId/config/:schemeType',
-            name: 'fitness-run-config',
-            component: () => import('../views/fitness/execution/FitnessRunConfigPage.vue'),
-            meta: { title: '方案配置', group: 'fitness' },
+            redirect: to => `/fitness/assets/items/${encodeURIComponent(to.params.itemId)}/config`,
           },
           {
             path: 'fitness/execution/run/:itemId/launch',
-            name: 'fitness-run-launch',
-            component: () => import('../views/fitness/execution/FitnessRunLaunchPage.vue'),
-            meta: { title: '执行确认', group: 'fitness' },
+            redirect: to => `/fitness/assets/items/${encodeURIComponent(to.params.itemId)}/launch`,
           },
           {
             path: 'fitness/execution/runs/:runId',
