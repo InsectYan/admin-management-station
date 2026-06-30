@@ -83,7 +83,7 @@ function goP0Config() {
     router.push(`/fitness/assets/items/${encodeURIComponent(p0ConfigItemId.value)}/config`);
     return;
   }
-  router.push({ path: '/fitness/assets/items', query: { is_p0_blocker: 'true' } });
+  router.push({ path: '/testgen/items', query: { is_p0_blocker: 'true' } });
 }
 
 watch(() => route.params.tab, () => {

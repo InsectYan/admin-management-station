@@ -1,9 +1,5 @@
 -- 接口测试执行扩展（apitest 迭代）
-
-ALTER TABLE test_cases
-  ADD COLUMN IF NOT EXISTS http_config JSONB DEFAULT NULL;
-
-CREATE INDEX IF NOT EXISTS idx_test_cases_http_config ON test_cases USING GIN (http_config);
+-- test_cases 已废弃，执行目标改为 test_item_detail.item_id（见 019_drop_test_cases.sql）
 
 CREATE TABLE IF NOT EXISTS env_configs (
   id              SERIAL PRIMARY KEY,
@@ -29,7 +25,7 @@ WHERE NOT EXISTS (SELECT 1 FROM env_configs WHERE name = 'staging');
 CREATE TABLE IF NOT EXISTS test_runs (
   id                SERIAL PRIMARY KEY,
   batch_id          UUID,
-  case_id           INT REFERENCES test_cases(id) ON DELETE SET NULL,
+  item_id           VARCHAR(64),
   env_id            INT REFERENCES env_configs(id) ON DELETE SET NULL,
   mode              VARCHAR(16) NOT NULL DEFAULT 'functional',
   status            VARCHAR(16) NOT NULL DEFAULT 'pending',
@@ -50,7 +46,13 @@ CREATE TABLE IF NOT EXISTS test_runs (
   updated_at        TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_test_runs_case ON test_runs (case_id);
+-- 已有库从 case_id 迁移到 item_id
+ALTER TABLE test_runs ADD COLUMN IF NOT EXISTS item_id VARCHAR(64);
+ALTER TABLE test_runs DROP CONSTRAINT IF EXISTS test_runs_case_id_fkey;
+ALTER TABLE test_runs DROP COLUMN IF EXISTS case_id;
+DROP INDEX IF EXISTS idx_test_runs_case;
+
+CREATE INDEX IF NOT EXISTS idx_test_runs_item ON test_runs (item_id);
 CREATE INDEX IF NOT EXISTS idx_test_runs_status ON test_runs (status);
 CREATE INDEX IF NOT EXISTS idx_test_runs_batch ON test_runs (batch_id);
 

@@ -6,20 +6,30 @@ export const useGenerationJobStore = defineStore('generationJob', {
     jobId: null,
     status: 'pending',
     currentPhase: 'analyze',
-    progress: { analyze: 0, functional: 0, edge: 0, review: 0 },
+    progress: { overall_percent: 0, analyze: 0, generate: 0, review: 0 },
     steps: [],
     errorMessage: null,
     agentContext: {},
     jobOptions: {},
-    testTypes: [],
+    projectCode: '',
+    projectName: '',
     pollingTimer: null,
   }),
   getters: {
     overallPercent: (s) => {
-      const vals = Object.values(s.progress);
-      if (!vals.length) return 0;
-      return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+      const fromProgress = s.progress?.overall_percent;
+      if (fromProgress != null && !Number.isNaN(Number(fromProgress))) {
+        return Math.round(Number(fromProgress));
+      }
+      const fromCtx = s.agentContext?.overall_percent;
+      if (fromCtx != null && !Number.isNaN(Number(fromCtx))) {
+        return Math.round(Number(fromCtx));
+      }
+      return 0;
     },
+    currentTarget: (s) => s.agentContext?.current_target || null,
+    targetStates: (s) => s.agentContext?.target_states || [],
+    schemeTargets: (s) => s.agentContext?.scheme_targets || s.jobOptions?.scheme_targets || [],
     isTerminal: (s) => ['done', 'failed', 'cancelled'].includes(s.status),
   },
   actions: {
@@ -33,7 +43,8 @@ export const useGenerationJobStore = defineStore('generationJob', {
       this.errorMessage = job.error_message ?? null;
       this.agentContext = job.agent_context ?? {};
       this.jobOptions = job.options ?? {};
-      this.testTypes = job.test_types ?? [];
+      this.projectCode = job.project_code ?? '';
+      this.projectName = job.project_name ?? '';
       if (this.isTerminal) this.stopPolling();
       return job;
     },

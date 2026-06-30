@@ -51,12 +51,14 @@ ON CONFLICT (code) DO NOTHING;
 CREATE TABLE IF NOT EXISTS generation_jobs (
   id              SERIAL PRIMARY KEY,
   document_id     INT REFERENCES documents(id) ON DELETE SET NULL,
-  module          VARCHAR(64) NOT NULL,
+  project_code    VARCHAR(64),
+  project_name    VARCHAR(255),
+  module          VARCHAR(64),
   test_types      JSONB NOT NULL DEFAULT '[]',
   options         JSONB DEFAULT '{}',
   status          VARCHAR(32) NOT NULL DEFAULT 'pending',
   current_phase   VARCHAR(32) DEFAULT 'analyze',
-  progress        JSONB DEFAULT '{"analyze":0,"functional":0,"edge":0,"review":0}',
+  progress        JSONB DEFAULT '{"overall_percent":0,"analyze":0,"generate":0,"review":0}',
   steps_log       JSONB DEFAULT '[]',
   agent_run_id    INT,
   agent_context   JSONB DEFAULT '{}',
@@ -71,29 +73,7 @@ CREATE TABLE IF NOT EXISTS generation_jobs (
 CREATE INDEX IF NOT EXISTS idx_generation_jobs_status ON generation_jobs (status);
 CREATE INDEX IF NOT EXISTS idx_generation_jobs_document ON generation_jobs (document_id);
 CREATE INDEX IF NOT EXISTS idx_generation_jobs_created_at ON generation_jobs (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_generation_jobs_project ON generation_jobs (project_code);
 
 -- 已有库升级见 database/migrations/001_add_agent_context.sql
-
-CREATE TABLE IF NOT EXISTS test_cases (
-  id              SERIAL PRIMARY KEY,
-  job_id          INT REFERENCES generation_jobs(id) ON DELETE CASCADE,
-  case_id         VARCHAR(64) NOT NULL,
-  title           VARCHAR(255) NOT NULL,
-  module          VARCHAR(64),
-  type            VARCHAR(32),
-  priority        VARCHAR(16) DEFAULT 'medium',
-  status          VARCHAR(20) DEFAULT 'pending',
-  confidence      REAL DEFAULT 0.0 CHECK (confidence >= 0 AND confidence <= 1),
-  compliance      VARCHAR(32) DEFAULT 'unverified',
-  preconditions   TEXT,
-  steps           JSONB NOT NULL DEFAULT '[]',
-  expected        TEXT,
-  tags            JSONB DEFAULT '[]',
-  document_id     INT REFERENCES documents(id) ON DELETE SET NULL,
-  created_at      TIMESTAMPTZ DEFAULT NOW(),
-  updated_at      TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (job_id, case_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_test_cases_job ON test_cases (job_id);
-CREATE INDEX IF NOT EXISTS idx_test_cases_module_type ON test_cases (module, type);
+-- test_cases 已废弃，见 database/migrations/019_drop_test_cases.sql

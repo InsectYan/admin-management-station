@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS test_validation_enum (
+  project_code VARCHAR(64) NOT NULL DEFAULT 'fitness-agent',
   validation_id VARCHAR(64) PRIMARY KEY,
   name TEXT,
   validation_group TEXT,

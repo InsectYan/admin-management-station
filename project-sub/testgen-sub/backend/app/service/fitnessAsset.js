@@ -35,6 +35,8 @@ const ALLOWED_VIEWS = new Set([
 ]);
 
 const ITEM_FILTER_KEYS = [
+  'project_code',
+  'generation_job_id',
   'dimension_id', 'category_major_id', 'category_minor_id', 'priority_id',
   'scheme_primary_id', 'validation_primary_id', 'automation_status_id',
   'station_id', 'role_scope_id', 'is_risk_flag', 'is_p0_blocker', 'is_observability_audit',
@@ -471,6 +473,57 @@ class FitnessAssetService extends require('egg').Service {
     const [ rows ] = await this.app.model.query(`SELECT * FROM v_risk_link_bidirectional ORDER BY source_item_id`);
     await enrichRowsWithFkNames(this.app.model, 'v_risk_link_bidirectional', rows, this.app.baseDir);
     return paginateRows(rows, page, pageSize);
+  }
+
+  async deleteTestItem(itemId) {
+    if (!itemId) {
+      const err = new Error('item_id 不能为空');
+      err.status = 400;
+      throw err;
+    }
+    const [, meta] = await this.app.model.query(
+      `UPDATE test_item_detail SET is_active = FALSE, updated_at = NOW()
+       WHERE item_id = :itemId AND is_active = TRUE`,
+      { replacements: { itemId } },
+    );
+    const deleted = meta?.rowCount ?? 0;
+    if (!deleted) {
+      const err = new Error('测试项不存在或已删除');
+      err.status = 404;
+      throw err;
+    }
+    return { deleted: 1, item_id: itemId };
+  }
+
+  async deleteTestItemsBatch(itemIds = []) {
+    const ids = [ ...new Set(itemIds.map(id => String(id).trim()).filter(Boolean)) ];
+    if (!ids.length) {
+      const err = new Error('item_ids 不能为空');
+      err.status = 400;
+      throw err;
+    }
+    const [, meta] = await this.app.model.query(
+      `UPDATE test_item_detail SET is_active = FALSE, updated_at = NOW()
+       WHERE item_id IN (:ids) AND is_active = TRUE`,
+      { replacements: { ids } },
+    );
+    return { deleted: meta?.rowCount ?? 0, item_ids: ids };
+  }
+
+  async deleteTestItemsByFilter(query = {}) {
+    const { where, replacements } = buildTestItemWhere(query);
+    const countSql = `SELECT COUNT(*) AS total FROM test_item_detail t ${where}`;
+    const [ countRows ] = await this.app.model.query(countSql, { replacements });
+    const total = Number(countRows[0]?.total || 0);
+    if (!total) {
+      return { deleted: 0, total: 0 };
+    }
+    const updateSql = `
+      UPDATE test_item_detail t SET is_active = FALSE, updated_at = NOW()
+      ${where}
+    `;
+    const [, meta] = await this.app.model.query(updateSql, { replacements });
+    return { deleted: meta?.rowCount ?? total, total };
   }
 }
 

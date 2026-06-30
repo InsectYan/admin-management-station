@@ -11,6 +11,7 @@
   >
     <template #default="{ bodyHeight }">
       <el-table
+        ref="tableRef"
         v-loading="loading"
         :data="displayData"
         :height="bodyHeight ?? undefined"
@@ -51,9 +52,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import DataTablePanel from '@/components/DataTablePanel.vue';
 import { cellDisplayValue, cellTooltipValue, inferColumnsFromRow } from '@/utils/fitnessTableColumns.js';
+
+const tableRef = ref(null);
 
 const props = defineProps({
   data: { type: Array, default: () => [] },
@@ -84,6 +87,12 @@ const resolvedColumns = computed(() => {
   const sample = displayData.value[0] || props.data[0];
   return inferColumnsFromRow(sample, props.columns);
 });
+
+function clearSelection() {
+  tableRef.value?.clearSelection?.();
+}
+
+defineExpose({ clearSelection });
 </script>
 
 <style scoped>

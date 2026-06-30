@@ -1,7 +1,7 @@
 <template>
   <PageShell :title="item?.item_name || item?.detail_summary || '测试项详情'" v-loading="loading">
     <template #extra>
-      <el-button @click="router.push('/fitness/assets/items')">返回列表</el-button>
+      <el-button @click="router.push('/testgen/items')">返回列表</el-button>
       <el-button data-testid="fitness-item-config" :type="activeModule === 'config' ? 'primary' : 'default'" @click="goModule('config')">配置</el-button>
       <el-button data-testid="fitness-item-launch" :type="activeModule === 'launch' ? 'primary' : 'default'" @click="goModule('launch')">执行</el-button>
       <el-button data-testid="fitness-item-history" :type="activeModule === 'history' ? 'primary' : 'default'" @click="goModule('history')">历史</el-button>

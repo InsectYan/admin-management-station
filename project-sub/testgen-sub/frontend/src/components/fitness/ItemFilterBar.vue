@@ -1,5 +1,48 @@
 <template>
   <div class="fitness-filter-bar">
+    <el-select
+      v-if="showProject"
+      v-model="local.project_code"
+      placeholder="项目"
+      clearable
+      filterable
+      style="width: 200px"
+      @change="emitChange"
+    >
+      <el-option
+        v-for="p in options.projects"
+        :key="p.project_code"
+        :label="p.project_name"
+        :value="p.project_code"
+      >
+        <span>{{ p.project_name }}</span>
+        <span class="project-option-code">{{ p.project_code }}</span>
+      </el-option>
+    </el-select>
+    <el-select
+      v-if="showGenerationJob"
+      v-model="local.generation_job_id"
+      placeholder="生成任务"
+      clearable
+      filterable
+      style="width: 140px"
+      @change="emitChange"
+    >
+      <el-option
+        v-for="id in generationJobOptions"
+        :key="id"
+        :label="`任务 #${id}`"
+        :value="String(id)"
+      />
+    </el-select>
+    <el-input
+      v-else-if="showGenerationJobInput"
+      v-model="local.generation_job_id"
+      placeholder="任务 ID"
+      clearable
+      style="width: 120px"
+      @change="emitChange"
+    />
     <el-select v-if="showDimension" v-model="local.dimension_id" placeholder="维度" clearable style="width:120px" @change="emitChange">
       <el-option v-for="d in options.dimensions" :key="d.dimension_id" :label="d.name" :value="d.dimension_id" />
     </el-select>
@@ -41,8 +84,11 @@
 <script setup>
 import { computed, onMounted, reactive, watch } from 'vue';
 import { fetchEnums } from '@/services/fitnessService.js';
+import { fetchProjects } from '@/services/projectService.js';
 
 const EMPTY_ITEM_FILTERS = {
+  project_code: '',
+  generation_job_id: '',
   dimension_id: '',
   category_major_id: '',
   priority_id: '',
@@ -61,12 +107,17 @@ const props = defineProps({
   modelValue: { type: Object, default: () => ({}) },
   showDimension: { type: Boolean, default: true },
   showMajor: { type: Boolean, default: true },
+  showProject: { type: Boolean, default: true },
+  showGenerationJob: { type: Boolean, default: false },
+  showGenerationJobInput: { type: Boolean, default: false },
+  generationJobOptions: { type: Array, default: () => [] },
   showClear: { type: Boolean, default: true },
 });
 
 const emit = defineEmits([ 'update:modelValue', 'change', 'clear' ]);
 
 const options = reactive({
+  projects: [],
   dimensions: [], majors: [], priorities: [], schemes: [], validations: [],
   automation: [], stations: [], roles: [],
 });
@@ -118,7 +169,8 @@ watch(() => props.modelValue, (v) => Object.assign(local, { ...EMPTY_ITEM_FILTER
 
 onMounted(async () => {
   const pageSizeAll = 200;
-  const [ dimRes, majorRes, priRes, schemeRes, valRes, autoRes, stationRes, roleRes ] = await Promise.all([
+  const requests = [
+    fetchProjects({ page: 1, pageSize: pageSizeAll }),
     fetchEnums('test_dimension', { page: 1, pageSize: pageSizeAll }),
     fetchEnums('test_category_major', { page: 1, pageSize: pageSizeAll }),
     fetchEnums('test_priority_enum', { page: 1, pageSize: pageSizeAll }),
@@ -127,8 +179,12 @@ onMounted(async () => {
     fetchEnums('test_automation_status_enum', { page: 1, pageSize: pageSizeAll }),
     fetchEnums('test_station_enum', { page: 1, pageSize: pageSizeAll }),
     fetchEnums('test_role_enum', { page: 1, pageSize: pageSizeAll }),
-  ]);
+  ];
+  const [
+    projectRes, dimRes, majorRes, priRes, schemeRes, valRes, autoRes, stationRes, roleRes,
+  ] = await Promise.all(requests);
   Object.assign(options, {
+    projects: projectRes.list || [],
     dimensions: dimRes.list || [],
     majors: majorRes.list || [],
     priorities: priRes.list || [],
@@ -150,5 +206,10 @@ defineExpose({ clearAll, hasActiveFilters });
   gap: 8px;
   align-items: center;
   margin-bottom: 16px;
+}
+.project-option-code {
+  float: right;
+  color: #909399;
+  font-size: 12px;
 }
 </style>

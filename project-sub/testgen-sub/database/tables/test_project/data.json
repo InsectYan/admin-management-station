@@ -1,0 +1,15 @@
+[
+  {
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目",
+    "team": "QA 团队",
+    "status": "active",
+    "description": "Fitness Agent 智能健身平台全量测试用例库，涵盖六站流水线、业务功能、Agent 质量等维度。",
+    "repo_urls": ["https://github.com/example/fitness-agent"],
+    "cicd_config": { "provider": "github-actions", "pipeline": "ci-test.yml" },
+    "member_roles": [
+      { "user": "admin", "role": "owner" },
+      { "user": "qa-lead", "role": "editor" }
+    ]
+  }
+]

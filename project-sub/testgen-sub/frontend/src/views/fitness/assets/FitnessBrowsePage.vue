@@ -50,6 +50,7 @@ const pageSize = ref(20);
 
 const itemColumns = [
   { prop: 'item_id', label: '用例编码', width: 230 },
+  { prop: 'project_name', label: '项目名称', width: 140 },
   { prop: 'item_name', label: '名称', minWidth: 200 },
   { prop: 'priority_name', label: '优先级', width: 90 },
   { prop: 'scheme_primary_name', label: '主方案', width: 120 },

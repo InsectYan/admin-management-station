@@ -27,7 +27,6 @@ module.exports = app => {
 
   Document.associate = function associate() {
     app.model.Document.hasMany(app.model.GenerationJob, { foreignKey: 'document_id' });
-    app.model.Document.hasMany(app.model.TestCase, { foreignKey: 'document_id' });
   };
 
   return Document;

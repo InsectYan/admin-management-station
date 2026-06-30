@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS test_env_tier_enum (
+  project_code VARCHAR(64) NOT NULL DEFAULT 'fitness-agent',
   env_tier_id VARCHAR(32) PRIMARY KEY,
   name TEXT NOT NULL,
   description TEXT,

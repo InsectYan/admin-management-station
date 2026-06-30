@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS arch_reference (
+  project_code VARCHAR(64) NOT NULL DEFAULT 'fitness-agent',
   arch_ref_id VARCHAR(64) PRIMARY KEY,
   station TEXT,
   section TEXT,

@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS test_scheme_validation_pair (
+  project_code VARCHAR(64) NOT NULL DEFAULT 'fitness-agent',
   pair_id VARCHAR(64) PRIMARY KEY,
   scheme_id VARCHAR(64) REFERENCES test_scheme_enum(scheme_id),
   validation_id VARCHAR(64) REFERENCES test_validation_enum(validation_id),

@@ -3,150 +3,175 @@
     "automation_entry_id": "AUTO_S02",
     "name": "s02 门禁站测",
     "command": "cd server && npm run test:stations -- s02",
-    "suite": "stations"
+    "suite": "stations",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_S03",
     "name": "s03 队列站测",
     "command": "cd server && npm run test:stations -- s03",
-    "suite": "stations"
+    "suite": "stations",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_S04_MACRO",
     "name": "s04 macro gate",
     "command": "cd server && npm run test:stations -- s04-macro",
-    "suite": "stations"
+    "suite": "stations",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_S04_SESSION",
     "name": "s04 session gate",
     "command": "cd server && npm run test:stations -- s04-session",
-    "suite": "stations"
+    "suite": "stations",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_S04_BFF",
     "name": "s04 bff",
     "command": "cd server && npm run test:stations -- s04-bff",
-    "suite": "stations"
+    "suite": "stations",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_S05",
     "name": "s05 Pi 契约",
     "command": "cd server && npm run test:stations -- s05",
-    "suite": "stations"
+    "suite": "stations",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_S06",
     "name": "s06 journey",
     "command": "cd server && npm run test:stations -- s06",
-    "suite": "stations"
+    "suite": "stations",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_E2E_SMOKE",
     "name": "E2E smoke",
     "command": "cd server && npm run test:e2e -- smoke",
-    "suite": "e2e"
+    "suite": "e2e",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_E2E_CHAIN",
     "name": "E2E chain",
     "command": "cd server && npm run test:e2e -- chain",
-    "suite": "e2e"
+    "suite": "e2e",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_E2E_SESSION",
     "name": "E2E session",
     "command": "cd server && npm run test:e2e -- session",
-    "suite": "e2e"
+    "suite": "e2e",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_E2E_RESUME",
     "name": "E2E resume",
     "command": "cd server && npm run test:e2e -- resume",
-    "suite": "e2e"
+    "suite": "e2e",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_E2E_CONSULT",
     "name": "E2E consultation",
     "command": "cd server && npm run test:e2e -- consultation",
-    "suite": "e2e"
+    "suite": "e2e",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_E2E_COACH",
     "name": "E2E coach",
     "command": "cd server && npm run test:e2e -- coach",
-    "suite": "e2e"
+    "suite": "e2e",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_E2E_GENERIC",
     "name": "E2E 通用",
     "command": "cd server && npm run test:e2e",
-    "suite": "e2e"
+    "suite": "e2e",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_LOCAL_STACK",
     "name": "local 全栈",
     "command": "fitness local",
-    "suite": "deploy"
+    "suite": "deploy",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_AGENTRUN",
     "name": "AgentRun smoke",
     "command": "./scripts/smoke.sh",
-    "suite": "deploy"
+    "suite": "deploy",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_CODE_REVIEW",
     "name": "类型检查+审查",
     "command": "npm run typecheck",
-    "suite": "ci"
+    "suite": "ci",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_ARCH_REVIEW",
     "name": "架构审查",
     "command": "架构审查清单",
-    "suite": "manual"
+    "suite": "manual",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_MANUAL_UAT",
     "name": "专家 UAT",
     "command": "人工 rubric 评审",
-    "suite": "manual"
+    "suite": "manual",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_MANUAL",
     "name": "人工测试",
     "command": null,
-    "suite": "manual"
+    "suite": "manual",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_RDS_QUERY",
     "name": "RDS 查询",
     "command": "SQL turn_jobs/连接数",
-    "suite": "ops"
+    "suite": "ops",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_SLS",
     "name": "SLS 聚合",
     "command": "SLS api_label_zh",
-    "suite": "ops"
+    "suite": "ops",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_OTEL",
     "name": "OTel trace",
     "command": "ARMS/OTEL 控制台",
-    "suite": "ops"
+    "suite": "ops",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_OPS",
     "name": "运维操作",
     "command": "pi-ops 手册",
-    "suite": "ops"
+    "suite": "ops",
+    "project_code": "fitness-agent"
   },
   {
     "automation_entry_id": "AUTO_TODO_SCRIPT",
     "name": "待建脚本",
     "command": null,
-    "suite": "todo"
+    "suite": "todo",
+    "project_code": "fitness-agent"
   }
 ]

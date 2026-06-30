@@ -3,18 +3,21 @@
     "exec_env_id": "EXEC_LOCAL",
     "name": "仅本地",
     "description": "Docker/本机 Runner；不含 AgentRun 拟真",
-    "sort_order": 1
+    "sort_order": 1,
+    "project_code": "fitness-agent"
   },
   {
     "exec_env_id": "EXEC_TEST",
     "name": "仅测试",
     "description": "test AgentRun / 预发环境",
-    "sort_order": 2
+    "sort_order": 2,
+    "project_code": "fitness-agent"
   },
   {
     "exec_env_id": "EXEC_BOTH",
     "name": "双环境",
     "description": "本地与测试环境均可执行",
-    "sort_order": 3
+    "sort_order": 3,
+    "project_code": "fitness-agent"
   }
 ]

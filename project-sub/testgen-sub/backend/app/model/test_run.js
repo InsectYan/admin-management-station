@@ -8,7 +8,7 @@ module.exports = app => {
     {
       id: { type: INTEGER, primaryKey: true, autoIncrement: true },
       batch_id: { type: UUID },
-      case_id: { type: INTEGER },
+      item_id: { type: STRING(64) },
       env_id: { type: INTEGER },
       mode: {
         type: STRING(16),
@@ -44,7 +44,6 @@ module.exports = app => {
   );
 
   TestRun.associate = function associate() {
-    app.model.TestRun.belongsTo(app.model.TestCase, { foreignKey: 'case_id' });
     app.model.TestRun.belongsTo(app.model.EnvConfig, { foreignKey: 'env_id' });
     app.model.TestRun.hasMany(app.model.FuncResult, { foreignKey: 'run_id' });
     app.model.TestRun.hasMany(app.model.PerfResult, { foreignKey: 'run_id' });

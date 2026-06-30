@@ -60,7 +60,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "A1-OUTBOX-001",
@@ -121,7 +123,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "A1-OUTBOX-002",
@@ -184,7 +188,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "A2-S02-001",
@@ -248,7 +254,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "A2-S02-002",
@@ -312,7 +320,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "A2-S02-003",
@@ -375,7 +385,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "A2-S02-004",
@@ -439,7 +451,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "A2-S03-001",
@@ -503,7 +517,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "A2-S06-001",
@@ -566,7 +582,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "A5-CAP-001",
@@ -628,7 +646,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_LOCAL",
     "exec_env_name": "双环境",
-    "env_tier_name": "本地模拟"
+    "env_tier_name": "本地模拟",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "A5-MULTI-001",
@@ -692,7 +712,9 @@
     "exec_env_id": "EXEC_TEST",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "仅测试",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "A5-STALE-001",
@@ -754,7 +776,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_LOCAL",
     "exec_env_name": "双环境",
-    "env_tier_name": "本地模拟"
+    "env_tier_name": "本地模拟",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "A6-GOLDEN-001",
@@ -814,7 +838,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_LOCAL",
     "exec_env_name": "双环境",
-    "env_tier_name": "本地模拟"
+    "env_tier_name": "本地模拟",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "A6-MEDICAL-001",
@@ -879,7 +905,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "A6-SAFETY-001",
@@ -947,7 +975,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_PROD_ONLY",
     "exec_env_name": "双环境",
-    "env_tier_name": "生产/人工"
+    "env_tier_name": "生产/人工",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B1-LOADING-001",
@@ -1008,7 +1038,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B1-OBS-001",
@@ -1070,7 +1102,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B1-RESUME-001",
@@ -1131,7 +1165,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B1-SSE-001",
@@ -1192,7 +1228,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B1-STREAM-001",
@@ -1253,7 +1291,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B2-CIRCUIT-001",
@@ -1317,7 +1357,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B2-DUP-001",
@@ -1383,7 +1425,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B2-EMPTY-001",
@@ -1447,7 +1491,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B2-INFLIGHT-001",
@@ -1512,7 +1558,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B2-JOURNEY-001",
@@ -1575,7 +1623,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B2-KEY-001",
@@ -1639,7 +1689,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B2-LEN-001",
@@ -1705,7 +1757,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B2-OBS-001",
@@ -1769,7 +1823,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B2-OWN-001",
@@ -1835,7 +1891,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B2-RATE-001",
@@ -1898,7 +1956,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B3-CANCEL-001",
@@ -1959,7 +2019,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B3-CLAIM-001",
@@ -2022,7 +2084,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B3-CROSS-001",
@@ -2085,7 +2149,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B3-ENQ-001",
@@ -2147,7 +2213,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B3-OBS-001",
@@ -2209,7 +2277,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B3-RETRY-001",
@@ -2270,7 +2340,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B3-STALE-001",
@@ -2331,7 +2403,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B3-W-001",
@@ -2394,7 +2468,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B4-MEM-001",
@@ -2458,7 +2534,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B4-OBS-001",
@@ -2521,7 +2599,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B4-PERSIST-001",
@@ -2584,7 +2664,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B4-PREP-001",
@@ -2646,7 +2728,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B4-PREP-002",
@@ -2711,7 +2795,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B5-CONTRACT-001",
@@ -2772,7 +2858,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B5-LOCK-001",
@@ -2834,7 +2922,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B5-OBS-001",
@@ -2897,7 +2987,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B5-TOOL-001",
@@ -2959,7 +3051,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B6-HB-001",
@@ -3021,7 +3115,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B6-JOURNEY-001",
@@ -3083,7 +3179,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B6-OBS-001",
@@ -3148,7 +3246,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B6-POLL-001",
@@ -3210,7 +3310,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B6-SSE-001",
@@ -3272,7 +3374,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "B6-TIMEOUT-001",
@@ -3336,7 +3440,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-CONF-001",
@@ -3402,7 +3508,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-CONF-002",
@@ -3468,7 +3576,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-CONF-003",
@@ -3534,7 +3644,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-CONF-004",
@@ -3600,7 +3712,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-CONF-005",
@@ -3666,7 +3780,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-DEL-001",
@@ -3727,7 +3843,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-DEL-002",
@@ -3788,7 +3906,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-DUP-001",
@@ -3852,7 +3972,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-DUP-002",
@@ -3916,7 +4038,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-ENTRY-001",
@@ -3982,7 +4106,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-ENTRY-002",
@@ -4048,7 +4174,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-ENTRY-003",
@@ -4114,7 +4242,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-ENTRY-004",
@@ -4181,7 +4311,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_PROD_ONLY",
     "exec_env_name": "双环境",
-    "env_tier_name": "生产/人工"
+    "env_tier_name": "生产/人工",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-ENTRY-005",
@@ -4247,7 +4379,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-ENTRY-006",
@@ -4313,7 +4447,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-ENTRY-007",
@@ -4379,7 +4515,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-EVAL-001",
@@ -4439,7 +4577,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-IMPACT-001",
@@ -4499,7 +4639,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-IMPACT-002",
@@ -4559,7 +4701,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-IMPACT-003",
@@ -4619,7 +4763,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-IMPACT-004",
@@ -4679,7 +4825,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-INTENT-001",
@@ -4744,7 +4892,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-INTENT-002",
@@ -4809,7 +4959,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-INTENT-003",
@@ -4874,7 +5026,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-INTENT-004",
@@ -4939,7 +5093,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-INTENT-005",
@@ -5004,7 +5160,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-INTENT-006",
@@ -5069,7 +5227,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-INTENT-007",
@@ -5134,7 +5294,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-INTENT-008",
@@ -5199,7 +5361,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-MACRO-001",
@@ -5264,7 +5428,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-MACRO-002",
@@ -5329,7 +5495,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-MACRO-003",
@@ -5396,7 +5564,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-MACRO-004",
@@ -5461,7 +5631,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-MACRO-005",
@@ -5526,7 +5698,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-MACRO-006",
@@ -5591,7 +5765,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-MACRO-007",
@@ -5656,7 +5832,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-MACRO-008",
@@ -5722,7 +5900,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-MACRO-009",
@@ -5787,7 +5967,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-MACRO-010",
@@ -5852,7 +6034,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-MACRO-011",
@@ -5917,7 +6101,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-NOTE-001",
@@ -5977,7 +6163,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-OVERVIEW-001",
@@ -6037,7 +6225,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-SAFE-001",
@@ -6104,7 +6294,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-SAFE-002",
@@ -6172,7 +6364,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-SAFE-003",
@@ -6239,7 +6433,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-SAFE-004",
@@ -6306,7 +6502,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-SAFE-005",
@@ -6373,7 +6571,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-SAFE-006",
@@ -6440,7 +6640,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-SESSION-001",
@@ -6506,7 +6708,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-SESSION-002",
@@ -6571,7 +6775,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-SESSION-003",
@@ -6636,7 +6842,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-SESSION-004",
@@ -6701,7 +6909,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-SESSION-005",
@@ -6766,7 +6976,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-SESSION-006",
@@ -6831,7 +7043,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-SESSION-007",
@@ -6896,7 +7110,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-STRAT-001",
@@ -6960,7 +7176,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-STRAT-002",
@@ -7025,7 +7243,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-STRAT-003",
@@ -7089,7 +7309,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-STRAT-004",
@@ -7153,7 +7375,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-STRAT-005",
@@ -7217,7 +7441,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-STRAT-006",
@@ -7281,7 +7507,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-SUM-001",
@@ -7344,7 +7572,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-SUM-002",
@@ -7407,7 +7637,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-SUM-003",
@@ -7470,7 +7702,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C1-SUM-004",
@@ -7535,7 +7769,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-BOUND-001",
@@ -7600,7 +7836,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-BOUND-002",
@@ -7665,7 +7903,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-BOUND-003",
@@ -7730,7 +7970,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-BOUND-004",
@@ -7795,7 +8037,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-BOUND-005",
@@ -7860,7 +8104,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-BOUND-006",
@@ -7926,7 +8172,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-BOUND-007",
@@ -7991,7 +8239,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-BOUND-008",
@@ -8056,7 +8306,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_PROD_ONLY",
     "exec_env_name": "双环境",
-    "env_tier_name": "生产/人工"
+    "env_tier_name": "生产/人工",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-FB-001",
@@ -8116,7 +8368,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-FB-002",
@@ -8176,7 +8430,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-FB-003",
@@ -8236,7 +8492,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-MED-001",
@@ -8300,7 +8558,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-MED-002",
@@ -8364,7 +8624,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-MED-003",
@@ -8428,7 +8690,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-PAYLOAD-001",
@@ -8495,7 +8759,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-PAYLOAD-002",
@@ -8562,7 +8828,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-PAYLOAD-003",
@@ -8629,7 +8897,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-PAYLOAD-004",
@@ -8696,7 +8966,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-PAYLOAD-005",
@@ -8763,7 +9035,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-PAYLOAD-006",
@@ -8830,7 +9104,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-PAYLOAD-007",
@@ -8897,7 +9173,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-QNR-001",
@@ -8957,7 +9235,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-QNR-002",
@@ -9017,7 +9297,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-QNR-003",
@@ -9077,7 +9359,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-RISK-001",
@@ -9140,7 +9424,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-RISK-002",
@@ -9203,7 +9489,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-RISK-003",
@@ -9266,7 +9554,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-RISK-004",
@@ -9329,7 +9619,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-RISK-005",
@@ -9392,7 +9684,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-RISK-006",
@@ -9455,7 +9749,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-RISK-007",
@@ -9518,7 +9814,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-STATE-001",
@@ -9578,7 +9876,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-STATE-002",
@@ -9638,7 +9938,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-STATE-003",
@@ -9698,7 +10000,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-STATE-004",
@@ -9758,7 +10062,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-UX-001",
@@ -9819,7 +10125,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-UX-002",
@@ -9880,7 +10188,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C2-UX-003",
@@ -9941,7 +10251,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-ALERT-001",
@@ -10001,7 +10313,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-ALERT-002",
@@ -10063,7 +10377,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-ALERT-003",
@@ -10123,7 +10439,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-ALERT-004",
@@ -10183,7 +10501,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-BOUND-001",
@@ -10247,7 +10567,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-BOUND-002",
@@ -10311,7 +10633,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-BOUND-003",
@@ -10375,7 +10699,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-COACH-001",
@@ -10437,7 +10763,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-COACH-002",
@@ -10499,7 +10827,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-COACH-003",
@@ -10561,7 +10891,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-COACH-004",
@@ -10623,7 +10955,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-MEM-001",
@@ -10685,7 +11019,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-MEM-002",
@@ -10747,7 +11083,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-MEM-003",
@@ -10809,7 +11147,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-OPS-001",
@@ -10870,7 +11210,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-PAYLOAD-001",
@@ -10934,7 +11276,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-PAYLOAD-002",
@@ -11000,7 +11344,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-PAYLOAD-003",
@@ -11064,7 +11410,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-PERM-001",
@@ -11127,7 +11475,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-PERM-002",
@@ -11190,7 +11540,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-PERM-003",
@@ -11253,7 +11605,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-PERM-004",
@@ -11316,7 +11670,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-PROG-001",
@@ -11376,7 +11732,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-PROG-002",
@@ -11436,7 +11794,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-RISK-001",
@@ -11499,7 +11859,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-RISK-002",
@@ -11562,7 +11924,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-RISK-003",
@@ -11625,7 +11989,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-RISK-004",
@@ -11688,7 +12054,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-RISK-005",
@@ -11751,7 +12119,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C3-RISK-006",
@@ -11814,7 +12184,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C4-CONF-001",
@@ -11879,7 +12251,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C4-CONF-002",
@@ -11944,7 +12318,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C4-CONF-003",
@@ -12009,7 +12385,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C4-DATA-001",
@@ -12072,7 +12450,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C4-DATA-002",
@@ -12135,7 +12515,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C4-DATA-003",
@@ -12198,7 +12580,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C4-KB-001",
@@ -12260,7 +12644,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C4-KB-002",
@@ -12322,7 +12708,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_PROD_ONLY",
     "exec_env_name": "双环境",
-    "env_tier_name": "生产/人工"
+    "env_tier_name": "生产/人工",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C4-MEM-001",
@@ -12386,7 +12774,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C4-MEM-002",
@@ -12450,7 +12840,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C4-PAY-001",
@@ -12514,7 +12906,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C4-PAY-002",
@@ -12578,7 +12972,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C4-PAY-003",
@@ -12642,7 +13038,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "C4-PAY-004",
@@ -12706,7 +13104,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D1-CANCEL-001",
@@ -12769,7 +13169,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D1-HEALTH-001",
@@ -12832,7 +13234,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D1-POLL-001",
@@ -12895,7 +13299,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D1-READY-001",
@@ -12958,7 +13364,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D1-SESSION-001",
@@ -13024,7 +13432,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D2-OUT-001",
@@ -13088,7 +13498,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D2-SSE-001",
@@ -13151,7 +13563,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D2-SUB-001",
@@ -13214,7 +13628,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D2-SUB-002",
@@ -13277,7 +13693,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D2-SUB-003",
@@ -13340,7 +13758,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D2-SUB-004",
@@ -13403,7 +13823,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D2-SUB-005",
@@ -13466,7 +13888,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D2-SUB-006",
@@ -13529,7 +13953,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D2-SUB-007",
@@ -13592,7 +14018,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D3-CORS-001",
@@ -13653,7 +14081,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D3-JWT-001",
@@ -13716,7 +14146,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D3-KEY-001",
@@ -13777,7 +14209,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D3-NET-001",
@@ -13838,7 +14272,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D3-PASSTHR-001",
@@ -13899,7 +14335,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D4-FLD-001",
@@ -13961,7 +14399,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D4-FLD-002",
@@ -14023,7 +14463,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D4-FLD-003",
@@ -14085,7 +14527,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D4-FLD-004",
@@ -14147,7 +14591,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D5-EVT-001",
@@ -14212,7 +14658,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D5-EVT-002",
@@ -14277,7 +14725,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D5-EVT-003",
@@ -14342,7 +14792,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D5-EVT-004",
@@ -14407,7 +14859,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "D5-EVT-005",
@@ -14472,7 +14926,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E-RISK-001",
@@ -14538,7 +14994,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E-RISK-002",
@@ -14604,7 +15062,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E-RISK-003",
@@ -14671,7 +15131,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E-RISK-004",
@@ -14738,7 +15200,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E-RISK-005",
@@ -14805,7 +15269,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E-RISK-006",
@@ -14870,7 +15336,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E-RISK-007",
@@ -14935,7 +15403,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E-RISK-008",
@@ -15000,7 +15470,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E-RISK-009",
@@ -15065,7 +15537,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E-RISK-010",
@@ -15130,7 +15604,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E-SKILL-LIVE-001",
@@ -15192,7 +15668,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E-SKILL-MED-001",
@@ -15255,7 +15733,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E-SKILL-OPS-001",
@@ -15317,7 +15797,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E-SKILL-PAIN-001",
@@ -15379,7 +15861,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E-SKILL-PLAN-001",
@@ -15441,7 +15925,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E1-PATH-001",
@@ -15506,7 +15992,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E1-PATH-002",
@@ -15571,7 +16059,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E1-PATH-003",
@@ -15636,7 +16126,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E1-PATH-004",
@@ -15699,7 +16191,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E1-PATH-005",
@@ -15764,7 +16258,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E2-TOOL-001",
@@ -15825,7 +16321,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E2-TOOL-002",
@@ -15886,7 +16384,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E2-TOOL-003",
@@ -15947,7 +16447,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E2-TOOL-004",
@@ -16008,7 +16510,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E3-MEM-001",
@@ -16071,7 +16575,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E3-MEM-002",
@@ -16134,7 +16640,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E3-MEM-003",
@@ -16197,7 +16705,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E3-MEM-004",
@@ -16260,7 +16770,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E4-STAB-001",
@@ -16321,7 +16833,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E4-STAB-002",
@@ -16384,7 +16898,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E4-STAB-003",
@@ -16447,7 +16963,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E5-INJ-001",
@@ -16509,7 +17027,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E5-INJ-002",
@@ -16571,7 +17091,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E5-MED-001",
@@ -16633,7 +17155,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E5-PII-001",
@@ -16695,7 +17219,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E5-TOOL-001",
@@ -16757,7 +17283,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E6-GOLD-001",
@@ -16818,7 +17346,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E6-JUDGE-001",
@@ -16879,7 +17409,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E6-MOCK-001",
@@ -16940,7 +17472,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "E6-SKILL-001",
@@ -17001,7 +17535,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F1-CONC-001",
@@ -17063,7 +17599,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F1-LONG-001",
@@ -17125,7 +17663,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F1-PLAN-001",
@@ -17187,7 +17727,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F1-QUEUE-001",
@@ -17249,7 +17791,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F1-SUB-001",
@@ -17311,7 +17855,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F1-TTFT-001",
@@ -17373,7 +17919,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F2-DRAIN-001",
@@ -17434,7 +17982,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F2-MULTI-001",
@@ -17495,7 +18045,9 @@
     "exec_env_id": "EXEC_TEST",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "仅测试",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F2-POOL-001",
@@ -17556,7 +18108,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F2-STALE-001",
@@ -17617,7 +18171,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F3-GAP-001",
@@ -17679,7 +18235,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F3-GAP-002",
@@ -17741,7 +18299,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F3-LOG-001",
@@ -17804,7 +18364,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F3-TRACE-001",
@@ -17867,7 +18429,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F4-CLEAN-001",
@@ -17927,7 +18491,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F4-LOCAL-001",
@@ -17988,7 +18554,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F4-MODE-001",
@@ -18049,7 +18617,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F4-RESET-001",
@@ -18109,7 +18679,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F5-SYM-001",
@@ -18170,7 +18742,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F5-SYM-002",
@@ -18231,7 +18805,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F5-SYM-003",
@@ -18292,7 +18868,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F5-SYM-004",
@@ -18353,7 +18931,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F5-SYM-005",
@@ -18414,7 +18994,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F5-SYM-006",
@@ -18475,7 +19057,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F5-SYM-007",
@@ -18536,7 +19120,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F5-SYM-008",
@@ -18597,7 +19183,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F5-SYM-009",
@@ -18658,7 +19246,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F6-CAP-001",
@@ -18719,7 +19309,9 @@
     "exec_env_id": "EXEC_TEST",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "仅测试",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F6-CAP-002",
@@ -18782,7 +19374,9 @@
     "exec_env_id": "EXEC_TEST",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "仅测试",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "F6-CAP-003",
@@ -18843,7 +19437,9 @@
     "exec_env_id": "EXEC_TEST",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "仅测试",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G1-PHASE-001",
@@ -18906,7 +19502,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G1-PHASE-002",
@@ -18969,7 +19567,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G1-PHASE-003",
@@ -19032,7 +19632,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G1-PHASE-004",
@@ -19095,7 +19697,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G1-PHASE-005",
@@ -19158,7 +19762,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G1-PHASE-006",
@@ -19221,7 +19827,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G1-PHASE-007",
@@ -19284,7 +19892,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G2-QUEUE-001",
@@ -19345,7 +19955,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G2-QUEUE-002",
@@ -19406,7 +20018,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G2-QUEUE-003",
@@ -19469,7 +20083,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G3-ERR-001",
@@ -19531,7 +20147,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G3-ERR-002",
@@ -19591,7 +20209,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G3-ERR-003",
@@ -19651,7 +20271,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G4-SESS-001",
@@ -19712,7 +20334,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G4-SESS-002",
@@ -19773,7 +20397,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G4-SESS-003",
@@ -19834,7 +20460,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G4-SESS-004",
@@ -19895,7 +20523,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G5-UI-001",
@@ -19958,7 +20588,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G5-UI-002",
@@ -20021,7 +20653,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G5-UI-003",
@@ -20084,7 +20718,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G5-UI-004",
@@ -20147,7 +20783,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G6-COACH-001",
@@ -20206,7 +20844,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G6-MEM-001",
@@ -20267,7 +20907,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G6-MGR-001",
@@ -20326,7 +20968,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G7-STREAM-001",
@@ -20387,7 +21031,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G7-STREAM-002",
@@ -20448,7 +21094,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G8-T-001",
@@ -20511,7 +21159,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G8-T-002",
@@ -20574,7 +21224,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G8-T-003",
@@ -20637,7 +21289,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G8-T-004",
@@ -20700,7 +21354,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "G8-T-005",
@@ -20763,7 +21419,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H1-S02-001",
@@ -20829,7 +21487,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H1-S02-002",
@@ -20895,7 +21555,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H1-S03-001",
@@ -20959,7 +21621,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H1-S03-002",
@@ -21025,7 +21689,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H1-S03-003",
@@ -21089,7 +21755,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H1-S04-001",
@@ -21154,7 +21822,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H1-S04-002",
@@ -21220,7 +21890,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H1-S06-001",
@@ -21284,7 +21956,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H1-S06-002",
@@ -21351,7 +22025,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-001",
@@ -21417,7 +22093,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-002",
@@ -21483,7 +22161,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-003",
@@ -21549,7 +22229,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-004",
@@ -21615,7 +22297,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-005",
@@ -21681,7 +22365,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-006",
@@ -21747,7 +22433,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-007",
@@ -21813,7 +22501,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-008",
@@ -21879,7 +22569,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-009",
@@ -21945,7 +22637,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-010",
@@ -22011,7 +22705,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-011",
@@ -22077,7 +22773,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-012",
@@ -22143,7 +22841,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-013",
@@ -22209,7 +22909,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-014",
@@ -22275,7 +22977,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-015",
@@ -22341,7 +23045,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-016",
@@ -22407,7 +23113,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-017",
@@ -22473,7 +23181,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-018",
@@ -22539,7 +23249,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H2-FLD-019",
@@ -22605,7 +23317,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H3-MEM-001",
@@ -22669,7 +23383,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H3-MEM-002",
@@ -22735,7 +23451,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H3-MEM-003",
@@ -22799,7 +23517,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H4-MGR-001",
@@ -22862,7 +23582,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H4-MGR-002",
@@ -22927,7 +23649,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H4-MGR-003",
@@ -22990,7 +23714,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H5-JRN-001",
@@ -23054,7 +23780,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H5-JRN-002",
@@ -23118,7 +23846,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H5-JRN-003",
@@ -23182,7 +23912,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H6-SLS-001",
@@ -23246,7 +23978,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H6-SLS-002",
@@ -23310,7 +24044,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H6-SLS-003",
@@ -23374,7 +24110,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H7-CHK-001",
@@ -23437,7 +24175,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H7-CHK-002",
@@ -23500,7 +24240,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H7-CHK-003",
@@ -23563,7 +24305,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H7-CHK-004",
@@ -23626,7 +24370,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H7-CHK-005",
@@ -23689,7 +24435,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H7-CHK-006",
@@ -23752,7 +24500,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H8-GAP-001",
@@ -23814,7 +24564,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H8-GAP-002",
@@ -23876,7 +24628,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H8-GAP-003",
@@ -23938,7 +24692,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "H8-GAP-004",
@@ -24000,7 +24756,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_STAGING",
     "exec_env_name": "双环境",
-    "env_tier_name": "测试预发"
+    "env_tier_name": "测试预发",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "Q-AI-001",
@@ -24061,7 +24819,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "Q-COACH-001",
@@ -24122,7 +24882,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "Q-MEM-001",
@@ -24185,7 +24947,9 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   },
   {
     "item_id": "Q-PERF-001",
@@ -24246,6 +25010,8 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "exec_env_name": "双环境",
-    "env_tier_name": "随处等价"
+    "env_tier_name": "随处等价",
+    "project_code": "fitness-agent",
+    "project_name": "Fitness Agent 测试项目"
   }
 ]

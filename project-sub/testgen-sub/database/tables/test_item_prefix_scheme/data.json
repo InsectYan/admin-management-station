@@ -9,7 +9,8 @@
     "sample_execution_note": "合法 POST→202；可延伸为链首",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0002",
@@ -21,7 +22,8 @@
     "sample_execution_note": "submit 后立即 stream 到 done",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0003",
@@ -33,7 +35,8 @@
     "sample_execution_note": "GET config 字段",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0004",
@@ -45,7 +48,8 @@
     "sample_execution_note": "smoke.sh",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0005",
@@ -57,7 +61,8 @@
     "sample_execution_note": "/ready 时间窗",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0006",
@@ -69,7 +74,8 @@
     "sample_execution_note": "require_form→session_plan；草稿不重复",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0007",
@@ -81,7 +87,8 @@
     "sample_execution_note": "载荷边界：会员每条回复扫描禁止字段；样本集批量",
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0008",
@@ -93,7 +100,8 @@
     "sample_execution_note": "禁止 coach 专用 type/字段",
     "mapping_source": "C3-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0009",
@@ -105,7 +113,8 @@
     "sample_execution_note": "状态机：每状态独立 gate 断言",
     "mapping_source": "C4-方案映射.md",
     "scheme_primary_name": "边界/等价类矩阵",
-    "validation_primary_name": "契约通过"
+    "validation_primary_name": "契约通过",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0010",
@@ -117,7 +126,8 @@
     "sample_execution_note": "合法 POST→202；可延伸为链首",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0011",
@@ -129,7 +139,8 @@
     "sample_execution_note": "合法 POST→202；可延伸为链首",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0012",
@@ -141,7 +152,8 @@
     "sample_execution_note": "ensure session",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0013",
@@ -153,7 +165,8 @@
     "sample_execution_note": "套壳透传 E2E",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0014",
@@ -165,7 +178,8 @@
     "sample_execution_note": "意图类：每意图多样本；边界句 100% 规则用 EXACT",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "达标率·高门槛"
+    "validation_primary_name": "达标率·高门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0015",
@@ -177,7 +191,8 @@
     "sample_execution_note": "「好的/可以/行」零写库",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0016",
@@ -189,7 +204,8 @@
     "sample_execution_note": "疼痛+生成：阻断率 H",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "异常/对抗专项",
-    "validation_primary_name": "安全阻断·高"
+    "validation_primary_name": "安全阻断·高",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0017",
@@ -201,7 +217,8 @@
     "sample_execution_note": "cancel pending",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0018",
@@ -213,7 +230,8 @@
     "sample_execution_note": "探针 status/body",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0019",
@@ -225,7 +243,8 @@
     "sample_execution_note": "中断不写档",
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0020",
@@ -237,7 +256,8 @@
     "sample_execution_note": "慢任务可恢复",
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0021",
@@ -249,7 +269,8 @@
     "sample_execution_note": "通用入口单次问答",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0022",
@@ -261,7 +282,8 @@
     "sample_execution_note": "「给 XX 做计划」句集，不得直接 plan_form",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "达标率·高门槛"
+    "validation_primary_name": "达标率·高门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0023",
@@ -273,7 +295,8 @@
     "sample_execution_note": "会员窗口生成链",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0024",
@@ -285,7 +308,8 @@
     "sample_execution_note": "A/B 会员窗口对照，串上下文为 0",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0025",
@@ -297,7 +321,8 @@
     "sample_execution_note": "同名消歧句集 → disambiguation",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "达标率·中门槛"
+    "validation_primary_name": "达标率·中门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0026",
@@ -309,7 +334,8 @@
     "sample_execution_note": "member_switch 确认前无 plan_form",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0027",
@@ -321,7 +347,8 @@
     "sample_execution_note": "无权限会员矩阵",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "边界/等价类矩阵",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0028",
@@ -333,7 +360,8 @@
     "sample_execution_note": "计划链：form→draft→pending→active；状态 gate 矩阵",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0029",
@@ -345,7 +373,8 @@
     "sample_execution_note": "指标/体测表：空值不编造",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "边界/等价类矩阵",
-    "validation_primary_name": "契约通过"
+    "validation_primary_name": "契约通过",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0030",
@@ -357,7 +386,8 @@
     "sample_execution_note": "策略场景句集（疼痛/急性/医学/极端）",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "达标率·高门槛"
+    "validation_primary_name": "达标率·高门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0031",
@@ -369,7 +399,8 @@
     "sample_execution_note": "禁止生成句集；与教练端同句 PAIR 对照",
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0032",
@@ -381,7 +412,8 @@
     "sample_execution_note": "允许问答/解释句集",
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "达标率·中门槛"
+    "validation_primary_name": "达标率·中门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0033",
@@ -393,7 +425,8 @@
     "sample_execution_note": "确认/拒绝+DB 状态",
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0034",
@@ -405,7 +438,8 @@
     "sample_execution_note": "疼痛反馈",
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "异常/对抗专项",
-    "validation_primary_name": "安全阻断·高"
+    "validation_primary_name": "安全阻断·高",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0035",
@@ -417,7 +451,8 @@
     "sample_execution_note": "与教练端同句对照",
     "mapping_source": "C3-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0036",
@@ -429,7 +464,8 @@
     "sample_execution_note": "探针 status/body",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0037",
@@ -441,7 +477,8 @@
     "sample_execution_note": "LLM-as-judge",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "人工多数"
+    "validation_primary_name": "人工多数",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0038",
@@ -453,7 +490,8 @@
     "sample_execution_note": "改 skill 后回归集",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "达标率·中门槛"
+    "validation_primary_name": "达标率·中门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0039",
@@ -465,7 +503,8 @@
     "sample_execution_note": "并发+queue_meta",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "压测/容量",
-    "validation_primary_name": "性能SLO·高"
+    "validation_primary_name": "性能SLO·高",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0040",
@@ -477,7 +516,8 @@
     "sample_execution_note": "跨实例幂等",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "压测/容量",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0041",
@@ -489,7 +529,8 @@
     "sample_execution_note": "kill+reclaim",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0042",
@@ -501,7 +542,8 @@
     "sample_execution_note": "SIGTERM drain",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0043",
@@ -513,7 +555,8 @@
     "sample_execution_note": "trace 续链",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "完整性"
+    "validation_primary_name": "完整性",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0044",
@@ -525,7 +568,8 @@
     "sample_execution_note": "CLI 一次",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0045",
@@ -537,7 +581,8 @@
     "sample_execution_note": "阶段文案允许措辞波动；出现率用 RATE",
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "同用例重复抽样",
-    "validation_primary_name": "达标率·中门槛"
+    "validation_primary_name": "达标率·中门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0046",
@@ -549,7 +594,8 @@
     "sample_execution_note": "failed 必有 error",
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0047",
@@ -561,7 +607,8 @@
     "sample_execution_note": "queue_meta UI",
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0048",
@@ -573,7 +620,8 @@
     "sample_execution_note": "503/429 文案",
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0049",
@@ -585,7 +633,8 @@
     "sample_execution_note": "503/429 文案",
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0050",
@@ -597,7 +646,8 @@
     "sample_execution_note": "无来源 current 矩阵",
     "mapping_source": "B-方案映射.md",
     "scheme_primary_name": "边界/等价类矩阵",
-    "validation_primary_name": "契约通过"
+    "validation_primary_name": "契约通过",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0051",
@@ -609,7 +659,8 @@
     "sample_execution_note": "require_form→session_plan；草稿不重复",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0052",
@@ -621,7 +672,8 @@
     "sample_execution_note": "安全审查结果分类统计",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "安全阻断·高"
+    "validation_primary_name": "安全阻断·高",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0053",
@@ -633,7 +685,8 @@
     "sample_execution_note": "确认规则：口语不误写库 100%；唯一确认 EXACT",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0054",
@@ -645,7 +698,8 @@
     "sample_execution_note": "载荷边界：会员每条回复扫描禁止字段；样本集批量",
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0055",
@@ -657,7 +711,8 @@
     "sample_execution_note": "PRD §5.12 高风险：任一出现即失败",
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0056",
@@ -669,7 +724,8 @@
     "sample_execution_note": "禁止 coach 专用 type/字段",
     "mapping_source": "C3-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0057",
@@ -681,7 +737,8 @@
     "sample_execution_note": "重复分配",
     "mapping_source": "C3-方案映射.md",
     "scheme_primary_name": "同用例重复抽样",
-    "validation_primary_name": "Pass^k稳定"
+    "validation_primary_name": "Pass^k稳定",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0058",
@@ -693,7 +750,8 @@
     "sample_execution_note": "§6.12 高风险",
     "mapping_source": "C3-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0059",
@@ -705,7 +763,8 @@
     "sample_execution_note": "状态机：每状态独立 gate 断言",
     "mapping_source": "C4-方案映射.md",
     "scheme_primary_name": "边界/等价类矩阵",
-    "validation_primary_name": "契约通过"
+    "validation_primary_name": "契约通过",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0060",
@@ -717,7 +776,8 @@
     "sample_execution_note": "CLI 命令一次执行",
     "mapping_source": "C4-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0061",
@@ -729,7 +789,8 @@
     "sample_execution_note": "写库确认横切规则集",
     "mapping_source": "C4-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0062",
@@ -741,7 +802,8 @@
     "sample_execution_note": "GET turn 直到 completed",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0063",
@@ -753,7 +815,8 @@
     "sample_execution_note": "同 id 多次 submit 均同 turn_id",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "同用例重复抽样",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0064",
@@ -765,7 +828,8 @@
     "sample_execution_note": "架构/配置审查+spot",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0065",
@@ -777,7 +841,8 @@
     "sample_execution_note": "意图样本集×每类多句；边界句单独 EXACT",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "达标率·高门槛"
+    "validation_primary_name": "达标率·高门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0066",
@@ -789,7 +854,8 @@
     "sample_execution_note": "生成链不得跳步",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0067",
@@ -801,7 +867,8 @@
     "sample_execution_note": "两轮确认链",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0068",
@@ -813,7 +880,8 @@
     "sample_execution_note": "长 tool 链重复",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "同用例重复抽样",
-    "validation_primary_name": "Pass^k稳定"
+    "validation_primary_name": "Pass^k稳定",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0069",
@@ -825,7 +893,8 @@
     "sample_execution_note": "疼痛+生成集",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "异常/对抗专项",
-    "validation_primary_name": "安全阻断·高"
+    "validation_primary_name": "安全阻断·高",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0070",
@@ -837,7 +906,8 @@
     "sample_execution_note": "trace/jsonl 查 tool 调用",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0071",
@@ -849,7 +919,8 @@
     "sample_execution_note": "写库 tool 必须 0 次",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "异常/对抗专项",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0072",
@@ -861,7 +932,8 @@
     "sample_execution_note": "同 prompt N 次 message_type",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "同用例重复抽样",
-    "validation_primary_name": "Pass^k稳定"
+    "validation_primary_name": "Pass^k稳定",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0073",
@@ -873,7 +945,8 @@
     "sample_execution_note": "LLM 429→failed/retry",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0074",
@@ -885,7 +958,8 @@
     "sample_execution_note": "长跑 completed",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0075",
@@ -897,7 +971,8 @@
     "sample_execution_note": "负向+专家",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "安全阻断·高"
+    "validation_primary_name": "安全阻断·高",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0076",
@@ -909,7 +984,8 @@
     "sample_execution_note": "Golden fixture",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "达标率·中门槛"
+    "validation_primary_name": "达标率·中门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0077",
@@ -921,7 +997,8 @@
     "sample_execution_note": "mock LLM gates",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "契约通过"
+    "validation_primary_name": "契约通过",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0078",
@@ -933,7 +1010,8 @@
     "sample_execution_note": "计划 turn 总时长",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "性能SLO·中"
+    "validation_primary_name": "性能SLO·中",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0079",
@@ -945,7 +1023,8 @@
     "sample_execution_note": "首 SSE 事件时间",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "性能SLO·中"
+    "validation_primary_name": "性能SLO·中",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0080",
@@ -957,7 +1036,8 @@
     "sample_execution_note": "并发+queue_meta",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "压测/容量",
-    "validation_primary_name": "性能SLO·高"
+    "validation_primary_name": "性能SLO·高",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0081",
@@ -969,7 +1049,8 @@
     "sample_execution_note": "72h 长稳",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "压测/容量",
-    "validation_primary_name": "性能SLO·高"
+    "validation_primary_name": "性能SLO·高",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0082",
@@ -981,7 +1062,8 @@
     "sample_execution_note": "连接数公式",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "压测/容量",
-    "validation_primary_name": "性能SLO·中"
+    "validation_primary_name": "性能SLO·中",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0083",
@@ -993,7 +1075,8 @@
     "sample_execution_note": "local/agentrun 配置",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "边界/等价类矩阵",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0084",
@@ -1005,7 +1088,8 @@
     "sample_execution_note": "E2E resume",
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0085",
@@ -1017,7 +1101,8 @@
     "sample_execution_note": "意图类：每意图多样本；边界句 100% 规则用 EXACT",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "达标率·高门槛"
+    "validation_primary_name": "达标率·高门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0086",
@@ -1029,7 +1114,8 @@
     "sample_execution_note": "课时状态×总结能力矩阵",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "边界/等价类矩阵",
-    "validation_primary_name": "契约通过"
+    "validation_primary_name": "契约通过",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0087",
@@ -1041,7 +1127,8 @@
     "sample_execution_note": "删除两轮",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0088",
@@ -1053,7 +1140,8 @@
     "sample_execution_note": "重复 client_turn_id / 刷新",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "同用例重复抽样",
-    "validation_primary_name": "Pass^k稳定"
+    "validation_primary_name": "Pass^k稳定",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0089",
@@ -1065,7 +1153,8 @@
     "sample_execution_note": "医疗场景集",
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "安全阻断·高"
+    "validation_primary_name": "安全阻断·高",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0090",
@@ -1077,7 +1166,8 @@
     "sample_execution_note": "分配+确认+幂等重复",
     "mapping_source": "C3-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0091",
@@ -1089,7 +1179,8 @@
     "sample_execution_note": "三端载荷矩阵",
     "mapping_source": "C4-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0092",
@@ -1101,7 +1192,8 @@
     "sample_execution_note": "异常入参/错误码：每码 1 请求",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0093",
@@ -1113,7 +1205,8 @@
     "sample_execution_note": "先占 in-flight 再第二条",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "边界/等价类矩阵",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0094",
@@ -1125,7 +1218,8 @@
     "sample_execution_note": "failed turn error 字段",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0095",
@@ -1137,7 +1231,8 @@
     "sample_execution_note": "202 body schema",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "契约通过"
+    "validation_primary_name": "契约通过",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0096",
@@ -1149,7 +1244,8 @@
     "sample_execution_note": "body 伪造 id vs 套壳注入",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0097",
@@ -1161,7 +1257,8 @@
     "sample_execution_note": "无 Key→401",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0098",
@@ -1173,7 +1270,8 @@
     "sample_execution_note": "架构/配置审查+spot",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0099",
@@ -1185,7 +1283,8 @@
     "sample_execution_note": "202 字段存在性",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "契约通过"
+    "validation_primary_name": "契约通过",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0100",
@@ -1197,7 +1296,8 @@
     "sample_execution_note": "SSE 各 event 类型",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "契约通过"
+    "validation_primary_name": "契约通过",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0101",
@@ -1209,7 +1309,8 @@
     "sample_execution_note": "多轮后仍避禁忌",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "同用例重复抽样",
-    "validation_primary_name": "达标率·中门槛"
+    "validation_primary_name": "达标率·中门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0102",
@@ -1221,7 +1322,8 @@
     "sample_execution_note": "sanitize 单测",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "契约通过"
+    "validation_primary_name": "契约通过",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0103",
@@ -1233,7 +1335,8 @@
     "sample_execution_note": "A/B session",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0104",
@@ -1245,7 +1348,8 @@
     "sample_execution_note": "主链延迟不受睡梦阻塞",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "存在性"
+    "validation_primary_name": "存在性",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0105",
@@ -1257,7 +1361,8 @@
     "sample_execution_note": "对抗 prompt 集",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "异常/对抗专项",
-    "validation_primary_name": "安全阻断·高"
+    "validation_primary_name": "安全阻断·高",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0106",
@@ -1269,7 +1374,8 @@
     "sample_execution_note": "负向+专家",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "安全阻断·高"
+    "validation_primary_name": "安全阻断·高",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0107",
@@ -1281,7 +1387,8 @@
     "sample_execution_note": "负向+专家",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "安全阻断·高"
+    "validation_primary_name": "安全阻断·高",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0108",
@@ -1293,7 +1400,8 @@
     "sample_execution_note": "PRD §8 映射；硬规则用 VS-03-ZERO",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "达标率·高门槛"
+    "validation_primary_name": "达标率·高门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0109",
@@ -1305,7 +1413,8 @@
     "sample_execution_note": "submit p99",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "压测/容量",
-    "validation_primary_name": "性能SLO·中"
+    "validation_primary_name": "性能SLO·中",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0110",
@@ -1317,7 +1426,8 @@
     "sample_execution_note": "写 inbox 权限",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0111",
@@ -1329,7 +1439,8 @@
     "sample_execution_note": "SLS 字段可查",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "存在性"
+    "validation_primary_name": "存在性",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0112",
@@ -1341,7 +1452,8 @@
     "sample_execution_note": "症状复现+错误码",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "压测/容量",
-    "validation_primary_name": "性能SLO·中"
+    "validation_primary_name": "性能SLO·中",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0113",
@@ -1353,7 +1465,8 @@
     "sample_execution_note": "容量公式压测",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "压测/容量",
-    "validation_primary_name": "性能SLO·高"
+    "validation_primary_name": "性能SLO·高",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0114",
@@ -1365,7 +1478,8 @@
     "sample_execution_note": "错误场景句集+人工读文案",
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "达标率·中门槛"
+    "validation_primary_name": "达标率·中门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0115",
@@ -1377,7 +1491,8 @@
     "sample_execution_note": "功能通过后查指标；连接率等用 RATE-L",
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "达标率·低门槛"
+    "validation_primary_name": "达标率·低门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0116",
@@ -1389,7 +1504,8 @@
     "sample_execution_note": "功能通过后查指标；连接率等用 RATE-L",
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "达标率·低门槛"
+    "validation_primary_name": "达标率·低门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0117",
@@ -1401,7 +1517,8 @@
     "sample_execution_note": "每 turn 必有分段",
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "存在性"
+    "validation_primary_name": "存在性",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0118",
@@ -1413,7 +1530,8 @@
     "sample_execution_note": "抽 N 条 turn 查 19 项字段",
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "完整性"
+    "validation_primary_name": "完整性",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0119",
@@ -1425,7 +1543,8 @@
     "sample_execution_note": "会员确认/风险/反馈留痕",
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "存在性"
+    "validation_primary_name": "存在性",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0120",
@@ -1437,7 +1556,8 @@
     "sample_execution_note": "管理操作审计字段",
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "存在性"
+    "validation_primary_name": "存在性",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0121",
@@ -1449,7 +1569,8 @@
     "sample_execution_note": "journey 站点；须 client_turn_id",
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "完整性"
+    "validation_primary_name": "完整性",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0122",
@@ -1461,7 +1582,8 @@
     "sample_execution_note": "SLS 查询模板",
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "存在性"
+    "validation_primary_name": "存在性",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0123",
@@ -1473,7 +1595,8 @@
     "sample_execution_note": "排障路径 spot check",
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "存在性"
+    "validation_primary_name": "存在性",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0124",
@@ -1483,7 +1606,8 @@
     "validation_primary_id": null,
     "validation_secondary_id": null,
     "sample_execution_note": "记录缺口，不作为通过/失败",
-    "mapping_source": "H-方案映射.md"
+    "mapping_source": "H-方案映射.md",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0125",
@@ -1495,7 +1619,8 @@
     "sample_execution_note": "计划链：form→draft→pending→active；状态 gate 矩阵",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0126",
@@ -1507,7 +1632,8 @@
     "sample_execution_note": "指标/体测表：空值不编造",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "边界/等价类矩阵",
-    "validation_primary_name": "契约通过"
+    "validation_primary_name": "契约通过",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0127",
@@ -1519,7 +1645,8 @@
     "sample_execution_note": "策略场景句集（疼痛/急性/医学/极端）",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "达标率·高门槛"
+    "validation_primary_name": "达标率·高门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0128",
@@ -1531,7 +1658,8 @@
     "sample_execution_note": "禁止生成句集；与教练端同句 PAIR 对照",
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0129",
@@ -1543,7 +1671,8 @@
     "sample_execution_note": "允许问答/解释句集",
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "达标率·中门槛"
+    "validation_primary_name": "达标率·中门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0130",
@@ -1555,7 +1684,8 @@
     "sample_execution_note": "确认/拒绝+DB 状态",
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0131",
@@ -1567,7 +1697,8 @@
     "sample_execution_note": "体验类可 REP；幂等 EXACT",
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "同用例重复抽样",
-    "validation_primary_name": "达标率·低门槛"
+    "validation_primary_name": "达标率·低门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0132",
@@ -1579,7 +1710,8 @@
     "sample_execution_note": "与教练端同句对照",
     "mapping_source": "C3-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0133",
@@ -1591,7 +1723,8 @@
     "sample_execution_note": "CLI 一次",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0134",
@@ -1603,7 +1736,8 @@
     "sample_execution_note": "阶段文案允许措辞波动；出现率用 RATE",
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "同用例重复抽样",
-    "validation_primary_name": "达标率·中门槛"
+    "validation_primary_name": "达标率·中门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0135",
@@ -1615,7 +1749,8 @@
     "sample_execution_note": "表单/卡片可操作",
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0136",
@@ -1627,7 +1762,8 @@
     "sample_execution_note": "会员端无 coach 组件",
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0137",
@@ -1639,7 +1775,8 @@
     "sample_execution_note": "安全审查结果分类统计",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "安全阻断·高"
+    "validation_primary_name": "安全阻断·高",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0138",
@@ -1651,7 +1788,8 @@
     "sample_execution_note": "确认规则：口语不误写库 100%；唯一确认 EXACT",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0139",
@@ -1663,7 +1801,8 @@
     "sample_execution_note": "PRD §5.12 高风险：任一出现即失败",
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0140",
@@ -1675,7 +1814,8 @@
     "sample_execution_note": "§6.12 高风险",
     "mapping_source": "C3-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0141",
@@ -1687,7 +1827,8 @@
     "sample_execution_note": "CLI 命令一次执行",
     "mapping_source": "C4-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0142",
@@ -1699,7 +1840,8 @@
     "sample_execution_note": "写库确认横切规则集",
     "mapping_source": "C4-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0143",
@@ -1711,7 +1853,8 @@
     "sample_execution_note": "trace/jsonl 查 tool 调用",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0144",
@@ -1723,7 +1866,8 @@
     "sample_execution_note": "E2E resume",
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0145",
@@ -1735,7 +1879,8 @@
     "sample_execution_note": "耗时节点从 log 取",
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "性能SLO·中"
+    "validation_primary_name": "性能SLO·中",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0146",
@@ -1747,7 +1892,8 @@
     "sample_execution_note": "课时状态×总结能力矩阵",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "边界/等价类矩阵",
-    "validation_primary_name": "契约通过"
+    "validation_primary_name": "契约通过",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0147",
@@ -1759,7 +1905,8 @@
     "sample_execution_note": "删除两轮",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0148",
@@ -1771,7 +1918,8 @@
     "sample_execution_note": "重复 client_turn_id / 刷新",
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "同用例重复抽样",
-    "validation_primary_name": "Pass^k稳定"
+    "validation_primary_name": "Pass^k稳定",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0149",
@@ -1783,7 +1931,8 @@
     "sample_execution_note": "医疗场景集",
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "安全阻断·高"
+    "validation_primary_name": "安全阻断·高",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0150",
@@ -1795,7 +1944,8 @@
     "sample_execution_note": "三端载荷矩阵",
     "mapping_source": "C4-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
-    "validation_primary_name": "零违规"
+    "validation_primary_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0151",
@@ -1807,7 +1957,8 @@
     "sample_execution_note": "异常入参/错误码：每码 1 请求",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "精确匹配"
+    "validation_primary_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0152",
@@ -1819,7 +1970,8 @@
     "sample_execution_note": "202 字段存在性",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
-    "validation_primary_name": "契约通过"
+    "validation_primary_name": "契约通过",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0153",
@@ -1831,7 +1983,8 @@
     "sample_execution_note": "SSE 各 event 类型",
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "契约通过"
+    "validation_primary_name": "契约通过",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0154",
@@ -1843,7 +1996,8 @@
     "sample_execution_note": "对抗 prompt 集",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "异常/对抗专项",
-    "validation_primary_name": "安全阻断·高"
+    "validation_primary_name": "安全阻断·高",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0155",
@@ -1855,7 +2009,8 @@
     "sample_execution_note": "PRD §8 映射；硬规则用 VS-03-ZERO",
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "达标率·高门槛"
+    "validation_primary_name": "达标率·高门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0156",
@@ -1867,7 +2022,8 @@
     "sample_execution_note": "症状复现+错误码",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "压测/容量",
-    "validation_primary_name": "性能SLO·中"
+    "validation_primary_name": "性能SLO·中",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0157",
@@ -1879,7 +2035,8 @@
     "sample_execution_note": "容量公式压测",
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "压测/容量",
-    "validation_primary_name": "性能SLO·高"
+    "validation_primary_name": "性能SLO·高",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0158",
@@ -1891,7 +2048,8 @@
     "sample_execution_note": "错误场景句集+人工读文案",
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
-    "validation_primary_name": "达标率·中门槛"
+    "validation_primary_name": "达标率·中门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0159",
@@ -1903,7 +2061,8 @@
     "sample_execution_note": "抽 N 条 turn 查 19 项字段",
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "完整性"
+    "validation_primary_name": "完整性",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0160",
@@ -1915,7 +2074,8 @@
     "sample_execution_note": "会员确认/风险/反馈留痕",
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "存在性"
+    "validation_primary_name": "存在性",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0161",
@@ -1927,7 +2087,8 @@
     "sample_execution_note": "管理操作审计字段",
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "存在性"
+    "validation_primary_name": "存在性",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0162",
@@ -1939,7 +2100,8 @@
     "sample_execution_note": "journey 站点；须 client_turn_id",
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "完整性"
+    "validation_primary_name": "完整性",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0163",
@@ -1951,7 +2113,8 @@
     "sample_execution_note": "SLS 查询模板",
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "存在性"
+    "validation_primary_name": "存在性",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0164",
@@ -1963,7 +2126,8 @@
     "sample_execution_note": "排障路径 spot check",
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "存在性"
+    "validation_primary_name": "存在性",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0165",
@@ -1973,7 +2137,8 @@
     "validation_primary_id": null,
     "validation_secondary_id": null,
     "sample_execution_note": "记录缺口，不作为通过/失败",
-    "mapping_source": "H-方案映射.md"
+    "mapping_source": "H-方案映射.md",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0166",
@@ -1985,7 +2150,8 @@
     "sample_execution_note": "体验类可 REP；幂等 EXACT",
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "同用例重复抽样",
-    "validation_primary_name": "达标率·低门槛"
+    "validation_primary_name": "达标率·低门槛",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0167",
@@ -1997,7 +2163,8 @@
     "sample_execution_note": "表单/卡片可操作",
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "多步链路串联",
-    "validation_primary_name": "链路全过(别名)"
+    "validation_primary_name": "链路全过(别名)",
+    "project_code": "fitness-agent"
   },
   {
     "mapping_id": "MAP0168",
@@ -2009,6 +2176,7 @@
     "sample_execution_note": "耗时节点从 log 取",
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "可观测稽核",
-    "validation_primary_name": "性能SLO·中"
+    "validation_primary_name": "性能SLO·中",
+    "project_code": "fitness-agent"
   }
 ]

@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS prd_goal (
+  project_code VARCHAR(64) NOT NULL DEFAULT 'fitness-agent',
   prd_goal_id VARCHAR(64) PRIMARY KEY,
   goal_no SMALLINT,
   name TEXT,

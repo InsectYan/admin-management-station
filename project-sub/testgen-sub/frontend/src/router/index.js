@@ -9,24 +9,81 @@ export function createAppRouter(basename) {
         path: '/',
         component: MainLayout,
         children: [
-          { path: '', redirect: 'scope' },
+          { path: '', redirect: 'projects' },
           {
-            path: 'scope',
+            path: 'projects',
+            name: 'project-list',
+            component: () => import('../views/projects/ProjectListPage.vue'),
+            meta: { title: '项目管理' },
+          },
+          {
+            path: 'projects/new',
+            name: 'project-new',
+            component: () => import('../views/projects/ProjectFormPage.vue'),
+            meta: { title: '新建项目' },
+          },
+          {
+            path: 'projects/:projectCode/edit',
+            name: 'project-edit',
+            component: () => import('../views/projects/ProjectFormPage.vue'),
+            meta: { title: '编辑项目' },
+          },
+          {
+            path: 'projects/:projectCode',
+            component: () => import('../views/projects/ProjectDetailLayout.vue'),
+            meta: { title: '项目详情' },
+            children: [
+              {
+                path: '',
+                name: 'project-detail',
+                component: () => import('../views/projects/ProjectOverviewPage.vue'),
+                meta: { title: '项目概览' },
+              },
+              {
+                path: 'environments',
+                name: 'project-environments',
+                component: () => import('../views/projects/ProjectEnvironmentsPage.vue'),
+                meta: { title: '环境配置' },
+              },
+              {
+                path: 'variables',
+                name: 'project-variables',
+                component: () => import('../views/projects/ProjectVariablesPage.vue'),
+                meta: { title: '全局变量' },
+              },
+              {
+                path: 'monitoring',
+                name: 'project-monitoring',
+                component: () => import('../views/projects/ProjectMonitoringPage.vue'),
+                meta: { title: '环境监控' },
+              },
+              {
+                path: 'sync',
+                name: 'project-sync',
+                component: () => import('../views/projects/ProjectSyncPage.vue'),
+                meta: { title: '环境同步' },
+              },
+            ],
+          },
+          {
+            path: 'testgen/scope',
             name: 'test-scope',
             component: () => import('../views/TestScopePage.vue'),
-            meta: { title: '生成测试用例' },
+            meta: { title: '生成配置', group: 'testgen' },
           },
+          {
+            path: 'testgen/items',
+            name: 'test-suite',
+            component: () => import('../views/fitness/assets/FitnessItemsPage.vue'),
+            meta: { title: '用例库', group: 'testgen' },
+          },
+          { path: 'scope', redirect: '/testgen/scope' },
+          { path: 'suite', redirect: '/testgen/items' },
           {
             path: 'jobs/:id',
             name: 'generation-progress',
             component: () => import('../views/GenerationProgressPage.vue'),
-            meta: { title: '生成进度' },
-          },
-          {
-            path: 'suite',
-            name: 'test-suite',
-            component: () => import('../views/TestSuitePage.vue'),
-            meta: { title: '测试用例管理' },
+            meta: { title: '生成进度', group: 'testgen' },
           },
           {
             path: 'runs/:runId',
@@ -51,14 +108,12 @@ export function createAppRouter(basename) {
           },
           {
             path: 'fitness/assets',
-            redirect: '/fitness/assets/items',
+            redirect: '/testgen/items',
             meta: { group: 'fitness' },
           },
           {
             path: 'fitness/assets/items',
-            name: 'fitness-items',
-            component: () => import('../views/fitness/assets/FitnessItemsPage.vue'),
-            meta: { title: '测试项库', group: 'fitness' },
+            redirect: to => ({ path: '/testgen/items', query: to.query }),
           },
           {
             path: 'fitness/assets/items/:itemId',

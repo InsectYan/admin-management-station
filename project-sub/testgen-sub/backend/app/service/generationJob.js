@@ -1,9 +1,10 @@
 'use strict';
 
 const Service = require('egg').Service;
+const { isApprovedCase } = require('../lib/generationItemMapper');
 
-const PHASES = [ 'analyze', 'functional', 'edge', 'review' ];
-const FIELD_MAX = 300;
+const PHASES = [ 'analyze', 'generate', 'review' ];
+const MAX_TARGET_ATTEMPTS = 5;
 
 class GenerationJobService extends Service {
   async createAndRun(payload) {
@@ -13,14 +14,20 @@ class GenerationJobService extends Service {
       document_content,
       document_title,
       document_type,
-      module,
-      test_types,
-      options,
+      project_code,
+      project_name,
+      options = {},
       llm_profile,
     } = payload;
 
-    if (!module) {
-      const err = new Error('module is required');
+    const scheme_targets = options.scheme_targets || [];
+    if (!project_code || !project_name) {
+      const err = new Error('project_code 与 project_name 为必填项');
+      err.status = 400;
+      throw err;
+    }
+    if (!scheme_targets.length) {
+      const err = new Error('至少配置一项主方案与主验证生成目标');
       err.status = 400;
       throw err;
     }
@@ -58,36 +65,45 @@ class GenerationJobService extends Service {
         title: resolvedTitle || '上传文档',
         doc_type: resolvedType || 'markdown',
         content: resolvedContent,
-        metadata: { module },
+        metadata: { project_code, project_name },
       });
       resolvedDocumentId = doc.id;
     }
 
     const jobPayload = {
       document_id: resolvedDocumentId,
-      module,
-      test_types,
+      project_code,
+      project_name,
       options,
       document_content: resolvedContent,
       document_title: resolvedTitle,
       document_type: resolvedType,
       llm_profile,
-      fitness_context: payload.fitness_context || options?.fitness_context || null,
     };
 
     const job = await this.ctx.model.GenerationJob.create({
       document_id: resolvedDocumentId,
-      module,
-      test_types: test_types || [],
-      options: options || {},
+      module: project_name,
+      project_code,
+      project_name,
+      test_types: [],
+      options,
       status: 'running',
       current_phase: 'analyze',
-      progress: { analyze: 10, functional: 0, edge: 0, review: 0 },
+      progress: { overall_percent: 0, analyze: 0, generate: 0, review: 0 },
       agent_context: {
         current_direction: '任务已创建，等待 Agent 启动…',
         current_phase: 'analyze',
+        current_target_index: 0,
+        current_target: scheme_targets[0],
+        scheme_targets,
+        target_states: scheme_targets.map(t => ({
+          ...t,
+          status: 'pending',
+          produced: 0,
+        })),
+        overall_percent: 0,
         llm_profile_id: llm_profile || '',
-        type_counts: options?.type_counts || {},
         updated_at: new Date().toISOString(),
       },
       started_at: new Date(),
@@ -103,122 +119,233 @@ class GenerationJobService extends Service {
       }
     });
 
-    return {
-      job_id: job.id,
-      id: job.id,
-      status: 'running',
-    };
+    return { job_id: job.id, id: job.id, status: 'running' };
   }
 
   async executeJob(jobId, payload) {
     const {
       document_id,
-      module,
-      test_types,
-      options,
+      project_code,
+      project_name,
+      options = {},
       document_content,
       llm_profile,
-      fitness_context: fitnessContextRaw,
     } = payload;
-    const fitnessContext = fitnessContextRaw || options?.fitness_context || null;
+
     const job = await this.ctx.model.GenerationJob.findByPk(jobId);
-    if (!job) return;
+    if (!job || job.status === 'cancelled') return;
 
-    if (job.status === 'cancelled') return;
-
-    let progressTimer = null;
-    let phaseIndex = 0;
-    let agentRes = null;
-
-    const updateProgress = async (phaseIdx, percent) => {
-      const progress = Object.fromEntries(
-        PHASES.map((p, i) => [ p, i < phaseIdx ? 100 : (i === phaseIdx ? percent : 0) ]),
-      );
-      await job.update({
-        current_phase: PHASES[phaseIdx],
-        progress,
-      });
-    };
+    const scheme_targets = options.scheme_targets || job.options?.scheme_targets || [];
+    const targetStates = scheme_targets.map(t => ({ ...t, status: 'pending', produced: 0 }));
+    const allSteps = [];
+    let totalItems = 0;
 
     try {
       const doc = await this.ctx.service.document.findById(document_id);
-      if (!doc) {
-        const err = new Error('document not found');
-        err.status = 404;
-        throw err;
-      }
-
-      await updateProgress(0, 25);
-      await this.updateAgentContext(jobId, {
-        current_direction: '正在连接 Agent 平台…',
-        current_phase: 'analyze',
-        llm_profile_id: llm_profile || job.agent_context?.llm_profile_id || '',
-      });
-
-      progressTimer = setInterval(async () => {
-        try {
-          await job.reload();
-          if ([ 'cancelled', 'done', 'failed' ].includes(job.status)) return;
-          phaseIndex = Math.min(phaseIndex + 1, PHASES.length - 1);
-          const percent = Math.min(25 + phaseIndex * 20, 90);
-          await updateProgress(phaseIndex, percent);
-        } catch (e) {
-          this.ctx.app.logger.warn('[generationJob] progress tick failed job=%s %s', jobId, e.message);
-        }
-      }, 3000);
+      if (!doc) throw new Error('document not found');
 
       const rawContent = document_content || doc.content;
-      const agentAction = fitnessContext?.scheme_id ? 'generate_for_fitness' : 'generate';
 
-      agentRes = await this.ctx.service.agentProxy.invokeTestgen({
-        action: agentAction,
-        doc_id: document_id,
-        doc_title: doc.title,
-        document_content: rawContent,
-        module,
-        test_types: test_types || [],
-        options: options || {},
-        fitness_context: fitnessContext,
-        scheme_id: fitnessContext?.scheme_id,
-        job_id: jobId,
-        llm_profile,
-        trace: { job_id: jobId },
-      });
+      for (let ti = 0; ti < scheme_targets.length; ti++) {
+        await job.reload();
+        if (job.status === 'cancelled') return;
 
-      if (progressTimer) clearInterval(progressTimer);
+        const target = scheme_targets[ti];
+        targetStates[ti].status = 'running';
+        let approvedCases = [];
+        let attempts = 0;
 
-      await job.reload();
-      if (job.status === 'cancelled') return;
+        while (approvedCases.length < target.count && attempts < MAX_TARGET_ATTEMPTS) {
+          attempts += 1;
+          await job.reload();
+          if (job.status === 'cancelled') return;
 
-      await this.syncFromAgentOutput(jobId, agentRes, document_id, module);
+          for (let pi = 0; pi < PHASES.length; pi++) {
+            const phase = PHASES[pi];
+            await this.updateSchemeProgress(jobId, {
+              targetIndex: ti,
+              phaseIndex: pi,
+              target,
+              targetStates,
+              scheme_targets,
+              direction: `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id} — ${this.phaseLabel(phase)}`,
+            });
+          }
 
-      if (fitnessContext) {
-        await this.applyFitnessPostProcess(jobId, fitnessContext, agentRes);
+          const agentRes = await this.ctx.service.agentProxy.invokeTestgen({
+            action: 'generate_for_fitness',
+            doc_id: document_id,
+            doc_title: doc.title,
+            document_content: rawContent,
+            module: project_name,
+            project_code,
+            project_name,
+            test_types: [ '功能测试', '边界值测试', 'GDPR 合规测试' ],
+            options: {
+              ...options,
+              hint: options.hint,
+              type_counts: {
+                '功能测试': target.count,
+                '边界值测试': target.count,
+                'GDPR 合规测试': target.count,
+              },
+              scheme_target: target,
+            },
+            fitness_context: {
+              scheme_id: target.scheme_id,
+              validation_id: target.validation_id,
+            },
+            scheme_id: target.scheme_id,
+            validation_id: target.validation_id,
+            job_id: jobId,
+            llm_profile,
+            trace: { job_id: jobId },
+          });
+
+          const rawCases = this.collectTestCasesFromOutput(agentRes.output || {});
+          const batchApproved = rawCases.filter(isApprovedCase);
+          approvedCases.push(...batchApproved);
+
+          const steps = agentRes.output?.steps || [];
+          allSteps.push(...steps.map(s => ({
+            ...s,
+            scheme_id: target.scheme_id,
+            validation_id: target.validation_id,
+            attempt: attempts,
+            test_case_count: batchApproved.length,
+          })));
+
+          targetStates[ti].produced = approvedCases.length;
+          targetStates[ti].attempt = attempts;
+          targetStates[ti].last_batch_approved = batchApproved.length;
+
+          const targetLabel = `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id}`;
+          let retryNotice = null;
+          let direction = '';
+
+          if (batchApproved.length === 0) {
+            targetStates[ti].last_attempt_empty = true;
+            retryNotice = `第 ${attempts} 次生成：${targetLabel} 合规审查后无有效用例`;
+            const willRetry = approvedCases.length < target.count && attempts < MAX_TARGET_ATTEMPTS;
+            direction = willRetry
+              ? `${retryNotice}，正在重试…（已通过 ${approvedCases.length}/${target.count} 条）`
+              : `${retryNotice}（已通过 ${approvedCases.length}/${target.count} 条）`;
+          } else if (approvedCases.length < target.count) {
+            targetStates[ti].last_attempt_empty = false;
+            retryNotice = null;
+            const willRetry = attempts < MAX_TARGET_ATTEMPTS;
+            direction = willRetry
+              ? `${targetLabel}：已通过 ${approvedCases.length}/${target.count} 条，继续补全…`
+              : `${targetLabel}：已通过 ${approvedCases.length}/${target.count} 条`;
+          } else {
+            targetStates[ti].last_attempt_empty = false;
+            retryNotice = null;
+            direction = `${targetLabel}：已通过 ${approvedCases.length}/${target.count} 条`;
+          }
+
+          if (approvedCases.length < target.count) {
+            await this.updateSchemeProgress(jobId, {
+              targetIndex: ti,
+              phaseIndex: PHASES.length - 1,
+              target,
+              targetStates,
+              scheme_targets,
+              direction,
+              steps_log: allSteps,
+              retry_notice: retryNotice,
+            });
+            this.ctx.app.logger.warn(
+              '[generationJob] job=%s target=%s attempt=%s approved=%s need=%s batch=%s',
+              jobId, target.scheme_id, attempts, approvedCases.length, target.count, batchApproved.length,
+            );
+          } else {
+            await this.updateSchemeProgress(jobId, {
+              targetIndex: ti,
+              phaseIndex: PHASES.length - 1,
+              target,
+              targetStates,
+              scheme_targets,
+              direction,
+              steps_log: allSteps,
+              retry_notice: null,
+            });
+          }
+        }
+
+        approvedCases = approvedCases.slice(0, target.count);
+
+        if (!approvedCases.length) {
+          targetStates[ti].status = 'failed';
+          targetStates[ti].produced = 0;
+          await this.updateSchemeProgress(jobId, {
+            targetIndex: ti,
+            phaseIndex: PHASES.length,
+            target,
+            targetStates,
+            scheme_targets,
+            direction: `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id}：未生成任何通过合规审查的用例`,
+            steps_log: allSteps,
+            retry_notice: `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id} 在 ${attempts} 次尝试后仍无有效用例`,
+          });
+          continue;
+        }
+
+        const itemIds = await this.ctx.service.generationItemWriter.bulkInsertItems(
+          approvedCases,
+          {
+            job_id: jobId,
+            project_code,
+            project_name,
+            scheme_id: target.scheme_id,
+            validation_id: target.validation_id,
+          },
+        );
+
+        totalItems += itemIds.length;
+        targetStates[ti].status = 'done';
+        targetStates[ti].produced = itemIds.length;
+
+        await this.updateSchemeProgress(jobId, {
+          targetIndex: ti,
+          phaseIndex: PHASES.length,
+          target,
+          targetStates,
+          scheme_targets,
+          direction: `${target.scheme_name || target.scheme_id} 已完成，写入 ${itemIds.length} 条`,
+          steps_log: allSteps,
+          retry_notice: null,
+        });
       }
 
-      const caseCount = await this.ctx.model.TestCase.count({ where: { job_id: jobId } });
-      if (caseCount === 0) {
-        throw new Error('Agent 执行完成但未返回可落库的测试用例，请检查文档内容或重试');
+      if (totalItems === 0) {
+        throw new Error('全部生成目标均未产出通过合规审查的有效用例，请检查文档内容或调整生成配置后重试');
       }
 
       await job.update({
         status: 'done',
         current_phase: 'review',
-        progress: { analyze: 100, functional: 100, edge: 100, review: 100 },
+        progress: { overall_percent: 100, analyze: 100, generate: 100, review: 100 },
+        steps_log: allSteps,
+        agent_context: {
+          ...(job.agent_context || {}),
+          target_states: targetStates,
+          overall_percent: 100,
+          retry_notice: null,
+          current_direction: `全部完成，共写入 ${totalItems} 条测试项`,
+          updated_at: new Date().toISOString(),
+        },
         finished_at: new Date(),
       });
     } catch (err) {
-      if (progressTimer) clearInterval(progressTimer);
       await job.reload();
       if (job.status !== 'cancelled') {
-        const abnormal = this.buildAbnormalDetail(agentRes, err.message);
         await job.update({
           status: 'failed',
           error_message: err.message,
           agent_context: {
             ...(job.agent_context || {}),
+            target_states: targetStates,
             current_direction: `执行失败：${err.message}`,
-            abnormal_content: abnormal,
             updated_at: new Date().toISOString(),
           },
           finished_at: new Date(),
@@ -228,19 +355,78 @@ class GenerationJobService extends Service {
     }
   }
 
+  normalizePhase(phase) {
+    if (phase === 'functional' || phase === 'edge') return 'generate';
+    return phase;
+  }
+
+  phaseLabel(phase) {
+    const key = this.normalizePhase(phase);
+    return {
+      analyze: '需求分析',
+      generate: '生成用例',
+      review: '合规审查',
+    }[key] || key;
+  }
+
+  async updateSchemeProgress(jobId, {
+    targetIndex,
+    phaseIndex,
+    target,
+    targetStates,
+    scheme_targets,
+    direction,
+    steps_log,
+    retry_notice,
+  }) {
+    const totalSteps = scheme_targets.length * PHASES.length;
+    const completedSteps = targetIndex * PHASES.length + Math.min(phaseIndex, PHASES.length);
+    const overallPercent = Math.min(99, Math.round((completedSteps / totalSteps) * 100));
+    const phase = PHASES[Math.min(phaseIndex, PHASES.length - 1)] || 'review';
+
+    const phaseProgress = Object.fromEntries(
+      PHASES.map((p, i) => {
+        if (i < phaseIndex) return [ p, 100 ];
+        if (i === phaseIndex) return [ p, 50 ];
+        return [ p, 0 ];
+      }),
+    );
+
+    const row = await this.ctx.model.GenerationJob.findByPk(jobId);
+    if (!row) return;
+
+    const updates = {
+      current_phase: phase,
+      progress: { overall_percent: overallPercent, ...phaseProgress },
+      agent_context: {
+        ...(row.agent_context || {}),
+        current_target_index: targetIndex,
+        current_target: target,
+        target_states: targetStates,
+        scheme_targets,
+        overall_percent: overallPercent,
+        current_phase: phase,
+        current_direction: direction,
+        retry_notice: retry_notice !== undefined ? retry_notice : (row.agent_context?.retry_notice ?? null),
+        updated_at: new Date().toISOString(),
+      },
+    };
+    if (steps_log) updates.steps_log = steps_log;
+    await row.update(updates);
+  }
+
   async retry(id, options = {}) {
     const row = await this.ctx.model.GenerationJob.findByPk(id);
-    if (!row) return null;
-    if (row.status !== 'failed') {
-      const err = new Error(`job cannot be retried in status: ${row.status}`);
+    if (!row || row.status !== 'failed') {
+      const err = new Error(`job cannot be retried in status: ${row?.status}`);
       err.status = 400;
       throw err;
     }
 
     const payload = {
       document_id: row.document_id,
-      module: row.module,
-      test_types: row.test_types,
+      project_code: row.project_code,
+      project_name: row.project_name,
       options: row.options,
       llm_profile: options.llm_profile,
     };
@@ -249,10 +435,11 @@ class GenerationJobService extends Service {
       status: 'running',
       error_message: null,
       current_phase: 'analyze',
-      progress: { analyze: 10, functional: 0, edge: 0, review: 0 },
+      progress: { overall_percent: 0, analyze: 0, generate: 0, review: 0 },
       agent_context: {
-        current_direction: '任务已重新提交，等待 Agent 启动…',
-        current_phase: 'analyze',
+        current_direction: '任务已重新提交…',
+        scheme_targets: row.options?.scheme_targets || [],
+        overall_percent: 0,
         updated_at: new Date().toISOString(),
       },
       finished_at: null,
@@ -284,6 +471,8 @@ class GenerationJobService extends Service {
       agent_run_id: json.agent_run_id,
       agent_context: json.agent_context || {},
       document_id: json.document_id,
+      project_code: json.project_code,
+      project_name: json.project_name,
       module: json.module,
       test_types: json.test_types,
       options: json.options,
@@ -293,28 +482,34 @@ class GenerationJobService extends Service {
     };
   }
 
-  async listTestCases(jobId, { page = 1, pageSize = 20, page_size } = {}) {
-    const size = Number(page_size || pageSize);
-    return this.ctx.service.testCase.list({
-      job_id: jobId,
-      page,
-      pageSize: size,
-    });
+  async listGeneratedItems(jobId, { page = 1, pageSize = 20 } = {}) {
+    const offset = (Number(page) - 1) * Number(pageSize);
+    const [ countRows ] = await this.app.model.query(
+      'SELECT COUNT(*) AS total FROM test_item_detail WHERE generation_job_id = :jobId',
+      { replacements: { jobId: Number(jobId) } },
+    );
+    const total = Number(countRows[0]?.total || 0);
+    const [ rows ] = await this.app.model.query(
+      `SELECT item_id, item_name, detail_summary, scheme_primary_id, validation_primary_id,
+              priority_id, project_code, project_name, created_at
+       FROM test_item_detail WHERE generation_job_id = :jobId
+       ORDER BY item_id LIMIT :limit OFFSET :offset`,
+      { replacements: { jobId: Number(jobId), limit: Number(pageSize), offset } },
+    );
+    return { list: rows, total, page: Number(page), pageSize: Number(pageSize) };
   }
 
   async updateAgentContext(id, patch = {}) {
     const row = await this.ctx.model.GenerationJob.findByPk(id);
     if (!row) return null;
-
-    const merged = {
-      ...(row.agent_context || {}),
-      ...patch,
-      updated_at: new Date().toISOString(),
-    };
-
+    const merged = { ...(row.agent_context || {}), ...patch, updated_at: new Date().toISOString() };
     const updates = { agent_context: merged };
-    if (patch.current_phase && PHASES.includes(patch.current_phase)) {
-      updates.current_phase = patch.current_phase;
+    if (patch.current_phase) {
+      const phase = this.normalizePhase(patch.current_phase);
+      if (PHASES.includes(phase)) {
+        updates.current_phase = phase;
+        merged.current_phase = phase;
+      }
     }
     await row.update(updates);
     return merged;
@@ -328,131 +523,13 @@ class GenerationJobService extends Service {
       err.status = 400;
       throw err;
     }
-    await row.update({
-      status: 'cancelled',
-      finished_at: new Date(),
-    });
+    await row.update({ status: 'cancelled', finished_at: new Date() });
     return this.findById(id);
   }
 
-  async syncFromAgentOutput(jobId, agentRes, documentId, jobModule) {
-    const { output = {}, meta = {} } = agentRes;
-    const steps = output.steps || [];
-    const progress = this.phasesToProgress(steps);
-    const rawCases = this.collectTestCasesFromOutput(output);
-    const usedCaseIds = new Set();
-    const cases = rawCases.map((tc, index) =>
-      this.normalizeTestCase(tc, jobId, documentId, jobModule, usedCaseIds, index),
-    );
-
-    const tx = await this.ctx.model.transaction();
-    try {
-      const row = await this.ctx.model.GenerationJob.findByPk(jobId, { transaction: tx });
-      const mergedContext = {
-        ...(row?.agent_context || {}),
-        model: meta.model || row?.agent_context?.model || '',
-        llm_profile_id: meta.llm_profile_id || agentRes.llm_profile_id || row?.agent_context?.llm_profile_id || '',
-        current_direction: cases.length
-          ? `Agent 执行完成，正在写入 ${cases.length} 条用例…`
-          : 'Agent 执行完成，但未解析到测试用例',
-        updated_at: new Date().toISOString(),
-      };
-      if (!cases.length) {
-        mergedContext.abnormal_content = this.buildAbnormalDetail(agentRes);
-      }
-
-      await this.ctx.model.GenerationJob.update(
-        {
-          agent_run_id: meta.run_id || null,
-          progress,
-          current_phase: this.resolveCurrentPhase(progress, steps),
-          agent_context: mergedContext,
-          steps_log: steps.map(s => ({
-            phase: s.phase || s.state?.phase,
-            note: s.note || s.partialOutput || s.state?.note?.[0] || '',
-            test_case_count: (s.state?.testCases || s.testCases || []).length,
-          })),
-        },
-        { where: { id: jobId }, transaction: tx },
-      );
-      if (cases.length) {
-        await this.ctx.model.TestCase.bulkCreate(cases, { transaction: tx });
-      } else {
-        this.ctx.app.logger.warn('[generationJob] job=%s agent returned 0 test cases', jobId);
-      }
-      await tx.commit();
-      return { caseCount: cases.length };
-    } catch (e) {
-      await tx.rollback();
-      this.ctx.app.logger.error('[generationJob] syncFromAgentOutput job=%s %s', jobId, e.message);
-      throw e;
-    }
-  }
-
-  buildAbnormalDetail(agentRes, errorMessage = '') {
-    const parts = [];
-    if (errorMessage) parts.push(`【BFF 错误】${errorMessage}`);
-
-    const output = agentRes?.output || {};
-    const reply = agentRes?.reply || '';
-    if (output.stoppedReason) {
-      parts.push(`【Agent 停止原因】${output.stoppedReason}`);
-    }
-    if (reply && output.stoppedReason === 'llm_error') {
-      parts.push(`【Agent 回复】\n${reply}`);
-    }
-
-    const rawCases = this.collectTestCasesFromOutput(output);
-    if (!rawCases.length) {
-      parts.push(
-        '【落库诊断】未从 Agent 输出中解析到 testCases / test_cases 数组。',
-        '常见原因：',
-        '1. LLM 输出 JSON 被截断或格式非法（检查 maxTokens 是否足够）',
-        '2. 用例只写在 note/summary 文本中，未放入 testCases 数组',
-        '3. phase 未随步序推进（functional/edge 步未产出用例）',
-        '4. 历史 memory 干扰导致模型提前 done（已对 generate 禁用 memory）',
-      );
-    }
-
-    if (output.summary) {
-      parts.push(`【Agent summary】\n${output.summary}`);
-    }
-    if (output.coverage_notes) {
-      parts.push(`【覆盖说明】\n${output.coverage_notes}`);
-    }
-
-    const steps = output.steps || [];
-    const tailSteps = steps.slice(-3);
-    for (const step of tailSteps) {
-      const label = step.step != null ? `步骤 ${step.step}` : '步骤';
-      const phase = step.phase || step.state?.phase || '—';
-      if (step.parseWarning) {
-        parts.push(`【${label} 解析警告】${step.parseWarning}`);
-      }
-      const partial = step.partialOutput || step.note || '';
-      if (partial) {
-        parts.push(`【${label} phase=${phase} 摘要】\n${partial}`);
-      }
-      const rawSnippet = String(step.rawText || '').slice(0, 1500);
-      if (rawSnippet && !rawCases.length) {
-        parts.push(`【${label} 原始 LLM 输出（前 1500 字）】\n${rawSnippet}`);
-      }
-      const batch = step.state?.testCases || step.state?.test_cases || [];
-      if (Array.isArray(batch) && !batch.length) {
-        parts.push(`【${label}】phase=${phase}，testCases 为空`);
-      }
-    }
-
-    return parts.filter(Boolean).join('\n\n') || errorMessage || '未知异常';
-  }
-
   collectTestCasesFromOutput(output = {}) {
-    if (Array.isArray(output.testCases) && output.testCases.length) {
-      return output.testCases;
-    }
-    if (Array.isArray(output.test_cases) && output.test_cases.length) {
-      return output.test_cases;
-    }
+    if (Array.isArray(output.testCases) && output.testCases.length) return output.testCases;
+    if (Array.isArray(output.test_cases) && output.test_cases.length) return output.test_cases;
     const merged = [];
     for (const step of output.steps || []) {
       const batch = step.state?.testCases || step.state?.test_cases
@@ -462,147 +539,11 @@ class GenerationJobService extends Service {
     return merged;
   }
 
-  truncateField(value, max = FIELD_MAX) {
-    const text = String(value ?? '').trim();
-    if (!text) return '';
-    if (text.length <= max) return text;
-    return `${text.slice(0, max)}…`;
-  }
-
-  normalizePriority(priority) {
-    const raw = String(priority || 'medium').toLowerCase();
-    const map = {
-      high: 'high', h: 'high', 高: 'high',
-      medium: 'medium', m: 'medium', 中: 'medium',
-      low: 'low', l: 'low', 低: 'low',
-    };
-    if (map[raw]) return map[raw];
-    if (raw.includes('高')) return 'high';
-    if (raw.includes('低')) return 'low';
-    return 'medium';
-  }
-
-  normalizeConfidence(value) {
-    if (value == null || value === '') return 0;
-    let n = Number(value);
-    if (Number.isNaN(n)) return 0;
-    if (n > 1) n /= 100;
-    return Math.min(1, Math.max(0, n));
-  }
-
-  normalizeStatus(status) {
-    const allowed = [ 'pending', 'running', 'passed', 'failed' ];
-    const raw = String(status || 'pending').toLowerCase();
-    return allowed.includes(raw) ? raw : 'pending';
-  }
-
-  uniqueCaseId(base, usedIds) {
-    let id = this.truncateField(base, 64) || `TC-${Date.now()}`;
-    if (!usedIds.has(id)) {
-      usedIds.add(id);
-      return id;
-    }
-    let n = 2;
-    while (usedIds.has(`${id}-${n}`)) n += 1;
-    const next = `${id}-${n}`;
-    usedIds.add(next);
-    return next;
-  }
-
-  normalizeTestCase(tc, jobId, documentId, jobModule, usedCaseIds, index) {
-    const baseId = tc.case_id || tc.caseId || tc.id || `TC-${jobId}-${index + 1}`;
-    const stepsRaw = Array.isArray(tc.steps) ? tc.steps : (tc.steps ? [ tc.steps ] : []);
-    const steps = stepsRaw.map(s => {
-      if (typeof s === 'string') return this.truncateField(s);
-      if (s && typeof s === 'object') {
-        return this.truncateField(s.action || s.step || JSON.stringify(s));
-      }
-      return this.truncateField(String(s));
-    }).filter(Boolean);
-
-    return {
-      job_id: jobId,
-      document_id: documentId,
-      case_id: this.uniqueCaseId(baseId, usedCaseIds),
-      title: this.truncateField(tc.title || tc.name || '未命名用例', 255),
-      module: this.truncateField(tc.module || jobModule || '', 64) || null,
-      type: this.truncateField(tc.type || 'functional', 32),
-      priority: this.normalizePriority(tc.priority),
-      status: this.normalizeStatus(tc.status),
-      confidence: this.normalizeConfidence(tc.confidence),
-      compliance: this.truncateField(tc.compliance || 'unverified', 32),
-      preconditions: this.truncateField(tc.preconditions || tc.precondition || '') || null,
-      steps: steps.length ? steps : [ '待补充步骤' ],
-      expected: this.truncateField(tc.expected || tc.expected_result || '') || null,
-      tags: Array.isArray(tc.tags)
-        ? tc.tags.map(t => this.truncateField(t, 64)).filter(Boolean)
-        : [],
-    };
-  }
-
-  resolveCurrentPhase(progress, steps = []) {
-    for (let i = PHASES.length - 1; i >= 0; i -= 1) {
-      if ((progress[PHASES[i]] || 0) > 0) return PHASES[i];
-    }
-    const lastStep = steps[steps.length - 1];
-    const last = lastStep?.phase || lastStep?.state?.phase;
-    if (PHASES.includes(last)) return last;
-    return 'analyze';
-  }
-
-  phasesToProgress(steps) {
-    const progress = Object.fromEntries(PHASES.map(p => [ p, 0 ]));
-    for (const step of steps) {
-      const phase = step.phase || step.state?.phase;
-      if (PHASES.includes(phase)) progress[phase] = 100;
-    }
-    if (steps.length) {
-      const lastStep = steps[steps.length - 1];
-      const last = lastStep.phase || lastStep.state?.phase;
-      if (PHASES.includes(last) && progress[last] < 100) progress[last] = 50;
-    }
-    return progress;
-  }
-
-  async applyFitnessPostProcess(jobId, fitnessContext, agentRes) {
-    const patch = { fitness_context: fitnessContext };
-
-    if (fitnessContext.auto_sample && fitnessContext.sample_set_id && fitnessContext.item_id) {
-      try {
-        const sampleRes = await this.ctx.service.agentProxy.invokeFitnessSample({
-          action: 'from_example',
-          item_id: fitnessContext.item_id,
-          sample_set_id: fitnessContext.sample_set_id,
-          scheme_id: fitnessContext.scheme_id,
-          test_input_example: fitnessContext.test_input_example,
-          test_cases: agentRes.output?.testCases || [],
-          trace: { job_id: jobId, item_id: fitnessContext.item_id },
-        });
-        patch.fitness_samples = sampleRes.output || sampleRes;
-      } catch (err) {
-        patch.fitness_samples_error = err.message;
-        this.ctx.app.logger.warn('[generationJob] enrich_samples job=%s %s', jobId, err.message);
-      }
-    }
-
-    if (fitnessContext.auto_dry_run && fitnessContext.item_id) {
-      try {
-        const dry = await this.ctx.service.internalFitness.dryRunLaunch(fitnessContext.item_id, {
-          scheme_id: fitnessContext.scheme_id,
-          dry_run: true,
-        });
-        patch.fitness_dry_run = {
-          verdict: dry.verdict,
-          pass: dry.pass,
-          sub_count: dry.sub_results?.length || 0,
-        };
-      } catch (err) {
-        patch.fitness_dry_run_error = err.message;
-        this.ctx.app.logger.warn('[generationJob] dry-run job=%s %s', jobId, err.message);
-      }
-    }
-
-    await this.updateAgentContext(jobId, patch);
+  buildAbnormalDetail(agentRes, errorMessage = '') {
+    const parts = errorMessage ? [ `【BFF 错误】${errorMessage}` ] : [];
+    const output = agentRes?.output || {};
+    if (output.summary) parts.push(`【Agent summary】\n${output.summary}`);
+    return parts.join('\n\n') || errorMessage || '未知异常';
   }
 }
 

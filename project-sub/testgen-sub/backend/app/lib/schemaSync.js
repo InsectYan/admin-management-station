@@ -61,22 +61,46 @@ function loadTablesMeta(dbDir) {
 }
 
 /**
+ * migrations 编号 >= 003 须在 Fitness 表 DDL 之后执行
+ * @param {string} fileName
+ */
+function isLateMigration(fileName) {
+  return migrationNumber(fileName) >= 3;
+}
+
+/**
+ * migrations 编号 >= 009 依赖 test_item_detail 等 seed 数据
+ * @param {string} fileName
+ */
+function isPostSeedMigration(fileName) {
+  return migrationNumber(fileName) >= 9;
+}
+
+/** @param {string} fileName */
+function migrationNumber(fileName) {
+  const m = fileName.match(/^(\d+)_/);
+  return m ? Number(m[1]) : 0;
+}
+
+/**
  * @param {import('sequelize').Sequelize} sequelize
  * @param {string} dbDir
  * @param {import('egg').EggLogger} logger
  * @param {{ beforeTables?: boolean, afterTables?: boolean }} scope
  */
 async function runSqlBootstrap(sequelize, dbDir, logger, scope = {}) {
-  const files = [ path.join(dbDir, 'init.sql') ];
+  const files = scope.postSeed ? [] : [ path.join(dbDir, 'init.sql') ];
   const migrationsDir = path.join(dbDir, 'migrations');
   if (fs.existsSync(migrationsDir)) {
     fs.readdirSync(migrationsDir)
       .filter(name => name.endsWith('.sql'))
       .sort()
       .forEach(name => {
-        const isLate = /^00[3-9]_/.test(name);
+        const isLate = isLateMigration(name);
+        const isPostSeed = isPostSeedMigration(name);
         if (scope.beforeTables && isLate) return;
-        if (scope.afterTables && !isLate) return;
+        if (scope.afterTables && (!isLate || isPostSeed)) return;
+        if (scope.postSeed && !isPostSeed) return;
         if (!scope.beforeTables && !scope.afterTables) {
           files.push(path.join(migrationsDir, name));
           return;
@@ -221,4 +245,7 @@ module.exports = {
   loadTablesMeta,
   loadTablesOrder,
   stripInsertStatements,
+  isLateMigration,
+  isPostSeedMigration,
+  migrationNumber,
 };

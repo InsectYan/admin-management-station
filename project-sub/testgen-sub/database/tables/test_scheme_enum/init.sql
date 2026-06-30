@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS test_scheme_enum (
+  project_code VARCHAR(64) NOT NULL DEFAULT 'fitness-agent',
   scheme_id VARCHAR(64) PRIMARY KEY,
   name TEXT,
   description TEXT,

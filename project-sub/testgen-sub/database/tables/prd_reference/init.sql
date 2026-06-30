@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS prd_reference (
+  project_code VARCHAR(64) NOT NULL DEFAULT 'fitness-agent',
   prd_ref_id VARCHAR(64) PRIMARY KEY,
   section TEXT,
   title TEXT

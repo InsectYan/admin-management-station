@@ -4,7 +4,8 @@
     "station_no": 0,
     "name": "非站级/横切",
     "description": "业务/Agent/部署类",
-    "arch_ref_id": null
+    "arch_ref_id": null,
+    "project_code": "fitness-agent"
   },
   {
     "station_id": "S01",
@@ -12,7 +13,8 @@
     "name": "① 前端",
     "description": "submit/stream/SSE/resume",
     "arch_ref_id": "ARCH_B1",
-    "arch_ref_title": "前端 submit/stream"
+    "arch_ref_title": "前端 submit/stream",
+    "project_code": "fitness-agent"
   },
   {
     "station_id": "S02",
@@ -20,7 +22,8 @@
     "name": "② 门禁",
     "description": "Key/熔断/限流/在途",
     "arch_ref_id": "ARCH_B2",
-    "arch_ref_title": "门禁 guard"
+    "arch_ref_title": "门禁 guard",
+    "project_code": "fitness-agent"
   },
   {
     "station_id": "S03",
@@ -28,7 +31,8 @@
     "name": "③ 队列",
     "description": "turn_jobs 入队 Worker",
     "arch_ref_id": "ARCH_B3",
-    "arch_ref_title": "队列入队 Worker"
+    "arch_ref_title": "队列入队 Worker",
+    "project_code": "fitness-agent"
   },
   {
     "station_id": "S04",
@@ -36,7 +40,8 @@
     "name": "④ Pipeline",
     "description": "prepare/gates/persist",
     "arch_ref_id": "ARCH_B4",
-    "arch_ref_title": "Pipeline prepare/gates/persist"
+    "arch_ref_title": "Pipeline prepare/gates/persist",
+    "project_code": "fitness-agent"
   },
   {
     "station_id": "S05",
@@ -44,7 +49,8 @@
     "name": "⑤ Pi",
     "description": "LLM/tools/outbox",
     "arch_ref_id": "ARCH_B5",
-    "arch_ref_title": "Pi outbox/tools"
+    "arch_ref_title": "Pi outbox/tools",
+    "project_code": "fitness-agent"
   },
   {
     "station_id": "S06",
@@ -52,6 +58,7 @@
     "name": "⑥ 回传",
     "description": "SSE final/journey",
     "arch_ref_id": "ARCH_B6",
-    "arch_ref_title": "SSE 回传 journey"
+    "arch_ref_title": "SSE 回传 journey",
+    "project_code": "fitness-agent"
   }
 ]

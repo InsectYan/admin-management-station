@@ -7,20 +7,24 @@ const {
   resolveDatabaseDir,
   stripInsertStatements,
   loadTablesOrder,
+  isLateMigration,
+  isPostSeedMigration,
 } = require('../../app/lib/schemaSync');
 const { syncTableColumnsFromInitSql } = require('./schema-column-sync');
 
 async function runSqlBootstrap(sequelize, dbDir, logger, scope = {}) {
-  const files = [ path.join(dbDir, 'init.sql') ];
+  const files = scope.postSeed ? [] : [ path.join(dbDir, 'init.sql') ];
   const migrationsDir = path.join(dbDir, 'migrations');
   if (fs.existsSync(migrationsDir)) {
     fs.readdirSync(migrationsDir)
       .filter(name => name.endsWith('.sql'))
       .sort()
       .forEach(name => {
-        const isLate = /^00[3-9]_/.test(name);
+        const isLate = isLateMigration(name);
+        const isPostSeed = isPostSeedMigration(name);
         if (scope.beforeTables && isLate) return;
-        if (scope.afterTables && !isLate) return;
+        if (scope.afterTables && (!isLate || isPostSeed)) return;
+        if (scope.postSeed && !isPostSeed) return;
         files.push(path.join(migrationsDir, name));
       });
   }
@@ -84,9 +88,15 @@ async function bootstrapFitnessSchema(sequelize, opts = {}) {
   return dbDir;
 }
 
+/** 依赖 seed 数据的 migrations（009+），须在 data 注入后执行 */
+async function runPostSeedMigrations(sequelize, dbDir, logger = console) {
+  await runSqlBootstrap(sequelize, dbDir, logger, { postSeed: true });
+}
+
 module.exports = {
   bootstrapFitnessSchema,
   runSqlBootstrap,
   runTablesBootstrap,
   runViewsBootstrap,
+  runPostSeedMigrations,
 };

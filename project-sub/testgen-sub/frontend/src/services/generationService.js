@@ -14,10 +14,9 @@ export async function startGeneration({
   document_content,
   document_title,
   document_type,
-  module,
-  test_types,
+  project_code,
+  project_name,
   options,
-  fitness_context,
 }) {
   const { data } = await api.post(`${base()}/generation-jobs`, withLlmProfile({
     staging_id,
@@ -25,10 +24,9 @@ export async function startGeneration({
     document_content,
     document_title,
     document_type,
-    module,
-    test_types,
+    project_code,
+    project_name,
     options,
-    fitness_context,
   }));
   return data.data;
 }
@@ -38,9 +36,14 @@ export async function getJob(jobId) {
   return data.data;
 }
 
-export async function listJobTestCases(jobId, params = {}) {
-  const { data } = await api.get(`${base()}/generation-jobs/${jobId}/test-cases`, { params });
+export async function listJobGeneratedItems(jobId, params = {}) {
+  const { data } = await api.get(`${base()}/generation-jobs/${jobId}/generated-items`, { params });
   return data.data;
+}
+
+/** @deprecated use listJobGeneratedItems */
+export async function listJobTestCases(jobId, params = {}) {
+  return listJobGeneratedItems(jobId, params);
 }
 
 export async function pauseJob(jobId) {

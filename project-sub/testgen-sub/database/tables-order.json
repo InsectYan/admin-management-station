@@ -1,10 +1,11 @@
 [
+  "test_project",
   "test_dimension",
   "test_category_major",
   "test_category_minor",
-  "test_category_minor_scheme",
   "test_scheme_enum",
   "test_validation_enum",
+  "test_category_minor_scheme",
   "test_scheme_validation_pair",
   "test_priority_enum",
   "test_automation_status_enum",
@@ -24,17 +25,5 @@
   "test_item_prd_goal_link",
   "test_item_prd_ref_link",
   "test_item_arch_ref_link",
-  "test_item_risk_link",
-  "v_metric_dimension_summary",
-  "v_metric_prd_goal_coverage",
-  "v_metric_automation_coverage",
-  "v_metric_risk_guard_coverage",
-  "v_metric_priority_distribution",
-  "v_metric_station_role_matrix",
-  "v_analysis_release_readiness",
-  "v_analysis_risk_gap",
-  "v_analysis_scheme_validation_matrix",
-  "v_analysis_dimension_automation",
-  "v_analysis_p0_blockers_todo",
-  "v_risk_link_bidirectional"
+  "test_item_risk_link"
 ]

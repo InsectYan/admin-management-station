@@ -1,17 +1,39 @@
 ﻿<template>
-  <PageShell title="测试项库" table-layout>
+  <PageShell title="用例库" table-layout>
     <ItemFilterBar
       :model-value="filters"
+      :show-generation-job-input="true"
       @update:model-value="applyFilters"
       @change="onFilterChange"
       @clear="onFilterClear"
-    />
+    >
+      <template #extra>
+        <el-button
+          type="danger"
+          plain
+          :disabled="!selectedRows.length"
+          :loading="deleting"
+          @click="handleBatchDelete"
+        >
+          批量删除 ({{ selectedRows.length || 0 }})
+        </el-button>
+        <el-button
+          type="danger"
+          :loading="deletingAll"
+          :disabled="!total"
+          @click="handleDeleteAllFiltered"
+        >
+          一键删除 ({{ total }})
+        </el-button>
+      </template>
+    </ItemFilterBar>
     <div class="items-toolbar">
       <el-button :disabled="!selectedRows.length" @click="openAddToPlan">加入计划 ({{ selectedRows.length || 0 }})</el-button>
       <el-button :loading="exporting" @click="exportJson">导出 JSON</el-button>
       <el-button :loading="exporting" @click="exportCsv">导出 CSV</el-button>
     </div>
     <FitnessLabeledTable
+      ref="tableRef"
       :data="list"
       :columns="itemColumns"
       :page="page"
@@ -64,11 +86,12 @@
         {{ formatPassRate(row.target_pass_rate) }}
       </template>
       <template #suffix>
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="goDetail(row)">详情</el-button>
             <el-button link size="small" data-testid="fitness-items-config" @click="goConfig(row)">配置</el-button>
             <el-button link type="primary" size="small" data-testid="fitness-items-launch" @click="goLaunch(row)">执行</el-button>
+            <el-button link type="danger" size="small" @click="handleDeleteRow(row)">删除</el-button>
           </template>
         </el-table-column>
       </template>
@@ -89,12 +112,15 @@
 <script setup>
 import { onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import PageShell from '@/components/PageShell.vue';
 import ItemFilterBar from '@/components/fitness/ItemFilterBar.vue';
 import FitnessLabeledTable from '@/components/fitness/FitnessLabeledTable.vue';
 import {
   appendPlanItems,
+  batchDeleteTestItems,
+  deleteTestItem,
+  deleteTestItemsByFilter,
   exportTestItems,
   fetchPlans,
   fetchTestItems,
@@ -113,13 +139,18 @@ const route = useRoute();
 const router = useRouter();
 const loading = ref(false);
 const exporting = ref(false);
+const deleting = ref(false);
+const deletingAll = ref(false);
 const addingToPlan = ref(false);
 const list = ref([]);
 const total = ref(0);
 const page = ref(1);
 const pageSize = ref(20);
 const selectedRows = ref([]);
+const tableRef = ref(null);
 const FILTER_DEFAULTS = {
+  project_code: '',
+  generation_job_id: '',
   dimension_id: '',
   category_major_id: '',
   priority_id: '',
@@ -161,7 +192,8 @@ function formatPassRate(value) {
 
 const itemColumns = [
   { prop: 'item_id', label: '用例编码', width: 180 },
-  { prop: 'detail_summary', label: '名称', minWidth: 220 },
+  { prop: 'project_name', label: '项目名称', width: 220 },
+  { prop: 'detail_summary', label: '测试用例名称', minWidth: 220 },
   { prop: 'dimension_name', label: '维度', width: 88 },
   { prop: 'category_major_name', label: '大类', width: 100 },
   { prop: 'priority_name', label: '优先级', width: 88 },
@@ -181,6 +213,9 @@ const itemColumns = [
 
 function parseQueryFilters(q = {}) {
   const next = { ...FILTER_DEFAULTS };
+  if (q.job_id && !q.generation_job_id) {
+    next.generation_job_id = String(q.job_id);
+  }
   for (const [ k, v ] of Object.entries(q)) {
     if (k in FILTER_DEFAULTS) {
       if (k === 'is_p0_blocker' || k === 'is_risk_flag') next[k] = v === 'true';
@@ -214,18 +249,20 @@ function syncRouteQuery() {
   router.replace({ query: q });
 }
 
-watch(() => route.query, (q) => applyFilters(parseQueryFilters(q)), { deep: true });
+watch(() => route.query, (q) => {
+  applyFilters(parseQueryFilters(q));
+  page.value = 1;
+  loadData();
+}, { deep: true });
 
 function onFilterChange() {
   page.value = 1;
   syncRouteQuery();
-  loadData();
 }
 
 function onFilterClear() {
   page.value = 1;
   syncRouteQuery();
-  loadData();
 }
 
 async function loadData() {
@@ -274,6 +311,75 @@ async function exportCsv() {
     downloadBlob(`fitness-items-${Date.now()}.csv`, blob);
   } finally {
     exporting.value = false;
+  }
+}
+
+function clearTableSelection() {
+  selectedRows.value = [];
+  tableRef.value?.clearSelection?.();
+}
+
+async function handleDeleteRow(row) {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除用例「${row.detail_summary || row.item_id}」吗？`,
+      '删除确认',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    );
+    await deleteTestItem(row.item_id);
+    ElMessage.success('已删除');
+    clearTableSelection();
+    await loadData();
+  } catch (err) {
+    if (err !== 'cancel' && err !== 'close') {
+      ElMessage.error(err.message || '删除失败');
+    }
+  }
+}
+
+async function handleBatchDelete() {
+  if (!selectedRows.value.length) return;
+  try {
+    await ElMessageBox.confirm(
+      `确定删除已勾选的 ${selectedRows.value.length} 条用例吗？`,
+      '批量删除',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    );
+    deleting.value = true;
+    const count = selectedRows.value.length;
+    const result = await batchDeleteTestItems(selectedRows.value.map(r => r.item_id));
+    clearTableSelection();
+    ElMessage.success(`已删除 ${result.deleted ?? count} 条`);
+    await loadData();
+  } catch (err) {
+    if (err !== 'cancel' && err !== 'close') {
+      ElMessage.error(err.message || '批量删除失败');
+    }
+  } finally {
+    deleting.value = false;
+  }
+}
+
+async function handleDeleteAllFiltered() {
+  if (!total.value) return;
+  try {
+    await ElMessageBox.confirm(
+      `确定删除当前筛选条件下的全部 ${total.value} 条用例吗？此操作不可恢复。`,
+      '一键删除',
+      { type: 'warning', confirmButtonText: '全部删除', cancelButtonText: '取消' },
+    );
+    deletingAll.value = true;
+    const result = await deleteTestItemsByFilter(apiFilterParams());
+    clearTableSelection();
+    ElMessage.success(`已删除 ${result.deleted ?? 0} 条`);
+    page.value = 1;
+    await loadData();
+  } catch (err) {
+    if (err !== 'cancel' && err !== 'close') {
+      ElMessage.error(err.message || '删除失败');
+    }
+  } finally {
+    deletingAll.value = false;
   }
 }
 

@@ -2,21 +2,25 @@
   {
     "priority_id": "P0",
     "name": "阻塞发版",
-    "sort_order": 0
+    "sort_order": 0,
+    "project_code": "fitness-agent"
   },
   {
     "priority_id": "P1",
     "name": "高",
-    "sort_order": 1
+    "sort_order": 1,
+    "project_code": "fitness-agent"
   },
   {
     "priority_id": "P2",
     "name": "中",
-    "sort_order": 2
+    "sort_order": 2,
+    "project_code": "fitness-agent"
   },
   {
     "priority_id": "P3",
     "name": "低",
-    "sort_order": 3
+    "sort_order": 3,
+    "project_code": "fitness-agent"
   }
 ]

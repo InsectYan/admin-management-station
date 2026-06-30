@@ -16,12 +16,13 @@ const props = defineProps({
 const containerRef = ref(null);
 let graph = null;
 
-const PHASES = ['analyze', 'functional', 'edge', 'review'];
+const PHASES = ['analyze', 'generate', 'review'];
 const PHASE_LABELS = {
   analyze: '需求分析',
-  functional: '功能用例',
-  edge: '边界用例',
+  generate: '生成用例',
   review: '合规审查',
+  functional: '生成用例',
+  edge: '生成用例',
 };
 
 function resizeGraph() {
@@ -95,7 +96,10 @@ function buildGraph() {
   });
 
   PHASES.forEach((phase, i) => {
-    const pct = props.progress?.[phase] ?? 0;
+    let pct = props.progress?.[phase] ?? 0;
+    if (phase === 'generate') {
+      pct = Math.max(pct, props.progress?.functional ?? 0, props.progress?.edge ?? 0);
+    }
     const done = pct >= 100;
     graph.addNode({
       id: phase,

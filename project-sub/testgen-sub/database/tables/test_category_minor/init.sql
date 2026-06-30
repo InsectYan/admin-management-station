@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS test_category_minor (
+  project_code VARCHAR(64) NOT NULL DEFAULT 'fitness-agent',
   category_minor_id VARCHAR(64) PRIMARY KEY,
   category_major_id VARCHAR(64) REFERENCES test_category_major(category_major_id),
   name TEXT,

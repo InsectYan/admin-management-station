@@ -94,7 +94,7 @@
     "onerror": {
       "errorPageUrl": "",
       "appErrorFilter": null,
-      "templatePath": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-onerror\\lib\\onerror_page.mustache"
+      "templatePath": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg-onerror\\lib\\onerror_page.mustache"
     },
     "i18n": {
       "defaultLocale": "en_US",
@@ -107,8 +107,8 @@
     "watcher": {
       "type": "development",
       "eventSources": {
-        "default": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-watcher\\lib\\event-sources\\default",
-        "development": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-watcher\\lib\\event-sources\\development"
+        "default": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg-watcher\\lib\\event-sources\\default",
+        "development": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg-watcher\\lib\\event-sources\\development"
       }
     },
     "customLogger": {
@@ -137,7 +137,9 @@
         ".pdf",
         ".json",
         ".yaml",
-        ".yml"
+        ".yml",
+        ".doc",
+        ".docx"
       ],
       "whitelist": null,
       "allowArrayField": false,
@@ -166,14 +168,14 @@
     },
     "static": {
       "prefix": "/public/",
-      "dir": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\app\\public",
+      "dir": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\app\\public",
       "dynamic": true,
       "preload": false,
       "buffer": false,
       "maxFiles": 1000
     },
     "view": {
-      "root": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\app\\view",
+      "root": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\app\\view",
       "cache": false,
       "defaultExtension": ".html",
       "defaultViewEngine": "",
@@ -221,15 +223,20 @@
         "dev": "egg-bin dev",
         "start": "egg-scripts start --daemon --title=testgen-sub-backend",
         "stop": "egg-scripts stop --title=testgen-sub-backend",
-        "db:init": "node scripts/init-db.js"
+        "db:init": "node scripts/init-db.js",
+        "db:sync": "node scripts/sync-schema.js",
+        "db:seed": "node scripts/seed-data.js",
+        "db:reset": "node scripts/db-cli.js reset",
+        "db": "node scripts/db-cli.js all"
       },
       "dependencies": {
+        "axios": "^1.18.1",
         "dotenv": "^16.4.7",
         "egg": "^3.27.1",
         "egg-cors": "^3.0.1",
-        "egg-multipart": "^3.5.0",
         "egg-scripts": "^3.0.1",
         "egg-sequelize": "^6.0.0",
+        "pdf-parse": "^1.1.1",
         "pg": "^8.13.1",
         "pg-hstore": "^2.3.4"
       },
@@ -240,9 +247,9 @@
         "node": ">=18.0.0"
       }
     },
-    "baseDir": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend",
+    "baseDir": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend",
     "HOME": "C:\\Users\\Administrator",
-    "rundir": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\run",
+    "rundir": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\run",
     "dump": {
       "ignore": "<Set>",
       "timing": {
@@ -278,7 +285,7 @@
       "onerror": "<Function onerror>"
     },
     "logger": {
-      "dir": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\logs\\testgen-sub-backend",
+      "dir": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\logs\\testgen-sub-backend",
       "encoding": "utf8",
       "env": "local",
       "level": "INFO",
@@ -349,7 +356,30 @@
     "agentPlatform": {
       "baseUrl": "http://127.0.0.1:4001",
       "invokePath": "/api/skills/testgen-skill/invoke",
-      "timeout": 300000
+      "judgeInvokePath": "/api/skills/fitness-judge-skill/invoke",
+      "sampleInvokePath": "/api/skills/fitness-sample-skill/invoke",
+      "exploreInvokePath": "/api/skills/fitness-explore-skill/invoke",
+      "perfInvokePath": "/api/skills/perf-bottleneck-skill/invoke",
+      "timeout": 300000,
+      "judgeTimeoutMs": 120000,
+      "sampleTimeoutMs": 120000,
+      "exploreTimeoutMs": 90000
+    },
+    "testRun": {
+      "maxConcurrentRuns": 5
+    },
+    "fitnessExecution": {
+      "fitnessAgentRoot": "",
+      "cliAllowlist": [
+        "npm run test:stations",
+        "npm run test:e2e"
+      ],
+      "maxConcurrentRuns": 3,
+      "cliTimeoutMs": 600000,
+      "httpTimeoutMs": 120000
+    },
+    "projectEnv": {
+      "healthTimeoutMs": 10000
     },
     "testgen": {
       "maxConcurrentJobs": 3,
@@ -372,8 +402,8 @@
         "jsonp"
       ],
       "env": [],
-      "from": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
-      "path": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-onerror",
+      "from": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
+      "path": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg-onerror",
       "version": "2.4.0"
     },
     "session": {
@@ -383,8 +413,8 @@
       "dependencies": [],
       "optionalDependencies": [],
       "env": [],
-      "from": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
-      "path": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-session",
+      "from": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
+      "path": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg-session",
       "version": "3.3.0"
     },
     "i18n": {
@@ -394,8 +424,8 @@
       "dependencies": [],
       "optionalDependencies": [],
       "env": [],
-      "from": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
-      "path": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-i18n",
+      "from": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
+      "path": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg-i18n",
       "version": "2.1.1"
     },
     "watcher": {
@@ -405,8 +435,8 @@
       "dependencies": [],
       "optionalDependencies": [],
       "env": [],
-      "from": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
-      "path": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-watcher",
+      "from": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
+      "path": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg-watcher",
       "version": "3.1.1",
       "dependents": [
         "development"
@@ -414,15 +444,15 @@
     },
     "multipart": {
       "enable": true,
+      "package": "egg-multipart",
       "name": "multipart",
       "dependencies": [],
       "optionalDependencies": [
         "schedule"
       ],
       "env": [],
-      "from": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\plugin.js",
-      "package": "egg-multipart",
-      "path": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-multipart",
+      "from": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
+      "path": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg-multipart",
       "version": "3.5.0"
     },
     "security": {
@@ -434,8 +464,8 @@
         "session"
       ],
       "env": [],
-      "from": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
-      "path": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-security",
+      "from": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
+      "path": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg-security",
       "version": "3.7.0"
     },
     "development": {
@@ -449,8 +479,8 @@
       "env": [
         "local"
       ],
-      "from": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
-      "path": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-development",
+      "from": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
+      "path": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg-development",
       "version": "3.0.2"
     },
     "logrotator": {
@@ -462,8 +492,8 @@
       ],
       "optionalDependencies": [],
       "env": [],
-      "from": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
-      "path": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-logrotator",
+      "from": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
+      "path": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg-logrotator",
       "version": "3.2.0"
     },
     "schedule": {
@@ -473,8 +503,8 @@
       "dependencies": [],
       "optionalDependencies": [],
       "env": [],
-      "from": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
-      "path": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-schedule",
+      "from": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
+      "path": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg-schedule",
       "version": "4.0.1",
       "dependents": [
         "logrotator"
@@ -487,8 +517,8 @@
       "dependencies": [],
       "optionalDependencies": [],
       "env": [],
-      "from": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
-      "path": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-static",
+      "from": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
+      "path": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg-static",
       "version": "2.3.1"
     },
     "jsonp": {
@@ -500,8 +530,8 @@
         "security"
       ],
       "env": [],
-      "from": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
-      "path": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-jsonp",
+      "from": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
+      "path": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg-jsonp",
       "version": "2.0.0"
     },
     "view": {
@@ -511,8 +541,8 @@
       "dependencies": [],
       "optionalDependencies": [],
       "env": [],
-      "from": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
-      "path": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-view",
+      "from": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg\\config\\plugin.js",
+      "path": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg-view",
       "version": "2.1.4"
     },
     "sequelize": {
@@ -522,8 +552,8 @@
       "dependencies": [],
       "optionalDependencies": [],
       "env": [],
-      "from": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\plugin.js",
-      "path": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-sequelize",
+      "from": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\config\\plugin.js",
+      "path": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg-sequelize",
       "version": "6.0.0"
     },
     "cors": {
@@ -533,14 +563,14 @@
       "dependencies": [],
       "optionalDependencies": [],
       "env": [],
-      "from": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\config\\plugin.js",
-      "path": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend\\node_modules\\egg-cors",
+      "from": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\config\\plugin.js",
+      "path": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend\\node_modules\\egg-cors",
       "version": "3.0.1"
     }
   },
   "appInfo": {
     "name": "testgen-sub-backend",
-    "baseDir": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend",
+    "baseDir": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend",
     "env": "local",
     "scope": "",
     "HOME": "C:\\Users\\Administrator",
@@ -556,15 +586,20 @@
         "dev": "egg-bin dev",
         "start": "egg-scripts start --daemon --title=testgen-sub-backend",
         "stop": "egg-scripts stop --title=testgen-sub-backend",
-        "db:init": "node scripts/init-db.js"
+        "db:init": "node scripts/init-db.js",
+        "db:sync": "node scripts/sync-schema.js",
+        "db:seed": "node scripts/seed-data.js",
+        "db:reset": "node scripts/db-cli.js reset",
+        "db": "node scripts/db-cli.js all"
       },
       "dependencies": {
+        "axios": "^1.18.1",
         "dotenv": "^16.4.7",
         "egg": "^3.27.1",
         "egg-cors": "^3.0.1",
-        "egg-multipart": "^3.5.0",
         "egg-scripts": "^3.0.1",
         "egg-sequelize": "^6.0.0",
+        "pdf-parse": "^1.1.1",
         "pg": "^8.13.1",
         "pg-hstore": "^2.3.4"
       },
@@ -575,6 +610,6 @@
         "node": ">=18.0.0"
       }
     },
-    "root": "E:\\AI Tools\\projects\\admin-management-station\\testgen-sub\\backend"
+    "root": "E:\\AI Tools\\projects\\admin-management-station\\project-sub\\testgen-sub\\backend"
   }
 }

@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS test_role_enum (
+  project_code VARCHAR(64) NOT NULL DEFAULT 'fitness-agent',
   role_scope_id VARCHAR(64) PRIMARY KEY,
   name TEXT,
   description TEXT

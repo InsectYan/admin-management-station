@@ -86,6 +86,37 @@ class FitnessAssetController extends Controller {
     const data = await this.service.fitnessAsset.listRiskLinks(this.ctx.query);
     this.ctx.body = { code: 0, message: 'ok', data };
   }
+
+  async deleteItem() {
+    try {
+      const data = await this.service.fitnessAsset.deleteTestItem(this.ctx.params.itemId);
+      this.ctx.body = { code: 0, message: 'deleted', data };
+    } catch (err) {
+      this.ctx.status = err.status || 400;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
+  async batchDeleteItems() {
+    try {
+      const { item_ids: itemIds } = this.ctx.request.body || {};
+      const data = await this.service.fitnessAsset.deleteTestItemsBatch(itemIds);
+      this.ctx.body = { code: 0, message: 'deleted', data };
+    } catch (err) {
+      this.ctx.status = err.status || 400;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
+  async deleteItemsByFilter() {
+    try {
+      const data = await this.service.fitnessAsset.deleteTestItemsByFilter(this.ctx.query);
+      this.ctx.body = { code: 0, message: 'deleted', data };
+    } catch (err) {
+      this.ctx.status = err.status || 400;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
 }
 
 module.exports = FitnessAssetController;

@@ -5,7 +5,8 @@
     "validation_id": "VS-01-EXACT",
     "is_primary": true,
     "scheme_name": "确定性单次",
-    "validation_name": "精确匹配"
+    "validation_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "pair_id": "P02",
@@ -13,7 +14,8 @@
     "validation_id": "VS-02-CONTRACT",
     "is_primary": false,
     "scheme_name": "确定性单次",
-    "validation_name": "契约通过"
+    "validation_name": "契约通过",
+    "project_code": "fitness-agent"
   },
   {
     "pair_id": "P03",
@@ -21,7 +23,8 @@
     "validation_id": "VS-01-EXACT",
     "is_primary": true,
     "scheme_name": "边界/等价类矩阵",
-    "validation_name": "精确匹配"
+    "validation_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "pair_id": "P04",
@@ -29,7 +32,8 @@
     "validation_id": "VS-02-CONTRACT",
     "is_primary": true,
     "scheme_name": "边界/等价类矩阵",
-    "validation_name": "契约通过"
+    "validation_name": "契约通过",
+    "project_code": "fitness-agent"
   },
   {
     "pair_id": "P05",
@@ -37,7 +41,8 @@
     "validation_id": "VS-08-PASSK",
     "is_primary": true,
     "scheme_name": "同用例重复抽样",
-    "validation_name": "Pass^k稳定"
+    "validation_name": "Pass^k稳定",
+    "project_code": "fitness-agent"
   },
   {
     "pair_id": "P06",
@@ -45,7 +50,8 @@
     "validation_id": "VS-07-RATE-M",
     "is_primary": false,
     "scheme_name": "同用例重复抽样",
-    "validation_name": "达标率·中门槛"
+    "validation_name": "达标率·中门槛",
+    "project_code": "fitness-agent"
   },
   {
     "pair_id": "P07",
@@ -53,7 +59,8 @@
     "validation_id": "VS-07-RATE-M",
     "is_primary": true,
     "scheme_name": "固定样本集批量",
-    "validation_name": "达标率·中门槛"
+    "validation_name": "达标率·中门槛",
+    "project_code": "fitness-agent"
   },
   {
     "pair_id": "P08",
@@ -61,7 +68,8 @@
     "validation_id": "VS-07-RATE-H",
     "is_primary": false,
     "scheme_name": "固定样本集批量",
-    "validation_name": "达标率·高门槛"
+    "validation_name": "达标率·高门槛",
+    "project_code": "fitness-agent"
   },
   {
     "pair_id": "P09",
@@ -69,7 +77,8 @@
     "validation_id": "VS-04-CHAIN-OK",
     "is_primary": true,
     "scheme_name": "多步链路串联",
-    "validation_name": "链路全过"
+    "validation_name": "链路全过",
+    "project_code": "fitness-agent"
   },
   {
     "pair_id": "P10",
@@ -77,7 +86,8 @@
     "validation_id": "VS-03-ZERO",
     "is_primary": true,
     "scheme_name": "对照/跨端对比",
-    "validation_name": "零违规"
+    "validation_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "pair_id": "P11",
@@ -85,7 +95,8 @@
     "validation_id": "VS-01-EXACT",
     "is_primary": false,
     "scheme_name": "对照/跨端对比",
-    "validation_name": "精确匹配"
+    "validation_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "pair_id": "P12",
@@ -93,7 +104,8 @@
     "validation_id": "VS-09-BLOCK-H",
     "is_primary": true,
     "scheme_name": "异常/对抗专项",
-    "validation_name": "安全阻断·高"
+    "validation_name": "安全阻断·高",
+    "project_code": "fitness-agent"
   },
   {
     "pair_id": "P13",
@@ -101,7 +113,8 @@
     "validation_id": "VS-03-ZERO",
     "is_primary": false,
     "scheme_name": "异常/对抗专项",
-    "validation_name": "零违规"
+    "validation_name": "零违规",
+    "project_code": "fitness-agent"
   },
   {
     "pair_id": "P14",
@@ -109,7 +122,8 @@
     "validation_id": "VS-05-PRESENCE",
     "is_primary": true,
     "scheme_name": "可观测稽核",
-    "validation_name": "存在性"
+    "validation_name": "存在性",
+    "project_code": "fitness-agent"
   },
   {
     "pair_id": "P15",
@@ -117,7 +131,8 @@
     "validation_id": "VS-06-COMPLETE",
     "is_primary": false,
     "scheme_name": "可观测稽核",
-    "validation_name": "完整性"
+    "validation_name": "完整性",
+    "project_code": "fitness-agent"
   },
   {
     "pair_id": "P16",
@@ -125,7 +140,8 @@
     "validation_id": "VS-10-SLO-M",
     "is_primary": true,
     "scheme_name": "压测/容量",
-    "validation_name": "性能SLO·中"
+    "validation_name": "性能SLO·中",
+    "project_code": "fitness-agent"
   },
   {
     "pair_id": "P17",
@@ -133,7 +149,8 @@
     "validation_id": "VS-01-EXACT",
     "is_primary": false,
     "scheme_name": "压测/容量",
-    "validation_name": "精确匹配"
+    "validation_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "pair_id": "P18",
@@ -141,6 +158,7 @@
     "validation_id": "VS-11-MAJORITY",
     "is_primary": true,
     "scheme_name": "人工评审",
-    "validation_name": "人工多数"
+    "validation_name": "人工多数",
+    "project_code": "fitness-agent"
   }
 ]

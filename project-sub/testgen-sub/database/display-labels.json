@@ -1,5 +1,19 @@
 {
   "tables": {
+    "test_project": {
+      "label": "测试项目",
+      "columns": {
+        "project_code": "项目编码",
+        "project_name": "项目名称",
+        "team": "团队",
+        "status": "状态",
+        "description": "描述",
+        "repo_urls": "代码仓库",
+        "cicd_config": "CI/CD 配置",
+        "member_roles": "成员权限",
+        "last_active_at": "最近活跃"
+      }
+    },
     "test_dimension": {
       "label": "测试维度",
       "columns": {
@@ -225,6 +239,8 @@
       "label": "测试项",
       "columns": {
         "item_id": "用例编码",
+        "project_code": "项目编码",
+        "project_name": "项目名称",
         "item_name": "用例名称",
         "sub_class": "子类标签",
         "dimension_id": "维度",

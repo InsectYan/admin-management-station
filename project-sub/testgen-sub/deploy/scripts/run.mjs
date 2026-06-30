@@ -96,8 +96,11 @@ Fitness 数据库（须 Postgres 已启动，默认端口见 deploy/config/.env.
   ams-testgen db:seed            同上（全量）
   ams-testgen db:seed <表名>     同步 Schema + 仅注入指定表
   ams-testgen db:sync            仅同步 Schema（不含数据）
+  ams-testgen db:reset           清空全库 → 重建 Schema → 全量注入
+  ams-testgen db:reset <表名>    删表/视图重建 + 注入该表 seed 数据
 
 db 流程：对比 init.sql 自动 ADD COLUMN → enrich data.json 中文名 → 外键顺序注入
+db:reset 会 DROP SCHEMA public CASCADE，运行时数据（ft_run、generation_jobs 等）一并清空
 字段中文标签：database/display-labels.json
 
 未 link:
@@ -138,6 +141,13 @@ switch (task) {
   case 'db:seed': {
     const tableName = process.argv[3]
     const args = [ join('scripts', 'db-cli.js'), 'seed' ]
+    if (tableName) args.push(tableName)
+    runNodeBackendScript(args)
+    break
+  }
+  case 'db:reset': {
+    const tableName = process.argv[3]
+    const args = [ join('scripts', 'db-cli.js'), 'reset' ]
     if (tableName) args.push(tableName)
     runNodeBackendScript(args)
     break

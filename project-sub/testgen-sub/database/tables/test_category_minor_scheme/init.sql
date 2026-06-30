@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS test_category_minor_scheme (
+  project_code VARCHAR(64) NOT NULL DEFAULT 'fitness-agent',
   category_minor_id VARCHAR(64) PRIMARY KEY REFERENCES test_category_minor(category_minor_id),
   item_prefix VARCHAR(64) NOT NULL,
   scheme_primary_id VARCHAR(16) REFERENCES test_scheme_enum(scheme_id),

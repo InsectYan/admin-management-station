@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS test_dimension (
+  project_code VARCHAR(64) NOT NULL DEFAULT 'fitness-agent',
   dimension_id VARCHAR(64) PRIMARY KEY,
   name TEXT,
   sort_order SMALLINT,

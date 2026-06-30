@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS automation_entry_enum (
+  project_code VARCHAR(64) NOT NULL DEFAULT 'fitness-agent',
   automation_entry_id VARCHAR(64) PRIMARY KEY,
   name TEXT,
   command TEXT,

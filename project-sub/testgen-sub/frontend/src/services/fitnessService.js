@@ -12,6 +12,21 @@ export async function fetchTestItems(params) {
   return data.data;
 }
 
+export async function deleteTestItem(itemId) {
+  const { data } = await api.delete(`/fitness/items/${encodeURIComponent(itemId)}`);
+  return data.data;
+}
+
+export async function batchDeleteTestItems(itemIds) {
+  const { data } = await api.post('/fitness/items/batch-delete', { item_ids: itemIds });
+  return data.data;
+}
+
+export async function deleteTestItemsByFilter(params) {
+  const { data } = await api.delete('/fitness/items', { params });
+  return data.data;
+}
+
 export async function exportTestItems(params, format = 'json') {
   if (format === 'csv') {
     const res = await api.get('/fitness/items/export', {

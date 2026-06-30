@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS threshold_param_enum (
+  project_code VARCHAR(64) NOT NULL DEFAULT 'fitness-agent',
   param_id VARCHAR(64) PRIMARY KEY,
   validation_id VARCHAR(64) REFERENCES test_validation_enum(validation_id),
   name TEXT,

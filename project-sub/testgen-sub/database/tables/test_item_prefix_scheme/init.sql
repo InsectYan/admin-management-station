@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS test_item_prefix_scheme (
+  project_code VARCHAR(64) NOT NULL DEFAULT 'fitness-agent',
   mapping_id VARCHAR(16) PRIMARY KEY,
   item_prefix VARCHAR(64) NOT NULL,
   scheme_primary_id VARCHAR(16) REFERENCES test_scheme_enum(scheme_id),

@@ -5,6 +5,21 @@ module.exports = app => {
 
   router.get('/api/health', controller.health.index);
 
+  // 项目管理（测试平台入口）
+  router.get('/api/projects', controller.testProject.index);
+  router.post('/api/projects', controller.testProject.create);
+  router.get('/api/projects/:projectCode', controller.testProject.show);
+  router.put('/api/projects/:projectCode', controller.testProject.update);
+  router.delete('/api/projects/:projectCode', controller.testProject.destroy);
+  router.get('/api/projects/:projectCode/environments', controller.testProject.listEnvironments);
+  router.post('/api/projects/:projectCode/environments', controller.testProject.createEnvironment);
+  router.put('/api/projects/:projectCode/environments/:envId', controller.testProject.updateEnvironment);
+  router.delete('/api/projects/:projectCode/environments/:envId', controller.testProject.deleteEnvironment);
+  router.post('/api/projects/:projectCode/environments/sync', controller.testProject.syncEnvironments);
+  router.get('/api/projects/:projectCode/variables', controller.testProject.listVariables);
+  router.put('/api/projects/:projectCode/variables', controller.testProject.saveVariables);
+  router.get('/api/projects/:projectCode/health', controller.testProject.healthStatus);
+
   router.get('/api/documents', controller.document.index);
   router.post('/api/documents', controller.document.create);
   router.post('/api/documents/upload', controller.document.upload);
@@ -27,6 +42,7 @@ module.exports = app => {
   router.get('/api/generation-jobs/:id', controller.generationJob.show);
   router.post('/api/generation-jobs/:id/cancel', controller.generationJob.cancel);
   router.post('/api/generation-jobs/:id/retry', controller.generationJob.retry);
+  router.get('/api/generation-jobs/:id/generated-items', controller.generationJob.testCases);
   router.get('/api/generation-jobs/:id/test-cases', controller.generationJob.testCases);
   router.post('/api/internal/generation-jobs/:id/agent-context', controller.generationJob.updateAgentContext);
 
@@ -34,14 +50,6 @@ module.exports = app => {
   router.post('/api/internal/fitness/samples/bulk', controller.internalFitness.bulkSamples);
   router.patch('/api/internal/fitness/items/:itemId', controller.internalFitness.patchItem);
   router.post('/api/internal/fitness/run/:itemId/dry-run', controller.internalFitness.dryRunLaunch);
-
-  router.get('/api/test-cases/export', controller.testCase.export);
-  router.get('/api/test-cases', controller.testCase.index);
-  router.post('/api/test-cases/batch-delete', controller.testCase.batchDestroy);
-  router.delete('/api/test-cases/all', controller.testCase.destroyAll);
-  router.get('/api/test-cases/:id', controller.testCase.show);
-  router.put('/api/test-cases/:id', controller.testCase.update);
-  router.delete('/api/test-cases/:id', controller.testCase.destroy);
 
   router.get('/api/env-configs', controller.envConfig.index);
   router.post('/api/env-configs', controller.envConfig.create);
@@ -62,6 +70,9 @@ module.exports = app => {
   router.get('/api/fitness/dashboard', controller.fitnessAsset.dashboard);
   router.get('/api/fitness/items/export', controller.fitnessAsset.exportItems);
   router.get('/api/fitness/items', controller.fitnessAsset.listItems);
+  router.delete('/api/fitness/items', controller.fitnessAsset.deleteItemsByFilter);
+  router.post('/api/fitness/items/batch-delete', controller.fitnessAsset.batchDeleteItems);
+  router.delete('/api/fitness/items/:itemId', controller.fitnessAsset.deleteItem);
   router.get('/api/fitness/items/:itemId', controller.fitnessAsset.showItem);
   router.get('/api/fitness/browse', controller.fitnessAsset.browse);
   router.get('/api/fitness/schemes', controller.fitnessAsset.schemes);

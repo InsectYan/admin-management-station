@@ -65,6 +65,10 @@ module.exports = appInfo => {
     httpTimeoutMs: Number(process.env.FT_HTTP_TIMEOUT_MS || 120000),
   };
 
+  config.projectEnv = {
+    healthTimeoutMs: Number(process.env.PROJECT_ENV_HEALTH_TIMEOUT_MS || 10000),
+  };
+
   config.testgen = {
     maxConcurrentJobs: Number(process.env.MAX_CONCURRENT_JOBS || 3),
     parseCacheTtl: Number(process.env.PARSE_CACHE_TTL || 3600),

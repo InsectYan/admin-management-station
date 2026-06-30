@@ -5,7 +5,8 @@
     "name": "达标率·低",
     "unit": "percent",
     "placeholder": "rate_L = ___%",
-    "validation_name": "达标率·低门槛"
+    "validation_name": "达标率·低门槛",
+    "project_code": "fitness-agent"
   },
   {
     "param_id": "rate_M",
@@ -13,7 +14,8 @@
     "name": "达标率·中",
     "unit": "percent",
     "placeholder": "rate_M = ___%",
-    "validation_name": "达标率·中门槛"
+    "validation_name": "达标率·中门槛",
+    "project_code": "fitness-agent"
   },
   {
     "param_id": "rate_H",
@@ -21,7 +23,8 @@
     "name": "达标率·高",
     "unit": "percent",
     "placeholder": "rate_H = ___%",
-    "validation_name": "达标率·高门槛"
+    "validation_name": "达标率·高门槛",
+    "project_code": "fitness-agent"
   },
   {
     "param_id": "passk_N",
@@ -29,7 +32,8 @@
     "name": "重复次数 N",
     "unit": "count",
     "placeholder": "passk_N = ___",
-    "validation_name": "Pass^k稳定"
+    "validation_name": "Pass^k稳定",
+    "project_code": "fitness-agent"
   },
   {
     "param_id": "passk_M",
@@ -37,7 +41,8 @@
     "name": "至少通过 M",
     "unit": "count",
     "placeholder": "passk_M = ___",
-    "validation_name": "Pass^k稳定"
+    "validation_name": "Pass^k稳定",
+    "project_code": "fitness-agent"
   },
   {
     "param_id": "block_L",
@@ -45,7 +50,8 @@
     "name": "阻断率·低",
     "unit": "percent",
     "placeholder": "block_L = ___%",
-    "validation_name": "安全阻断·低"
+    "validation_name": "安全阻断·低",
+    "project_code": "fitness-agent"
   },
   {
     "param_id": "block_M",
@@ -53,7 +59,8 @@
     "name": "阻断率·中",
     "unit": "percent",
     "placeholder": "block_M = ___%",
-    "validation_name": "安全阻断·中"
+    "validation_name": "安全阻断·中",
+    "project_code": "fitness-agent"
   },
   {
     "param_id": "block_H",
@@ -61,7 +68,8 @@
     "name": "阻断率·高",
     "unit": "percent",
     "placeholder": "block_H = ___%",
-    "validation_name": "安全阻断·高"
+    "validation_name": "安全阻断·高",
+    "project_code": "fitness-agent"
   },
   {
     "param_id": "submit_p99_ms_L",
@@ -69,7 +77,8 @@
     "name": "submit p99·低",
     "unit": "ms",
     "placeholder": "submit_p99_ms_L",
-    "validation_name": "性能SLO·低"
+    "validation_name": "性能SLO·低",
+    "project_code": "fitness-agent"
   },
   {
     "param_id": "submit_p99_ms_M",
@@ -77,7 +86,8 @@
     "name": "submit p99·中",
     "unit": "ms",
     "placeholder": "submit_p99_ms_M",
-    "validation_name": "性能SLO·中"
+    "validation_name": "性能SLO·中",
+    "project_code": "fitness-agent"
   },
   {
     "param_id": "ttft_ms_M",
@@ -85,7 +95,8 @@
     "name": "TTFT·中",
     "unit": "ms",
     "placeholder": "ttft_ms_M",
-    "validation_name": "性能SLO·中"
+    "validation_name": "性能SLO·中",
+    "project_code": "fitness-agent"
   },
   {
     "param_id": "error_rate_H",
@@ -93,7 +104,8 @@
     "name": "错误率·高",
     "unit": "percent",
     "placeholder": "error_rate_H",
-    "validation_name": "性能SLO·高"
+    "validation_name": "性能SLO·高",
+    "project_code": "fitness-agent"
   },
   {
     "param_id": "reviewer_count",
@@ -101,7 +113,8 @@
     "name": "评审人数",
     "unit": "count",
     "placeholder": "reviewer_count",
-    "validation_name": "人工多数"
+    "validation_name": "人工多数",
+    "project_code": "fitness-agent"
   },
   {
     "param_id": "majority_rule",
@@ -109,6 +122,7 @@
     "name": "多数规则",
     "unit": "text",
     "placeholder": ">50% 合格",
-    "validation_name": "人工多数"
+    "validation_name": "人工多数",
+    "project_code": "fitness-agent"
   }
 ]

@@ -48,6 +48,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ../database:/app/database:ro
+      - e:/AI Tools/projects/fitness-agent:/fitness-agent:ro
 
   testgen-frontend:
     build:

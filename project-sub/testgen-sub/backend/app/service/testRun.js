@@ -7,17 +7,79 @@ const { Op } = require('sequelize');
 const TERMINAL = new Set([ 'success', 'failed', 'cancelled' ]);
 
 class TestRunService extends Service {
+  normalizeItemIds(payload) {
+    const raw = payload.item_ids || payload.case_ids || [];
+    if (!Array.isArray(raw) || !raw.length) return [];
+    return [ ...new Set(raw.map(id => String(id).trim()).filter(Boolean)) ];
+  }
+
+  buildHttpConfigFromItem(row) {
+    const assertions = [];
+    const points = Array.isArray(row.assertion_points)
+      ? row.assertion_points
+      : (typeof row.assertion_points === 'string'
+        ? JSON.parse(row.assertion_points || '[]')
+        : []);
+    if (row.http_status_expected != null) {
+      assertions.push({ type: 'status', expect: Number(row.http_status_expected) });
+    }
+    for (const point of points) {
+      if (typeof point === 'string') {
+        assertions.push({ type: 'body_contains', expect: point });
+      }
+    }
+    return {
+      url: row.endpoint_path || '',
+      method: (row.http_method || 'GET').toUpperCase(),
+      headers: {},
+      body: null,
+      assertions,
+    };
+  }
+
+  async loadItemForRun(itemId) {
+    const [ rows ] = await this.app.model.query(
+      `SELECT item_id, item_name, detail_summary, project_name, endpoint_path,
+              http_method, http_status_expected, assertion_points
+       FROM test_item_detail WHERE item_id = :itemId LIMIT 1`,
+      { replacements: { itemId } },
+    );
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      item_id: row.item_id,
+      case_id: row.item_id,
+      title: row.detail_summary || row.item_name,
+      module: row.project_name || '',
+      http_config: this.buildHttpConfigFromItem(row),
+    };
+  }
+
+  async attachItemsToRuns(runs) {
+    const enriched = [];
+    for (const run of runs) {
+      const json = typeof run.toJSON === 'function' ? run.toJSON() : { ...run };
+      const item = json.item_id ? await this.loadItemForRun(json.item_id) : null;
+      enriched.push({
+        ...json,
+        test_item: item,
+        testCase: item,
+      });
+    }
+    return enriched;
+  }
+
   async createRuns(payload) {
     const {
-      case_ids: caseIds,
       env_id: envId,
       mode = 'functional',
       concurrency = 1,
       perf_options: perfOptions = {},
     } = payload;
 
-    if (!Array.isArray(caseIds) || !caseIds.length) {
-      const err = new Error('case_ids 不能为空');
+    const itemIds = this.normalizeItemIds(payload);
+    if (!itemIds.length) {
+      const err = new Error('item_ids 不能为空');
       err.status = 400;
       throw err;
     }
@@ -29,23 +91,24 @@ class TestRunService extends Service {
       throw err;
     }
 
-    const uniqueIds = [ ...new Set(caseIds.map(id => Number(id)).filter(id => id > 0)) ];
-    const cases = await this.ctx.model.TestCase.findAll({
-      where: { id: { [Op.in]: uniqueIds } },
-    });
-    if (!cases.length) {
-      const err = new Error('未找到有效测试用例');
+    const items = [];
+    for (const itemId of itemIds) {
+      const item = await this.loadItemForRun(itemId);
+      if (item) items.push(item);
+    }
+    if (!items.length) {
+      const err = new Error('未找到有效测试项');
       err.status = 404;
       throw err;
     }
 
-    const batchId = cases.length > 1 ? randomUUID() : null;
+    const batchId = items.length > 1 ? randomUUID() : null;
     const runs = [];
 
-    for (const tc of cases) {
+    for (const item of items) {
       const run = await this.ctx.model.TestRun.create({
         batch_id: batchId,
-        case_id: tc.id,
+        item_id: item.item_id,
         env_id: envId,
         mode,
         status: 'pending',
@@ -80,12 +143,12 @@ class TestRunService extends Service {
     const run = await this.ctx.model.TestRun.findByPk(runId);
     if (!run || run.status === 'cancelled') return;
 
-    const testCase = await this.ctx.model.TestCase.findByPk(run.case_id);
+    const testCase = run.item_id ? await this.loadItemForRun(run.item_id) : null;
     const envConfig = await this.ctx.model.EnvConfig.findByPk(run.env_id);
     if (!testCase || !envConfig) {
       await run.update({
         status: 'failed',
-        error_message: '用例或环境不存在',
+        error_message: '测试项或环境不存在',
         finished_at: new Date(),
       });
       return;
@@ -98,7 +161,7 @@ class TestRunService extends Service {
       if (run.mode === 'performance') {
         const perfRes = await this.ctx.service.executionEngine.executePerformanceRun(
           run,
-          testCase.toJSON(),
+          testCase,
           envConfig.toJSON(),
         );
         success = perfRes.success;
@@ -120,7 +183,7 @@ class TestRunService extends Service {
       } else {
         const funcRes = await this.ctx.service.executionEngine.executeFunctionalRun(
           run,
-          testCase.toJSON(),
+          testCase,
           envConfig.toJSON(),
         );
         success = funcRes.success;
@@ -156,7 +219,7 @@ class TestRunService extends Service {
         where: { run_id: runId },
         order: [[ 'window_start', 'ASC' ]],
       });
-      const testCase = await this.ctx.model.TestCase.findByPk(run.case_id);
+      const testCase = run.item_id ? await this.loadItemForRun(run.item_id) : null;
       const envConfig = await this.ctx.model.EnvConfig.findByPk(run.env_id);
 
       const agentRes = await this.ctx.service.agentProxy.invokePerfAnalysis({
@@ -170,7 +233,7 @@ class TestRunService extends Service {
           error_rate: p.error_rate,
         })),
         case_meta: testCase ? {
-          case_id: testCase.case_id,
+          case_id: testCase.item_id,
           title: testCase.title,
           module: testCase.module,
           url: testCase.http_config?.url || '',
@@ -195,7 +258,6 @@ class TestRunService extends Service {
   async findById(id) {
     const run = await this.ctx.model.TestRun.findByPk(id, {
       include: [
-        { model: this.ctx.model.TestCase, attributes: [ 'id', 'case_id', 'title', 'module' ] },
         { model: this.ctx.model.EnvConfig, attributes: [ 'id', 'name', 'base_url' ] },
       ],
     });
@@ -207,15 +269,14 @@ class TestRunService extends Service {
     if (json.batch_id) {
       const siblings = await this.ctx.model.TestRun.findAll({
         where: { batch_id: json.batch_id },
-        include: [
-          { model: this.ctx.model.TestCase, attributes: [ 'id', 'case_id', 'title' ] },
-        ],
         order: [[ 'id', 'ASC' ]],
       });
       items = siblings.map(s => s.toJSON());
     }
 
-    const metrics = await this.buildMetricsSummary(id, json.mode);
+    items = await this.attachItemsToRuns(items);
+    const primary = items[0] || json;
+    const metrics = await this.buildMetricsSummary(id, primary.mode || json.mode);
 
     const running = items.filter(i => i.status === 'running').length;
     const success = items.filter(i => i.status === 'success').length;
@@ -227,9 +288,9 @@ class TestRunService extends Service {
       : json.progress;
 
     return {
-      ...json,
-      status: items.length > 1 ? aggregateStatus : json.status,
-      progress: items.length > 1 ? aggregateProgress : json.progress,
+      ...primary,
+      status: items.length > 1 ? aggregateStatus : primary.status,
+      progress: items.length > 1 ? aggregateProgress : primary.progress,
       items,
       summary: { running, success, failed, total: items.length },
       metrics,
@@ -280,12 +341,12 @@ class TestRunService extends Service {
       offset: (pageNum - 1) * size,
       order: [[ 'id', 'DESC' ]],
       include: [
-        { model: this.ctx.model.TestCase, attributes: [ 'case_id', 'title' ] },
         { model: this.ctx.model.EnvConfig, attributes: [ 'name' ] },
       ],
     });
+    const list = await this.attachItemsToRuns(rows);
     return {
-      list: rows.map(r => r.toJSON()),
+      list,
       total: count,
       page: pageNum,
       pageSize: size,

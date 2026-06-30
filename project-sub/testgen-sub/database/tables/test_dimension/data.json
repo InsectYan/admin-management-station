@@ -9,7 +9,8 @@
     "default_validation_id": "VS-01-EXACT",
     "item_count": 19,
     "default_scheme_name": "确定性单次",
-    "default_validation_name": "精确匹配"
+    "default_validation_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "dimension_id": "B",
@@ -21,7 +22,8 @@
     "default_validation_id": "VS-01-EXACT",
     "item_count": 38,
     "default_scheme_name": "确定性单次",
-    "default_validation_name": "精确匹配"
+    "default_validation_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "dimension_id": "C",
@@ -33,7 +35,8 @@
     "default_validation_id": "VS-04-CHAIN-OK",
     "item_count": 147,
     "default_scheme_name": "多步链路串联",
-    "default_validation_name": "链路全过"
+    "default_validation_name": "链路全过",
+    "project_code": "fitness-agent"
   },
   {
     "dimension_id": "D",
@@ -45,7 +48,8 @@
     "default_validation_id": "VS-01-EXACT",
     "item_count": 28,
     "default_scheme_name": "确定性单次",
-    "default_validation_name": "精确匹配"
+    "default_validation_name": "精确匹配",
+    "project_code": "fitness-agent"
   },
   {
     "dimension_id": "E",
@@ -57,7 +61,8 @@
     "default_validation_id": "VS-07-RATE-H",
     "item_count": 40,
     "default_scheme_name": "固定样本集批量",
-    "default_validation_name": "达标率·高门槛"
+    "default_validation_name": "达标率·高门槛",
+    "project_code": "fitness-agent"
   },
   {
     "dimension_id": "F",
@@ -69,7 +74,8 @@
     "default_validation_id": "VS-10-SLO-M",
     "item_count": 30,
     "default_scheme_name": "压测/容量",
-    "default_validation_name": "性能SLO·中"
+    "default_validation_name": "性能SLO·中",
+    "project_code": "fitness-agent"
   },
   {
     "dimension_id": "G",
@@ -81,7 +87,8 @@
     "default_validation_id": "VS-07-RATE-M",
     "item_count": 31,
     "default_scheme_name": "同用例重复抽样",
-    "default_validation_name": "达标率·中门槛"
+    "default_validation_name": "达标率·中门槛",
+    "project_code": "fitness-agent"
   },
   {
     "dimension_id": "H",
@@ -93,6 +100,7 @@
     "default_validation_id": "VS-05-PRESENCE",
     "item_count": 50,
     "default_scheme_name": "可观测稽核",
-    "default_validation_name": "存在性"
+    "default_validation_name": "存在性",
+    "project_code": "fitness-agent"
   }
 ]

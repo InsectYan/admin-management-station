@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS test_item_relation_type_enum (
+  project_code VARCHAR(64) NOT NULL DEFAULT 'fitness-agent',
   relation_type_id VARCHAR(64) PRIMARY KEY,
   name TEXT,
   description TEXT

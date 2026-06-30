@@ -3,7 +3,13 @@
 const path = require('path');
 const { Client } = require('pg');
 const { Sequelize } = require('sequelize');
-const { bootstrapFitnessSchema, runViewsBootstrap } = require('./lib/schema-bootstrap');
+const { bootstrapFitnessSchema, runViewsBootstrap, runPostSeedMigrations } = require('./lib/schema-bootstrap');
+const {
+  dropPublicSchema,
+  applyTableDdl,
+  dropTableOrView,
+  assertKnownTable,
+} = require('./lib/db-reset');
 const {
   buildInsertSql,
   loadSeedTableOrder,
@@ -34,6 +40,15 @@ function pgConfig() {
 
 function pgClient() {
   return new Client(pgConfig());
+}
+
+function createSequelize() {
+  const cfg = pgConfig();
+  return new Sequelize(cfg.database, cfg.user, cfg.password, {
+    ...cfg,
+    dialect: 'postgres',
+    logging: false,
+  });
 }
 
 async function syncSchema() {
@@ -179,15 +194,7 @@ async function seedTable(tablesDir, tableName, client, meta, { failFast = false 
  * @param {string} [targetTable]
  * @param {{ syncFirst?: boolean }} [opts]
  */
-async function seedData(targetTable, opts = {}) {
-  loadEnv();
-  const syncFirst = opts.syncFirst !== false;
-
-  if (syncFirst) {
-    console.log('[db] 注入前先同步 Schema…');
-    await syncSchema();
-  }
-
+async function prepareSeedArtifacts() {
   try {
     const { resolveAll } = require('./resolve-item-schemes.js');
     const r = resolveAll();
@@ -203,6 +210,18 @@ async function seedData(targetTable, opts = {}) {
   } catch (err) {
     console.warn('[db] data.json FK 名称 enrich 跳过:', err.message);
   }
+}
+
+async function seedData(targetTable, opts = {}) {
+  loadEnv();
+  const syncFirst = opts.syncFirst !== false;
+
+  if (syncFirst) {
+    console.log('[db] 注入前先同步 Schema…');
+    await syncSchema();
+  }
+
+  await prepareSeedArtifacts();
 
   const dbDir = path.join(__dirname, '../../database');
   const tablesDir = path.join(dbDir, 'tables');
@@ -249,19 +268,81 @@ async function seedData(targetTable, opts = {}) {
   await client.end();
 
   console.log('[db] 创建/更新分析视图…');
-  const sequelize = new Sequelize(
-    pgConfig().database,
-    pgConfig().user,
-    pgConfig().password,
-    { ...pgConfig(), dialect: 'postgres', logging: false },
-  );
+  const sequelize = createSequelize();
   try {
     const dbDir = path.join(__dirname, '../../database');
     await runViewsBootstrap(sequelize, dbDir, console);
+    console.log('[db] 应用 post-seed migrations（009+）…');
+    await runPostSeedMigrations(sequelize, dbDir, console);
   } finally {
     await sequelize.close();
   }
   console.log('[db] 全部完成');
+}
+
+/**
+ * 清空并重建数据库（全库或单表），然后注入 seed 数据
+ * @param {string} [targetTable] 省略则 DROP SCHEMA 全量重建
+ */
+async function resetDatabase(targetTable) {
+  loadEnv();
+  const cfg = pgConfig();
+  const dbDir = path.join(__dirname, '../../database');
+  const tablesDir = path.join(dbDir, 'tables');
+
+  if (targetTable) {
+    assertKnownTable(dbDir, targetTable);
+  }
+
+  const client = pgClient();
+  await client.connect();
+  const sequelize = createSequelize();
+  let clientClosed = false;
+
+  try {
+    if (!targetTable) {
+      await dropPublicSchema(client, cfg.user);
+      await client.end();
+      clientClosed = true;
+
+      console.log('[db] 重建 Schema（init.sql + migrations + Fitness 表）…');
+      await bootstrapFitnessSchema(sequelize, { baseDir: path.join(__dirname, '..') });
+      await sequelize.close();
+
+      console.log('[db] 全量注入 seed 数据…');
+      await seedData(undefined, { syncFirst: false });
+      return;
+    }
+
+    const isView = targetTable.startsWith('v_');
+    console.log(`[db] 单表重置: ${targetTable}`);
+    await dropTableOrView(client, targetTable);
+    await applyTableDdl(sequelize, dbDir, targetTable);
+
+    if (!isView) {
+      await prepareSeedArtifacts();
+      const meta = loadSeedTableMeta(dbDir);
+      const result = await seedTable(tablesDir, targetTable, client, meta, { failFast: true });
+      if (result.status === 'fail') {
+        throw new Error(`${targetTable} 数据注入失败`);
+      }
+      if (targetTable === 'test_item_detail') {
+        const schemeSync = await syncItemSchemesAfterSeed(client, tablesDir);
+        if (schemeSync.fromDataJson || schemeSync.fromMinorScheme) {
+          console.log(
+            `[db] 用例方案回填: data.json ${schemeSync.fromDataJson} 条, 子类映射 ${schemeSync.fromMinorScheme} 条`,
+          );
+        }
+      }
+    }
+
+    console.log('[db] 刷新分析视图…');
+    await runViewsBootstrap(sequelize, dbDir, console);
+    console.log(`[db] ${targetTable} 重置完成`);
+  } finally {
+    if (!clientClosed) await client.end().catch(() => {});
+    await sequelize.close().catch(() => {});
+  }
 }
 
 async function main() {
@@ -275,12 +356,15 @@ async function main() {
     case 'seed':
       await seedData(arg || undefined, { syncFirst: true });
       break;
+    case 'reset':
+      await resetDatabase(arg || undefined);
+      break;
     case 'all':
     case 'full':
       await seedData(undefined, { syncFirst: true });
       break;
     default:
-      console.error(`用法: node db-cli.js <sync|seed [表名]|all>`);
+      console.error(`用法: node db-cli.js <sync|seed [表名]|reset [表名]|all>`);
       process.exit(1);
   }
 }
@@ -292,4 +376,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { syncSchema, seedData };
+module.exports = { syncSchema, seedData, resetDatabase };

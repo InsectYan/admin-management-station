@@ -4,16 +4,18 @@
 
 ## 端口（见 docs-project/应用端口与命名注册表.md）
 
-| 服务 | 端口 |
-|------|------|
-| API | 5202 |
-| Vite | 5102 |
+
+| 服务           | 端口   |
+| ------------ | ---- |
+| API          | 5202 |
+| Vite         | 5102 |
 | Postgres 宿主机 | 5302 |
+
 
 ## 本地启动
 
 ```bash
-cd testgen-sub/deploy && npm link && ams-testgen local
+cd project-sub/testgen-sub/deploy && npm link && ams-testgen local
 ```
 
 **已有数据库卷升级**（若 `POST /api/generation-jobs` 报 500、`agent_context does not exist`）：
@@ -41,6 +43,8 @@ ams-testgen db                 # 同步 Schema + 全量注入 23 张 Fitness 表
 ams-testgen db:seed            # 同上
 ams-testgen db:seed test_item_detail   # 仅注入指定表
 ams-testgen db:sync            # 仅 DDL，不注入数据
+ams-testgen db:reset           # 清空全库 → 重建 Schema → 全量注入（含运行时表）
+ams-testgen db:reset test_item_detail  # 删表重建 + 仅注入指定表
 ```
 
 注入规则对齐 `fitness-agent-test-docs/数据库详细表/_scripts/generate-all-tables.mjs`（`sqlVal` + `ON CONFLICT DO NOTHING` + 外键顺序）。表目录在 `database/tables/<表名>/`，须同时含 `init.sql` 与 `data.json`。

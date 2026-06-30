@@ -75,10 +75,6 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
-  testTypes: {
-    type: Array,
-    default: () => [],
-  },
   errorMessage: {
     type: String,
     default: '',
@@ -87,9 +83,10 @@ const props = defineProps({
 
 const phaseLabelMap = {
   analyze: '需求分析',
-  functional: '功能用例',
-  edge: '边界用例',
+  generate: '生成用例',
   review: '合规审查',
+  functional: '生成用例',
+  edge: '生成用例',
 };
 
 function truncate(text, max) {
@@ -113,13 +110,15 @@ const displayLlmProfile = computed(() =>
 );
 
 const quotaLines = computed(() => {
-  const counts = context.value.type_counts
-    || props.jobOptions?.type_counts
-    || {};
-  const types = props.testTypes?.length
-    ? props.testTypes
-    : Object.keys(counts);
-  return types.map(t => `${t}：${counts[t] ?? '—'} 条`);
+  const targets = context.value.scheme_targets
+    || props.jobOptions?.scheme_targets
+    || [];
+  if (targets.length) {
+    return targets.map(t =>
+      `${t.scheme_id || ''} · ${t.validation_id || ''}：${t.count ?? '—'} 条`,
+    );
+  }
+  return [];
 });
 
 const phaseLabel = computed(() =>

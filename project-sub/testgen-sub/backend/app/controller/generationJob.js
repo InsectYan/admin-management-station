@@ -26,7 +26,7 @@ class GenerationJobController extends Controller {
       return;
     }
     const { page, page_size, pageSize } = this.ctx.query;
-    const data = await this.service.generationJob.listTestCases(this.ctx.params.id, {
+    const data = await this.service.generationJob.listGeneratedItems(this.ctx.params.id, {
       page: Number(page) || 1,
       page_size,
       pageSize,

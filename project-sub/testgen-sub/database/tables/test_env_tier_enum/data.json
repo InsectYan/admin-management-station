@@ -3,24 +3,28 @@
     "env_tier_id": "TIER_ANY",
     "name": "随处等价",
     "description": "站测/纯函数；CI、本地、测试环境结果一致",
-    "sort_order": 1
+    "sort_order": 1,
+    "project_code": "fitness-agent"
   },
   {
     "env_tier_id": "TIER_LOCAL",
     "name": "本地模拟",
     "description": "Docker/脚本可模拟；不必占用 test AgentRun",
-    "sort_order": 2
+    "sort_order": 2,
+    "project_code": "fitness-agent"
   },
   {
     "env_tier_id": "TIER_STAGING",
     "name": "测试预发",
     "description": "需 AgentRun/RDS/NAS/SLS 等拟真环境",
-    "sort_order": 3
+    "sort_order": 3,
+    "project_code": "fitness-agent"
   },
   {
     "env_tier_id": "TIER_PROD_ONLY",
     "name": "生产/人工",
     "description": "仅生产验证或专家 UAT，自动化受限",
-    "sort_order": 4
+    "sort_order": 4,
+    "project_code": "fitness-agent"
   }
 ]

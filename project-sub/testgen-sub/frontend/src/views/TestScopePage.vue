@@ -1,5 +1,5 @@
 <template>
-  <PageShell title="生成测试用例">
+  <PageShell title="生成配置">
     <template #extra>
       <el-button
         type="primary"
@@ -17,48 +17,101 @@
       label-width="100px"
       class="testgen-scope-form"
     >
-      <el-form-item label="业务模块" prop="module">
+      <el-form-item label="项目" prop="project_code">
         <el-select
-          v-model="form.module"
-          placeholder="请选择业务模块"
+          v-model="form.project_code"
+          placeholder="请选择项目"
           filterable
           style="width: 100%"
+          @change="onProjectChange"
         >
           <el-option
-            v-for="item in moduleOptions"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
+            v-for="p in projectOptions"
+            :key="p.project_code"
+            :label="p.project_name"
+            :value="p.project_code"
+          >
+            <span>{{ p.project_name }}</span>
+            <span class="testgen-project-code">{{ p.project_code }}</span>
+          </el-option>
         </el-select>
       </el-form-item>
-      <el-form-item label="测试类型" prop="test_types">
-        <el-checkbox-group v-model="form.test_types">
+      <el-form-item v-if="selectedProject" label="项目 Code">
+        <el-input :model-value="selectedProject.project_code" disabled />
+      </el-form-item>
+
+      <el-form-item label="主方案 (TS)" prop="scheme_ids">
+        <el-checkbox-group v-model="form.scheme_ids">
           <el-checkbox
-            v-for="item in testTypeOptions"
-            :key="item"
-            :label="item"
-            :value="item"
-          />
+            v-for="item in schemeOptions"
+            :key="item.scheme_id"
+            :label="item.scheme_id"
+            :value="item.scheme_id"
+          >
+            {{ item.scheme_id }} {{ item.name || '' }}
+          </el-checkbox>
         </el-checkbox-group>
       </el-form-item>
 
-      <el-form-item v-if="form.test_types.length" label="各类型条数">
+      <el-form-item v-if="form.scheme_ids.length" label="方案条数">
         <div class="testgen-type-counts">
           <div
-            v-for="item in form.test_types"
-            :key="item"
+            v-for="sid in form.scheme_ids"
+            :key="sid"
             class="testgen-type-count-row"
           >
-            <span class="testgen-type-count-label">{{ item }}</span>
+            <span class="testgen-type-count-label">{{ schemeLabel(sid) }}</span>
             <el-input-number
-              v-model="form.type_counts[item]"
+              v-model="form.scheme_counts[sid]"
               :min="1"
               :max="50"
               size="small"
             />
-            <span class="testgen-type-count-hint">条（单条字段上限 300 字）</span>
+            <span class="testgen-type-count-hint">条</span>
           </div>
+        </div>
+      </el-form-item>
+
+      <el-form-item label="主验证 (VS)" prop="validation_ids">
+        <el-checkbox-group v-model="form.validation_ids">
+          <el-checkbox
+            v-for="item in validationOptions"
+            :key="item.validation_id"
+            :label="item.validation_id"
+            :value="item.validation_id"
+          >
+            {{ item.validation_id }} {{ item.name || '' }}
+          </el-checkbox>
+        </el-checkbox-group>
+      </el-form-item>
+
+      <el-form-item v-if="form.validation_ids.length" label="验证条数">
+        <div class="testgen-type-counts">
+          <div
+            v-for="vid in form.validation_ids"
+            :key="vid"
+            class="testgen-type-count-row"
+          >
+            <span class="testgen-type-count-label">{{ validationLabel(vid) }}</span>
+            <el-input-number
+              v-model="form.validation_counts[vid]"
+              :min="1"
+              :max="50"
+              size="small"
+            />
+            <span class="testgen-type-count-hint">条</span>
+          </div>
+        </div>
+      </el-form-item>
+
+      <el-form-item v-if="schemeTargetPreview.length" label="生成目标">
+        <el-table :data="schemeTargetPreview" size="small" border max-height="240">
+          <el-table-column prop="scheme_name" label="主方案" min-width="120" />
+          <el-table-column prop="validation_name" label="主验证" min-width="120" />
+          <el-table-column prop="count" label="条数" width="72" />
+        </el-table>
+        <div class="testgen-target-hint">
+          按上表顺序依次执行：每个目标完成需求分析 → 生成用例 → 合规审查后落库
         </div>
       </el-form-item>
 
@@ -190,33 +243,6 @@
           placeholder="可选，传给生成任务的补充说明"
         />
       </el-form-item>
-
-      <el-collapse v-model="fitnessCollapse" class="testgen-fitness-collapse">
-        <el-collapse-item title="Fitness 联动" name="fitness">
-          <el-form-item label="方案 ID">
-            <el-select
-              v-model="fitnessContext.scheme_id"
-              placeholder="选择 TS 方案（可选）"
-              filterable
-              clearable
-              style="width: 100%"
-            >
-              <el-option
-                v-for="s in schemeOptions"
-                :key="s.scheme_id"
-                :label="`${s.scheme_id} ${s.name || ''}`"
-                :value="s.scheme_id"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="自动样本">
-            <el-checkbox v-model="fitnessContext.auto_sample">生成后写入样本集</el-checkbox>
-          </el-form-item>
-          <el-form-item label="自动预检">
-            <el-checkbox v-model="fitnessContext.auto_dry_run">生成后 dry-run 预检</el-checkbox>
-          </el-form-item>
-        </el-collapse-item>
-      </el-collapse>
     </el-form>
   </PageShell>
 </template>
@@ -227,14 +253,12 @@ import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { UploadFilled } from '@element-plus/icons-vue';
 import PageShell from '../components/PageShell.vue';
-import {
-  listDocuments,
-  previewDocument,
-  getDocumentPreview,
-} from '../services/documentService';
-import { listModules } from '../services/knowledgeService';
+import { listDocuments, previewDocument, getDocumentPreview } from '../services/documentService';
 import { startGeneration } from '../services/generationService';
-import { fetchSchemes } from '../services/fitnessService.js';
+import { fetchEnums } from '../services/fitnessService.js';
+import { fetchProjects } from '../services/projectService.js';
+
+const DEFAULT_TARGET_COUNT = 5;
 
 const PREVIEW_SNIPPET_LEN = 500;
 
@@ -243,18 +267,13 @@ const formRef = ref(null);
 const submitting = ref(false);
 const uploading = ref(false);
 const documents = ref([]);
-const moduleOptions = ref([]);
+const projectOptions = ref([]);
 const docInputMode = ref('upload');
 const pasteContent = ref('');
 const pasteFullContent = ref('');
 const contentConfirmed = ref(false);
-const fitnessCollapse = ref([]);
 const schemeOptions = ref([]);
-const fitnessContext = ref({
-  scheme_id: '',
-  auto_sample: false,
-  auto_dry_run: false,
-});
+const validationOptions = ref([]);
 
 const emptyPreview = () => ({
   staging_id: null,
@@ -273,47 +292,88 @@ const emptyPreview = () => ({
 
 const previewData = ref(emptyPreview());
 
-const testTypeOptions = ['功能测试', '边界值测试', 'GDPR 合规测试', '安全测试'];
-
-const DEFAULT_TYPE_COUNTS = {
-  '功能测试': 5,
-  '边界值测试': 3,
-  'GDPR 合规测试': 2,
-  '安全测试': 3,
-};
-
 const form = ref({
-  module: '',
-  test_types: ['功能测试'],
-  type_counts: { '功能测试': DEFAULT_TYPE_COUNTS['功能测试'] },
+  project_code: '',
+  scheme_ids: [],
+  scheme_counts: {},
+  validation_ids: [],
+  validation_counts: {},
   document_id: '',
   hint: '',
 });
 
 watch(
-  () => form.value.test_types.slice(),
-  (types) => {
-    const next = { ...form.value.type_counts };
-    for (const t of types) {
-      if (next[t] == null) next[t] = DEFAULT_TYPE_COUNTS[t] || 3;
+  () => form.value.scheme_ids.slice(),
+  (ids) => {
+    const next = { ...form.value.scheme_counts };
+    for (const id of ids) {
+      if (next[id] == null) next[id] = DEFAULT_TARGET_COUNT;
     }
     for (const key of Object.keys(next)) {
-      if (!types.includes(key)) delete next[key];
+      if (!ids.includes(key)) delete next[key];
     }
-    form.value.type_counts = next;
+    form.value.scheme_counts = next;
   },
 );
 
+watch(
+  () => form.value.validation_ids.slice(),
+  (ids) => {
+    const next = { ...form.value.validation_counts };
+    for (const id of ids) {
+      if (next[id] == null) next[id] = DEFAULT_TARGET_COUNT;
+    }
+    for (const key of Object.keys(next)) {
+      if (!ids.includes(key)) delete next[key];
+    }
+    form.value.validation_counts = next;
+  },
+);
+
+const selectedProject = computed(() =>
+  projectOptions.value.find(p => p.project_code === form.value.project_code) || null,
+);
+
+function schemeLabel(schemeId) {
+  const row = schemeOptions.value.find(s => s.scheme_id === schemeId);
+  return row ? `${row.scheme_id} ${row.name || ''}`.trim() : schemeId;
+}
+
+function validationLabel(validationId) {
+  const row = validationOptions.value.find(v => v.validation_id === validationId);
+  return row ? `${row.validation_id} ${row.name || ''}`.trim() : validationId;
+}
+
+function buildSchemeTargets() {
+  const targets = [];
+  for (const sid of form.value.scheme_ids) {
+    const scheme = schemeOptions.value.find(s => s.scheme_id === sid);
+    for (const vid of form.value.validation_ids) {
+      const validation = validationOptions.value.find(v => v.validation_id === vid);
+      targets.push({
+        scheme_id: sid,
+        scheme_name: scheme?.name || sid,
+        validation_id: vid,
+        validation_name: validation?.name || vid,
+        count: form.value.scheme_counts[sid] ?? DEFAULT_TARGET_COUNT,
+      });
+    }
+  }
+  return targets;
+}
+
+const schemeTargetPreview = computed(() => buildSchemeTargets());
+
 const rules = {
-  module: [{ required: true, message: '请选择业务模块', trigger: 'change' }],
-  test_types: [{ type: 'array', min: 1, message: '至少选择一项测试类型', trigger: 'change' }],
+  project_code: [{ required: true, message: '请选择项目', trigger: 'change' }],
+  scheme_ids: [{ type: 'array', min: 1, message: '至少选择一项主方案', trigger: 'change' }],
+  validation_ids: [{ type: 'array', min: 1, message: '至少选择一项主验证', trigger: 'change' }],
 };
 
-const hasPreview = computed(() => previewData.value.parse_ok);
-
 const canSubmit = computed(() =>
-  form.value.module
-  && form.value.test_types.length > 0
+  form.value.project_code
+  && form.value.scheme_ids.length > 0
+  && form.value.validation_ids.length > 0
   && contentConfirmed.value
   && hasPreview.value,
 );
@@ -374,26 +434,20 @@ async function loadDocuments() {
   }
 }
 
-async function loadModules() {
+async function loadProjects() {
   try {
-    const result = await listModules();
-    const list = Array.isArray(result) ? result : result?.list ?? [];
-    if (list.length && typeof list[0] === 'object') {
-      moduleOptions.value = list.map((m) => ({
-        label: m.name || m.code,
-        value: m.name || m.code,
-      }));
-    } else {
-      moduleOptions.value = list.map((name) => ({ label: name, value: name }));
-    }
-  } catch {
-    moduleOptions.value = [
-      { label: '课程预约', value: '课程预约' },
-      { label: '设备借用', value: '设备借用' },
-      { label: '会员管理', value: '会员管理' },
-    ];
+    const result = await fetchProjects({ page: 1, pageSize: 200 });
+    projectOptions.value = result.list || [];
+  } catch (err) {
+    ElMessage.warning(err.message || '加载项目列表失败');
   }
 }
+
+function onProjectChange() {
+  // project_name 由 selectedProject 推导
+}
+
+const hasPreview = computed(() => previewData.value.parse_ok);
 
 function clearPreview() {
   previewData.value = emptyPreview();
@@ -504,15 +558,13 @@ async function handleStartGeneration() {
 
   submitting.value = true;
   try {
-    const type_counts = Object.fromEntries(
-      form.value.test_types.map(t => [ t, form.value.type_counts[t] || DEFAULT_TYPE_COUNTS[t] || 3 ]),
-    );
-    const options = { type_counts };
+    const scheme_targets = buildSchemeTargets();
+    const options = { scheme_targets };
     if (form.value.hint) options.hint = form.value.hint;
 
     const payload = {
-      module: form.value.module,
-      test_types: form.value.test_types,
+      project_code: form.value.project_code,
+      project_name: selectedProject.value?.project_name || form.value.project_code,
       options,
     };
 
@@ -524,14 +576,6 @@ async function handleStartGeneration() {
       payload.document_content = pasteFullContent.value;
       payload.document_title = previewData.value.title;
       payload.document_type = previewData.value.doc_type;
-    }
-
-    if (fitnessContext.value.scheme_id || fitnessContext.value.auto_sample || fitnessContext.value.auto_dry_run) {
-      payload.fitness_context = {
-        scheme_id: fitnessContext.value.scheme_id || undefined,
-        auto_sample: fitnessContext.value.auto_sample,
-        auto_dry_run: fitnessContext.value.auto_dry_run,
-      };
     }
 
     const result = await startGeneration(payload);
@@ -546,11 +590,30 @@ async function handleStartGeneration() {
 
 onMounted(() => {
   loadDocuments();
-  loadModules();
-  fetchSchemes({ pageSize: 50 }).then(data => {
-    schemeOptions.value = data.list || [];
+  loadProjects();
+  const pageSizeAll = 200;
+  Promise.all([
+    fetchEnums('test_scheme_enum', { page: 1, pageSize: pageSizeAll }),
+    fetchEnums('test_validation_enum', { page: 1, pageSize: pageSizeAll }),
+  ]).then(([ schemeRes, valRes ]) => {
+    schemeOptions.value = schemeRes.list || [];
+    validationOptions.value = valRes.list || [];
   }).catch(() => {
     schemeOptions.value = [];
+    validationOptions.value = [];
   });
 });
 </script>
+
+<style scoped>
+.testgen-project-code {
+  float: right;
+  color: #909399;
+  font-size: 12px;
+}
+.testgen-target-hint {
+  margin-top: 8px;
+  color: #909399;
+  font-size: 12px;
+}
+</style>

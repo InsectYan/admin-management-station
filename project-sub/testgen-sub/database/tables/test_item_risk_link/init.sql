@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS test_item_risk_link (
+  project_code VARCHAR(64) NOT NULL DEFAULT 'fitness-agent',
   link_id VARCHAR(16) PRIMARY KEY,
   risk_item_id VARCHAR(64) NOT NULL REFERENCES test_item_detail(item_id) ON DELETE CASCADE,
   main_item_id VARCHAR(64) NOT NULL REFERENCES test_item_detail(item_id) ON DELETE CASCADE,

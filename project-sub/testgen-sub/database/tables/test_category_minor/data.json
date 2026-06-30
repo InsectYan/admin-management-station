@@ -4,615 +4,703 @@
     "category_major_id": "A1",
     "name": "单元/契约",
     "sort_order": 1,
-    "category_major_name": "单元/契约"
+    "category_major_name": "单元/契约",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "A2_STATION",
     "category_major_id": "A2",
     "name": "站级集成",
     "sort_order": 1,
-    "category_major_name": "站级集成"
+    "category_major_name": "站级集成",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "A3_HTTP",
     "category_major_id": "A3",
     "name": "HTTP/服务",
     "sort_order": 1,
-    "category_major_name": "HTTP/服务"
+    "category_major_name": "HTTP/服务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "A4_E2E",
     "category_major_id": "A4",
     "name": "全栈 E2E",
     "sort_order": 1,
-    "category_major_name": "全栈 E2E"
+    "category_major_name": "全栈 E2E",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "A5_LOAD",
     "category_major_id": "A5",
     "name": "压测/运维",
     "sort_order": 1,
-    "category_major_name": "压测/运维"
+    "category_major_name": "压测/运维",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "A6_EVAL",
     "category_major_id": "A6",
     "name": "Eval/UAT",
     "sort_order": 1,
-    "category_major_name": "Eval/UAT"
+    "category_major_name": "Eval/UAT",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "B1_FRONT",
     "category_major_id": "B1",
     "name": "前端幂等/SSE",
     "sort_order": 1,
-    "category_major_name": "① 前端"
+    "category_major_name": "① 前端",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "B1_OBS",
     "category_major_id": "B1",
     "name": "站级观测",
     "sort_order": 2,
-    "category_major_name": "① 前端"
+    "category_major_name": "① 前端",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "B2_GUARD",
     "category_major_id": "B2",
     "name": "门禁规则",
     "sort_order": 1,
-    "category_major_name": "② 门禁"
+    "category_major_name": "② 门禁",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "B2_OBS",
     "category_major_id": "B2",
     "name": "站级观测",
     "sort_order": 2,
-    "category_major_name": "② 门禁"
+    "category_major_name": "② 门禁",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "B3_QUEUE",
     "category_major_id": "B3",
     "name": "队列 Worker",
     "sort_order": 1,
-    "category_major_name": "③ 队列"
+    "category_major_name": "③ 队列",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "B3_OBS",
     "category_major_id": "B3",
     "name": "站级观测",
     "sort_order": 2,
-    "category_major_name": "③ 队列"
+    "category_major_name": "③ 队列",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "B4_PIPELINE",
     "category_major_id": "B4",
     "name": "Pipeline",
     "sort_order": 1,
-    "category_major_name": "④ Pipeline"
+    "category_major_name": "④ Pipeline",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "B4_OBS",
     "category_major_id": "B4",
     "name": "站级观测",
     "sort_order": 2,
-    "category_major_name": "④ Pipeline"
+    "category_major_name": "④ Pipeline",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "B5_PI",
     "category_major_id": "B5",
     "name": "Pi 契约",
     "sort_order": 1,
-    "category_major_name": "⑤ Pi"
+    "category_major_name": "⑤ Pi",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "B5_OBS",
     "category_major_id": "B5",
     "name": "站级观测",
     "sort_order": 2,
-    "category_major_name": "⑤ Pi"
+    "category_major_name": "⑤ Pi",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "B6_SSE",
     "category_major_id": "B6",
     "name": "SSE 回传",
     "sort_order": 1,
-    "category_major_name": "⑥ 回传"
+    "category_major_name": "⑥ 回传",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "B6_OBS",
     "category_major_id": "B6",
     "name": "站级观测",
     "sort_order": 2,
-    "category_major_name": "⑥ 回传"
+    "category_major_name": "⑥ 回传",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "B_REL_LAW",
     "category_major_id": "B_REL",
     "name": "可靠性法则",
     "sort_order": 1,
-    "category_major_name": "可靠性法则"
+    "category_major_name": "可靠性法则",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C1_ENTRY",
     "category_major_id": "C1",
     "name": "入口与会员上下文",
     "sort_order": 1,
-    "category_major_name": "教练端业务"
+    "category_major_name": "教练端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C1_INTENT",
     "category_major_id": "C1",
     "name": "意图识别",
     "sort_order": 2,
-    "category_major_name": "教练端业务"
+    "category_major_name": "教练端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C1_MACRO",
     "category_major_id": "C1",
     "name": "训练计划生成",
     "sort_order": 3,
-    "category_major_name": "教练端业务"
+    "category_major_name": "教练端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C1_SESSION",
     "category_major_id": "C1",
     "name": "单次训练内容",
     "sort_order": 4,
-    "category_major_name": "教练端业务"
+    "category_major_name": "教练端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C1_SUM",
     "category_major_id": "C1",
     "name": "训练总结",
     "sort_order": 5,
-    "category_major_name": "教练端业务"
+    "category_major_name": "教练端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C1_STRAT",
     "category_major_id": "C1",
     "name": "回复策略",
     "sort_order": 6,
-    "category_major_name": "教练端业务"
+    "category_major_name": "教练端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C1_SAFE",
     "category_major_id": "C1",
     "name": "安全审查",
     "sort_order": 7,
-    "category_major_name": "教练端业务"
+    "category_major_name": "教练端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C1_IMPACT",
     "category_major_id": "C1",
     "name": "AI影响分析",
     "sort_order": 8,
-    "category_major_name": "教练端业务"
+    "category_major_name": "教练端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C1_CONF",
     "category_major_id": "C1",
     "name": "写库确认",
     "sort_order": 9,
-    "category_major_name": "教练端业务"
+    "category_major_name": "教练端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C1_DEL",
     "category_major_id": "C1",
     "name": "删除与重复",
     "sort_order": 10,
-    "category_major_name": "教练端业务"
+    "category_major_name": "教练端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C1_OBJ",
     "category_major_id": "C1",
     "name": "生成类对象清单",
     "sort_order": 11,
-    "category_major_name": "教练端业务"
+    "category_major_name": "教练端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C2_BOUND",
     "category_major_id": "C2",
     "name": "能力边界",
     "sort_order": 1,
-    "category_major_name": "会员端业务"
+    "category_major_name": "会员端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C2_STATE",
     "category_major_id": "C2",
     "name": "会员状态",
     "sort_order": 2,
-    "category_major_name": "会员端业务"
+    "category_major_name": "会员端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C2_PAYLOAD",
     "category_major_id": "C2",
     "name": "载荷边界",
     "sort_order": 3,
-    "category_major_name": "会员端业务"
+    "category_major_name": "会员端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C2_MED",
     "category_major_id": "C2",
     "name": "医疗安全",
     "sort_order": 4,
-    "category_major_name": "会员端业务"
+    "category_major_name": "会员端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C2_FB",
     "category_major_id": "C2",
     "name": "会员反馈",
     "sort_order": 5,
-    "category_major_name": "会员端业务"
+    "category_major_name": "会员端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C2_QNR",
     "category_major_id": "C2",
     "name": "健康问卷",
     "sort_order": 6,
-    "category_major_name": "会员端业务"
+    "category_major_name": "会员端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C2_UX",
     "category_major_id": "C2",
     "name": "速度与异常",
     "sort_order": 7,
-    "category_major_name": "会员端业务"
+    "category_major_name": "会员端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C2_RISK",
     "category_major_id": "C2",
     "name": "高风险清单",
     "sort_order": 8,
-    "category_major_name": "会员端业务"
+    "category_major_name": "会员端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C3_MATRIX",
     "category_major_id": "C3",
     "name": "能力矩阵",
     "sort_order": 1,
-    "category_major_name": "管理端业务"
+    "category_major_name": "管理端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C3_QUERY",
     "category_major_id": "C3",
     "name": "查询场景",
     "sort_order": 2,
-    "category_major_name": "管理端业务"
+    "category_major_name": "管理端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C3_ALERT",
     "category_major_id": "C3",
     "name": "管理提醒",
     "sort_order": 3,
-    "category_major_name": "管理端业务"
+    "category_major_name": "管理端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C3_PAYLOAD",
     "category_major_id": "C3",
     "name": "载荷边界",
     "sort_order": 4,
-    "category_major_name": "管理端业务"
+    "category_major_name": "管理端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C3_PERM",
     "category_major_id": "C3",
     "name": "权限与消歧",
     "sort_order": 5,
-    "category_major_name": "管理端业务"
+    "category_major_name": "管理端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C3_RISK",
     "category_major_id": "C3",
     "name": "高风险清单",
     "sort_order": 6,
-    "category_major_name": "管理端业务"
+    "category_major_name": "管理端业务",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C4_MEM",
     "category_major_id": "C4",
     "name": "记忆与知识库",
     "sort_order": 1,
-    "category_major_name": "横切业务与状态机"
+    "category_major_name": "横切业务与状态机",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C4_PAY",
     "category_major_id": "C4",
     "name": "三端载荷矩阵",
     "sort_order": 2,
-    "category_major_name": "横切业务与状态机"
+    "category_major_name": "横切业务与状态机",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C4_PLAN_ST",
     "category_major_id": "C4",
     "name": "训练计划状态机",
     "sort_order": 3,
-    "category_major_name": "横切业务与状态机"
+    "category_major_name": "横切业务与状态机",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C4_SESS_ST",
     "category_major_id": "C4",
     "name": "课时状态机",
     "sort_order": 4,
-    "category_major_name": "横切业务与状态机"
+    "category_major_name": "横切业务与状态机",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C4_SUM_ST",
     "category_major_id": "C4",
     "name": "总结状态机",
     "sort_order": 5,
-    "category_major_name": "横切业务与状态机"
+    "category_major_name": "横切业务与状态机",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C4_EVAL_ST",
     "category_major_id": "C4",
     "name": "评估状态机",
     "sort_order": 6,
-    "category_major_name": "横切业务与状态机"
+    "category_major_name": "横切业务与状态机",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C4_QNR_ST",
     "category_major_id": "C4",
     "name": "问卷状态机",
     "sort_order": 7,
-    "category_major_name": "横切业务与状态机"
+    "category_major_name": "横切业务与状态机",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C4_DATA",
     "category_major_id": "C4",
     "name": "数据生命周期",
     "sort_order": 8,
-    "category_major_name": "横切业务与状态机"
+    "category_major_name": "横切业务与状态机",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "C4_CONF",
     "category_major_id": "C4",
     "name": "写库确认横切",
     "sort_order": 9,
-    "category_major_name": "横切业务与状态机"
+    "category_major_name": "横切业务与状态机",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "D1_API",
     "category_major_id": "D1",
     "name": "正常路径",
     "sort_order": 1,
-    "category_major_name": "接口正常路径"
+    "category_major_name": "接口正常路径",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "D2_ERR",
     "category_major_id": "D2",
     "name": "异常错误码",
     "sort_order": 1,
-    "category_major_name": "接口异常/错误码"
+    "category_major_name": "接口异常/错误码",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "D3_SHELL",
     "category_major_id": "D3",
     "name": "套壳联调",
     "sort_order": 1,
-    "category_major_name": "套壳联调"
+    "category_major_name": "套壳联调",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "D4_FLD",
     "category_major_id": "D4",
     "name": "202字段",
     "sort_order": 1,
-    "category_major_name": "202 载荷字段"
+    "category_major_name": "202 载荷字段",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "D5_EVT",
     "category_major_id": "D5",
     "name": "SSE事件",
     "sort_order": 1,
-    "category_major_name": "SSE 事件类型"
+    "category_major_name": "SSE 事件类型",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "E1_PATH",
     "category_major_id": "E1",
     "name": "决策路径",
     "sort_order": 1,
-    "category_major_name": "决策与路径"
+    "category_major_name": "决策与路径",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "E2_TOOL",
     "category_major_id": "E2",
     "name": "工具调用",
     "sort_order": 1,
-    "category_major_name": "工具调用"
+    "category_major_name": "工具调用",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "E3_MEM",
     "category_major_id": "E3",
     "name": "记忆上下文",
     "sort_order": 1,
-    "category_major_name": "记忆与上下文"
+    "category_major_name": "记忆与上下文",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "E4_STAB",
     "category_major_id": "E4",
     "name": "稳定性",
     "sort_order": 1,
-    "category_major_name": "稳定性"
+    "category_major_name": "稳定性",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "E5_SEC",
     "category_major_id": "E5",
     "name": "安全合规",
     "sort_order": 1,
-    "category_major_name": "安全与合规"
+    "category_major_name": "安全与合规",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "E6_EVAL",
     "category_major_id": "E6",
     "name": "Eval",
     "sort_order": 1,
-    "category_major_name": "Eval/CI"
+    "category_major_name": "Eval/CI",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "E_RISK_LIST",
     "category_major_id": "E_RISK",
     "name": "高风险",
     "sort_order": 1,
-    "category_major_name": "Agent高风险清单"
+    "category_major_name": "Agent高风险清单",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "E_SKILL_RT",
     "category_major_id": "E_SKILL",
     "name": "Skill路由",
     "sort_order": 1,
-    "category_major_name": "Skill路由"
+    "category_major_name": "Skill路由",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "F1_PERF",
     "category_major_id": "F1",
     "name": "性能",
     "sort_order": 1,
-    "category_major_name": "性能"
+    "category_major_name": "性能",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "F2_REL",
     "category_major_id": "F2",
     "name": "可靠性",
     "sort_order": 1,
-    "category_major_name": "可靠性"
+    "category_major_name": "可靠性",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "F3_OBS",
     "category_major_id": "F3",
     "name": "可观测概要",
     "sort_order": 1,
-    "category_major_name": "可观测概要"
+    "category_major_name": "可观测概要",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "F4_DEPLOY",
     "category_major_id": "F4",
     "name": "部署环境",
     "sort_order": 1,
-    "category_major_name": "部署与环境"
+    "category_major_name": "部署与环境",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "F5_SYM",
     "category_major_id": "F5",
     "name": "症状调参",
     "sort_order": 1,
-    "category_major_name": "症状→测试"
+    "category_major_name": "症状→测试",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "F6_CAP",
     "category_major_id": "F6",
     "name": "容量公式",
     "sort_order": 1,
-    "category_major_name": "容量公式"
+    "category_major_name": "容量公式",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "G1_PHASE",
     "category_major_id": "G1",
     "name": "阶段反馈",
     "sort_order": 1,
-    "category_major_name": "等待与阶段反馈"
+    "category_major_name": "等待与阶段反馈",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "G2_QUEUE",
     "category_major_id": "G2",
     "name": "排队感知",
     "sort_order": 1,
-    "category_major_name": "排队感知"
+    "category_major_name": "排队感知",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "G3_ERR",
     "category_major_id": "G3",
     "name": "错误友好",
     "sort_order": 1,
-    "category_major_name": "错误友好"
+    "category_major_name": "错误友好",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "G4_SESS",
     "category_major_id": "G4",
     "name": "会话续传",
     "sort_order": 1,
-    "category_major_name": "会话与续传"
+    "category_major_name": "会话与续传",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "G5_UI",
     "category_major_id": "G5",
     "name": "结构化UI",
     "sort_order": 1,
-    "category_major_name": "结构化 UI"
+    "category_major_name": "结构化 UI",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "G6_DIFF",
     "category_major_id": "G6",
     "name": "三端差异",
     "sort_order": 1,
-    "category_major_name": "三端差异"
+    "category_major_name": "三端差异",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "G7_STREAM",
     "category_major_id": "G7",
     "name": "流式半截",
     "sort_order": 1,
-    "category_major_name": "流式与半截内容"
+    "category_major_name": "流式与半截内容",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "G8_TIME",
     "category_major_id": "G8",
     "name": "耗时指标",
     "sort_order": 1,
-    "category_major_name": "耗时体验指标"
+    "category_major_name": "耗时体验指标",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "H1_STATION",
     "category_major_id": "H1",
     "name": "六站观测",
     "sort_order": 1,
-    "category_major_name": "六站观测指标"
+    "category_major_name": "六站观测指标",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "H2_FLD",
     "category_major_id": "H2",
     "name": "日志字段",
     "sort_order": 1,
-    "category_major_name": "PRD 日志字段"
+    "category_major_name": "PRD 日志字段",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "H3_MEM",
     "category_major_id": "H3",
     "name": "会员日志",
     "sort_order": 1,
-    "category_major_name": "会员端专用日志"
+    "category_major_name": "会员端专用日志",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "H4_MGR",
     "category_major_id": "H4",
     "name": "管理日志",
     "sort_order": 1,
-    "category_major_name": "管理端专用日志"
+    "category_major_name": "管理端专用日志",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "H5_JRN",
     "category_major_id": "H5",
     "name": "journey漫游",
     "sort_order": 1,
-    "category_major_name": "turn_journeys"
+    "category_major_name": "turn_journeys",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "H6_SLS",
     "category_major_id": "H6",
     "name": "SLS监控",
     "sort_order": 1,
-    "category_major_name": "SLS/接口监控"
+    "category_major_name": "SLS/接口监控",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "H7_CHK",
     "category_major_id": "H7",
     "name": "排障速查",
     "sort_order": 1,
-    "category_major_name": "排障速查"
+    "category_major_name": "排障速查",
+    "project_code": "fitness-agent"
   },
   {
     "category_minor_id": "H8_GAP",
     "category_major_id": "H8",
     "name": "可观测缺口",
     "sort_order": 1,
-    "category_major_name": "可观测缺口"
+    "category_major_name": "可观测缺口",
+    "project_code": "fitness-agent"
   }
 ]

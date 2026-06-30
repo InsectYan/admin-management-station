@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS config_env_enum (
+  project_code VARCHAR(64) NOT NULL DEFAULT 'fitness-agent',
   config_env_id VARCHAR(64) PRIMARY KEY,
   name TEXT,
   domain TEXT,

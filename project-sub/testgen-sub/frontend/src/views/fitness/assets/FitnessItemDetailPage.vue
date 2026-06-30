@@ -2,6 +2,7 @@
   <div v-loading="loading">
     <el-descriptions v-if="item" :column="2" border>
       <el-descriptions-item label="ID">{{ item.item_id }}</el-descriptions-item>
+      <el-descriptions-item label="项目">{{ item.project_name || item.project_code }}</el-descriptions-item>
       <el-descriptions-item label="优先级">{{ item.priority_name || item.priority_id }}</el-descriptions-item>
       <el-descriptions-item label="分类">{{ item.dimension_name }} / {{ item.category_major_name }}</el-descriptions-item>
       <el-descriptions-item label="来源">{{ item.source_doc }} {{ item.source_section }}</el-descriptions-item>
