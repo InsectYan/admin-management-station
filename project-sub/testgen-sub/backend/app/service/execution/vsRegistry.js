@@ -9,6 +9,7 @@ const VsZeroEngine = require('./validators/vsZero');
 const VsBlockRateEngine = require('./validators/vsBlockRate');
 const VsAgentJudgeEngine = require('./validators/vsAgentJudge');
 const VsMajorityEngine = require('./validators/vsMajority');
+const VsSloEngine = require('./validators/vsSlo');
 
 const contractEngine = new VsContractEngine();
 const rateEngine = new VsRateEngine();
@@ -19,6 +20,7 @@ const zeroEngine = new VsZeroEngine();
 const blockRateEngine = new VsBlockRateEngine();
 const agentJudgeEngine = new VsAgentJudgeEngine();
 const majorityEngine = new VsMajorityEngine();
+const sloEngine = new VsSloEngine();
 
 /** VS 分组与 VS-02 契约判定（E1 默认走契约引擎） */
 const CONTRACT_IDS = new Set([
@@ -59,6 +61,12 @@ const OBS_IDS = new Set([
   'VS-06-COMPLETE',
 ]);
 
+const SLO_IDS = new Set([
+  'VS-10-SLO-L',
+  'VS-10-SLO-M',
+  'VS-10-SLO-H',
+]);
+
 function get(validationId, runConfig) {
   const cfg = runConfig?.config_json || {};
   if (cfg.use_agent_judge === true) {
@@ -87,6 +95,9 @@ function get(validationId, runConfig) {
   }
   if (PASSK_IDS.has(validationId) || String(validationId).startsWith('VS-08')) {
     return passKEngine;
+  }
+  if (SLO_IDS.has(validationId) || String(validationId).startsWith('VS-10')) {
+    return sloEngine;
   }
   const err = new Error(`判定引擎尚未实现: ${validationId}`);
   err.status = 501;

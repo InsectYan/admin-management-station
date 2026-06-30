@@ -10,6 +10,26 @@
       v-model="configJson"
       v-model:threshold="thresholdJson"
     />
+    <el-collapse v-if="item?.scheme_secondary_id" style="margin-top:16px">
+      <el-collapse-item title="次要方案 (scheme_secondary_id)" name="secondary">
+        <p>
+          {{ item.scheme_secondary_name || item.scheme_secondary_id }}
+          · VS: {{ item.validation_secondary_id || '-' }}
+        </p>
+        <el-alert type="info" :closable="false">
+          次要方案配置需单独保存；当前页编辑主方案 {{ schemeId }}。
+        </el-alert>
+        <el-button
+          v-if="secondarySchemeType"
+          link
+          type="primary"
+          style="margin-top:8px"
+          @click="loadSecondaryConfig"
+        >
+          加载次要方案预填
+        </el-button>
+      </el-collapse-item>
+    </el-collapse>
     <el-button type="primary" style="margin-top:16px" @click="save">保存配置</el-button>
   </div>
 </template>
@@ -43,6 +63,9 @@ const route = useRoute();
 const itemId = computed(() => route.params.itemId);
 const schemeType = computed(() => route.params.schemeType || schemeToConfigPath(item.value?.scheme_primary_id));
 const schemeId = computed(() => SCHEME_TYPE_TO_ID[schemeType.value] || 'TS-01-DET');
+const secondarySchemeType = computed(() =>
+  item.value?.scheme_secondary_id ? schemeToConfigPath(item.value.scheme_secondary_id) : null,
+);
 const configComponent = computed(() => COMPONENTS[schemeType.value] || COMPONENTS.det);
 const loading = ref(false);
 const item = ref(null);
@@ -78,6 +101,19 @@ async function save() {
     sample_set_id: configJson.value.sample_set_id,
   });
   ElMessage.success('配置已保存');
+}
+
+async function loadSecondaryConfig() {
+  if (!item.value?.scheme_secondary_id) return;
+  loading.value = true;
+  try {
+    const saved = await fetchRunConfig(itemId.value, item.value.scheme_secondary_id);
+    configJson.value = saved?.config_json || configJson.value;
+    thresholdJson.value = saved?.threshold_json || thresholdJson.value;
+    ElMessage.info('已加载次要方案配置到当前表单（保存时将写入主方案）');
+  } finally {
+    loading.value = false;
+  }
 }
 
 watch(itemId, loadConfig);

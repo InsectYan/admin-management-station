@@ -24,14 +24,45 @@
     <p v-if="isPairScheme">对照臂: {{ pairArmCount }}</p>
     <p v-if="isNegScheme">对抗用例: {{ negCaseCount }}</p>
     <p v-if="isObsScheme">可观测检查: {{ obsCheckCount }}</p>
-    <el-button
-      type="primary"
-      :loading="launching"
-      :disabled="!canLaunch"
-      @click="launch"
-    >
-      一键执行
-    </el-button>
+    <div class="launch-actions">
+      <el-button
+        type="primary"
+        data-testid="fitness-launch-run"
+        :loading="launching"
+        :disabled="!canLaunch"
+        @click="launch"
+      >
+        一键执行
+      </el-button>
+      <el-button
+        data-testid="fitness-dry-run"
+        :loading="dryRunning"
+        :disabled="!canDryRun"
+        @click="runDryRun"
+      >
+        Dry-run 预检
+      </el-button>
+    </div>
+    <template v-if="dryRunResult">
+      <el-alert
+        :type="dryRunResult.verdict === 'pass' ? 'success' : 'warning'"
+        :title="`预检判定: ${dryRunResult.verdict || '-'}`"
+        :closable="false"
+        style="margin-top:16px"
+      />
+      <el-table :data="dryRunSubRows" size="small" style="margin-top:12px" border>
+        <el-table-column prop="sub_index" label="#" width="50" />
+        <el-table-column prop="input_summary" label="输入" min-width="160" />
+        <el-table-column prop="output_summary" label="输出" min-width="160" />
+        <el-table-column prop="sub_verdict" label="判定" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.sub_verdict === 'pass' ? 'success' : 'danger'" size="small">
+              {{ row.sub_verdict }}
+            </el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+    </template>
     <el-alert v-if="engineMsg" type="warning" :title="engineMsg" style="margin-top:16px" />
     <el-alert
       v-if="item && !LAUNCHABLE_SCHEMES.has(schemeId)"
@@ -48,6 +79,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   LAUNCHABLE_SCHEMES,
+  dryRunLaunch,
   fetchEnvironments,
   fetchRunConfig,
   fetchTestItem,
@@ -59,6 +91,8 @@ const router = useRouter();
 const itemId = computed(() => route.params.itemId);
 const loading = ref(false);
 const launching = ref(false);
+const dryRunning = ref(false);
+const dryRunResult = ref(null);
 const item = ref(null);
 const runConfig = ref(null);
 const envs = ref([]);
@@ -103,6 +137,8 @@ const canLaunch = computed(() => {
   if (isObsScheme.value && obsCheckCount.value === 0) return false;
   return true;
 });
+const canDryRun = computed(() => envId.value && LAUNCHABLE_SCHEMES.has(schemeId.value));
+const dryRunSubRows = computed(() => dryRunResult.value?.sub_results || []);
 
 async function loadLaunchData() {
   loading.value = true;
@@ -120,6 +156,23 @@ async function loadLaunchData() {
     }
   } finally {
     loading.value = false;
+  }
+}
+
+async function runDryRun() {
+  dryRunning.value = true;
+  dryRunResult.value = null;
+  engineMsg.value = '';
+  try {
+    dryRunResult.value = await dryRunLaunch(itemId.value, {
+      env_id: envId.value,
+      scheme_id: schemeId.value,
+      validation_id: validationId.value,
+    });
+  } catch (e) {
+    engineMsg.value = e.response?.data?.message || e.message || '预检失败';
+  } finally {
+    dryRunning.value = false;
   }
 }
 
@@ -144,3 +197,11 @@ watch(itemId, loadLaunchData);
 
 onMounted(loadLaunchData);
 </script>
+
+<style scoped>
+.launch-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+</style>

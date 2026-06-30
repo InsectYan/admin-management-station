@@ -8,6 +8,7 @@ const Ts05ChainEngine = require('./engines/ts05ChainEngine');
 const Ts06PairEngine = require('./engines/ts06PairEngine');
 const Ts07NegEngine = require('./engines/ts07NegEngine');
 const Ts08ObsEngine = require('./engines/ts08ObsEngine');
+const Ts09LoadEngine = require('./engines/ts09LoadEngine');
 const Ts10ManEngine = require('./engines/ts10ManEngine');
 
 /** @type {Map<string, import('./engines/baseTsEngine')>} */
@@ -20,6 +21,7 @@ const engines = new Map([
   [ 'TS-06-PAIR', new Ts06PairEngine() ],
   [ 'TS-07-NEG', new Ts07NegEngine() ],
   [ 'TS-08-OBS', new Ts08ObsEngine() ],
+  [ 'TS-09-LOAD', new Ts09LoadEngine() ],
   [ 'TS-10-MAN', new Ts10ManEngine() ],
 ]);
 

@@ -17,6 +17,7 @@ export async function startGeneration({
   module,
   test_types,
   options,
+  fitness_context,
 }) {
   const { data } = await api.post(`${base()}/generation-jobs`, withLlmProfile({
     staging_id,
@@ -27,6 +28,7 @@ export async function startGeneration({
     module,
     test_types,
     options,
+    fitness_context,
   }));
   return data.data;
 }

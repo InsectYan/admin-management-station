@@ -177,6 +177,17 @@ class RunOrchestrator {
       }
     }
 
+    if (schemeId === 'TS-09-LOAD') {
+      const cfg = runConfig?.config_json || {};
+      const path = cfg.path || item.endpoint_path;
+      if (!path) {
+        const err = new Error('TS-09-LOAD 需要 config_json.path 或 item.endpoint_path');
+        err.status = 400;
+        err.code = 'LOAD_PATH_REQUIRED';
+        throw err;
+      }
+    }
+
     if (body.dry_run) {
       return this.executeDryRun(itemId, body);
     }

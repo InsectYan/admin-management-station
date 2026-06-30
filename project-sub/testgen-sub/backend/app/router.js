@@ -80,6 +80,7 @@ module.exports = app => {
   router.delete('/api/fitness/plans/:id', controller.fitnessPlan.destroy);
   router.post('/api/fitness/plans/:id/results', controller.fitnessPlan.saveResults);
   router.post('/api/fitness/plans/:id/export-report', controller.fitnessPlan.exportReport);
+  router.post('/api/fitness/plans/:id/summary', controller.fitnessPlan.summarizeReport);
   router.post('/api/fitness/plans/:id/launch', controller.fitnessPlan.launch);
   router.get('/api/fitness/plans/:id/runs', controller.fitnessPlan.planRuns);
 
@@ -96,13 +97,19 @@ module.exports = app => {
   router.delete('/api/fitness/samples/:setId', controller.fitnessExecution.deleteSampleSet);
   router.get('/api/fitness/samples/:setId/items', controller.fitnessExecution.listSampleItems);
   router.post('/api/fitness/samples/:setId/items', controller.fitnessExecution.createSampleItem);
+  router.post('/api/fitness/samples/:setId/import', controller.fitnessExecution.importSampleItems);
   router.put('/api/fitness/samples/:setId/items/:itemId', controller.fitnessExecution.updateSampleItem);
   router.delete('/api/fitness/samples/:setId/items/:itemId', controller.fitnessExecution.deleteSampleItem);
   router.get('/api/fitness/runs', controller.fitnessExecution.listRuns);
   router.get('/api/fitness/runs/:runId', controller.fitnessExecution.showRun);
   router.get('/api/fitness/runs/:runId/stream', controller.fitnessExecution.streamRun);
   router.post('/api/fitness/runs/:runId/cancel', controller.fitnessExecution.cancelRun);
+  router.post('/api/fitness/runs/:runId/rerun-failed', controller.fitnessExecution.rerunFailedRun);
+  router.get('/api/fitness/runs/:runId/export-log', controller.fitnessExecution.exportRunLog);
   router.post('/api/fitness/runs/:runId/explain', controller.fitnessExecution.explainRun);
+  router.post('/api/fitness/runs/:runId/score', controller.fitnessExecution.scoreManualRun);
+  router.post('/api/fitness/runs/:runId/pre-review', controller.fitnessExecution.preReviewRun);
+  router.post('/api/fitness/runs/:runId/analyze-load', controller.fitnessExecution.analyzeLoadRun);
   router.post('/api/fitness/samples/generate', controller.fitnessExecution.generateSamples);
   router.get('/api/fitness/run-config/:itemId', controller.fitnessExecution.getRunConfig);
   router.post('/api/fitness/run-config/:itemId', controller.fitnessExecution.saveRunConfig);

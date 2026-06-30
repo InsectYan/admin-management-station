@@ -94,6 +94,21 @@ class FitnessPlanController extends Controller {
     }
     this.ctx.body = { code: 0, message: 'ok', data };
   }
+
+  async summarizeReport() {
+    try {
+      const data = await this.service.fitnessPlan.summarizeReport(Number(this.ctx.params.id));
+      if (!data) {
+        this.ctx.status = 404;
+        this.ctx.body = { code: 404, message: '计划不存在', data: null };
+        return;
+      }
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: err.status || 500, message: err.message, data: null };
+    }
+  }
 }
 
 module.exports = FitnessPlanController;

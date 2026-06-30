@@ -67,8 +67,8 @@
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="goDetail(row)">详情</el-button>
-            <el-button link size="small" @click="goConfig(row)">配置</el-button>
-            <el-button link type="primary" size="small" @click="goLaunch(row)">执行</el-button>
+            <el-button link size="small" data-testid="fitness-items-config" @click="goConfig(row)">配置</el-button>
+            <el-button link type="primary" size="small" data-testid="fitness-items-launch" @click="goLaunch(row)">执行</el-button>
           </template>
         </el-table-column>
       </template>

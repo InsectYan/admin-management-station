@@ -40,7 +40,7 @@
 
 | TS-08-OBS | Journey / 字段可观测 | **E4 ✅** |
 
-| TS-09～10 | LOAD / 人工 | ❌ E6/E7 |
+| TS-09～10 | LOAD / 人工 | **E7/E6 ✅**（TS-09 简易压测 + TS-10 人工 UI） |
 
 
 
@@ -66,9 +66,9 @@
 
 - [x] `POST /api/fitness/environments/health-check`
 
-- [ ] dry-run 单条（launch 页）
+- [x] dry-run 单条（launch 页）
 
-- [ ] 重跑失败项、导出 JSON 日志（控制台）
+- [x] 重跑失败项、导出 JSON 日志（控制台）
 
 - [ ] LLM Judge（E6）→ 见 [FITNESS_AGENT_DIRECTION.md §3.2](./FITNESS_AGENT_DIRECTION.md#32-a2--p0fitness-judge-skillch-ag-01)
 
@@ -144,11 +144,11 @@
 
 - [x] 控制台：达标率仪表 + pass/fail 图 + Journey/可观测 Tab
 
-- [ ] 样本集 CSV/JSON 导入、从 test_input_example 生成（含 **A3 fitness-sample-skill** + A1 `enrich_samples`）
+- [x] 样本集 CSV/JSON 导入、从 test_input_example 生成（含 **A3 fitness-sample-skill** + A1 `enrich_samples`）
 
-- [ ] 配置页：辅助方案折叠区（scheme_secondary_id）
+- [x] 配置页：辅助方案折叠区（scheme_secondary_id）
 
-- [ ] 控制台：写入计划报告
+- [x] 控制台：写入计划报告
 
 
 
@@ -218,8 +218,8 @@
 
 ### 生成链路 × Fitness
 
-- [ ] `generationJob` 传入 `fitness_context`（scheme_id · auto_sample）
-- [ ] `/jobs/:id` 展示 dry-run / 样本写入结果
+- [x] `generationJob` 传入 `fitness_context`（scheme_id · auto_sample）— 后端 + `/scope` 表单
+- [x] `/jobs/:id` 展示 dry-run / 样本写入结果
 - [ ] 测试项库：从生成 job 一键导入样本集（可选）
 
 ---

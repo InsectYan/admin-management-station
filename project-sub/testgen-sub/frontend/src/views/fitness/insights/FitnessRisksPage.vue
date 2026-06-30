@@ -2,17 +2,27 @@
   <PageShell title="风险中心">
     <el-tabs v-model="activeTab" @tab-change="onTabChange">
       <el-tab-pane label="风险清单" name="list">
-        <el-select
-          v-model="coverageStatus"
-          placeholder="覆盖状态"
-          clearable
-          style="width:140px;margin-bottom:12px"
-          @change="onFilterChange"
-        >
-          <el-option label="已覆盖" value="COVERED" />
-          <el-option label="部分覆盖" value="PARTIAL" />
-          <el-option label="缺口" value="GAP" />
-        </el-select>
+        <div class="risk-filters">
+          <el-select
+            v-model="coverageStatus"
+            placeholder="覆盖状态"
+            clearable
+            style="width:140px"
+            @change="onFilterChange"
+          >
+            <el-option label="已覆盖" value="COVERED" />
+            <el-option label="部分覆盖" value="PARTIAL" />
+            <el-option label="缺口" value="GAP" />
+          </el-select>
+          <el-input
+            v-model="reverseItemId"
+            placeholder="反向查 item_id"
+            clearable
+            style="width:180px"
+            @change="onFilterChange"
+            @clear="onFilterChange"
+          />
+        </div>
         <FitnessLabeledTable
           :data="risks"
           :columns="riskColumns"
@@ -27,6 +37,14 @@
         />
       </el-tab-pane>
       <el-tab-pane label="关联图" name="graph">
+        <el-input
+          v-model="reverseItemId"
+          placeholder="反向查 item_id"
+          clearable
+          style="width:180px;margin-bottom:12px"
+          @change="loadLinks"
+          @clear="loadLinks"
+        />
         <FitnessLabeledTable
           :data="links"
           :columns="linkColumns"
@@ -58,6 +76,7 @@ const router = useRouter();
 const loading = ref(false);
 const activeTab = ref('list');
 const coverageStatus = ref(route.query.status || '');
+const reverseItemId = ref(route.query.item_id || '');
 const risks = ref([]);
 const total = ref(0);
 const page = ref(1);
@@ -95,6 +114,7 @@ async function loadRisks() {
   try {
     const data = await fetchRisks({
       coverage_status: coverageStatus.value || undefined,
+      item_id: reverseItemId.value || undefined,
       page: page.value,
       pageSize: pageSize.value,
     });
@@ -108,7 +128,11 @@ async function loadRisks() {
 async function loadLinks() {
   loading.value = true;
   try {
-    const data = await fetchRiskLinks({ page: linkPage.value, pageSize: linkPageSize.value });
+    const data = await fetchRiskLinks({
+      item_id: reverseItemId.value || undefined,
+      page: linkPage.value,
+      pageSize: linkPageSize.value,
+    });
     links.value = data.list || [];
     linkTotal.value = data.total || 0;
   } finally {
@@ -122,3 +146,12 @@ function goDetail(row) {
 
 onMounted(loadRisks);
 </script>
+
+<style scoped>
+.risk-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+</style>

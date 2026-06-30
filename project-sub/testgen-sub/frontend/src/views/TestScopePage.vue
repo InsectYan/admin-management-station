@@ -190,6 +190,33 @@
           placeholder="可选，传给生成任务的补充说明"
         />
       </el-form-item>
+
+      <el-collapse v-model="fitnessCollapse" class="testgen-fitness-collapse">
+        <el-collapse-item title="Fitness 联动" name="fitness">
+          <el-form-item label="方案 ID">
+            <el-select
+              v-model="fitnessContext.scheme_id"
+              placeholder="选择 TS 方案（可选）"
+              filterable
+              clearable
+              style="width: 100%"
+            >
+              <el-option
+                v-for="s in schemeOptions"
+                :key="s.scheme_id"
+                :label="`${s.scheme_id} ${s.name || ''}`"
+                :value="s.scheme_id"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="自动样本">
+            <el-checkbox v-model="fitnessContext.auto_sample">生成后写入样本集</el-checkbox>
+          </el-form-item>
+          <el-form-item label="自动预检">
+            <el-checkbox v-model="fitnessContext.auto_dry_run">生成后 dry-run 预检</el-checkbox>
+          </el-form-item>
+        </el-collapse-item>
+      </el-collapse>
     </el-form>
   </PageShell>
 </template>
@@ -207,6 +234,7 @@ import {
 } from '../services/documentService';
 import { listModules } from '../services/knowledgeService';
 import { startGeneration } from '../services/generationService';
+import { fetchSchemes } from '../services/fitnessService.js';
 
 const PREVIEW_SNIPPET_LEN = 500;
 
@@ -220,6 +248,13 @@ const docInputMode = ref('upload');
 const pasteContent = ref('');
 const pasteFullContent = ref('');
 const contentConfirmed = ref(false);
+const fitnessCollapse = ref([]);
+const schemeOptions = ref([]);
+const fitnessContext = ref({
+  scheme_id: '',
+  auto_sample: false,
+  auto_dry_run: false,
+});
 
 const emptyPreview = () => ({
   staging_id: null,
@@ -485,10 +520,18 @@ async function handleStartGeneration() {
       payload.staging_id = previewData.value.staging_id;
     } else if (docInputMode.value === 'existing' && previewData.value.document_id) {
       payload.document_id = previewData.value.document_id;
-    } else if (pasteFullContent.value) {
+    } else     if (pasteFullContent.value) {
       payload.document_content = pasteFullContent.value;
       payload.document_title = previewData.value.title;
       payload.document_type = previewData.value.doc_type;
+    }
+
+    if (fitnessContext.value.scheme_id || fitnessContext.value.auto_sample || fitnessContext.value.auto_dry_run) {
+      payload.fitness_context = {
+        scheme_id: fitnessContext.value.scheme_id || undefined,
+        auto_sample: fitnessContext.value.auto_sample,
+        auto_dry_run: fitnessContext.value.auto_dry_run,
+      };
     }
 
     const result = await startGeneration(payload);
@@ -504,5 +547,10 @@ async function handleStartGeneration() {
 onMounted(() => {
   loadDocuments();
   loadModules();
+  fetchSchemes({ pageSize: 50 }).then(data => {
+    schemeOptions.value = data.list || [];
+  }).catch(() => {
+    schemeOptions.value = [];
+  });
 });
 </script>

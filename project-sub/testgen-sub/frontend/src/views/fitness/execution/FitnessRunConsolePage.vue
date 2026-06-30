@@ -1,5 +1,51 @@
 ﻿<template>
   <PageShell title="运行控制台" v-loading="loading">
+    <template #extra>
+      <div v-if="run" class="console-toolbar">
+        <el-button
+          data-testid="fitness-rerun-failed"
+          size="small"
+          :loading="rerunning"
+          :disabled="!canRerunFailed"
+          @click="handleRerunFailed"
+        >
+          重跑失败项
+        </el-button>
+        <el-button
+          data-testid="fitness-export-run-log"
+          size="small"
+          :loading="exportingLog"
+          @click="handleExportLog"
+        >
+          导出 JSON 日志
+        </el-button>
+        <el-button
+          data-testid="fitness-write-plan-report"
+          size="small"
+          @click="showPlanDialog = true"
+        >
+          写入计划报告
+        </el-button>
+        <el-button
+          v-if="run.scheme_id === 'TS-09-LOAD'"
+          data-testid="fitness-analyze-load"
+          size="small"
+          :loading="analyzingLoad"
+          @click="handleAnalyzeLoad"
+        >
+          压测分析
+        </el-button>
+        <el-button
+          v-if="run.scheme_id === 'TS-10-MAN'"
+          data-testid="fitness-pre-review"
+          size="small"
+          :loading="preReviewing"
+          @click="handlePreReview"
+        >
+          AI 预审
+        </el-button>
+      </div>
+    </template>
     <el-descriptions v-if="run" :column="2" border>
       <el-descriptions-item label="Run ID">{{ run.id }}</el-descriptions-item>
       <el-descriptions-item label="用例">{{ run.item_id }}</el-descriptions-item>
@@ -87,25 +133,64 @@
       <div v-if="explainMarkdown" class="explain-md">{{ explainMarkdown }}</div>
       <el-empty v-else description="点击按钮生成解读（不改变 verdict）" />
     </el-card>
+
+    <el-dialog v-model="showPlanDialog" title="写入计划报告" width="420px">
+      <el-select v-model="selectedPlanId" placeholder="选择计划" filterable style="width:100%">
+        <el-option
+          v-for="p in planOptions"
+          :key="p.id"
+          :label="`${p.name} (${p.version_tag || '-'})`"
+          :value="p.id"
+        />
+      </el-select>
+      <template #footer>
+        <el-button @click="showPlanDialog = false">取消</el-button>
+        <el-button type="primary" :loading="writingPlan" :disabled="!selectedPlanId" @click="handleWritePlan">
+          写入
+        </el-button>
+      </template>
+    </el-dialog>
   </PageShell>
 </template>
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
 import PageShell from '@/components/PageShell.vue';
 import PassFailChart from '@/components/fitness/PassFailChart.vue';
-import { fetchFtRun, streamFtRun, explainFtRun } from '@/services/fitnessService.js';
+import {
+  analyzeLoadRun,
+  exportRunLog,
+  fetchFtRun,
+  fetchPlan,
+  fetchPlans,
+  preReviewRun,
+  rerunFailedRun,
+  savePlanResults,
+  streamFtRun,
+  explainFtRun,
+} from '@/services/fitnessService.js';
+import { downloadJson } from '@/utils/fitnessExport.js';
 
 const TERMINAL = new Set([ 'success', 'failed', 'cancelled' ]);
 
 const route = useRoute();
+const router = useRouter();
 const loading = ref(false);
 const run = ref(null);
 const liveProgress = ref(null);
 const resultTab = ref('subs');
 const explainLoading = ref(false);
 const explainMarkdown = ref('');
+const rerunning = ref(false);
+const exportingLog = ref(false);
+const analyzingLoad = ref(false);
+const preReviewing = ref(false);
+const writingPlan = ref(false);
+const showPlanDialog = ref(false);
+const selectedPlanId = ref(null);
+const planOptions = ref([]);
 /** @type {EventSource | null} */
 let es = null;
 
@@ -184,6 +269,10 @@ const rateProgressStatus = computed(() => {
   return undefined;
 });
 
+const canRerunFailed = computed(() =>
+  isTerminal.value && failCount.value > 0 && run.value?.status !== 'cancelled',
+);
+
 async function reloadRun() {
   run.value = await fetchFtRun(route.params.runId);
 }
@@ -197,6 +286,92 @@ async function loadExplain() {
     explainMarkdown.value = e?.response?.data?.message || e.message || '解读失败';
   } finally {
     explainLoading.value = false;
+  }
+}
+
+async function handleRerunFailed() {
+  rerunning.value = true;
+  try {
+    const next = await rerunFailedRun(route.params.runId);
+    router.push(`/fitness/execution/runs/${next.id}`);
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || e.message || '重跑失败');
+  } finally {
+    rerunning.value = false;
+  }
+}
+
+async function handleExportLog() {
+  exportingLog.value = true;
+  try {
+    const data = await exportRunLog(route.params.runId);
+    downloadJson(`fitness-run-${route.params.runId}-log.json`, data);
+    ElMessage.success('日志已导出');
+  } catch (e) {
+    downloadJson(`fitness-run-${route.params.runId}-log.json`, run.value);
+    ElMessage.warning(e?.response?.data?.message || '使用本地 run 快照导出');
+  } finally {
+    exportingLog.value = false;
+  }
+}
+
+async function loadPlanOptions() {
+  const data = await fetchPlans({ page: 1, pageSize: 100 });
+  planOptions.value = data.list || [];
+  selectedPlanId.value = planOptions.value[0]?.id ?? null;
+}
+
+async function handleWritePlan() {
+  if (!selectedPlanId.value || !run.value) return;
+  writingPlan.value = true;
+  try {
+    const plan = await fetchPlan(selectedPlanId.value);
+    const planItem = (plan.items || []).find(i => i.item_id === run.value.item_id);
+    if (!planItem) {
+      ElMessage.warning('该计划不包含当前用例');
+      return;
+    }
+    const existing = (plan.results || []).find(r => r.plan_item_id === planItem.id);
+    await savePlanResults(selectedPlanId.value, [{
+      plan_item_id: planItem.id,
+      item_id: run.value.item_id,
+      result_status: run.value.verdict === 'pass' ? 'passed' : run.value.verdict === 'fail' ? 'failed' : 'pending',
+      validation_result: run.value.verdict || existing?.validation_result || '',
+      notes: existing?.notes || '',
+      ft_run_id: run.value.id,
+    }]);
+    ElMessage.success('已写入计划报告');
+    showPlanDialog.value = false;
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || e.message || '写入失败');
+  } finally {
+    writingPlan.value = false;
+  }
+}
+
+async function handleAnalyzeLoad() {
+  analyzingLoad.value = true;
+  try {
+    const data = await analyzeLoadRun(route.params.runId);
+    explainMarkdown.value = data.markdown || data.summary || JSON.stringify(data, null, 2);
+    ElMessage.success('压测分析完成');
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || e.message || '分析失败');
+  } finally {
+    analyzingLoad.value = false;
+  }
+}
+
+async function handlePreReview() {
+  preReviewing.value = true;
+  try {
+    const data = await preReviewRun(route.params.runId);
+    explainMarkdown.value = data.markdown || JSON.stringify(data, null, 2);
+    ElMessage.success('预审完成');
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || e.message || '预审失败');
+  } finally {
+    preReviewing.value = false;
   }
 }
 
@@ -225,6 +400,7 @@ onMounted(async () => {
   loading.value = true;
   try {
     await reloadRun();
+    await loadPlanOptions();
     if (!isTerminal.value) startStream();
   } finally {
     loading.value = false;
@@ -235,6 +411,11 @@ onBeforeUnmount(closeStream);
 </script>
 
 <style scoped>
+.console-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .rate-caption {
   text-align: center;
   color: var(--el-text-color-secondary);

@@ -6,6 +6,7 @@
       <el-step title="用例选择" />
       <el-step title="阈值" />
       <el-step title="预览" />
+      <el-step title="发版标准" />
     </el-steps>
 
     <div v-show="step === 0">
@@ -39,12 +40,22 @@
     </div>
     <div v-show="step === 4">
       <p>计划: {{ form.name }} · 用例 {{ selectedItemIds.length }} 条 · PRD 目标 {{ selectedGoals.length }} 个</p>
+    </div>
+    <div v-show="step === 5">
+      <el-alert type="info" :closable="false" title="发版放行标准说明" />
+      <ul class="release-criteria">
+        <li>P0 阻塞项自动化覆盖率须达到计划阈值（默认 ≥ 95%）</li>
+        <li>风险防护项无 GAP 状态（已覆盖或部分覆盖可接受）</li>
+        <li>PRD 目标关联用例通过率 ≥ 计划阈值</li>
+        <li>发版信号为 GREEN 或 YELLOW（RED 需豁免审批）</li>
+        <li>计划内所有 P0 用例执行 verdict 为 pass，或已登记已知缺陷</li>
+      </ul>
       <el-button type="primary" :loading="saving" @click="submit">创建计划</el-button>
     </div>
 
     <div style="margin-top:24px">
       <el-button v-if="step > 0" @click="step -= 1">上一步</el-button>
-      <el-button v-if="step < 4" type="primary" @click="nextStep">下一步</el-button>
+      <el-button v-if="step < 5" type="primary" @click="nextStep">下一步</el-button>
     </div>
   </PageShell>
 </template>
@@ -106,3 +117,12 @@ onMounted(async () => {
   thresholdParams.value = await fetchEnums('threshold_param_enum');
 });
 </script>
+
+<style scoped>
+.release-criteria {
+  margin: 16px 0 24px;
+  padding-left: 20px;
+  line-height: 1.8;
+  color: var(--el-text-color-regular);
+}
+</style>

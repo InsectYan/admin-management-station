@@ -38,9 +38,11 @@
     </el-dialog>
 
     <el-drawer v-model="showItems" :title="activeSet?.name || '样本条目'" size="640px">
-      <div style="margin-bottom:12px;display:flex;gap:8px">
+      <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap">
         <el-button type="primary" size="small" @click="openItemForm()">添加 HTTP 样本</el-button>
         <el-button size="small" :loading="aiLoading" @click="aiGenerateSamples">AI 从 example 生成</el-button>
+        <el-button size="small" @click="triggerImport">导入 JSON/CSV</el-button>
+        <input ref="importInputRef" type="file" accept=".json,.csv,.txt" style="display:none" @change="onImportFile" />
       </div>
       <el-table v-loading="itemsLoading" :data="items" size="small" border>
         <el-table-column prop="sort_order" label="#" width="50" />
@@ -89,6 +91,7 @@ import {
   fetchSampleItems,
   fetchSampleSets,
   generateFitnessSamples,
+  importSampleItems,
   updateSampleItem,
   updateSampleSet,
 } from '@/services/fitnessService.js';
@@ -105,6 +108,7 @@ const showSetForm = ref(false);
 const showItems = ref(false);
 const showItemForm = ref(false);
 const activeSet = ref(null);
+const importInputRef = ref(null);
 const setForm = reactive({ id: null, name: '', item_id: '' });
 const tagsText = ref('');
 const itemForm = reactive({
@@ -253,6 +257,71 @@ async function aiGenerateSamples() {
     ElMessage.error(e?.response?.data?.message || e.message || '生成失败');
   } finally {
     aiLoading.value = false;
+  }
+}
+
+function triggerImport() {
+  importInputRef.value?.click();
+}
+
+function parseCsvSamples(text) {
+  const lines = text.trim().split(/\r?\n/).filter(Boolean);
+  if (!lines.length) return [];
+  const header = lines[0].split(',').map(s => s.trim().toLowerCase());
+  const pathIdx = header.indexOf('path');
+  const methodIdx = header.indexOf('method');
+  const statusIdx = header.findIndex(h => h === 'expect_status' || h === 'status');
+  const start = pathIdx >= 0 ? 1 : 0;
+  return lines.slice(start).map((line, i) => {
+    const cols = line.split(',').map(s => s.trim());
+    const path = pathIdx >= 0 ? cols[pathIdx] : cols[0];
+    const method = methodIdx >= 0 ? cols[methodIdx] : (cols[1] || 'GET');
+    const expect_status = statusIdx >= 0 ? Number(cols[statusIdx]) : Number(cols[2]) || 200;
+    return {
+      sort_order: i,
+      input_data: { runner: 'http', path, method: method.toUpperCase(), expect_status },
+    };
+  });
+}
+
+function normalizeImportItems(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((row, i) => {
+    const input = row.input_data || row;
+    return {
+      sort_order: row.sort_order ?? i,
+      input_data: {
+        runner: input.runner || 'http',
+        path: input.path || '/health',
+        method: (input.method || 'GET').toUpperCase(),
+        expect_status: input.expect_status ?? 200,
+      },
+    };
+  });
+}
+
+async function onImportFile(ev) {
+  const file = ev.target.files?.[0];
+  ev.target.value = '';
+  if (!file || !activeSet.value) return;
+  try {
+    const text = await file.text();
+    let items;
+    if (file.name.toLowerCase().endsWith('.csv')) {
+      items = parseCsvSamples(text);
+    } else {
+      items = normalizeImportItems(JSON.parse(text));
+    }
+    if (!items.length) {
+      ElMessage.warning('未解析到有效样本');
+      return;
+    }
+    await importSampleItems(activeSet.value.id, items);
+    ElMessage.success(`已导入 ${items.length} 条样本`);
+    await openItems(activeSet.value);
+    await load();
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || e.message || '导入失败');
   }
 }
 

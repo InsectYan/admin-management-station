@@ -1,6 +1,28 @@
 'use strict';
 
 const RunOrchestrator = require('./execution/runOrchestrator');
+const vsRegistry = require('./execution/vsRegistry');
+
+function assertionEntries(detail) {
+  if (Array.isArray(detail)) return detail;
+  if (detail && typeof detail === 'object' && Array.isArray(detail.assertions)) {
+    return detail.assertions;
+  }
+  return [];
+}
+
+function dbResultToSubResult(row) {
+  const detail = row.assertion_detail;
+  const isWrapped = detail && typeof detail === 'object' && !Array.isArray(detail);
+  return {
+    sub_index: row.sub_index,
+    input_summary: row.input_summary,
+    output_summary: row.output_summary,
+    assertion_detail: isWrapped ? (detail.assertions || []) : (detail || []),
+    sub_verdict: row.sub_verdict,
+    artifacts: isWrapped ? detail.artifacts : undefined,
+  };
+}
 
 class FitnessExecutionService extends require('egg').Service {
   orchestrator() {
@@ -258,6 +280,201 @@ class FitnessExecutionService extends require('egg').Service {
     }
 
     return agentRes.output || agentRes;
+  }
+
+  async rerunFailedRun(runId) {
+    const runData = await this.getRun(runId);
+    if (!runData) return null;
+
+    const failed = (runData.results || []).filter(r => r.sub_verdict === 'fail');
+    if (!failed.length) {
+      const err = new Error('无失败子项，无需重跑');
+      err.status = 400;
+      err.code = 'NO_FAILED_SUB_RESULTS';
+      throw err;
+    }
+
+    return this.orchestrator().launch(runData.item_id, {
+      env_id: runData.env_id,
+      scheme_id: runData.scheme_id,
+      validation_id: runData.validation_id,
+    });
+  }
+
+  async exportRunLog(runId) {
+    const runData = await this.getRun(runId);
+    if (!runData) return null;
+    return {
+      ...runData,
+      exported_at: new Date().toISOString(),
+    };
+  }
+
+  async importSampleItems(setId, body = {}) {
+    const items = body.items;
+    if (!Array.isArray(items)) {
+      const err = new Error('items 必须为数组');
+      err.status = 400;
+      throw err;
+    }
+    return this.ctx.service.internalFitness.bulkCreateSampleItems({
+      sample_set_id: setId,
+      items,
+    });
+  }
+
+  async scoreManualRun(runId, body = {}) {
+    const run = await this.ctx.model.FtRun.findByPk(runId);
+    if (!run) return null;
+
+    const results = await this.ctx.model.FtRunResult.findAll({
+      where: { ft_run_id: runId },
+      order: [[ 'sub_index', 'ASC' ]],
+    });
+
+    const targetRow = results.find(row =>
+      assertionEntries(row.assertion_detail).some(d => d.type === 'manual_queue'),
+    );
+    if (!targetRow) {
+      const err = new Error('未找到待评审子项');
+      err.status = 404;
+      err.code = 'MANUAL_QUEUE_NOT_FOUND';
+      throw err;
+    }
+
+    const detail = targetRow.assertion_detail;
+    const isWrapped = detail && typeof detail === 'object' && !Array.isArray(detail);
+    const assertions = assertionEntries(detail).map(a => {
+      if (a.type === 'manual_queue') {
+        return { ...a, status: 'reviewed' };
+      }
+      return a;
+    });
+    assertions.push({
+      type: 'human_review',
+      score: body.score,
+      pass: body.pass,
+      comment: body.comment,
+      reviewer_id: body.reviewer_id,
+      reviewed_at: new Date().toISOString(),
+    });
+
+    const newDetail = isWrapped
+      ? { ...detail, assertions }
+      : assertions;
+    const subVerdict = body.pass ? 'pass' : 'fail';
+    await targetRow.update({
+      assertion_detail: newDetail,
+      sub_verdict: subVerdict,
+    });
+
+    const updatedResults = await this.ctx.model.FtRunResult.findAll({
+      where: { ft_run_id: runId },
+      order: [[ 'sub_index', 'ASC' ]],
+    });
+    const subResults = updatedResults.map(dbResultToSubResult);
+
+    const item = await this.orchestrator().loadItem(run.item_id);
+    const runConfig = run.run_config_id
+      ? await this.ctx.model.FtRunConfig.findByPk(run.run_config_id)
+      : await this.ctx.model.FtRunConfig.findOne({
+        where: { item_id: run.item_id, scheme_id: run.scheme_id },
+      });
+
+    const vsEngine = vsRegistry.get(run.validation_id, runConfig);
+    const verdictResult = await vsEngine.judge(
+      subResults,
+      runConfig?.threshold_json || {},
+      item,
+      run.validation_id,
+      { item, runConfig, run, ctx: this.ctx },
+    );
+
+    const finalStatus = verdictResult.pass ? 'success' : 'failed';
+    await run.update({
+      status: finalStatus,
+      verdict: verdictResult.verdict,
+      finished_at: new Date(),
+      progress: {
+        ...(run.progress || {}),
+        phase: 'done',
+        percent: 100,
+        verdict: verdictResult.verdict,
+      },
+    });
+
+    return {
+      run_id: runId,
+      sub_verdict: subVerdict,
+      verdict: verdictResult.verdict,
+      status: finalStatus,
+      verdict_detail: verdictResult,
+    };
+  }
+
+  async preReviewRun(runId) {
+    const runData = await this.getRun(runId);
+    if (!runData) return null;
+
+    let materials = {};
+    for (const row of runData.results || []) {
+      const mq = assertionEntries(row.assertion_detail).find(d => d.type === 'manual_queue');
+      if (mq?.materials) {
+        materials = mq.materials;
+        break;
+      }
+    }
+
+    const agentRes = await this.ctx.service.agentProxy.invokeFitnessJudge({
+      action: 'pre_review',
+      run_id: runId,
+      item_id: runData.item_id,
+      materials,
+      trace: { run_id: runId, item_id: runData.item_id },
+    });
+
+    return {
+      run_id: runId,
+      markdown: agentRes.output?.markdown || agentRes.reply || '',
+      suggestions: agentRes.output?.suggestions || agentRes.output,
+      meta: agentRes.meta || {},
+    };
+  }
+
+  async analyzeLoadRun(runId) {
+    const runData = await this.getRun(runId);
+    if (!runData) return null;
+
+    if (runData.scheme_id !== 'TS-09-LOAD') {
+      const err = new Error('仅 TS-09-LOAD 运行支持负载分析');
+      err.status = 400;
+      err.code = 'NOT_LOAD_RUN';
+      throw err;
+    }
+
+    const perfSamples = [];
+    for (const row of runData.results || []) {
+      const detail = row.assertion_detail;
+      const perf = (detail && typeof detail === 'object' && !Array.isArray(detail))
+        ? detail.artifacts?.perf
+        : null;
+      if (perf) perfSamples.push(perf);
+    }
+
+    const agentRes = await this.ctx.service.agentProxy.invokePerfAnalysis({
+      action: 'analyze_load_run',
+      run_id: runId,
+      item_id: runData.item_id,
+      perf_samples: perfSamples,
+      trace: { run_id: runId, item_id: runData.item_id },
+    });
+
+    return {
+      run_id: runId,
+      markdown: agentRes.output?.markdown || agentRes.reply || '',
+      analysis: agentRes.output,
+      meta: agentRes.meta || {},
+    };
   }
 }
 

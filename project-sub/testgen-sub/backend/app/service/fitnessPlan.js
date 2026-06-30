@@ -177,6 +177,37 @@ class FitnessPlanService extends require('egg').Service {
     const PlanBatchRunner = require('./execution/planBatchRunner');
     return new PlanBatchRunner(this.ctx).getPlanRunSummary(planId);
   }
+
+  async summarizeReport(planId) {
+    const plan = await this.findById(planId);
+    if (!plan) return null;
+
+    const observations = (plan.results || []).map(r => {
+      const planItem = plan.items.find(i => i.id === r.plan_item_id);
+      return {
+        item_id: planItem?.item_id,
+        result_status: r.result_status,
+        validation_result: r.validation_result,
+        notes: r.notes,
+        ft_run_id: r.ft_run_id,
+      };
+    });
+
+    const agentRes = await this.ctx.service.agentProxy.invokeFitnessJudge({
+      action: 'summary',
+      plan_id: planId,
+      plan_name: plan.name,
+      observations,
+      trace: { plan_id: planId },
+    });
+
+    return {
+      plan_id: planId,
+      markdown: agentRes.output?.markdown || agentRes.reply || '',
+      summary: agentRes.output,
+      meta: agentRes.meta || {},
+    };
+  }
 }
 
 module.exports = FitnessPlanService;

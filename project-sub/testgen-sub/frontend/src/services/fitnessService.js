@@ -191,6 +191,49 @@ export async function launchRun(itemId, payload) {
   return data.data;
 }
 
+export async function dryRunLaunch(itemId, body) {
+  const { data } = await api.post(`/fitness/run/${encodeURIComponent(itemId)}/launch`, {
+    ...body,
+    dry_run: true,
+  });
+  return data.data;
+}
+
+export async function rerunFailedRun(runId) {
+  const { data } = await api.post(`/fitness/runs/${runId}/rerun-failed`);
+  return data.data;
+}
+
+export async function exportRunLog(runId) {
+  const { data } = await api.get(`/fitness/runs/${runId}/export-log`);
+  return data.data;
+}
+
+export async function importSampleItems(setId, items) {
+  const { data } = await api.post(`/fitness/samples/${setId}/items/bulk`, { items });
+  return data.data;
+}
+
+export async function scoreManualRun(runId, body) {
+  const { data } = await api.post(`/fitness/runs/${runId}/score`, body);
+  return data.data;
+}
+
+export async function preReviewRun(runId) {
+  const { data } = await api.post(`/fitness/runs/${runId}/pre-review`);
+  return data.data;
+}
+
+export async function analyzeLoadRun(runId) {
+  const { data } = await api.post(`/fitness/runs/${runId}/analyze-load`);
+  return data.data;
+}
+
+export async function summarizePlanReport(planId) {
+  const { data } = await api.post(`/fitness/plans/${planId}/summarize`);
+  return data.data;
+}
+
 /** @param {number|string} runId @param {(payload: object) => void} onMessage */
 export function streamFtRun(runId, onMessage) {
   const url = `${resolveApiBase()}/fitness/runs/${encodeURIComponent(runId)}/stream`;
@@ -237,7 +280,7 @@ export const SCHEME_TYPE_TO_ID = Object.fromEntries(
   Object.entries(SCHEME_CONFIG_ROUTES).map(([ id, type ]) => [ type, id ]),
 );
 
-/** E2/E3/E4/E5 已实现的方案 */
+/** E2/E3/E4/E5/E7 已实现的方案 */
 export const LAUNCHABLE_SCHEMES = new Set([
   'TS-01-DET',
   'TS-02-BND',
@@ -247,6 +290,7 @@ export const LAUNCHABLE_SCHEMES = new Set([
   'TS-06-PAIR',
   'TS-07-NEG',
   'TS-08-OBS',
+  'TS-09-LOAD',
   'TS-10-MAN',
 ]);
 

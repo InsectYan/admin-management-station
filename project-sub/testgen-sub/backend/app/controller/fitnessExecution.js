@@ -277,6 +277,92 @@ class FitnessExecutionController extends Controller {
       throw err;
     }
   }
+
+  async rerunFailedRun() {
+    try {
+      const data = await this.service.fitnessExecution.rerunFailedRun(this.ctx.params.runId);
+      if (!data) {
+        this.ctx.status = 404;
+        this.ctx.body = { code: 404, message: '运行记录不存在', data: null };
+        return;
+      }
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      if (this.handleError(err)) return;
+      throw err;
+    }
+  }
+
+  async exportRunLog() {
+    const data = await this.service.fitnessExecution.exportRunLog(this.ctx.params.runId);
+    if (!data) {
+      this.ctx.status = 404;
+      this.ctx.body = { code: 404, message: '运行记录不存在', data: null };
+      return;
+    }
+    this.ctx.body = { code: 0, message: 'ok', data };
+  }
+
+  async importSampleItems() {
+    try {
+      const data = await this.service.fitnessExecution.importSampleItems(
+        this.ctx.params.setId,
+        this.ctx.request.body || {},
+      );
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      if (this.handleError(err)) return;
+      throw err;
+    }
+  }
+
+  async scoreManualRun() {
+    try {
+      const data = await this.service.fitnessExecution.scoreManualRun(
+        this.ctx.params.runId,
+        this.ctx.request.body || {},
+      );
+      if (!data) {
+        this.ctx.status = 404;
+        this.ctx.body = { code: 404, message: '运行记录不存在', data: null };
+        return;
+      }
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      if (this.handleError(err)) return;
+      throw err;
+    }
+  }
+
+  async preReviewRun() {
+    try {
+      const data = await this.service.fitnessExecution.preReviewRun(this.ctx.params.runId);
+      if (!data) {
+        this.ctx.status = 404;
+        this.ctx.body = { code: 404, message: '运行记录不存在', data: null };
+        return;
+      }
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      if (this.handleError(err)) return;
+      throw err;
+    }
+  }
+
+  async analyzeLoadRun() {
+    try {
+      const data = await this.service.fitnessExecution.analyzeLoadRun(this.ctx.params.runId);
+      if (!data) {
+        this.ctx.status = 404;
+        this.ctx.body = { code: 404, message: '运行记录不存在', data: null };
+        return;
+      }
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      if (this.handleError(err)) return;
+      throw err;
+    }
+  }
 }
 
 module.exports = FitnessExecutionController;
