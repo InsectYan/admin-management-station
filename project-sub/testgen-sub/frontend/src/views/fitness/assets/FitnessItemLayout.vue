@@ -1,10 +1,10 @@
 <template>
   <PageShell :title="item?.item_name || item?.detail_summary || '测试项详情'" v-loading="loading">
     <template #extra>
-      <el-button @click="goBack">{{ backLabel }}</el-button>
-      <el-button v-if="hasListFilters && isFromRunConsole(route.query)" @click="goList">返回列表</el-button>
+      <el-button v-if="isFromRunConsole(route.query)" @click="goBack">返回控制台</el-button>
+      <el-button @click="goList">返回列表</el-button>
       <el-button
-        v-if="isFromRunConsole(route.query) && activeModule !== 'detail'"
+        v-if="activeModule !== 'detail'"
         data-testid="fitness-item-detail-tab"
         type="primary"
         @click="goModule('detail')"
@@ -44,22 +44,12 @@ const activeModule = computed(() => {
   return 'detail';
 });
 
-const backLabel = computed(() => (
-  isFromRunConsole(route.query) ? '返回控制台' : '返回列表'
-));
-
-const hasListFilters = computed(() => Object.keys(pickListQuery(route.query)).length > 0);
-
 function goModule(module) {
   router.push(buildItemDetailRoute(itemId.value, { module, query: route.query }));
 }
 
 function goBack() {
-  if (isFromRunConsole(route.query)) {
-    router.push(buildRunConsoleRoute(route.query.runId, route.query));
-    return;
-  }
-  goList();
+  router.push(buildRunConsoleRoute(route.query.runId, route.query));
 }
 
 function goList() {

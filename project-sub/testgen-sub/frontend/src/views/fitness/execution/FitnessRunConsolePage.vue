@@ -3,15 +3,6 @@
     <template #extra>
       <div v-if="run" class="console-toolbar">
         <el-button
-          v-if="run.item_id"
-          size="small"
-          type="primary"
-          data-testid="fitness-console-back-detail"
-          @click="goItemDetail"
-        >
-          用例详情
-        </el-button>
-        <el-button
           data-testid="fitness-rerun-failed"
           size="small"
           :loading="rerunning"
