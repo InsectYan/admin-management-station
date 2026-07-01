@@ -116,6 +116,12 @@ class AgentProxyService extends Service {
     return this.invokeSkill(path, { ...payload, _skill: 'fitness-sample-skill' }, sampleTimeoutMs);
   }
 
+  async invokeFitnessConfig(payload) {
+    const { configInvokePath, configTimeoutMs } = this._skillConfig();
+    const path = configInvokePath || '/api/skills/fitness-config-skill/invoke';
+    return this.invokeSkill(path, { ...payload, _skill: 'fitness-config-skill' }, configTimeoutMs);
+  }
+
   async invokeFitnessExplore(payload) {
     const { exploreInvokePath, exploreTimeoutMs } = this._skillConfig();
     const path = exploreInvokePath || '/api/skills/fitness-explore-skill/invoke';

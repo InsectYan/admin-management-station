@@ -13,9 +13,11 @@ const {
   applyMinorSchemeFallback,
   applyMinorSchemeFallbackAll,
 } = require('../lib/itemSchemeResolve');
+const { applyResolvedTemplate } = require('../lib/configTemplateRegistry');
 
 const ALLOWED_TABLES = new Set([
   'test_dimension', 'test_category_major', 'test_category_minor',
+  'config_template_enum', 'test_category_major_template',
   'test_scheme_enum', 'test_validation_enum', 'test_scheme_validation_pair',
   'test_priority_enum', 'test_automation_status_enum', 'test_station_enum', 'test_role_enum',
   'config_env_enum', 'automation_entry_enum', 'test_exec_env_enum', 'test_env_tier_enum',
@@ -53,6 +55,9 @@ const ITEM_LIST_JOINS = `
   LEFT JOIN test_role_enum rl ON rl.role_scope_id = t.role_scope_id
   LEFT JOIN test_exec_env_enum ee ON ee.exec_env_id = t.exec_env_id
   LEFT JOIN test_env_tier_enum et ON et.env_tier_id = t.env_tier_id
+  LEFT JOIN test_category_major_template cmt ON cmt.category_major_id = t.category_major_id
+  LEFT JOIN config_template_enum ct_map ON ct_map.template_code = cmt.template_code
+  LEFT JOIN config_template_enum ct_scheme ON ct_scheme.scheme_id = t.scheme_primary_id
   ${ITEM_SCHEME_FALLBACK_JOINS}
 `;
 
@@ -69,6 +74,10 @@ const ITEM_LIST_SELECT = `
   rl.name AS role_scope_name,
   ee.name AS exec_env_name,
   et.name AS env_tier_name,
+  cmt.template_code AS mapped_template_code,
+  ct_map.name AS mapped_template_name,
+  ct_scheme.template_code AS scheme_template_code,
+  ct_scheme.name AS scheme_template_name,
   ${ITEM_SCHEME_FALLBACK_SELECT}
 `;
 
@@ -288,7 +297,9 @@ class FitnessAssetService extends require('egg').Service {
       LIMIT :limit OFFSET :offset
     `;
     const [ rows ] = await this.app.model.query(listSql, { replacements });
-    const list = await this.enrichItemsWithExecutionMetrics(applyMinorSchemeFallbackAll(rows));
+    const list = await this.enrichItemsWithExecutionMetrics(
+      applyMinorSchemeFallbackAll(rows).map(applyResolvedTemplate),
+    );
     return { list, total, page: Number(page), pageSize: Number(pageSize) };
   }
 
@@ -306,7 +317,9 @@ class FitnessAssetService extends require('egg').Service {
       LIMIT :limit
     `;
     const [ rows ] = await this.app.model.query(listSql, { replacements });
-    const enriched = await this.enrichItemsWithExecutionMetrics(applyMinorSchemeFallbackAll(rows));
+    const enriched = await this.enrichItemsWithExecutionMetrics(
+      applyMinorSchemeFallbackAll(rows).map(applyResolvedTemplate),
+    );
 
     const columns = [
       { key: 'item_id', label: '用例编码' },
@@ -339,6 +352,31 @@ class FitnessAssetService extends require('egg').Service {
     return { list: enriched, csv, total: enriched.length };
   }
 
+  async fetchRiskLinksForItem(itemId) {
+    const viewSql = `SELECT * FROM v_risk_link_bidirectional
+         WHERE source_item_id = :itemId OR target_item_id = :itemId`;
+    const fallbackSql = `
+      SELECT 'RISK_TO_MAIN' AS direction, risk_item_id AS source_item_id, main_item_id AS target_item_id,
+        relation_type_id, risk_category, is_primary, description, link_id
+      FROM test_item_risk_link
+      WHERE risk_item_id = :itemId OR main_item_id = :itemId
+      UNION ALL
+      SELECT 'MAIN_TO_RISK' AS direction, main_item_id AS source_item_id, risk_item_id AS target_item_id,
+        relation_type_id, risk_category, is_primary, '反向：' || description, link_id
+      FROM test_item_risk_link
+      WHERE risk_item_id = :itemId OR main_item_id = :itemId`;
+    try {
+      const [ rows ] = await this.app.model.query(viewSql, { replacements: { itemId } });
+      await enrichRowsWithFkNames(this.app.model, 'v_risk_link_bidirectional', rows, this.app.baseDir);
+      return rows;
+    } catch (err) {
+      if (!/v_risk_link_bidirectional/.test(String(err.message))) throw err;
+      const [ rows ] = await this.app.model.query(fallbackSql, { replacements: { itemId } });
+      await enrichRowsWithFkNames(this.app.model, 'v_risk_link_bidirectional', rows, this.app.baseDir);
+      return rows;
+    }
+  }
+
   async getTestItem(itemId) {
     const [ rows ] = await this.app.model.query(
       `SELECT ${ITEM_LIST_SELECT},
@@ -355,7 +393,7 @@ class FitnessAssetService extends require('egg').Service {
     );
     if (!rows.length) return null;
 
-    const item = applyMinorSchemeFallback(rows[0]);
+    const item = applyResolvedTemplate(applyMinorSchemeFallback(rows[0]));
     const [ prdGoals, prdRefs, archRefs, riskLinks ] = await Promise.all([
       this.app.model.query(
         `SELECT l.*, g.name AS goal_name FROM test_item_prd_goal_link l
@@ -372,13 +410,8 @@ class FitnessAssetService extends require('egg').Service {
          JOIN arch_reference a ON a.arch_ref_id = l.arch_ref_id WHERE l.item_id = :itemId`,
         { replacements: { itemId } },
       ).then(([ r ]) => r),
-      this.app.model.query(
-        `SELECT * FROM v_risk_link_bidirectional
-         WHERE source_item_id = :itemId OR target_item_id = :itemId`,
-        { replacements: { itemId } },
-      ).then(([ r ]) => r),
+      this.fetchRiskLinksForItem(itemId),
     ]);
-    await enrichRowsWithFkNames(this.app.model, 'v_risk_link_bidirectional', riskLinks, this.app.baseDir);
 
     return {
       ...item,

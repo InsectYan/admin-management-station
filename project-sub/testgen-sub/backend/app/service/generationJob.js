@@ -1,7 +1,12 @@
 'use strict';
 
 const Service = require('egg').Service;
-const { isApprovedCase } = require('../lib/generationItemMapper');
+const { isApprovedCase, auditItemDetailFields, normalizeCaseFields } = require('../lib/generationItemMapper');
+const { buildSchemeTargetsFromMajors } = require('../lib/generationTemplateHelper');
+const {
+  buildFitnessPrimaryContextText,
+  buildTemplateOutputFormatText,
+} = require('../lib/templateOutputFormats');
 
 const PHASES = [ 'analyze', 'generate', 'review' ];
 const MAX_TARGET_ATTEMPTS = 5;
@@ -20,14 +25,35 @@ class GenerationJobService extends Service {
       llm_profile,
     } = payload;
 
-    const scheme_targets = options.scheme_targets || [];
+    let scheme_targets = options.scheme_targets || [];
+    const category_major_ids = options.category_major_ids?.length
+      ? options.category_major_ids
+      : (options.category_major_id ? [ options.category_major_id ] : []);
+
     if (!project_code || !project_name) {
       const err = new Error('project_code 与 project_name 为必填项');
       err.status = 400;
       throw err;
     }
+    if (!category_major_ids.length) {
+      const err = new Error('请至少选择一个测试大类');
+      err.status = 400;
+      throw err;
+    }
+
     if (!scheme_targets.length) {
-      const err = new Error('至少配置一项主方案与主验证生成目标');
+      scheme_targets = await buildSchemeTargetsFromMajors(this.app, {
+        category_major_ids,
+        validation_ids: options.validation_ids,
+        major_counts: options.major_counts,
+        default_count: options.default_count || 5,
+      });
+      options.scheme_targets = scheme_targets;
+      options.category_major_ids = category_major_ids;
+    }
+
+    if (!scheme_targets.length) {
+      const err = new Error('无法根据所选大类解析生成目标，请检查大类与验证配置');
       err.status = 400;
       throw err;
     }
@@ -175,35 +201,49 @@ class GenerationJobService extends Service {
           const agentRes = await this.ctx.service.agentProxy.invokeTestgen({
             action: 'generate_for_fitness',
             doc_id: document_id,
+            doc_content: rawContent,
             doc_title: doc.title,
             document_content: rawContent,
+            document_title: doc.title,
             module: project_name,
             project_code,
             project_name,
-            test_types: [ '功能测试', '边界值测试', 'GDPR 合规测试' ],
+            test_types: [ '功能测试', '边界值测试' ],
             options: {
               ...options,
               hint: options.hint,
+              category_major_id: target.category_major_id,
               type_counts: {
                 '功能测试': target.count,
                 '边界值测试': target.count,
-                'GDPR 合规测试': target.count,
               },
               scheme_target: target,
             },
             fitness_context: {
               scheme_id: target.scheme_id,
               validation_id: target.validation_id,
+              category_major_id: target.category_major_id,
+              template_code: target.template_code,
             },
+            fitness_primary_context: buildFitnessPrimaryContextText(target),
+            template_output_format: buildTemplateOutputFormatText(target.template_code),
             scheme_id: target.scheme_id,
             validation_id: target.validation_id,
+            template_code: target.template_code,
             job_id: jobId,
             llm_profile,
             trace: { job_id: jobId },
           });
 
           const rawCases = this.collectTestCasesFromOutput(agentRes.output || {});
-          const batchApproved = rawCases.filter(isApprovedCase);
+          const batchApproved = rawCases.filter(tc => isApprovedCase(normalizeCaseFields(tc)));
+          if (rawCases.length && !batchApproved.length) {
+            const sample = auditItemDetailFields(normalizeCaseFields(rawCases[0]));
+            this.ctx.app.logger.warn(
+              '[generationJob] job=%s target=%s attempt=%s raw=%s approved=0 sample_errors=%j',
+              jobId, target.scheme_id, attempts, rawCases.length, sample.errors,
+            );
+          }
           approvedCases.push(...batchApproved);
 
           const steps = agentRes.output?.steps || [];
@@ -225,7 +265,7 @@ class GenerationJobService extends Service {
 
           if (batchApproved.length === 0) {
             targetStates[ti].last_attempt_empty = true;
-            retryNotice = `第 ${attempts} 次生成：${targetLabel} 合规审查后无有效用例`;
+            retryNotice = `第 ${attempts} 次生成：${targetLabel} 字段校验后无有效用例`;
             const willRetry = approvedCases.length < target.count && attempts < MAX_TARGET_ATTEMPTS;
             direction = willRetry
               ? `${retryNotice}，正在重试…（已通过 ${approvedCases.length}/${target.count} 条）`
@@ -283,7 +323,7 @@ class GenerationJobService extends Service {
             target,
             targetStates,
             scheme_targets,
-            direction: `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id}：未生成任何通过合规审查的用例`,
+            direction: `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id}：未生成任何通过字段校验的用例`,
             steps_log: allSteps,
             retry_notice: `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id} 在 ${attempts} 次尝试后仍无有效用例`,
           });
@@ -298,6 +338,10 @@ class GenerationJobService extends Service {
             project_name,
             scheme_id: target.scheme_id,
             validation_id: target.validation_id,
+            category_major_id: target.category_major_id,
+            category_minor_id: target.category_minor_id,
+            dimension_id: target.dimension_id,
+            template_code: target.template_code,
           },
         );
 
@@ -318,7 +362,7 @@ class GenerationJobService extends Service {
       }
 
       if (totalItems === 0) {
-        throw new Error('全部生成目标均未产出通过合规审查的有效用例，请检查文档内容或调整生成配置后重试');
+        throw new Error('全部生成目标均未产出通过字段校验的有效用例，请检查文档内容或调整生成配置后重试');
       }
 
       await job.update({
@@ -365,7 +409,7 @@ class GenerationJobService extends Service {
     return {
       analyze: '需求分析',
       generate: '生成用例',
-      review: '合规审查',
+      review: '字段合规',
     }[key] || key;
   }
 
@@ -491,7 +535,7 @@ class GenerationJobService extends Service {
     const total = Number(countRows[0]?.total || 0);
     const [ rows ] = await this.app.model.query(
       `SELECT item_id, item_name, detail_summary, scheme_primary_id, validation_primary_id,
-              priority_id, project_code, project_name, created_at
+              priority_id, project_code, project_name, category_major_id, template_code, created_at
        FROM test_item_detail WHERE generation_job_id = :jobId
        ORDER BY item_id LIMIT :limit OFFSET :offset`,
       { replacements: { jobId: Number(jobId), limit: Number(pageSize), offset } },
@@ -528,15 +572,27 @@ class GenerationJobService extends Service {
   }
 
   collectTestCasesFromOutput(output = {}) {
-    if (Array.isArray(output.testCases) && output.testCases.length) return output.testCases;
-    if (Array.isArray(output.test_cases) && output.test_cases.length) return output.test_cases;
-    const merged = [];
+    /** @type {unknown[][]} */
+    const batches = [];
+    if (Array.isArray(output.testCases) && output.testCases.length) batches.push(output.testCases);
+    if (Array.isArray(output.test_cases) && output.test_cases.length) batches.push(output.test_cases);
     for (const step of output.steps || []) {
       const batch = step.state?.testCases || step.state?.test_cases
         || step.testCases || step.test_cases || [];
-      if (Array.isArray(batch)) merged.push(...batch);
+      if (Array.isArray(batch) && batch.length) batches.push(batch);
     }
-    return merged;
+    if (!batches.length) return [];
+
+    let best = batches[batches.length - 1];
+    let bestApproved = 0;
+    for (const batch of batches) {
+      const approved = batch.filter(tc => isApprovedCase(normalizeCaseFields(tc))).length;
+      if (approved > bestApproved) {
+        bestApproved = approved;
+        best = batch;
+      }
+    }
+    return best;
   }
 
   buildAbnormalDetail(agentRes, errorMessage = '') {

@@ -13,6 +13,7 @@
       <el-descriptions-item label="VS">{{ item.validation_primary_name || item.validation_primary_id }}</el-descriptions-item>
       <el-descriptions-item label="六站/三端">{{ item.station_name || item.station_id }} / {{ item.role_scope_name || item.role_scope_id }}</el-descriptions-item>
       <el-descriptions-item label="自动化">{{ item.automation_status_name || item.automation_status_id }}</el-descriptions-item>
+      <el-descriptions-item label="配置模板">{{ item.template_name || item.template_code || '—' }}</el-descriptions-item>
     </el-descriptions>
 
     <el-divider content-position="left">测什么</el-divider>
@@ -69,6 +70,7 @@ import { onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { fetchTestItem } from '@/services/fitnessService.js';
 import { riskRelationTag } from '@/utils/fitnessExport.js';
+import { buildItemDetailRoute } from '@/utils/itemListQuery.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -82,7 +84,7 @@ function relationTag(typeId) {
 function goRelatedItem(row) {
   const peerId = row.source_item_id === route.params.itemId ? row.target_item_id : row.source_item_id;
   if (peerId && peerId !== route.params.itemId) {
-    router.push(`/fitness/assets/items/${encodeURIComponent(peerId)}`);
+    router.push(buildItemDetailRoute(peerId, { query: route.query }));
   }
 }
 

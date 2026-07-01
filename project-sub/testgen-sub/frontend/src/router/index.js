@@ -72,6 +72,12 @@ export function createAppRouter(basename) {
             meta: { title: '生成配置', group: 'testgen' },
           },
           {
+            path: 'config/templates',
+            name: 'config-templates',
+            component: () => import('../views/config/TemplateManagePage.vue'),
+            meta: { title: '模板管理', group: 'config' },
+          },
+          {
             path: 'testgen/items',
             name: 'test-suite',
             component: () => import('../views/fitness/assets/FitnessItemsPage.vue'),

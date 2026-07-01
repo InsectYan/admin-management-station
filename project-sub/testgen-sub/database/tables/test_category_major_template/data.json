@@ -1,0 +1,290 @@
+[
+  {
+    "category_major_id": "A1",
+    "template_code": "TPL-DET",
+    "note": "单元/契约",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "A2",
+    "template_code": "TPL-DET",
+    "note": "站级集成",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "A3",
+    "template_code": "TPL-DET",
+    "note": "HTTP/服务",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "A4",
+    "template_code": "TPL-CHAIN",
+    "note": "全栈 E2E",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "A5",
+    "template_code": "TPL-LOAD",
+    "note": "压测/运维",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "A6",
+    "template_code": "TPL-SET",
+    "note": "Eval/UAT",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "B1",
+    "template_code": "TPL-DET",
+    "note": "前端",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "B2",
+    "template_code": "TPL-DET",
+    "note": "门禁",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "B3",
+    "template_code": "TPL-DET",
+    "note": "队列",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "B4",
+    "template_code": "TPL-BND",
+    "note": "Pipeline",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "B5",
+    "template_code": "TPL-DET",
+    "note": "Pi",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "B6",
+    "template_code": "TPL-CHAIN",
+    "note": "回传",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "B_REL",
+    "template_code": "TPL-DET",
+    "note": "可靠性法则",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "D1",
+    "template_code": "TPL-DET",
+    "note": "接口正常路径",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "D2",
+    "template_code": "TPL-DET",
+    "note": "接口异常/错误码",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "D3",
+    "template_code": "TPL-DET",
+    "note": "套壳联调",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "D4",
+    "template_code": "TPL-DET",
+    "note": "202 载荷字段",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "D5",
+    "template_code": "TPL-DET",
+    "note": "SSE 事件类型",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "E1",
+    "template_code": "TPL-SET",
+    "note": "决策与路径",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "E2",
+    "template_code": "TPL-REP",
+    "note": "工具调用",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "E3",
+    "template_code": "TPL-REP",
+    "note": "记忆与上下文",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "E4",
+    "template_code": "TPL-REP",
+    "note": "稳定性",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "E5",
+    "template_code": "TPL-NEG",
+    "note": "安全与合规",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "E6",
+    "template_code": "TPL-SET",
+    "note": "Eval/CI",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "E_RISK",
+    "template_code": "TPL-NEG",
+    "note": "Agent高风险清单",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "E_SKILL",
+    "template_code": "TPL-SET",
+    "note": "Skill路由",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "F1",
+    "template_code": "TPL-LOAD",
+    "note": "性能",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "F2",
+    "template_code": "TPL-LOAD",
+    "note": "可靠性",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "F3",
+    "template_code": "TPL-OBS",
+    "note": "可观测概要",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "F4",
+    "template_code": "TPL-DET",
+    "note": "部署与环境",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "F5",
+    "template_code": "TPL-DET",
+    "note": "症状→测试",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "F6",
+    "template_code": "TPL-LOAD",
+    "note": "容量公式",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "G1",
+    "template_code": "TPL-REP",
+    "note": "等待与阶段反馈",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "G2",
+    "template_code": "TPL-DET",
+    "note": "排队感知",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "G3",
+    "template_code": "TPL-DET",
+    "note": "错误友好",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "G4",
+    "template_code": "TPL-CHAIN",
+    "note": "会话与续传",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "G5",
+    "template_code": "TPL-BND",
+    "note": "结构化 UI",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "G6",
+    "template_code": "TPL-PAIR",
+    "note": "三端差异",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "G7",
+    "template_code": "TPL-CHAIN",
+    "note": "流式与半截内容",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "G8",
+    "template_code": "TPL-OBS",
+    "note": "耗时体验指标",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "H1",
+    "template_code": "TPL-OBS",
+    "note": "六站观测指标",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "H2",
+    "template_code": "TPL-OBS",
+    "note": "PRD 日志字段",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "H3",
+    "template_code": "TPL-OBS",
+    "note": "会员端专用日志",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "H4",
+    "template_code": "TPL-OBS",
+    "note": "管理端专用日志",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "H5",
+    "template_code": "TPL-OBS",
+    "note": "turn_journeys",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "H6",
+    "template_code": "TPL-OBS",
+    "note": "SLS/接口监控",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "H7",
+    "template_code": "TPL-OBS",
+    "note": "排障速查",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_major_id": "H8",
+    "template_code": "TPL-OBS",
+    "note": "可观测缺口",
+    "project_code": "fitness-agent"
+  }
+]

@@ -16,7 +16,10 @@ function parseAutomationCommand(command, fitnessAgentRoot, allowlist) {
     throw err;
   }
   if (!fitnessAgentRoot) {
-    const err = new Error('未配置 FITNESS_AGENT_ROOT，无法执行 CLI 用例');
+    const err = new Error(
+      '未配置 CLI 工作区：请在「环境与服务端点」填写 cli_workspace_root，'
+      + '或设置环境变量 FITNESS_AGENT_ROOT（Docker 默认 /fitness-agent）',
+    );
     err.status = 400;
     err.code = 'FITNESS_AGENT_ROOT_MISSING';
     throw err;
@@ -61,13 +64,15 @@ function parseAutomationCommand(command, fitnessAgentRoot, allowlist) {
 
 /**
  * @param {import('egg').Context} ctx
- * @param {{ command: string, timeoutMs?: number }} opts
+ * @param {{ command: string, timeoutMs?: number, env?: object }} opts
  */
-async function runCli(ctx, opts) {
+async function runCli(ctx, opts = {}) {
   const cfg = ctx.app.config.fitnessExecution || {};
+  const { resolveFitnessAgentRoot } = require('../../../lib/fitnessAgentRoot');
+  const root = resolveFitnessAgentRoot(ctx, opts.env);
   const parsed = parseAutomationCommand(
     opts.command,
-    cfg.fitnessAgentRoot,
+    root,
     cfg.cliAllowlist,
   );
   const timeoutMs = opts.timeoutMs || cfg.cliTimeoutMs || 600000;

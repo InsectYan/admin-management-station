@@ -41,9 +41,8 @@
       :total="total"
       :loading="loading"
       :table-props="{ rowKey: 'item_id' }"
-      @update:page="page = $event"
-      @update:page-size="pageSize = $event"
-      @change="loadData"
+      @update:page="onPageChange"
+      @update:page-size="onPageSizeChange"
       @selection-change="selectedRows = $event"
     >
       <template #prefix>
@@ -110,7 +109,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import PageShell from '@/components/PageShell.vue';
@@ -134,9 +133,16 @@ import {
   itemTagLabel,
   priorityTagProps,
 } from '@/utils/fitnessItemTags.js';
+import {
+  FILTER_DEFAULTS,
+  buildItemDetailRoute,
+  buildListQuery,
+  parseListQuery,
+} from '@/utils/itemListQuery.js';
 
 const route = useRoute();
 const router = useRouter();
+const initialQuery = parseListQuery(route.query);
 const loading = ref(false);
 const exporting = ref(false);
 const deleting = ref(false);
@@ -144,28 +150,11 @@ const deletingAll = ref(false);
 const addingToPlan = ref(false);
 const list = ref([]);
 const total = ref(0);
-const page = ref(1);
-const pageSize = ref(20);
+const page = ref(initialQuery.page);
+const pageSize = ref(initialQuery.pageSize);
 const selectedRows = ref([]);
 const tableRef = ref(null);
-const FILTER_DEFAULTS = {
-  project_code: '',
-  generation_job_id: '',
-  dimension_id: '',
-  category_major_id: '',
-  priority_id: '',
-  scheme_primary_id: '',
-  validation_primary_id: '',
-  automation_status_id: '',
-  station_id: '',
-  role_scope_id: '',
-  is_p0_blocker: false,
-  is_risk_flag: false,
-  keyword: '',
-  preset: '',
-};
-
-const filters = reactive({ ...FILTER_DEFAULTS, ...parseQueryFilters(route.query) });
+const filters = reactive({ ...FILTER_DEFAULTS, ...initialQuery.filters });
 const planDialogVisible = ref(false);
 const planOptions = ref([]);
 const targetPlanId = ref(null);
@@ -196,6 +185,7 @@ const itemColumns = [
   { prop: 'detail_summary', label: '测试用例名称', minWidth: 220 },
   { prop: 'dimension_name', label: '维度', width: 88 },
   { prop: 'category_major_name', label: '大类', width: 100 },
+  { prop: 'template_name', label: '配置模板', width: 110 },
   { prop: 'priority_name', label: '优先级', width: 88 },
   { prop: 'exec_env_name', label: '可执行环境', width: 100 },
   { prop: 'env_tier_name', label: '环境分层', width: 100 },
@@ -211,20 +201,6 @@ const itemColumns = [
   { prop: 'role_scope_name', label: '三端', width: 80 },
 ];
 
-function parseQueryFilters(q = {}) {
-  const next = { ...FILTER_DEFAULTS };
-  if (q.job_id && !q.generation_job_id) {
-    next.generation_job_id = String(q.job_id);
-  }
-  for (const [ k, v ] of Object.entries(q)) {
-    if (k in FILTER_DEFAULTS) {
-      if (k === 'is_p0_blocker' || k === 'is_risk_flag') next[k] = v === 'true';
-      else next[k] = v;
-    }
-  }
-  return next;
-}
-
 function applyFilters(v) {
   Object.assign(filters, { ...FILTER_DEFAULTS, ...(v || {}) });
 }
@@ -237,23 +213,19 @@ function apiFilterParams() {
 }
 
 function syncRouteQuery() {
-  const q = {};
-  for (const [ k, v ] of Object.entries(filters)) {
-    const empty = FILTER_DEFAULTS[k];
-    if (typeof empty === 'boolean') {
-      if (v !== empty) q[k] = 'true';
-    } else if (v !== '' && v != null) {
-      q[k] = String(v);
-    }
-  }
-  router.replace({ query: q });
+  router.replace({
+    name: 'test-suite',
+    query: buildListQuery(filters, page.value, pageSize.value),
+  });
 }
 
 watch(() => route.query, (q) => {
-  applyFilters(parseQueryFilters(q));
-  page.value = 1;
+  const parsed = parseListQuery(q);
+  applyFilters(parsed.filters);
+  page.value = parsed.page;
+  pageSize.value = parsed.pageSize;
   loadData();
-}, { deep: true });
+}, { deep: true, immediate: true });
 
 function onFilterChange() {
   page.value = 1;
@@ -261,6 +233,17 @@ function onFilterChange() {
 }
 
 function onFilterClear() {
+  page.value = 1;
+  syncRouteQuery();
+}
+
+function onPageChange(nextPage) {
+  page.value = nextPage;
+  syncRouteQuery();
+}
+
+function onPageSizeChange(nextSize) {
+  pageSize.value = nextSize;
   page.value = 1;
   syncRouteQuery();
 }
@@ -276,21 +259,24 @@ async function loadData() {
   }
 }
 
-function itemPath(row, module) {
-  const base = `/fitness/assets/items/${encodeURIComponent(row.item_id)}`;
-  return module ? `${base}/${module}` : base;
-}
-
 function goDetail(row) {
-  router.push(itemPath(row));
+  router.push(buildItemDetailRoute(row.item_id, {
+    query: buildListQuery(filters, page.value, pageSize.value),
+  }));
 }
 
 function goConfig(row) {
-  router.push(itemPath(row, 'config'));
+  router.push(buildItemDetailRoute(row.item_id, {
+    module: 'config',
+    query: buildListQuery(filters, page.value, pageSize.value),
+  }));
 }
 
 function goLaunch(row) {
-  router.push(itemPath(row, 'launch'));
+  router.push(buildItemDetailRoute(row.item_id, {
+    module: 'launch',
+    query: buildListQuery(filters, page.value, pageSize.value),
+  }));
 }
 
 async function exportJson() {
@@ -373,7 +359,7 @@ async function handleDeleteAllFiltered() {
     clearTableSelection();
     ElMessage.success(`已删除 ${result.deleted ?? 0} 条`);
     page.value = 1;
-    await loadData();
+    syncRouteQuery();
   } catch (err) {
     if (err !== 'cancel' && err !== 'close') {
       ElMessage.error(err.message || '删除失败');
@@ -402,8 +388,6 @@ async function confirmAddToPlan() {
     addingToPlan.value = false;
   }
 }
-
-onMounted(loadData);
 </script>
 
 <style scoped>

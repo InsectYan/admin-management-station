@@ -19,6 +19,14 @@
     "pk": "scheme_id",
     "type": "table"
   },
+  "config_template_enum": {
+    "pk": "template_code",
+    "type": "table"
+  },
+  "test_category_major_template": {
+    "pk": "category_major_id",
+    "type": "table"
+  },
   "test_validation_enum": {
     "pk": "validation_id",
     "type": "table"
@@ -105,6 +113,46 @@
   },
   "test_project": {
     "pk": "project_code",
+    "type": "table"
+  },
+  "tpl_config_det": {
+    "pk": "item_id",
+    "type": "table"
+  },
+  "tpl_config_bnd": {
+    "pk": "item_id",
+    "type": "table"
+  },
+  "tpl_config_rep": {
+    "pk": "item_id",
+    "type": "table"
+  },
+  "tpl_config_set": {
+    "pk": "item_id",
+    "type": "table"
+  },
+  "tpl_config_chain": {
+    "pk": "item_id",
+    "type": "table"
+  },
+  "tpl_config_pair": {
+    "pk": "item_id",
+    "type": "table"
+  },
+  "tpl_config_neg": {
+    "pk": "item_id",
+    "type": "table"
+  },
+  "tpl_config_obs": {
+    "pk": "item_id",
+    "type": "table"
+  },
+  "tpl_config_load": {
+    "pk": "item_id",
+    "type": "table"
+  },
+  "tpl_config_man": {
+    "pk": "item_id",
     "type": "table"
   }
 }

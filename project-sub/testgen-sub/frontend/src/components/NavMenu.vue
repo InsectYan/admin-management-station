@@ -43,6 +43,16 @@
         <el-menu-item index="/testgen/items">用例库</el-menu-item>
       </el-sub-menu>
 
+      <el-sub-menu index="config">
+        <template #title>
+          <el-icon><Setting /></el-icon>
+          <span>配置管理</span>
+        </template>
+        <el-menu-item index="/config/templates">模板管理</el-menu-item>
+        <el-menu-item index="/fitness/settings/enums">枚举配置</el-menu-item>
+        <el-menu-item index="/fitness/execution/environments">环境配置</el-menu-item>
+      </el-sub-menu>
+
       <el-sub-menu index="fitness">
         <template #title>
           <el-icon><DataAnalysis /></el-icon>
@@ -67,11 +77,9 @@
         </el-sub-menu>
         <el-sub-menu index="fitness-exec">
           <template #title>执行层</template>
-          <el-menu-item index="/fitness/execution/environments">环境配置</el-menu-item>
           <el-menu-item index="/fitness/execution/samples">样本集</el-menu-item>
           <el-menu-item index="/fitness/execution/center">执行中心</el-menu-item>
         </el-sub-menu>
-        <el-menu-item index="/fitness/settings/enums">枚举配置</el-menu-item>
       </el-sub-menu>
     </el-menu>
   </el-aside>
@@ -106,7 +114,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { Aim, Fold, Expand, DataAnalysis, FolderOpened } from '@element-plus/icons-vue';
+import { Aim, Fold, Expand, DataAnalysis, FolderOpened, Setting } from '@element-plus/icons-vue';
 import { useNavCollapse } from '../composables/useNavCollapse.js';
 
 defineProps({
@@ -132,6 +140,15 @@ const activePath = computed(() => {
   }
   if (route.path.startsWith('/jobs')) return '/testgen/scope';
   if (route.path.startsWith('/runs') && !route.path.startsWith('/fitness')) return '/testgen/items';
+  if (route.path.startsWith('/config')) {
+    return '/config/templates';
+  }
+  if (route.path.startsWith('/fitness/settings/enums')) {
+    return '/fitness/settings/enums';
+  }
+  if (route.path.startsWith('/fitness/execution/environments')) {
+    return '/fitness/execution/environments';
+  }
   if (route.path.startsWith('/fitness')) {
     if (route.path.startsWith('/fitness/assets')) {
       if (route.path.startsWith('/fitness/assets/items/')) return '/testgen/items';

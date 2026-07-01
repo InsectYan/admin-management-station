@@ -2,6 +2,7 @@
 
 const { emitProgress } = require('../../../lib/fitnessRunEvents');
 const BaseTsEngine = require('./baseTsEngine');
+const { resolveHttpBody, methodNeedsBody } = require('../../../lib/httpRequestBody');
 const { runHttp } = require('../runners/httpRunner');
 const { isBlockedStatus, scanForbidden } = require('../runners/forbiddenScan');
 
@@ -55,12 +56,13 @@ class Ts07NegEngine extends BaseTsEngine {
         ...(c.headers || {}),
       };
 
+      const body = methodNeedsBody(method) ? resolveHttpBody(method, c) : undefined;
       const httpResult = await runHttp(eggCtx, {
         baseUrl: env.bff_coach_url,
         path,
         method,
         headers,
-        body: c.body,
+        body,
       });
 
       const statusBlocked = isBlockedStatus(httpResult.statusCode, blockStatuses);

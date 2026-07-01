@@ -1,5 +1,7 @@
 'use strict';
 
+const { isApprovedCase, auditItemDetailFields, normalizeCaseFields } = require('./itemDetailFieldSchema');
+
 const FIELD_MAX = 300;
 const DEFAULTS = {
   dimension_id: 'C',
@@ -51,23 +53,17 @@ function buildItemId(ctx, index) {
   return base;
 }
 
-function isApprovedCase(tc) {
-  const compliance = String(tc.compliance || '').toLowerCase();
-  const status = String(tc.status || '').toLowerCase();
-  if (compliance === 'rejected' || compliance === 'fail' || status === 'rejected') return false;
-  return true;
-}
-
 /**
  * @param {Record<string, unknown>} tc
  * @param {object} ctx
  * @param {number} index
  */
 function mapAgentCaseToItemDetail(tc, ctx, index) {
-  const itemId = truncate(tc.item_id || tc.case_id || tc.caseId || buildItemId(ctx, index), 64);
-  const title = truncate(tc.item_name || tc.title || tc.name || '未命名用例', 512);
-  const expected = truncate(tc.expected_observation || tc.expected || tc.expected_result || '');
-  const steps = normalizeSteps(tc.test_steps || tc.steps);
+  const normalized = normalizeCaseFields(tc);
+  const itemId = truncate(normalized.item_id || tc.item_id || tc.case_id || tc.caseId || buildItemId(ctx, index), 64);
+  const title = truncate(normalized.item_name || tc.item_name || tc.title || tc.name || '未命名用例', 512);
+  const expected = truncate(normalized.expected_observation || tc.expected_observation || tc.expected || tc.expected_result || '');
+  const steps = normalizeSteps(normalized.test_steps || tc.test_steps || tc.steps);
   const preconditions = toJsonArray(tc.preconditions || tc.precondition);
   const assertions = toJsonArray(tc.assertion_points || tc.assertions || expected);
 
@@ -76,12 +72,13 @@ function mapAgentCaseToItemDetail(tc, ctx, index) {
     project_code: ctx.project_code,
     project_name: ctx.project_name,
     generation_job_id: ctx.job_id,
-    dimension_id: tc.dimension_id || DEFAULTS.dimension_id,
-    category_major_id: tc.category_major_id || DEFAULTS.category_major_id,
-    category_minor_id: tc.category_minor_id || DEFAULTS.category_minor_id,
+    dimension_id: ctx.dimension_id || DEFAULTS.dimension_id,
+    category_major_id: ctx.category_major_id || DEFAULTS.category_major_id,
+    category_minor_id: ctx.category_minor_id || DEFAULTS.category_minor_id,
+    template_code: ctx.template_code || null,
     sub_class: truncate(tc.sub_class || 'ai_generated', 128) || 'ai_generated',
     item_name: title,
-    detail_summary: truncate(tc.detail_summary || title, 4096) || title,
+    detail_summary: truncate(normalized.detail_summary || tc.detail_summary || title, 4096) || title,
     expected_observation: expected || null,
     test_input_example: truncate(tc.test_input_example || tc.input || tc.body || '') || null,
     preconditions,
@@ -99,16 +96,20 @@ function mapAgentCaseToItemDetail(tc, ctx, index) {
     http_method: truncate(tc.http_method || tc.method || '', 8) || null,
     http_status_expected: tc.http_status_expected || tc.expect_status || null,
     source_doc: truncate(`ai-gen:job-${ctx.job_id}`, 128),
-    source_section: truncate(ctx.scheme_id || 'generated', 32),
+    source_section: truncate(ctx.validation_id || ctx.scheme_id || 'generated', 32),
     tags: Array.isArray(tc.tags) ? tc.tags : [ 'ai-generated', `job-${ctx.job_id}` ],
     notes: truncate(tc.notes || '') || null,
     scheme_mapping_source: 'ai-generation',
     is_active: true,
+    config_json: tc.config_json && typeof tc.config_json === 'object' ? tc.config_json : undefined,
+    threshold_json: tc.threshold_json && typeof tc.threshold_json === 'object' ? tc.threshold_json : undefined,
   };
 }
 
 module.exports = {
   mapAgentCaseToItemDetail,
   isApprovedCase,
+  auditItemDetailFields,
+  normalizeCaseFields,
   buildItemId,
 };

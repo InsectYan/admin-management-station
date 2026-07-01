@@ -31,6 +31,7 @@ import { fetchEnums } from '@/services/fitnessService.js';
 
 const enumTables = [
   'test_dimension', 'test_category_major', 'test_category_minor',
+  'config_template_enum', 'test_category_major_template',
   'test_scheme_enum', 'test_validation_enum', 'test_priority_enum',
   'test_automation_status_enum', 'test_station_enum', 'test_role_enum',
   'config_env_enum', 'automation_entry_enum', 'threshold_param_enum', 'prd_goal',
@@ -40,6 +41,8 @@ const tableLabels = {
   test_dimension: '测试维度',
   test_category_major: '测试大类',
   test_category_minor: '测试子类',
+  config_template_enum: '配置模板',
+  test_category_major_template: '大类模板挂载',
   test_scheme_enum: 'TS 测试方案',
   test_validation_enum: 'VS 验证标准',
   test_priority_enum: '优先级',

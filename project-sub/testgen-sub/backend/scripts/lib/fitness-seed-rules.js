@@ -99,15 +99,19 @@ function assertSeedable(tablesDir, tableName) {
 }
 
 /**
- * 从 init.sql 提取 INSERT（与 generate-all-tables.mjs 输出一致）
+ * 从 init.sql 提取 INSERT（支持多行 VALUES）
  * @param {string} initSql
  * @returns {string[]}
  */
 function extractInsertStatements(initSql) {
-  return initSql
-    .split('\n')
-    .map(line => line.trim())
-    .filter(line => /^INSERT\s+/i.test(line));
+  const statements = [];
+  const re = /INSERT[\s\S]*?;/gi;
+  let match;
+  while ((match = re.exec(initSql)) !== null) {
+    const sql = match[0].trim();
+    if (sql) statements.push(sql);
+  }
+  return statements;
 }
 
 module.exports = {

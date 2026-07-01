@@ -24,6 +24,16 @@
     "summary": "10 种测试方案 TS-01-DET … TS-10-MAN。",
     "purpose": "定义「怎么测」：单次、矩阵、样本集、链路、对照、对抗、可观测、压测、人工评审等。"
   },
+  "config_template_enum": {
+    "title": "配置模板枚举",
+    "summary": "10 套配置模板 TPL-DET … TPL-MAN，关联 TS、Panel、Agent、存储表。",
+    "purpose": "驱动用例配置页组件路由与 tpl_config_* 表选择；大类通过 test_category_major_template 挂载。"
+  },
+  "test_category_major_template": {
+    "title": "大类模板挂载",
+    "summary": "48 条非混合 TS 大类 → template_code 一对一映射。",
+    "purpose": "C1–C4 混合 TS 大类不挂载；用例 template_code 由 scheme_primary_id 解析。"
+  },
   "test_validation_enum": {
     "title": "验证标准 VS",
     "summary": "17 种验证标准，含 DETERMINISTIC / STATISTICAL / SLO / MANUAL 分组。",

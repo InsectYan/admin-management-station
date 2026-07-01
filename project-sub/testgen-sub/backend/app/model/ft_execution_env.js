@@ -10,6 +10,7 @@ module.exports = app => {
     bff_member_url: { type: STRING(512) },
     bff_manager_url: { type: STRING(512) },
     agent_chat_url: { type: STRING(512) },
+    cli_workspace_root: { type: STRING(512) },
     auth_configured: { type: JSONB, defaultValue: {} },
     is_default: { type: BOOLEAN, defaultValue: false },
   }, { tableName: 'ft_execution_env' });

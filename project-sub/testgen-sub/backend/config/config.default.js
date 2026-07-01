@@ -1,5 +1,19 @@
 require('dotenv').config();
 
+const fs = require('fs');
+
+function detectDefaultFitnessAgentRoot() {
+  if (process.env.FITNESS_AGENT_ROOT) return process.env.FITNESS_AGENT_ROOT;
+  for (const p of [ '/fitness-agent', '/workspace/fitness-agent' ]) {
+    try {
+      if (fs.existsSync(p)) return p;
+    } catch {
+      /* ignore */
+    }
+  }
+  return '';
+}
+
 module.exports = appInfo => {
   const config = {};
 
@@ -45,11 +59,13 @@ module.exports = appInfo => {
     invokePath: '/api/skills/testgen-skill/invoke',
     judgeInvokePath: process.env.FITNESS_JUDGE_INVOKE_PATH || '/api/skills/fitness-judge-skill/invoke',
     sampleInvokePath: process.env.FITNESS_SAMPLE_INVOKE_PATH || '/api/skills/fitness-sample-skill/invoke',
+    configInvokePath: process.env.FITNESS_CONFIG_INVOKE_PATH || '/api/skills/fitness-config-skill/invoke',
     exploreInvokePath: process.env.FITNESS_EXPLORE_INVOKE_PATH || '/api/skills/fitness-explore-skill/invoke',
     perfInvokePath: process.env.PERF_SKILL_INVOKE_PATH || '/api/skills/perf-bottleneck-skill/invoke',
     timeout: Number(process.env.AGENT_PLATFORM_TIMEOUT || 300000),
     judgeTimeoutMs: Number(process.env.FITNESS_JUDGE_TIMEOUT_MS || 120000),
     sampleTimeoutMs: Number(process.env.FITNESS_SAMPLE_TIMEOUT_MS || 120000),
+    configTimeoutMs: Number(process.env.FITNESS_CONFIG_TIMEOUT_MS || 120000),
     exploreTimeoutMs: Number(process.env.FITNESS_EXPLORE_TIMEOUT_MS || 90000),
   };
 
@@ -58,7 +74,7 @@ module.exports = appInfo => {
   };
 
   config.fitnessExecution = {
-    fitnessAgentRoot: process.env.FITNESS_AGENT_ROOT || '',
+    fitnessAgentRoot: detectDefaultFitnessAgentRoot(),
     cliAllowlist: [ 'npm run test:stations', 'npm run test:e2e' ],
     maxConcurrentRuns: Number(process.env.FT_MAX_CONCURRENT_RUNS || 3),
     cliTimeoutMs: Number(process.env.FT_CLI_TIMEOUT_MS || 600000),

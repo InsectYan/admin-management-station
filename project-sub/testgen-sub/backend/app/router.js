@@ -122,6 +122,12 @@ module.exports = app => {
   router.post('/api/fitness/runs/:runId/pre-review', controller.fitnessExecution.preReviewRun);
   router.post('/api/fitness/runs/:runId/analyze-load', controller.fitnessExecution.analyzeLoadRun);
   router.post('/api/fitness/samples/generate', controller.fitnessExecution.generateSamples);
+  router.get('/api/fitness/template-config/templates', controller.configTemplate.listTemplates);
+  router.get('/api/fitness/template-config/major/:majorId', controller.configTemplate.getByMajor);
+  router.get('/api/fitness/template-config/items/:itemId', controller.configTemplate.getItemConfig);
+  router.post('/api/fitness/template-config/items/:itemId', controller.configTemplate.saveItemConfig);
+  router.post('/api/fitness/template-config/items/:itemId/generate', controller.configTemplate.generateItemConfig);
+
   router.get('/api/fitness/run-config/:itemId', controller.fitnessExecution.getRunConfig);
   router.post('/api/fitness/run-config/:itemId', controller.fitnessExecution.saveRunConfig);
   router.post('/api/fitness/run/:itemId/launch', controller.fitnessExecution.launch);

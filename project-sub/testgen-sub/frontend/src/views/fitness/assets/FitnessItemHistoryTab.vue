@@ -19,7 +19,7 @@
         </el-table-column>
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">
-            <el-button link @click="router.push(`/fitness/execution/runs/${row.id}`)">控制台</el-button>
+            <el-button link @click="goConsole(row.id)">控制台</el-button>
           </template>
         </el-table-column>
       </template>
@@ -32,6 +32,7 @@ import { onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import FitnessLabeledTable from '@/components/fitness/FitnessLabeledTable.vue';
 import { fetchFtRuns } from '@/services/fitnessService.js';
+import { buildRunConsoleRoute } from '@/utils/itemListQuery.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -62,6 +63,10 @@ async function loadHistory() {
   } finally {
     loading.value = false;
   }
+}
+
+function goConsole(runId) {
+  router.push(buildRunConsoleRoute(runId, route.query));
 }
 
 watch(() => route.params.itemId, () => {

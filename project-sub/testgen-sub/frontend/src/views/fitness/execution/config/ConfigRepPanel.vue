@@ -32,11 +32,18 @@
         <el-select v-model="local.method" style="width:120px" @change="sync">
           <el-option label="GET" value="GET" />
           <el-option label="POST" value="POST" />
+          <el-option label="PUT" value="PUT" />
+          <el-option label="PATCH" value="PATCH" />
         </el-select>
       </el-form-item>
       <el-form-item label="期望 Status">
         <el-input-number v-model="local.expect_status" :min="100" :max="599" @change="sync" />
       </el-form-item>
+      <HttpBodyFormItems
+        :method="local.method"
+        :endpoint-path="local.path"
+        v-model="bodyConfig"
+      />
     </template>
     <template v-else>
       <el-form-item label="CLI 命令">
@@ -57,7 +64,8 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, watch } from 'vue';
+import { onMounted, reactive, ref, watch } from 'vue';
+import HttpBodyFormItems from '@/components/config-templates/HttpBodyFormItems.vue';
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -80,6 +88,8 @@ const thresholdLocal = reactive({
   passk_M: 3,
 });
 
+const bodyConfig = ref({});
+
 function sync() {
   emit('update:modelValue', {
     repeat_count: local.repeat_count,
@@ -88,6 +98,7 @@ function sync() {
     method: local.method,
     expect_status: local.expect_status,
     command: local.command || undefined,
+    ...bodyConfig.value,
   });
 }
 
@@ -109,7 +120,10 @@ function initFromProps() {
     passk_N: props.threshold?.passk_N ?? local.repeat_count,
     passk_M: props.threshold?.passk_M ?? local.repeat_count,
   });
+  bodyConfig.value = { ...props.modelValue };
 }
+
+watch(bodyConfig, () => sync(), { deep: true });
 
 watch(() => props.modelValue, initFromProps, { deep: true });
 watch(() => props.threshold, v => Object.assign(thresholdLocal, v || {}), { deep: true });

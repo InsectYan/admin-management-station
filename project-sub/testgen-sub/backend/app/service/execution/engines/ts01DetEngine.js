@@ -1,6 +1,7 @@
 'use strict';
 
 const BaseTsEngine = require('./baseTsEngine');
+const { resolveHttpBody, methodNeedsBody } = require('../../../lib/httpRequestBody');
 const { runCli } = require('../runners/cliRunner');
 const { runHttp } = require('../runners/httpRunner');
 
@@ -17,6 +18,7 @@ class Ts01DetEngine extends BaseTsEngine {
     if (item.automation_command) {
       const cliResult = await runCli(ctx.ctx, {
         command: item.automation_command,
+        env,
       });
       const outputTail = (cliResult.stdout || cliResult.stderr || '').slice(-2000);
       return [{
@@ -41,12 +43,16 @@ class Ts01DetEngine extends BaseTsEngine {
         'X-Test-Item-Id': item.item_id,
         ...(configJson.headers || {}),
       };
+      const method = (
+        item.http_method || configJson.method || configJson.http_method || 'GET'
+      ).toUpperCase();
+      const body = methodNeedsBody(method) ? resolveHttpBody(method, configJson) : undefined;
       const httpResult = await runHttp(ctx.ctx, {
         baseUrl: env.bff_coach_url,
         path: item.endpoint_path,
-        method: item.http_method || configJson.method || 'GET',
+        method,
         headers,
-        body: configJson.body,
+        body,
       });
       const assertions = configJson.assertions || [];
       if (!assertions.length && item.http_status_expected != null) {

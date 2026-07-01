@@ -2,6 +2,7 @@
 
 const { emitProgress } = require('../../../lib/fitnessRunEvents');
 const BaseTsEngine = require('./baseTsEngine');
+const { resolveHttpBody, methodNeedsBody } = require('../../../lib/httpRequestBody');
 const { runHttp } = require('../runners/httpRunner');
 
 class Ts04SetEngine extends BaseTsEngine {
@@ -74,12 +75,13 @@ class Ts04SetEngine extends BaseTsEngine {
         ...(input.headers || {}),
       };
 
+      const body = methodNeedsBody(method) ? resolveHttpBody(method, input) : undefined;
       const httpResult = await runHttp(eggCtx, {
         baseUrl: env.bff_coach_url,
         path,
         method,
         headers,
-        body: input.body,
+        body,
       });
 
       const statusOk = httpResult.statusCode === Number(expectStatus);

@@ -33,6 +33,7 @@ class Ts03RepEngine extends BaseTsEngine {
       command: configJson.command || item.automation_command,
       headers: configJson.headers,
       body: configJson.body,
+      test_input_example: configJson.test_input_example,
     };
 
     if (baseRow.runner === 'cli' && !baseRow.command && !item.automation_command) {

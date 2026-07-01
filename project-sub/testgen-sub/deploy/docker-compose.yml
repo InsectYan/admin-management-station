@@ -39,6 +39,7 @@ services:
       PORT: ${TESTGEN_PORT:-5202}
       POSTGRES_DB: ${TESTGEN_POSTGRES_DB:-testgen_db}
       AGENT_PLATFORM_URL: ${AGENT_PLATFORM_URL:-http://host.docker.internal:4001}
+      FITNESS_AGENT_ROOT: ${FITNESS_AGENT_ROOT:-/fitness-agent}
     ports:
       - "${TESTGEN_PORT:-5202}:${TESTGEN_PORT:-5202}"
     depends_on:
@@ -48,7 +49,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ../database:/app/database:ro
-      - e:/AI Tools/projects/fitness-agent:/fitness-agent:ro
+      - ${FITNESS_AGENT_HOST_PATH:-e:/AI Tools/projects/fitness-agent}:/fitness-agent:rw
 
   testgen-frontend:
     build:

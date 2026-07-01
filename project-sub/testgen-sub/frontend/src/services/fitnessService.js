@@ -129,6 +129,11 @@ export async function fetchEnvironments(params) {
   return data.data;
 }
 
+export async function updateEnvironment(id, payload) {
+  const { data } = await api.put(`/fitness/environments/${id}`, payload);
+  return data.data;
+}
+
 export async function fetchSampleSets(params) {
   const { data } = await api.get('/fitness/samples', { params });
   return data.data;
@@ -311,4 +316,32 @@ export const LAUNCHABLE_SCHEMES = new Set([
 
 export function schemeToConfigPath(schemeId) {
   return SCHEME_CONFIG_ROUTES[schemeId] || 'det';
+}
+
+export async function fetchTemplateList() {
+  const { data } = await api.get('/fitness/template-config/templates');
+  return data.data;
+}
+
+export async function fetchMajorTemplateMapping(majorId) {
+  const { data } = await api.get(`/fitness/template-config/major/${encodeURIComponent(majorId)}`);
+  return data.data;
+}
+
+export async function fetchItemTemplateConfig(itemId) {
+  const { data } = await api.get(`/fitness/template-config/items/${encodeURIComponent(itemId)}`);
+  return data.data;
+}
+
+export async function saveItemTemplateConfig(itemId, payload) {
+  const { data } = await api.post(`/fitness/template-config/items/${encodeURIComponent(itemId)}`, payload);
+  return data.data;
+}
+
+export async function generateItemTemplateConfig(itemId, payload = {}) {
+  const { data } = await api.post(
+    `/fitness/template-config/items/${encodeURIComponent(itemId)}/generate`,
+    payload,
+  );
+  return data.data;
 }

@@ -223,6 +223,13 @@ async function syncSchemaOnStartup(app) {
       logger.info('[SchemaSync] 自动补列 %d 个（%d 表）', colSync.added, colSync.tables);
     }
     await runSqlBootstrap(sequelize, dbDir, logger, { afterTables: true });
+    const { runViewsBootstrap, runPostSeedMigrations } = require('../../scripts/lib/schema-bootstrap');
+    await runViewsBootstrap(sequelize, dbDir, logger);
+    try {
+      await runPostSeedMigrations(sequelize, dbDir, logger);
+    } catch (err) {
+      logger.warn('[SchemaSync] Post-seed migrations warning: %s', err.message);
+    }
   } else {
     logger.warn('[SchemaSync] database/init.sql not found under %s', app.baseDir);
   }

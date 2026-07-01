@@ -1,6 +1,7 @@
 'use strict';
 
 const BaseTsEngine = require('./baseTsEngine');
+const { resolveHttpBody, methodNeedsBody } = require('../../../lib/httpRequestBody');
 const { runHttp } = require('../runners/httpRunner');
 
 function percentile(sorted, p) {
@@ -44,19 +45,24 @@ class Ts09LoadEngine extends BaseTsEngine {
     let total = 0;
     const runId = run.id;
 
+    const methodUpper = String(method || 'GET').toUpperCase();
+    const requestBody = methodNeedsBody(methodUpper)
+      ? resolveHttpBody(methodUpper, cfg)
+      : undefined;
+
     const vuLoop = async () => {
       while (Date.now() < endAt) {
         try {
           const res = await runHttp(eggCtx, {
             baseUrl: env.bff_coach_url,
             path,
-            method,
+            method: methodUpper,
             headers: {
               'X-Test-Run-Id': String(runId),
               'X-Test-Item-Id': item.item_id,
               ...(cfg.headers || {}),
             },
-            body: cfg.body,
+            body: requestBody,
           });
           total += 1;
           const ok = res.statusCode >= 200 && res.statusCode < 400;

@@ -1,5 +1,6 @@
 'use strict';
 
+const { resolveHttpBody, methodNeedsBody } = require('../../../lib/httpRequestBody');
 const { runCli } = require('./cliRunner');
 const { runHttp } = require('./httpRunner');
 
@@ -15,7 +16,7 @@ async function executeMatrixRow(execCtx, row, subIndex) {
 
   if (runner === 'cli') {
     const command = row.command || item.automation_command;
-    const cliResult = await runCli(eggCtx, { command });
+    const cliResult = await runCli(eggCtx, { command, env });
     const ok = cliResult.exitCode === 0;
     return {
       sub_index: subIndex,
@@ -55,12 +56,13 @@ async function executeMatrixRow(execCtx, row, subIndex) {
     ...(row.headers || {}),
   };
 
+  const body = methodNeedsBody(method) ? resolveHttpBody(method, row) : undefined;
   const httpResult = await runHttp(eggCtx, {
     baseUrl: env.bff_coach_url,
     path,
     method,
     headers,
-    body: row.body,
+    body,
   });
 
   const statusOk = httpResult.statusCode === Number(expectStatus);

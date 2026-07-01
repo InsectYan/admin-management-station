@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS test_item_detail (
   endpoint_path VARCHAR(256),
   http_method VARCHAR(8),
   http_status_expected SMALLINT,
+  template_code VARCHAR(32) REFERENCES config_template_enum(template_code),
   scheme_primary_id VARCHAR(16) REFERENCES test_scheme_enum(scheme_id),
   scheme_secondary_id VARCHAR(16) REFERENCES test_scheme_enum(scheme_id),
   validation_primary_id VARCHAR(20) REFERENCES test_validation_enum(validation_id),

@@ -3,6 +3,15 @@
     <template #extra>
       <div v-if="run" class="console-toolbar">
         <el-button
+          v-if="run.item_id"
+          size="small"
+          type="primary"
+          data-testid="fitness-console-back-detail"
+          @click="goItemDetail"
+        >
+          用例详情
+        </el-button>
+        <el-button
           data-testid="fitness-rerun-failed"
           size="small"
           :loading="rerunning"
@@ -48,7 +57,18 @@
     </template>
     <el-descriptions v-if="run" :column="2" border>
       <el-descriptions-item label="Run ID">{{ run.id }}</el-descriptions-item>
-      <el-descriptions-item label="用例">{{ run.item_id }}</el-descriptions-item>
+      <el-descriptions-item label="用例">
+        <el-button
+          v-if="run.item_id"
+          link
+          type="primary"
+          data-testid="fitness-console-item-detail"
+          @click="goItemDetail"
+        >
+          {{ run.item_id }}
+        </el-button>
+        <span v-else>—</span>
+      </el-descriptions-item>
       <el-descriptions-item label="TS">{{ run.scheme_id }}</el-descriptions-item>
       <el-descriptions-item label="VS">{{ run.validation_id || '-' }}</el-descriptions-item>
       <el-descriptions-item label="状态">{{ run.status }}</el-descriptions-item>
@@ -172,6 +192,7 @@ import {
   explainFtRun,
 } from '@/services/fitnessService.js';
 import { downloadJson } from '@/utils/fitnessExport.js';
+import { buildItemDetailRoute, buildRunConsoleRoute } from '@/utils/itemListQuery.js';
 
 const TERMINAL = new Set([ 'success', 'failed', 'cancelled' ]);
 
@@ -277,6 +298,14 @@ async function reloadRun() {
   run.value = await fetchFtRun(route.params.runId);
 }
 
+function goItemDetail() {
+  if (!run.value?.item_id) return;
+  router.push(buildItemDetailRoute(run.value.item_id, {
+    fromRun: run.value.id,
+    listQuery: route.query,
+  }));
+}
+
 async function loadExplain() {
   explainLoading.value = true;
   try {
@@ -293,7 +322,7 @@ async function handleRerunFailed() {
   rerunning.value = true;
   try {
     const next = await rerunFailedRun(route.params.runId);
-    router.push(`/fitness/execution/runs/${next.id}`);
+    router.push(buildRunConsoleRoute(next.id, route.query));
   } catch (e) {
     ElMessage.error(e?.response?.data?.message || e.message || '重跑失败');
   } finally {

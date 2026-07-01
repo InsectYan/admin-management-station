@@ -85,6 +85,7 @@ import {
   fetchTestItem,
   launchRun,
 } from '@/services/fitnessService.js';
+import { buildRunConsoleRoute } from '@/utils/itemListQuery.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -185,7 +186,7 @@ async function launch() {
       scheme_id: schemeId.value,
       validation_id: validationId.value,
     });
-    router.push(`/fitness/execution/runs/${run.id}`);
+    router.push(buildRunConsoleRoute(run.id, route.query));
   } catch (e) {
     engineMsg.value = e.response?.data?.message || e.message || '执行失败';
   } finally {

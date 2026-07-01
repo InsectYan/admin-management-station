@@ -4,6 +4,8 @@
   "test_category_major",
   "test_category_minor",
   "test_scheme_enum",
+  "config_template_enum",
+  "test_category_major_template",
   "test_validation_enum",
   "test_category_minor_scheme",
   "test_scheme_validation_pair",
