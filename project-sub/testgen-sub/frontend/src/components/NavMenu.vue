@@ -30,57 +30,7 @@
       active-text-color="#ffd04b"
       router
     >
-      <el-menu-item index="/projects">
-        <el-icon><FolderOpened /></el-icon>
-        <span>项目管理</span>
-      </el-menu-item>
-      <el-sub-menu index="testgen">
-        <template #title>
-          <el-icon><Aim /></el-icon>
-          <span>测试用例</span>
-        </template>
-        <el-menu-item index="/testgen/scope">生成配置</el-menu-item>
-        <el-menu-item index="/testgen/items">用例库</el-menu-item>
-      </el-sub-menu>
-
-      <el-sub-menu index="config">
-        <template #title>
-          <el-icon><Setting /></el-icon>
-          <span>配置管理</span>
-        </template>
-        <el-menu-item index="/config/templates">模板管理</el-menu-item>
-        <el-menu-item index="/fitness/settings/enums">枚举配置</el-menu-item>
-        <el-menu-item index="/fitness/execution/environments">环境配置</el-menu-item>
-      </el-sub-menu>
-
-      <el-sub-menu index="fitness">
-        <template #title>
-          <el-icon><DataAnalysis /></el-icon>
-          <span>Fitness 测试体系</span>
-        </template>
-        <el-menu-item index="/fitness/dashboard">发版仪表盘</el-menu-item>
-        <el-sub-menu index="fitness-assets">
-          <template #title>测试资产</template>
-          <el-menu-item index="/fitness/assets/browse">分类浏览</el-menu-item>
-          <el-menu-item index="/fitness/assets/schemes">方案百科</el-menu-item>
-        </el-sub-menu>
-        <el-sub-menu index="fitness-insights">
-          <template #title>洞察分析</template>
-          <el-menu-item index="/fitness/insights/metrics/dimensions">指标中心</el-menu-item>
-          <el-menu-item index="/fitness/insights/analysis/readiness">分析中心</el-menu-item>
-          <el-menu-item index="/fitness/insights/risks">风险中心</el-menu-item>
-        </el-sub-menu>
-        <el-sub-menu index="fitness-plans">
-          <template #title>测试计划</template>
-          <el-menu-item index="/fitness/plans">计划列表</el-menu-item>
-          <el-menu-item index="/fitness/plans/new">计划向导</el-menu-item>
-        </el-sub-menu>
-        <el-sub-menu index="fitness-exec">
-          <template #title>执行层</template>
-          <el-menu-item index="/fitness/execution/samples">样本集</el-menu-item>
-          <el-menu-item index="/fitness/execution/center">执行中心</el-menu-item>
-        </el-sub-menu>
-      </el-sub-menu>
+      <NavMenuNodes :nodes="navMenus" />
     </el-menu>
   </el-aside>
   <el-menu
@@ -93,29 +43,18 @@
     active-text-color="#409eff"
     router
   >
-    <el-menu-item index="/projects">
-      <el-icon><FolderOpened /></el-icon>
-      <span>项目管理</span>
-    </el-menu-item>
-    <el-sub-menu index="testgen-h">
-      <template #title>测试用例</template>
-      <el-menu-item index="/testgen/scope">生成配置</el-menu-item>
-      <el-menu-item index="/testgen/items">用例库</el-menu-item>
-    </el-sub-menu>
-    <el-sub-menu index="fitness-h">
-      <template #title>Fitness 测试体系</template>
-      <el-menu-item index="/fitness/dashboard">仪表盘</el-menu-item>
-      <el-menu-item index="/fitness/plans">测试计划</el-menu-item>
-      <el-menu-item index="/fitness/execution/center">执行中心</el-menu-item>
-    </el-sub-menu>
+    <NavMenuNodes :nodes="navMenus" />
   </el-menu>
 </template>
 
 <script setup>
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { Aim, Fold, Expand, DataAnalysis, FolderOpened, Setting } from '@element-plus/icons-vue';
+import { Fold, Expand } from '@element-plus/icons-vue';
+import { navMenus } from '@/config/navMenu.js';
+import { resolveNavActivePath } from '@/utils/navActivePath.js';
 import { useNavCollapse } from '../composables/useNavCollapse.js';
+import NavMenuNodes from './NavMenuNodes.vue';
 
 defineProps({
   embedded: { type: Boolean, default: false },
@@ -126,42 +65,5 @@ const route = useRoute();
 const { collapsed, toggleCollapsed } = useNavCollapse();
 
 const asideWidth = computed(() => (collapsed.value ? '64px' : '240px'));
-
-const activePath = computed(() => {
-  if (route.path.startsWith('/testgen') || route.path.startsWith('/scope') || route.path.startsWith('/suite') || route.path.startsWith('/jobs')) {
-    if (route.path.startsWith('/jobs')) return '/testgen/scope';
-    if (route.path.startsWith('/suite') || route.path.startsWith('/testgen/items')) return '/testgen/items';
-    return '/testgen/scope';
-  }
-  if (route.path.startsWith('/projects')) {
-    if (route.path.includes('/edit') || route.path.endsWith('/new')) return route.path.includes('/new') ? '/projects/new' : '/projects';
-    if (route.path.match(/^\/projects\/[^/]+\/(environments|variables|monitoring|sync)/)) return '/projects';
-    return route.path.match(/^\/projects\/[^/]+$/) ? '/projects' : '/projects';
-  }
-  if (route.path.startsWith('/jobs')) return '/testgen/scope';
-  if (route.path.startsWith('/runs') && !route.path.startsWith('/fitness')) return '/testgen/items';
-  if (route.path.startsWith('/config')) {
-    return '/config/templates';
-  }
-  if (route.path.startsWith('/fitness/settings/enums')) {
-    return '/fitness/settings/enums';
-  }
-  if (route.path.startsWith('/fitness/execution/environments')) {
-    return '/fitness/execution/environments';
-  }
-  if (route.path.startsWith('/fitness')) {
-    if (route.path.startsWith('/fitness/assets')) {
-      if (route.path.startsWith('/fitness/assets/items/')) return '/testgen/items';
-      return route.path.split('/').slice(0, 4).join('/') || '/fitness/assets/browse';
-    }
-    if (route.path.startsWith('/fitness/insights/metrics')) return '/fitness/insights/metrics/dimensions';
-    if (route.path.startsWith('/fitness/insights/analysis')) return '/fitness/insights/analysis/readiness';
-    if (route.path.startsWith('/fitness/insights/risks')) return '/fitness/insights/risks';
-    if (route.path.startsWith('/fitness/plans')) return route.path.includes('/new') ? '/fitness/plans/new' : '/fitness/plans';
-    if (route.path.startsWith('/fitness/execution')) return '/fitness/execution/center';
-    if (route.path.startsWith('/fitness/settings')) return '/fitness/settings/enums';
-    return '/fitness/dashboard';
-  }
-  return route.path.startsWith('/suite') ? '/testgen/items' : '/testgen/scope';
-});
+const activePath = computed(() => resolveNavActivePath(route.path));
 </script>

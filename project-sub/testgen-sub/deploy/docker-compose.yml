@@ -50,6 +50,8 @@ services:
     volumes:
       - ../database:/app/database:ro
       - ${FITNESS_AGENT_HOST_PATH:-e:/AI Tools/projects/fitness-agent}:/fitness-agent:rw
+      # Linux 容器内专用 node_modules（避免 Windows 宿主机安装的原生包不兼容）
+      - fitness_agent_server_modules:/fitness-agent/server/node_modules
 
   testgen-frontend:
     build:
@@ -77,3 +79,4 @@ networks:
 
 volumes:
   testgen_pgdata:
+  fitness_agent_server_modules:

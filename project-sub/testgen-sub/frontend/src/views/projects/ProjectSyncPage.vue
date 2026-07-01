@@ -26,10 +26,10 @@
 
     <el-divider v-if="lastResult" content-position="left">最近同步结果</el-divider>
     <el-alert v-if="lastResult" type="success" show-icon :closable="false">
-      {{ lastResult.source }} → {{ lastResult.targets.join('、') }}（{{ lastResult.fields.join('、') }}）
-      <template #default>
+      <div>
+        {{ lastResult.source }} → {{ lastResult.targets.join('、') }}（{{ lastResult.fields.join('、') }}）
         <p style="margin: 4px 0 0">{{ formatTime(lastResult.synced_at) }}</p>
-      </template>
+      </div>
     </el-alert>
   </div>
 </template>

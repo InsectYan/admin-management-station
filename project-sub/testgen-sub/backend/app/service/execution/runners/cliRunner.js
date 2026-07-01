@@ -62,6 +62,18 @@ function parseAutomationCommand(command, fitnessAgentRoot, allowlist) {
   };
 }
 
+function buildCliSpawnEnv(processEnv, executionEnv, cfg) {
+  const env = { ...processEnv };
+  const auth = executionEnv?.auth_configured || {};
+  const databaseUrl = auth.database_url
+    || auth.DATABASE_URL
+    || cfg.cliDefaultDatabaseUrl;
+  if (databaseUrl && !env.DATABASE_URL) {
+    env.DATABASE_URL = databaseUrl;
+  }
+  return env;
+}
+
 /**
  * @param {import('egg').Context} ctx
  * @param {{ command: string, timeoutMs?: number, env?: object }} opts
@@ -69,6 +81,7 @@ function parseAutomationCommand(command, fitnessAgentRoot, allowlist) {
 async function runCli(ctx, opts = {}) {
   const cfg = ctx.app.config.fitnessExecution || {};
   const { resolveFitnessAgentRoot } = require('../../../lib/fitnessAgentRoot');
+  const { ensureCliWorkspaceDeps } = require('../../../lib/cliWorkspacePrep');
   const root = resolveFitnessAgentRoot(ctx, opts.env);
   const parsed = parseAutomationCommand(
     opts.command,
@@ -77,12 +90,23 @@ async function runCli(ctx, opts = {}) {
   );
   const timeoutMs = opts.timeoutMs || cfg.cliTimeoutMs || 600000;
 
+  let prepMeta = { installed: false };
+  try {
+    prepMeta = await ensureCliWorkspaceDeps(parsed.cwd, {
+      autoInstall: cfg.cliAutoInstallDeps !== false,
+      timeoutMs: cfg.cliInstallTimeoutMs || 600000,
+    });
+  } catch (prepErr) {
+    prepErr.message = `CLI 依赖准备失败: ${prepErr.message}`;
+    throw prepErr;
+  }
+
   return new Promise((resolve, reject) => {
     const started = Date.now();
     const child = spawn(parsed.executable, parsed.args, {
       cwd: parsed.cwd,
       shell: parsed.shell,
-      env: { ...process.env },
+      env: buildCliSpawnEnv(process.env, opts.env, cfg),
     });
 
     let stdout = '';
@@ -120,6 +144,7 @@ async function runCli(ctx, opts = {}) {
         durationMs: Date.now() - started,
         command: parsed.summary,
         cwd: parsed.cwd,
+        deps_installed: prepMeta.installed || false,
       });
     });
   });
@@ -127,5 +152,6 @@ async function runCli(ctx, opts = {}) {
 
 module.exports = {
   parseAutomationCommand,
+  buildCliSpawnEnv,
   runCli,
 };

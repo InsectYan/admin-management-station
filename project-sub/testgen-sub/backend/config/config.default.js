@@ -76,6 +76,10 @@ module.exports = appInfo => {
   config.fitnessExecution = {
     fitnessAgentRoot: detectDefaultFitnessAgentRoot(),
     cliAllowlist: [ 'npm run test:stations', 'npm run test:e2e' ],
+    cliAutoInstallDeps: process.env.FT_CLI_AUTO_INSTALL !== 'false',
+    cliInstallTimeoutMs: Number(process.env.FT_CLI_INSTALL_TIMEOUT_MS || 600000),
+    cliDefaultDatabaseUrl: process.env.FITNESS_TEST_DATABASE_URL
+      || 'postgresql://fitness:fitness_secret@host.docker.internal:5433/fitness_db',
     maxConcurrentRuns: Number(process.env.FT_MAX_CONCURRENT_RUNS || 3),
     cliTimeoutMs: Number(process.env.FT_CLI_TIMEOUT_MS || 600000),
     httpTimeoutMs: Number(process.env.FT_HTTP_TIMEOUT_MS || 120000),
