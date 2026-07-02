@@ -94,7 +94,7 @@
     "prd_goal_ids": [],
     "automation_status_id": "AUTO_EXISTING",
     "automation_entry_id": "AUTO_S05",
-    "automation_command": "cd server && npm run test:stations -- s05",
+    "automation_command": "cd server && npm run test:stations -- s04-outbox",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S05",
@@ -110,7 +110,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": "validateCoachOutbox",
+    "code_reference": "server/src/stations/s04-pipeline/tests/suites/outbox-contract.suite.ts",
     "tags": [
       "A1"
     ],
@@ -159,7 +159,7 @@
     "prd_goal_ids": [],
     "automation_status_id": "AUTO_EXISTING",
     "automation_entry_id": "AUTO_S05",
-    "automation_command": "cd server && npm run test:stations -- s05",
+    "automation_command": "cd server && npm run test:stations -- s04-outbox",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S05",
@@ -175,7 +175,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": "validateCoachOutbox",
+    "code_reference": "server/src/stations/s04-pipeline/tests/suites/outbox-contract.suite.ts",
     "tags": [
       "A1"
     ],
@@ -1197,9 +1197,9 @@
       "ARCH_B1"
     ],
     "prd_goal_ids": [],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S01",
+    "automation_command": "cd server && npm run test:stations -- agent-sse",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S01",
@@ -1215,7 +1215,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "frontend/tests/agent-sse.unit.ts",
     "tags": [
       "B1"
     ],
@@ -1309,9 +1309,8 @@
       "Internal API Key 正确；session 归属校验通过"
     ],
     "test_steps": [
-      "构造异常/边界请求体",
-      "POST submit",
-      "断言 HTTP 与 body：503 + circuit_breaker"
+      "运行 db-circuit 站级自测",
+      "断言：503 + circuit_breaker"
     ],
     "assertion_points": [
       "503 + circuit_breaker"
@@ -1326,9 +1325,9 @@
     "prd_goal_ids": [
       "G06"
     ],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S02",
+    "automation_command": "cd server && npm run test:stations -- db-circuit",
     "config_env": "DB_CIRCUIT_*",
     "config_env_id": "DB_CIRCUIT_",
     "station_id": "S02",
@@ -1344,7 +1343,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": "server/tests/stations/s02",
+    "code_reference": "server/src/stations/s02-gate/tests/db-circuit.test.ts",
     "tags": [
       "B2"
     ],
@@ -1393,9 +1392,9 @@
       "G06",
       "G09"
     ],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S02",
+    "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S02",
@@ -1411,7 +1410,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": "server/tests/stations/s02",
+    "code_reference": "server/src/stations/s02-gate/tests/turn-submit-guard.test.ts",
     "tags": [
       "B2",
       "IDEMPOTENT"
@@ -1659,8 +1658,8 @@
       "G06"
     ],
     "automation_status_id": "AUTO_EXISTING",
-    "automation_entry_id": "AUTO_AGENTRUN",
-    "automation_command": "./scripts/smoke.sh",
+    "automation_entry_id": "AUTO_S02",
+    "automation_command": "cd server && npm run test:stations -- s02-key",
     "config_env": "INTERNAL_API_KEY",
     "config_env_id": "INTERNAL_API_KEY",
     "station_id": "S02",
@@ -1676,7 +1675,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": "server/tests/stations/s02",
+    "code_reference": "server/src/stations/s02-gate/tests/internal-api-key.test.ts",
     "tags": [
       "B2"
     ],
@@ -2053,9 +2052,9 @@
       "ARCH_B3"
     ],
     "prd_goal_ids": [],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S03",
+    "automation_command": "cd server && npm run test:stations -- turn-job-lifecycle",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S03",
@@ -2071,7 +2070,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": "turnJobStore",
+    "code_reference": "server/src/stations/s03-queue/tests/turn-job-lifecycle.test.ts",
     "tags": [
       "B3"
     ],
@@ -2309,9 +2308,9 @@
       "ARCH_B3"
     ],
     "prd_goal_ids": [],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S03",
+    "automation_command": "cd server && npm run test:stations -- s03-retry",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S03",
@@ -2327,7 +2326,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": "turnJobStore",
+    "code_reference": "server/src/stations/s03-queue/tests/turn-job-retry.test.ts",
     "tags": [
       "B3"
     ],
@@ -2372,9 +2371,9 @@
       "ARCH_B3"
     ],
     "prd_goal_ids": [],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S03",
+    "automation_command": "cd server && npm run test:stations -- turn-job-lifecycle",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S03",
@@ -2390,7 +2389,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": "turnJobStore",
+    "code_reference": "server/src/stations/s03-queue/tests/turn-job-lifecycle.test.ts",
     "tags": [
       "B3"
     ],
@@ -3343,9 +3342,9 @@
       "ARCH_B6"
     ],
     "prd_goal_ids": [],
-    "automation_status_id": "AUTO_PARTIAL",
-    "automation_entry_id": "AUTO_E2E_GENERIC",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S06",
+    "automation_command": "cd server && npm run test:stations -- sse-frame",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S06",
@@ -3361,7 +3360,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s06-stream/tests/sse-frame.test.ts",
     "tags": [
       "B6"
     ],
@@ -8726,9 +8725,9 @@
       "G07",
       "G08"
     ],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S04_BFF",
+    "automation_command": "cd server && npm run test:stations -- s04-portal",
     "config_env": null,
     "config_env_id": null,
     "station_id": "NONE",
@@ -8746,7 +8745,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s04-pipeline/tests/suites/portal-payload.suite.ts",
     "tags": [
       "C2",
       "TS-06-PAIR",
@@ -8795,9 +8794,9 @@
       "G07",
       "G08"
     ],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S04_BFF",
+    "automation_command": "cd server && npm run test:stations -- s04-portal",
     "config_env": null,
     "config_env_id": null,
     "station_id": "NONE",
@@ -8815,7 +8814,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s04-pipeline/tests/suites/portal-payload.suite.ts",
     "tags": [
       "C2",
       "TS-06-PAIR",
@@ -8864,9 +8863,9 @@
       "G07",
       "G08"
     ],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S04_BFF",
+    "automation_command": "cd server && npm run test:stations -- s04-portal",
     "config_env": null,
     "config_env_id": null,
     "station_id": "NONE",
@@ -8884,7 +8883,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s04-pipeline/tests/suites/portal-payload.suite.ts",
     "tags": [
       "C2",
       "TS-06-PAIR",
@@ -13835,7 +13834,7 @@
     "sub_class": "队列满",
     "item_name": "[D2-SUB-005] 队列满 — 队列满",
     "detail_summary": "队列满",
-    "expected_observation": "queue_meta, Retry-After",
+    "expected_observation": "503 queue reject 或 queue_meta warn",
     "test_input_example": null,
     "preconditions": [
       "Internal API Key 正确；session 归属校验通过"
@@ -13856,9 +13855,9 @@
       "ARCH_B2"
     ],
     "prd_goal_ids": [],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S02",
+    "automation_command": "cd server && npm run test:stations -- turn-queue-policy",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S02",
@@ -13876,7 +13875,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s02-gate/tests/turn-queue-policy.test.ts",
     "tags": [
       "D2",
       "TS-01-DET"
@@ -13921,9 +13920,9 @@
       "ARCH_B2"
     ],
     "prd_goal_ids": [],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S02",
+    "automation_command": "cd server && npm run test:stations -- s02-key",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S02",
@@ -13941,7 +13940,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s02-gate/tests/internal-api-key.test.ts",
     "tags": [
       "D2",
       "TS-01-DET"

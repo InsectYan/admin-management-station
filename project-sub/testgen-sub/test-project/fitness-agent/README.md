@@ -1,60 +1,61 @@
-# fitness-agent · 被测项目文件集
+# fitness-agent · 被测项目（SUT）文档
 
-> **用途**：testgen-sub 平台管理的被测项目（SUT）资料，供测试用例生成、缺口追踪与自动化规划引用。  
-> **被测仓库**：[`fitness-agent`](../../../../../fitness-agent/)（Pi 三端：教练 / 会员 / 店长）  
-> **梳理日期**：2026-07-02  
-> **关联测试文档**：[`fitness-agent/server/tests`](../../../../../fitness-agent/server/tests/README.md) · [`fitness-agent-test-docs`](../../../../../fitness-agent-test-docs/测试用例分类体系.md)
+> testgen-sub 平台对 [`fitness-agent`](../../../../../fitness-agent/) 的测试资料集：站级单测索引、缺口追踪、执行命令与主表自动化字段同步。
+
+| 元信息 | 值 |
+|--------|-----|
+| 被测仓库 | Pi 三端（教练 / 会员 / 店长） |
+| 架构 | 六站流水线 s01→s06 |
+| 文档版本 | 2026-07-02 |
+| 权威命令说明 | [`fitness-agent/server/tests/README.md`](../../../../../fitness-agent/server/tests/README.md) |
+| 测试分类体系 | [`fitness-agent-test-docs`](../../../../../fitness-agent-test-docs/测试用例分类体系.md) |
 
 ---
 
-## 目录说明
+## 文档导航
 
-| 文件 | 说明 |
+| 文档 | 用途 |
 |------|------|
-| [单测缺口梳理.md](./单测缺口梳理.md) | **主文档**：现有覆盖、六站 + platform 缺失单测、优先级、测试项 ID 映射 |
-| [建议新增测试文件.md](./建议新增测试文件.md) | 建议在 fitness-agent 仓库内新增的测试文件路径与命名 |
-| [运行命令与前置.md](./运行命令与前置.md) | 站级 / E2E / 类型检查命令及环境前置 |
+| [站级测试清单.md](./站级测试清单.md) | **已实现**的站级测试文件、filter 命令、DB 依赖 |
+| [单测缺口梳理.md](./单测缺口梳理.md) | P0 已覆盖 vs P1/P2 仍缺项 |
+| [运行命令与前置.md](./运行命令与前置.md) | 一起测 / 单一测命令速查 |
+| [数据库自动化同步.md](./数据库自动化同步.md) | `test_item_detail` 自动化字段维护 |
+| [scripts/sync-automation-status.mjs](./scripts/sync-automation-status.mjs) | 批量回写 `data.json` 的脚本 |
 
 ---
 
-## 项目概要
+## 覆盖率快照（2026-07-02）
 
-fitness-agent 采用 **六站流水线** 架构（s01 前端 → s02 门禁 → s03 队列 → s04 Pipeline → s05 Pi → s06 回传），async-only 主链。
+| 层级 | 一起测 | 单一测示例 |
+|------|--------|------------|
+| 站级 s01~s06 | `cd fitness-agent/server && npm run test:stations` | `npm run test:stations -- db-circuit` |
+| 全栈 E2E | `npm run test:e2e` | `npm run test:e2e -- chain` |
 
-| 站 | 代码路径 | 现有站级测试入口 |
-|----|----------|------------------|
-| s01 前端 | `fitness-agent/frontend/` | `frontend/tests/s01-frontend.test.mjs` |
-| s02 门禁 | `server/src/stations/s02-gate/` | `tests/turn-submit-guard.test.ts` |
-| s03 队列 | `server/src/stations/s03-queue/` | `tests/turn-job-store.test.ts` |
-| s04 Pipeline | `server/src/stations/s04-pipeline/` | `tests/s04-pipeline.test.ts` |
-| s05 Pi | `server/src/stations/s05-pi/` | `tests/s05-pi.test.ts` |
-| s06 回传 | `server/src/stations/s06-stream/` | `tests/turn-journey.test.ts` |
-| 全栈 E2E | `server/tests/e2e/` | `full-stack.e2e.test.ts` |
+**P0 单测已落地**：DB 熔断、队列策略、Internal Key、队列 lifecycle/retry、outbox 全类型契约、会员/店长载荷、SSE 帧、draft merge、前端 queue hint。
+
+**仍待补（P1+）**：`readAgentSseStream` 全事件解析、会员/店长 session 归属、portal pipeline 幂等 replay、HTTP 轮询兜底等。详见 [单测缺口梳理.md](./单测缺口梳理.md)。
 
 ---
 
-## 缺口摘要（P0）
-
-以下项 **尚无站级/单测覆盖**，且适合不依赖 LLM 的自测：
-
-1. DB 熔断（`dbCircuitBreaker` → 503）
-2. 队列硬顶 / 软提示（`turnQueuePolicy`）
-3. outbox 全 `message_type` 契约（`validateCoachOutbox` 其余分支）
-4. 会员/店长载荷边界（`validatePortalOutbox`，仅 `text`）
-5. 队列 claim / complete / stale 回收（`turnJobStore` 生命周期）
-6. 前端 + 后端 SSE 帧解析
-
-详见 [单测缺口梳理.md](./单测缺口梳理.md)。
-
----
-
-## 快速命令
+## 本地环境
 
 ```bash
-# 在 fitness-agent/server 目录
-npm run test:stations   # s01~s06 站级（s02~s06 需 Postgres）
-npm run test:e2e        # 全栈 E2E（需 Docker :3001 + LLM Key）
-npm run typecheck
+# 启动 fitness-agent 全栈（Postgres + Server + 前端）
+fitness local
+
+# 清运行时数据（对话/计划/队列，保留种子人物）
+fitness local:clean
+
+# 站级全量（在 fitness-agent/server）
+npm run test:stations
 ```
 
-完整说明见 [运行命令与前置.md](./运行命令与前置.md)。
+---
+
+## testgen-sub 侧维护
+
+新增或修改 fitness-agent 单测后：
+
+1. 更新 [站级测试清单.md](./站级测试清单.md) 与 [单测缺口梳理.md](./单测缺口梳理.md)
+2. 在 `scripts/sync-automation-status.mjs` 的 `PATCH` 中登记 `item_id`
+3. 运行同步并注入 DB → 见 [数据库自动化同步.md](./数据库自动化同步.md)

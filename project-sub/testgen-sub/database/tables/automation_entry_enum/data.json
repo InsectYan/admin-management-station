@@ -1,5 +1,12 @@
 [
   {
+    "automation_entry_id": "AUTO_S01",
+    "name": "s01 前端站测",
+    "command": "cd server && npm run test:stations -- s01",
+    "suite": "stations",
+    "project_code": "fitness-agent"
+  },
+  {
     "automation_entry_id": "AUTO_S02",
     "name": "s02 门禁站测",
     "command": "cd server && npm run test:stations -- s02",

@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS automation_entry_enum (
   suite TEXT
 );
 
+INSERT INTO automation_entry_enum (automation_entry_id, name, command, suite) VALUES ('AUTO_S01', 's01 前端站测', 'cd server && npm run test:stations -- s01', 'stations') ON CONFLICT (automation_entry_id) DO NOTHING;
 INSERT INTO automation_entry_enum (automation_entry_id, name, command, suite) VALUES ('AUTO_S02', 's02 门禁站测', 'cd server && npm run test:stations -- s02', 'stations') ON CONFLICT (automation_entry_id) DO NOTHING;
 INSERT INTO automation_entry_enum (automation_entry_id, name, command, suite) VALUES ('AUTO_S03', 's03 队列站测', 'cd server && npm run test:stations -- s03', 'stations') ON CONFLICT (automation_entry_id) DO NOTHING;
 INSERT INTO automation_entry_enum (automation_entry_id, name, command, suite) VALUES ('AUTO_S04_MACRO', 's04 macro gate', 'cd server && npm run test:stations -- s04-macro', 'stations') ON CONFLICT (automation_entry_id) DO NOTHING;
