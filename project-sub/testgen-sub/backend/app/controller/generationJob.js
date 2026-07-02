@@ -67,6 +67,24 @@ class GenerationJobController extends Controller {
     }
   }
 
+  async importSamples() {
+    try {
+      const data = await this.service.generationJob.importSamples(
+        this.ctx.params.id,
+        this.ctx.request.body || {},
+      );
+      if (!data) {
+        this.ctx.status = 404;
+        this.ctx.body = { code: 404, message: 'generation job not found', data: null };
+        return;
+      }
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      this.ctx.status = err.status || 400;
+      this.ctx.body = { code: err.status || 400, message: err.message, data: null };
+    }
+  }
+
   _checkInternalToken() {
     const expected = this.config.internalApiToken;
     if (!expected) return true;

@@ -8,7 +8,20 @@
     >
       <el-option v-for="t in enumTables" :key="t" :label="tableLabels[t] || t" :value="t" />
     </el-select>
+
+    <template v-if="isConfigEnvGrouped">
+      <el-collapse v-loading="loading">
+        <el-collapse-item v-for="g in configEnvGroups" :key="g.domain" :title="`${g.domain} (${g.item_count})`">
+          <el-table :data="g.items" size="small" border>
+            <el-table-column prop="config_env_id" label="ID" width="220" />
+            <el-table-column prop="name" label="名称" min-width="160" />
+            <el-table-column prop="default_value" label="默认值" width="120" />
+          </el-table>
+        </el-collapse-item>
+      </el-collapse>
+    </template>
     <FitnessLabeledTable
+      v-else
       :data="rows"
       :columns="columns"
       :page="page"
@@ -24,7 +37,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import PageShell from '@/components/PageShell.vue';
 import FitnessLabeledTable from '@/components/fitness/FitnessLabeledTable.vue';
 import { fetchEnums } from '@/services/fitnessService.js';
@@ -49,7 +62,7 @@ const tableLabels = {
   test_automation_status_enum: '自动化状态',
   test_station_enum: '六站',
   test_role_enum: '三端角色',
-  config_env_enum: '配置项',
+  config_env_enum: '配置项（按 domain 分组）',
   automation_entry_enum: '自动化入口',
   threshold_param_enum: '阈值参数',
   prd_goal: 'PRD 目标',
@@ -62,6 +75,9 @@ const columns = ref([]);
 const total = ref(0);
 const page = ref(1);
 const pageSize = ref(20);
+const configEnvGroups = ref([]);
+
+const isConfigEnvGrouped = computed(() => selectedTable.value === 'config_env_enum');
 
 function onTableChange() {
   page.value = 1;
@@ -72,6 +88,16 @@ async function load() {
   if (!selectedTable.value) return;
   loading.value = true;
   try {
+    if (isConfigEnvGrouped.value) {
+      const data = await fetchEnums('config_env_enum', { group_by: 'domain' });
+      configEnvGroups.value = (data.groups || []).map(g => ({
+        domain: g.domain || '未分组',
+        item_count: g.item_count,
+        items: g.items || [],
+      }));
+      rows.value = [];
+      return;
+    }
     const data = await fetchEnums(selectedTable.value, { page: page.value, pageSize: pageSize.value });
     rows.value = data.list || [];
     columns.value = data.columns || [];
@@ -85,5 +111,9 @@ load();
 </script>
 
 <style scoped>
-.sync-hint { color: #909399; font-size: 13px; margin-top: 12px; }
+.sync-hint {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
 </style>

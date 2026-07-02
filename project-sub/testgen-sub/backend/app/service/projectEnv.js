@@ -149,16 +149,74 @@ class ProjectEnvService extends require('egg').Service {
     };
   }
 
-  // ── 全局变量（后续实现） ──
+  // ── 全局变量 ──
 
-  async listVariables(_projectCode) {
-    return { list: [], total: 0 };
+  mapVariableRow(row) {
+    return {
+      key: row.var_key,
+      value: row.var_value || '',
+      source: row.source || 'manual',
+      extract_path: row.extract_path || '',
+      from_step: row.from_step || '',
+    };
   }
 
-  async saveVariables(_projectCode, _payload) {
-    const err = new Error('全局变量保存服务端尚未实现');
-    err.status = 501;
-    throw err;
+  async listVariables(projectCode) {
+    await this.assertProject(projectCode);
+    const rows = await this.ctx.model.ProjectEnvVariable.findAll({
+      where: { project_code: projectCode },
+      order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
+    });
+    const list = rows.map(r => this.mapVariableRow(r));
+    return { list, total: list.length };
+  }
+
+  async saveVariables(projectCode, payload) {
+    await this.assertProject(projectCode);
+    const variables = payload?.variables;
+    if (!Array.isArray(variables)) {
+      const err = new Error('variables 必须为数组');
+      err.status = 400;
+      throw err;
+    }
+    const keys = new Set();
+    for (const v of variables) {
+      const key = (v.key || '').trim();
+      if (!key) {
+        const err = new Error('变量名不能为空');
+        err.status = 400;
+        throw err;
+      }
+      if (keys.has(key)) {
+        const err = new Error(`变量名重复: ${key}`);
+        err.status = 409;
+        throw err;
+      }
+      keys.add(key);
+    }
+
+    await this.ctx.model.sequelize.transaction(async transaction => {
+      await this.ctx.model.ProjectEnvVariable.destroy({
+        where: { project_code: projectCode },
+        transaction,
+      });
+      if (variables.length) {
+        await this.ctx.model.ProjectEnvVariable.bulkCreate(
+          variables.map((v, i) => ({
+            project_code: projectCode,
+            var_key: v.key.trim(),
+            var_value: v.value ?? '',
+            source: v.source || 'manual',
+            extract_path: v.extract_path || null,
+            from_step: v.from_step || null,
+            sort_order: i,
+          })),
+          { transaction },
+        );
+      }
+    });
+
+    return this.listVariables(projectCode);
   }
 }
 

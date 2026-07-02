@@ -42,7 +42,9 @@
         <el-button type="primary" size="small" @click="openItemForm()">添加 HTTP 样本</el-button>
         <el-button size="small" :loading="aiLoading" @click="aiGenerateSamples">AI 从 example 生成</el-button>
         <el-button size="small" @click="triggerImport">导入 JSON/CSV</el-button>
+        <el-button size="small" :loading="csvEnrichLoading" @click="triggerCsvEnrich">CSV 智能补全</el-button>
         <input ref="importInputRef" type="file" accept=".json,.csv,.txt" style="display:none" @change="onImportFile" />
+        <input ref="csvEnrichInputRef" type="file" accept=".csv,.txt" style="display:none" @change="onCsvEnrichFile" />
       </div>
       <el-table v-loading="itemsLoading" :data="items" size="small" border>
         <el-table-column prop="sort_order" label="#" width="50" />
@@ -92,6 +94,7 @@ import {
   fetchSampleSets,
   generateFitnessSamples,
   importSampleItems,
+  enrichCsvSamples,
   updateSampleItem,
   updateSampleSet,
 } from '@/services/fitnessService.js';
@@ -99,6 +102,7 @@ import {
 const loading = ref(false);
 const itemsLoading = ref(false);
 const aiLoading = ref(false);
+const csvEnrichLoading = ref(false);
 const sets = ref([]);
 const items = ref([]);
 const total = ref(0);
@@ -109,6 +113,7 @@ const showItems = ref(false);
 const showItemForm = ref(false);
 const activeSet = ref(null);
 const importInputRef = ref(null);
+const csvEnrichInputRef = ref(null);
 const setForm = reactive({ id: null, name: '', item_id: '' });
 const tagsText = ref('');
 const itemForm = reactive({
@@ -262,6 +267,38 @@ async function aiGenerateSamples() {
 
 function triggerImport() {
   importInputRef.value?.click();
+}
+
+function triggerCsvEnrich() {
+  csvEnrichInputRef.value?.click();
+}
+
+async function onCsvEnrichFile(ev) {
+  const file = ev.target.files?.[0];
+  ev.target.value = '';
+  if (!file || !activeSet.value) return;
+  csvEnrichLoading.value = true;
+  try {
+    const csv_text = await file.text();
+    const data = await enrichCsvSamples({
+      csv_text,
+      item_id: activeSet.value.item_id,
+      scheme_id: 'TS-04-SET',
+    });
+    const items = data.items || [];
+    if (!items.length) {
+      ElMessage.warning('AI 未返回可导入样本');
+      return;
+    }
+    await importSampleItems(activeSet.value.id, items);
+    ElMessage.success(`CSV 智能补全并导入 ${items.length} 条`);
+    await openItems(activeSet.value);
+    await load();
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || e.message || 'CSV 补全失败');
+  } finally {
+    csvEnrichLoading.value = false;
+  }
 }
 
 function parseCsvSamples(text) {

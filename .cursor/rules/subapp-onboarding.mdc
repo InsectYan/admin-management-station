@@ -8,6 +8,8 @@ alwaysApply: false
 
 新增子应用时**须先读本文件**。参考实现见 `project-sub/novel-sub/` 及 `subapp.manifest.json`。
 
+**已有子应用的功能迭代**（改表、新 Skill、新页面等）须同时遵守 **`subapp-development.mdc`**。
+
 ## 1. 登记与 manifest（主库）
 
 | 步骤 | 位置 | 要求 |
@@ -123,7 +125,7 @@ exports.cors = { enable: true, package: 'egg-cors' };
 - [ ] 样式隔离（`subapp-style-isolation.mdc`）
 - [ ] `NavMenu` + `useNavCollapse` 垂直侧栏（独立 dev）；嵌入态水平 NavMenu
 - [ ] `vite.config.js` HMR + compose 前端源码挂载（见 **`vite-hmr.mdc`**）
-- [ ] README 联调步骤
+- [ ] README 联调步骤 + **「开发规范」节**（见 `subapp-development.mdc` §6）
 
 ## 禁止
 

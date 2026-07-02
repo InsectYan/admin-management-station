@@ -15,6 +15,36 @@
       </el-col>
     </el-row>
 
+    <el-row v-if="schemeRates.length || validationRates.length" :gutter="16" style="margin-bottom:16px">
+      <el-col :span="12">
+        <el-card shadow="never">
+          <template #header>TS 方案通过率</template>
+          <div v-for="s in schemeRates" :key="s.label" class="rate-row">
+            <span>{{ s.label }}</span>
+            <el-progress :percentage="s.rate" :stroke-width="14" />
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="12">
+        <el-card shadow="never">
+          <template #header>VS 验证通过率</template>
+          <div v-for="v in validationRates" :key="v.label" class="rate-row">
+            <span>{{ v.label }}</span>
+            <el-progress :percentage="v.rate" :stroke-width="14" />
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-card v-if="thresholdRows.length" shadow="never" style="margin-bottom:16px">
+      <template #header>阈值对比</template>
+      <el-table :data="thresholdRows" size="small">
+        <el-table-column prop="param_id" label="参数" width="160" />
+        <el-table-column prop="configured" label="计划配置" />
+        <el-table-column prop="notes" label="说明" />
+      </el-table>
+    </el-card>
+
     <el-table :data="resultRows" size="small">
       <el-table-column prop="item_id" label="用例" width="140" />
       <el-table-column label="结果" width="140">
@@ -51,6 +81,7 @@ import PageShell from '@/components/PageShell.vue';
 import {
   exportPlanReport,
   fetchPlan,
+  fetchPlanReportStats,
   fetchTestItem,
   savePlanResults,
   summarizePlanReport,
@@ -65,8 +96,34 @@ const summarizing = ref(false);
 const resultRows = ref([]);
 const reportContent = ref('');
 const dimensionRates = ref([]);
+const schemeRates = ref([]);
+const validationRates = ref([]);
+const thresholdRows = ref([]);
+
+function mapAggRates(agg) {
+  return Object.entries(agg || {}).map(([ label, row ]) => ({
+    label,
+    rate: row.total ? Math.round(100 * row.passed / row.total) : 0,
+    ...row,
+  }));
+}
+
+async function loadStats() {
+  const stats = await fetchPlanReportStats(id);
+  dimensionRates.value = Object.entries(stats.by_dimension || {}).map(([ dimension, row ]) => ({
+    dimension,
+    total: row.total,
+    passed: row.passed,
+    passRate: row.total ? Math.round(100 * row.passed / row.total) : 0,
+  }));
+  schemeRates.value = mapAggRates(stats.by_scheme);
+  validationRates.value = mapAggRates(stats.by_validation);
+  thresholdRows.value = stats.thresholds || [];
+}
 
 async function buildDimensionRates(plan) {
+  await loadStats();
+  if (dimensionRates.value.length) return;
   const rows = resultRows.value;
   const dimMap = {};
   for (const row of rows) {
@@ -150,5 +207,13 @@ async function handleSummarize() {
   font-size: 13px;
   color: var(--el-text-color-secondary);
   margin-top: 8px;
+}
+.rate-row {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 13px;
 }
 </style>

@@ -16,7 +16,8 @@
 
 每个应用 `deploy/docker-compose.yml` **自带 Postgres**；缓存默认 **memory**（见 `cache-local.mdc`），不共享根级 infra。
 
-> **Agent 平台**：智能体能力由独立仓库 [`agent-management-master`](../agent-management-master) 提供，**不**内嵌于本仓库各应用。
+> **Agent 平台**：智能体能力由独立仓库 [`agent-management-master`](../agent-management-master) 提供，**不**内嵌于本仓库各应用。  
+> **新 Skill 默认**在 [`agent-management-sub`](../agent-management-sub/plugins/) 开发，规范见 [`.cursor/rules/agent-skill-development.mdc`](.cursor/rules/agent-skill-development.mdc)。
 
 ## 快速启动
 

@@ -1,7 +1,7 @@
 <template>
   <div class="project-vars-page">
     <el-alert
-      title="全局变量支持手动配置与响应提取自动赋值，当前为前端预览；保存时将提示服务端接口尚未实现。"
+      title="全局变量支持手动配置与响应提取自动赋值，保存后持久化至服务端。"
       type="info"
       show-icon
       :closable="false"
@@ -9,9 +9,10 @@
     />
     <div class="toolbar">
       <el-button type="primary" @click="addVar">新增变量</el-button>
-      <el-button @click="saveVars">保存变量</el-button>
+      <el-button :loading="saving" @click="saveVars">保存变量</el-button>
+      <el-button :loading="loading" @click="loadVars">刷新</el-button>
     </div>
-    <el-table :data="variables" border stripe>
+    <el-table v-loading="loading" :data="variables" border stripe>
       <el-table-column prop="key" label="变量名" width="160">
         <template #default="{ row }">
           <el-input v-model="row.key" placeholder="如 access_token" />
@@ -58,23 +59,15 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
-import { saveProjectVariables } from '@/services/projectService.js';
+import { fetchProjectVariables, saveProjectVariables } from '@/services/projectService.js';
 
 const props = defineProps({
   project: { type: Object, required: true },
 });
 
-const storageKey = () => `testgen:project-vars:${props.project.project_code}`;
+const loading = ref(false);
+const saving = ref(false);
 const variables = ref([]);
-
-function loadLocal() {
-  try {
-    const raw = localStorage.getItem(storageKey());
-    variables.value = raw ? JSON.parse(raw) : defaultVars();
-  } catch {
-    variables.value = defaultVars();
-  }
-}
 
 function defaultVars() {
   return [
@@ -87,23 +80,36 @@ function addVar() {
   variables.value.push({ key: '', value: '', source: 'manual', extract_path: '', from_step: '' });
 }
 
-function persistLocal() {
-  localStorage.setItem(storageKey(), JSON.stringify(variables.value));
+async function loadVars() {
+  if (!props.project?.project_code) return;
+  loading.value = true;
+  try {
+    const data = await fetchProjectVariables(props.project.project_code);
+    const list = data?.list || [];
+    variables.value = list.length ? list : defaultVars();
+  } catch (e) {
+    ElMessage.warning(e.message || '加载变量失败');
+    variables.value = defaultVars();
+  } finally {
+    loading.value = false;
+  }
 }
 
 async function saveVars() {
-  persistLocal();
+  saving.value = true;
   try {
-    await saveProjectVariables(props.project.project_code, { variables: variables.value });
+    const data = await saveProjectVariables(props.project.project_code, { variables: variables.value });
+    variables.value = data?.list || variables.value;
+    ElMessage.success('已保存');
   } catch (e) {
-    ElMessage.warning(e.message || '服务端尚未实现，已保存至本地');
-    return;
+    ElMessage.error(e.message || '保存失败');
+  } finally {
+    saving.value = false;
   }
-  ElMessage.success('已保存');
 }
 
-watch(() => props.project.project_code, loadLocal);
-onMounted(loadLocal);
+watch(() => props.project.project_code, loadVars);
+onMounted(loadVars);
 </script>
 
 <style scoped>

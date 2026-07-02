@@ -215,6 +215,13 @@ class FitnessExecutionController extends Controller {
     this.ctx.body = { code: 0, message: 'ok', data };
   }
 
+  async exportK6Script() {
+    const { itemId } = this.ctx.params;
+    const schemeId = this.ctx.query.scheme_id || 'TS-09-LOAD';
+    const data = await this.service.fitnessExecution.exportK6Script(itemId, schemeId);
+    this.ctx.body = { code: 0, message: 'ok', data };
+  }
+
   async launch() {
     try {
       const data = await this.service.fitnessExecution.launchRun(
@@ -269,6 +276,18 @@ class FitnessExecutionController extends Controller {
   async generateSamples() {
     try {
       const data = await this.service.fitnessExecution.generateSamples(
+        this.ctx.request.body || {},
+      );
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      if (this.handleError(err)) return;
+      throw err;
+    }
+  }
+
+  async enrichCsvSamples() {
+    try {
+      const data = await this.service.fitnessExecution.enrichCsvSamples(
         this.ctx.request.body || {},
       );
       this.ctx.body = { code: 0, message: 'ok', data };

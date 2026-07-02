@@ -42,6 +42,7 @@ module.exports = app => {
   router.get('/api/generation-jobs/:id', controller.generationJob.show);
   router.post('/api/generation-jobs/:id/cancel', controller.generationJob.cancel);
   router.post('/api/generation-jobs/:id/retry', controller.generationJob.retry);
+  router.post('/api/generation-jobs/:id/import-samples', controller.generationJob.importSamples);
   router.get('/api/generation-jobs/:id/generated-items', controller.generationJob.testCases);
   router.get('/api/generation-jobs/:id/test-cases', controller.generationJob.testCases);
   router.post('/api/internal/generation-jobs/:id/agent-context', controller.generationJob.updateAgentContext);
@@ -91,6 +92,8 @@ module.exports = app => {
   router.delete('/api/fitness/plans/:id', controller.fitnessPlan.destroy);
   router.post('/api/fitness/plans/:id/results', controller.fitnessPlan.saveResults);
   router.post('/api/fitness/plans/:id/export-report', controller.fitnessPlan.exportReport);
+  router.post('/api/fitness/plans/:id/export-document', controller.fitnessPlan.exportDocument);
+  router.get('/api/fitness/plans/:id/report-stats', controller.fitnessPlan.reportStats);
   router.post('/api/fitness/plans/:id/summary', controller.fitnessPlan.summarizeReport);
   router.post('/api/fitness/plans/:id/launch', controller.fitnessPlan.launch);
   router.get('/api/fitness/plans/:id/runs', controller.fitnessPlan.planRuns);
@@ -122,6 +125,7 @@ module.exports = app => {
   router.post('/api/fitness/runs/:runId/pre-review', controller.fitnessExecution.preReviewRun);
   router.post('/api/fitness/runs/:runId/analyze-load', controller.fitnessExecution.analyzeLoadRun);
   router.post('/api/fitness/samples/generate', controller.fitnessExecution.generateSamples);
+  router.post('/api/fitness/samples/enrich-csv', controller.fitnessExecution.enrichCsvSamples);
   router.get('/api/fitness/template-config/templates', controller.configTemplate.listTemplates);
   router.get('/api/fitness/template-config/major/:majorId', controller.configTemplate.getByMajor);
   router.get('/api/fitness/template-config/items/:itemId', controller.configTemplate.getItemConfig);
@@ -129,6 +133,7 @@ module.exports = app => {
   router.post('/api/fitness/template-config/items/:itemId/generate', controller.configTemplate.generateItemConfig);
 
   router.get('/api/fitness/run-config/:itemId', controller.fitnessExecution.getRunConfig);
+  router.get('/api/fitness/run-config/:itemId/k6-script', controller.fitnessExecution.exportK6Script);
   router.post('/api/fitness/run-config/:itemId', controller.fitnessExecution.saveRunConfig);
   router.post('/api/fitness/run/:itemId/launch', controller.fitnessExecution.launch);
   router.post('/api/fitness/engines/:scheme/execute', controller.fitnessExecution.executeEngine);

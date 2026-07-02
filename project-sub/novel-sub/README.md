@@ -55,10 +55,45 @@ cd backend && npm run dev      # :5201
 cd frontend && npm run dev     # :5101
 ```
 
-## 规范
+## 开发规范（必读）
 
-- [app-self-contained.mdc](../.cursor/rules/app-self-contained.mdc)
-- [cache-local.mdc](../.cursor/rules/cache-local.mdc)
-- [qiankun-microfrontend.mdc](../.cursor/rules/qiankun-microfrontend.mdc)
-- [sub-app-developer 工作流](../skills/sub-app-developer/SKILL.md)
-- [novel-sub 项目 Skill](../skills/project-developer/novel-sub/SKILL.md)
+迭代开发须遵守 monorepo 规则：
+
+| 规则 | 说明 |
+|------|------|
+| [subapp-development.mdc](../../.cursor/rules/subapp-development.mdc) | **变更登记、DB 联动、docs 同步（主规范）** |
+| [agent-skill-development.mdc](../../.cursor/rules/agent-skill-development.mdc) | **新 Skill 默认落点 agent-management-sub** |
+| [subapp-onboarding.mdc](../../.cursor/rules/subapp-onboarding.mdc) | Qiankun 接入 |
+| [database-schema-sync.mdc](../../.cursor/rules/database-schema-sync.mdc) | 启动 Schema 同步 |
+
+### 变更须登记的文件
+
+| 类型 | 文件 |
+|------|------|
+| 变更记录 | [docs/变更记录.md](./docs/变更记录.md)（DB / API / UI 变更） |
+
+改表、新 API/页面时须登记（格式见 `subapp-development.mdc` §1）。
+
+### 本应用文档（开发后须同步）
+
+| 文档 | 路径 |
+|------|------|
+| 架构与流程图 | [docs/架构关系图.md](./docs/架构关系图.md) |
+| 评分与后续计划 | [docs/项目评分与后续计划.md](./docs/项目评分与后续计划.md) |
+
+文档缺失时按 `subapp-development.mdc` §3 创建并梳理。
+
+### 数据库 CLI
+
+| 命令 | 说明 |
+|------|------|
+| `cd backend && npm run db:init` | 空库初始化（`database/init.sql`） |
+| BFF 启动 | 自动 schema 同步（`database-schema-sync.mdc`） |
+
+**改表时须同步**：`database/init.sql`、`backend/app/model/`、必要时 `migrations/`；若引入 seed 体系应对齐 `testgen-sub` 的 `db:seed` / `db:reset` 命令集。
+
+## 规范索引
+
+- [app-self-contained.mdc](../../.cursor/rules/app-self-contained.mdc)
+- [sub-app-developer 工作流](../../skills/sub-app-developer/SKILL.md)
+- [novel-sub 项目 Skill](../../skills/project-developer/novel-sub/SKILL.md)

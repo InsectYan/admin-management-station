@@ -2,6 +2,7 @@
 
 const RunOrchestrator = require('./execution/runOrchestrator');
 const vsRegistry = require('./execution/vsRegistry');
+const { buildK6Script } = require('../lib/k6ScriptBuilder');
 
 function assertionEntries(detail) {
   if (Array.isArray(detail)) return detail;
@@ -214,6 +215,28 @@ class FitnessExecutionService extends require('egg').Service {
     });
   }
 
+  async exportK6Script(itemId, schemeId = 'TS-09-LOAD') {
+    const config = await this.getRunConfig(itemId, schemeId);
+    const cfg = {
+      ...(config?.config_json || {}),
+      ...(config?.threshold_json || {}),
+    };
+    let env = null;
+    if (config?.env_id) {
+      env = await this.ctx.model.FtExecutionEnv.findByPk(config.env_id);
+    }
+    if (!env) {
+      env = await this.ctx.model.FtExecutionEnv.findOne({ order: [[ 'id', 'ASC' ]] });
+    }
+    const script = buildK6Script(cfg, env?.toJSON?.() || env || {});
+    return {
+      item_id: itemId,
+      scheme_id: schemeId,
+      filename: `${itemId.replace(/[^\w-]+/g, '_')}-load.js`,
+      script,
+    };
+  }
+
   async launchRun(itemId, body) {
     return this.orchestrator().launch(itemId, body);
   }
@@ -280,6 +303,24 @@ class FitnessExecutionService extends require('egg').Service {
     }
 
     return agentRes.output || agentRes;
+  }
+
+  async enrichCsvSamples(body = {}) {
+    const { csv_text, item_id, scheme_id } = body;
+    if (!csv_text?.trim()) {
+      const err = new Error('csv_text 为必填');
+      err.status = 400;
+      throw err;
+    }
+    const agentRes = await this.ctx.service.agentProxy.invokeFitnessSample({
+      action: 'enrich_csv',
+      item_id,
+      scheme_id,
+      csv_text,
+      trace: { item_id },
+    });
+    const items = agentRes.output?.items || agentRes.output?.samples || [];
+    return { items, meta: agentRes.meta || {}, raw: agentRes.output };
   }
 
   async rerunFailedRun(runId) {

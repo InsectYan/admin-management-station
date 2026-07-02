@@ -17,6 +17,7 @@ export async function startGeneration({
   project_code,
   project_name,
   options,
+  fitness_context,
 }) {
   const { data } = await api.post(`${base()}/generation-jobs`, withLlmProfile({
     staging_id,
@@ -27,6 +28,7 @@ export async function startGeneration({
     project_code,
     project_name,
     options,
+    fitness_context,
   }));
   return data.data;
 }
@@ -58,5 +60,10 @@ export async function cancelJob(jobId) {
 
 export async function retryJob(jobId) {
   const { data } = await api.post(`${base()}/generation-jobs/${jobId}/retry`, withLlmProfile({}));
+  return data.data;
+}
+
+export async function importJobSamples(jobId, payload) {
+  const { data } = await api.post(`${base()}/generation-jobs/${jobId}/import-samples`, payload);
   return data.data;
 }

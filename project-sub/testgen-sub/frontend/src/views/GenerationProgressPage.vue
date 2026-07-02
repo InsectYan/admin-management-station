@@ -27,6 +27,15 @@
       style="margin-bottom: 16px"
     />
 
+    <el-alert
+      v-if="fitnessPostNotice"
+      type="success"
+      :title="fitnessPostNotice"
+      show-icon
+      :closable="false"
+      style="margin-bottom: 16px"
+    />
+
     <el-card shadow="never" class="testgen-progress-card">
       <div class="testgen-progress-summary">
         <span class="testgen-progress-label">整体进度</span>
@@ -148,10 +157,32 @@
       >
         查看用例库
       </el-button>
+      <el-button
+        v-if="store.status === 'done'"
+        :loading="importLoading"
+        @click="openImportDialog"
+      >
+        导入样本集
+      </el-button>
       <el-button @click="router.push({ name: 'test-scope' })">
         返回配置
       </el-button>
     </div>
+
+    <el-dialog v-model="importDialogVisible" title="导入至样本集" width="420px">
+      <el-select v-model="selectedSampleSetId" placeholder="选择样本集" style="width:100%">
+        <el-option
+          v-for="s in sampleSets"
+          :key="s.id"
+          :label="`${s.name} (#${s.id})`"
+          :value="s.id"
+        />
+      </el-select>
+      <template #footer>
+        <el-button @click="importDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="importLoading" @click="confirmImport">确认导入</el-button>
+      </template>
+    </el-dialog>
   </PageShell>
 </template>
 
@@ -162,12 +193,18 @@ import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import AgentConfigPanel from '../components/AgentConfigPanel.vue';
 import { useJobProgress } from '../composables/useJobProgress';
+import { importJobSamples } from '../services/generationService.js';
+import { fetchSampleSets } from '../services/fitnessService.js';
 
 const route = useRoute();
 const router = useRouter();
 const jobId = computed(() => route.params.id);
 const { store } = useJobProgress(jobId);
 const actionLoading = ref(false);
+const importLoading = ref(false);
+const importDialogVisible = ref(false);
+const sampleSets = ref([]);
+const selectedSampleSetId = ref(null);
 
 const phases = [
   { key: 'analyze', label: '需求分析' },
@@ -205,6 +242,16 @@ const currentTargetLabel = computed(() => {
 });
 
 const retryNotice = computed(() => store.agentContext?.retry_notice || '');
+
+const fitnessPostNotice = computed(() => {
+  const post = store.agentContext?.fitness_post_process;
+  if (!post) return '';
+  const parts = [];
+  if (post.enrich && !post.enrich.error) parts.push('样本 AI 补全已完成');
+  if (post.dry_run?.run_id) parts.push(`dry-run Run #${post.dry_run.run_id}`);
+  if (post.dry_run?.error) parts.push(`dry-run 失败: ${post.dry_run.error}`);
+  return parts.join(' · ');
+});
 
 const failedTargetsNotice = computed(() => {
   const failed = (store.targetStates || []).filter(t => t.status === 'failed');
@@ -296,6 +343,34 @@ async function handleRetry() {
     ElMessage.error(err.message || '重试失败');
   } finally {
     actionLoading.value = false;
+  }
+}
+
+async function openImportDialog() {
+  importDialogVisible.value = true;
+  try {
+    const data = await fetchSampleSets({ pageSize: 100 });
+    sampleSets.value = data.list || [];
+    selectedSampleSetId.value = sampleSets.value[0]?.id ?? null;
+  } catch (err) {
+    ElMessage.error(err.message || '加载样本集失败');
+  }
+}
+
+async function confirmImport() {
+  if (!selectedSampleSetId.value) {
+    ElMessage.warning('请选择样本集');
+    return;
+  }
+  importLoading.value = true;
+  try {
+    const result = await importJobSamples(jobId.value, { sample_set_id: selectedSampleSetId.value });
+    ElMessage.success(`已导入 ${result.created_count ?? result.items?.length ?? 0} 条样本`);
+    importDialogVisible.value = false;
+  } catch (err) {
+    ElMessage.error(err.message || '导入失败');
+  } finally {
+    importLoading.value = false;
   }
 }
 </script>

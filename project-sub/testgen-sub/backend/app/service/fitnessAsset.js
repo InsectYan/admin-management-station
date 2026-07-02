@@ -237,6 +237,27 @@ class FitnessAssetService extends require('egg').Service {
     const pageSize = Number(query.pageSize) || 20;
     const offset = (page - 1) * pageSize;
 
+    if (table === 'config_env_enum' && query.group_by === 'domain') {
+      const [ rows ] = await this.app.model.query(
+        `SELECT domain, COUNT(*)::int AS item_count
+         FROM config_env_enum
+         GROUP BY domain
+         ORDER BY domain NULLS LAST`,
+      );
+      const groups = [];
+      for (const g of rows) {
+        const domain = g.domain || '未分组';
+        const [ items ] = await this.app.model.query(
+          `SELECT * FROM config_env_enum WHERE COALESCE(domain, '') = COALESCE(:domain, '')
+           ORDER BY config_env_id`,
+          { replacements: { domain: g.domain } },
+        );
+        await enrichRowsWithFkNames(this.app.model, table, items, this.app.baseDir);
+        groups.push({ domain, item_count: g.item_count, items });
+      }
+      return { groups, total: groups.length, page: 1, pageSize: groups.length, columns: [] };
+    }
+
     const [ countRows ] = await this.app.model.query(`SELECT COUNT(*) AS total FROM "${table}"`);
     const total = Number(countRows[0]?.total || 0);
 
@@ -421,17 +442,18 @@ class FitnessAssetService extends require('egg').Service {
 
   async browseTree() {
     const [ dimensions ] = await this.app.model.query(
-      `SELECT * FROM test_dimension ORDER BY sort_order`,
+      `SELECT * FROM test_dimension ORDER BY sort_order NULLS LAST, dimension_id`,
     );
     const [ majors ] = await this.app.model.query(
-      `SELECT * FROM test_category_major ORDER BY dimension_id, sort_order`,
+      `SELECT * FROM test_category_major ORDER BY dimension_id, category_major_id`,
     );
     const [ minors ] = await this.app.model.query(
-      `SELECT cn.*, COUNT(t.item_id)::int AS item_count
+      `SELECT cn.category_minor_id, cn.category_major_id, cn.project_code, cn.name, cn.sort_order,
+              COUNT(t.item_id)::int AS item_count
        FROM test_category_minor cn
-       LEFT JOIN test_item_detail t ON t.category_minor_id = cn.category_minor_id AND t.is_active
-       GROUP BY cn.category_minor_id, cn.category_major_id, cn.name, cn.sort_order, cn.description
-       ORDER BY cn.category_major_id, cn.sort_order`,
+       LEFT JOIN test_item_detail t ON t.category_minor_id = cn.category_minor_id AND t.is_active = TRUE
+       GROUP BY cn.category_minor_id, cn.category_major_id, cn.project_code, cn.name, cn.sort_order
+       ORDER BY cn.category_major_id, cn.sort_order NULLS LAST, cn.category_minor_id`,
     );
     return { dimensions, majors, minors };
   }

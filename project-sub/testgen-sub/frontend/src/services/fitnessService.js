@@ -114,6 +114,53 @@ export async function exportPlanReport(id) {
   return data.data;
 }
 
+export async function exportPlanDocument(id, format = 'plan') {
+  const { data } = await api.post(`/fitness/plans/${id}/export-document`, { format });
+  return data.data;
+}
+
+export async function fetchPlanReportStats(id) {
+  const { data } = await api.get(`/fitness/plans/${id}/report-stats`);
+  return data.data;
+}
+
+function downloadTextFile(filename, content) {
+  const blob = new Blob([ content ], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function downloadPlanMarkdown(planName, content) {
+  const safe = (planName || 'plan').replace(/[^\w\u4e00-\u9fa5-]+/g, '_');
+  downloadTextFile(`${safe}.md`, content);
+}
+
+export function downloadPlanHtml(planName, content) {
+  const safe = (planName || 'plan').replace(/[^\w\u4e00-\u9fa5-]+/g, '_');
+  downloadTextFile(`${safe}.html`, content);
+}
+
+export async function exportK6Script(itemId, schemeId = 'TS-09-LOAD') {
+  const { data } = await api.get(
+    `/fitness/run-config/${encodeURIComponent(itemId)}/k6-script`,
+    { params: { scheme_id: schemeId } },
+  );
+  return data.data;
+}
+
+export function downloadK6Script(filename, script) {
+  downloadTextFile(filename || 'load-test.js', script);
+}
+
+export async function enrichCsvSamples(payload) {
+  const { data } = await api.post('/fitness/samples/enrich-csv', payload);
+  return data.data;
+}
+
 export async function launchPlan(planId, payload) {
   const { data } = await api.post(`/fitness/plans/${planId}/launch`, payload);
   return data.data;

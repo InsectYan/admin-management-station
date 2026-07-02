@@ -1,0 +1,126 @@
+---
+description: 新建 Agent / Skill 默认落点与开发规范——优先 agent-management-sub 子 Agent 插件
+globs: "{project-sub/**,skills/**,**/agentProxy.js,**/agent-management-sub/**,**/agent-management-master/**}"
+alwaysApply: false
+---
+
+# Agent / Skill 开发规范（默认落点）
+
+在 **admin-management-station** 工作区涉及智能体能力时，须区分「子 Agent 插件」与「业务 BFF 代理」。**用户未明确指定其他仓库或内嵌实现时，默认按本节执行。**
+
+---
+
+## 1. 默认落点（无明确提示时）
+
+| 开发类型 | 默认仓库与路径 | 说明 |
+|----------|----------------|------|
+| **新 Skill（子 Agent）** | [`agent-management-sub/plugins/{name}-skill/`](../../../agent-management-sub/plugins/) | **首选**；热插拔注册到主 Agent 平台 |
+| **新 Agent 执行方案（scheme）** | [`agent-management-master/app/lib/schemes/{name}/`](../../../agent-management-master/app/lib/schemes/) | 仅当需新 Loop/ReAct/Pi 等**执行范式**时 |
+| **BFF 代理 / 联调** | `project-sub/{app}-sub/backend/` | 仅 `agentProxy`、internal API、路由配置；**不含** LLM 业务逻辑 |
+| **前端页面** | `project-sub/{app}-sub/frontend/` | 调用本子应用 BFF，禁止直连 Agent 平台 |
+
+```text
+默认分工：
+  agent-management-sub/plugins/     ← Skill 实现（index.js、SKILL.md、callbacks）
+  agent-management-master/          ← 运行时加载、Scheme、LLM、路由
+  testgen-sub/backend/              ← agentProxy 转发 + 业务 DB + 执行引擎
+```
+
+### 禁止的默认行为
+
+- **禁止**在 `testgen-sub`（或其他子应用 BFF）内嵌 MCP、LLM SDK、Skill 完整 Loop 逻辑
+- **禁止**在 `admin-management-station` 根目录新建 `plugins/` 或平行 Skill 工程
+- **禁止**未在用户明确要求时，把新 Skill 只写在 `agent-management-master/plugins/` 而不同步到 `agent-management-sub` 源码仓
+
+---
+
+## 2. 须遵循的 agent-management-master 规范
+
+开发 Skill / Agent 时**以 agent 主仓规则与文档为准**：
+
+| 文档 / 规则 | 路径（相对 monorepo 同级目录） |
+|-------------|-------------------------------|
+| **子 Agent 开发指南** | `agent-management-sub/docs/子Agent开发指南.md` |
+| 主仓 README · 新增 Skill | `agent-management-master/README.md` §新增 Skill |
+| 主仓 README · 新增方案 | `agent-management-master/README.md` §新增 Agent 方案 |
+| DB Schema 同步 | `agent-management-master/.cursor/rules/database-schema-sync.mdc` |
+| API 契约 | `agent-management-master/docs/api/README.md` |
+| Scheme 文档 | `agent-management-master/docs/schemes/README.md` |
+| 子 Agent 仓库 README | `agent-management-sub/README.md` |
+
+### 新 Skill 最小交付物
+
+```
+agent-management-sub/plugins/{name}-skill/
+├── index.js          # name、scheme、routes、dbTables、callbacks
+├── SKILL.md          # 用途、action、入参/出参
+├── db/init.sql       # 与 dbTables 一致（若有表）
+└── lib/              # 可选：bffClient、业务工具
+```
+
+接入主应用（二选一）：
+
+```bash
+# 符号链接
+cd agent-management-master/plugins
+ln -s ../../agent-management-sub/plugins/{name}-skill {name}-skill
+
+# 或 agent-management-master/.env
+PLUGIN_DIR=E:/AI Tools/projects/agent-management-sub/plugins
+```
+
+重启 `agent-management-master`（`:4001`）后 `GET /api/plugins` 应出现新 Skill。
+
+---
+
+## 3. 与 testgen-sub / AMS 的协作（Skill 落地后）
+
+Skill 在 agent 仓实现后，**同一任务**须在业务子应用侧完成：
+
+| 步骤 | 位置 | 内容 |
+|------|------|------|
+| 1 | `backend/config/config.default.js` | 新增 `*InvokePath`（若新 Skill） |
+| 2 | `backend/app/service/agentProxy.js` | 新增 `invokeXxx()` |
+| 3 | `docs/设计-Agent联调配置.md` / `docs/待办-Agent开发任务清单.md` | 联调端口、Token、action 清单 |
+| 4 | `agent-management-sub/README.md` | Skill 总览表追加一行 |
+| 5 | 子应用 `docs/架构关系图.md` | Agent 调用关系图 |
+| 6 | `docs/待办-开发节点追踪.md` | 登记 `[Skill]` 变更 |
+
+详见 **`subapp-development.mdc` §1、§4**。
+
+---
+
+## 4. 何时可以不放在 agent-management-sub
+
+仅当用户**明确**要求以下之一时，可偏离默认落点：
+
+- 在指定目录单独实现（如仅改 `agent-management-master/plugins/` 做临时验证）
+- 在子应用 BFF 内做**无 LLM** 的确定性逻辑（如 VS 数值比较、Runner）
+- 修改已有第三方 / 外部 Agent 工程
+
+无明确说明时，**一律按 §1 默认落点**。
+
+---
+
+## 5. Checklist
+
+```text
+[ ] 新 Skill 已在 agent-management-sub/plugins/ 创建（非仅 BFF 内联）
+[ ] index.js + SKILL.md + db（若有）符合子Agent开发指南
+[ ] 已遵循 agent-management-master database-schema-sync.mdc
+[ ] agent-management-master 可加载插件（plugins 或 PLUGIN_DIR）
+[ ] 业务子应用 agentProxy + 说明文件 + 架构图已同步
+[ ] agent-management-sub/README.md Skill 表已更新
+```
+
+---
+
+## 6. 参考 Skill 示例
+
+| Skill | 路径 |
+|-------|------|
+| testgen-skill | `agent-management-sub/plugins/testgen-skill/` |
+| fitness-judge-skill | `agent-management-sub/plugins/fitness-judge-skill/` |
+| fitness-sample-skill | `agent-management-sub/plugins/fitness-sample-skill/` |
+
+联调说明：`project-sub/testgen-sub/docs/设计-Agent联调配置.md`

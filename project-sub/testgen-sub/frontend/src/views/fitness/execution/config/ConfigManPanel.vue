@@ -11,6 +11,7 @@
     </el-form-item>
     <el-form-item>
       <el-button type="primary" :loading="launching" @click="launchReview">发起人工评审</el-button>
+      <el-button :loading="preReviewLoading" @click="runPreReview">AI 预审</el-button>
       <el-button :loading="loadingPending" @click="loadPending">刷新待审队列</el-button>
     </el-form-item>
 
@@ -34,8 +35,8 @@
 <script setup>
 import { onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
-import { fetchEnvironments, fetchFtRuns, launchRun, scoreManualRun } from '@/services/fitnessService.js';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { fetchEnvironments, fetchFtRuns, launchRun, preReviewRun, scoreManualRun } from '@/services/fitnessService.js';
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -45,6 +46,7 @@ const emit = defineEmits([ 'update:modelValue' ]);
 
 const router = useRouter();
 const launching = ref(false);
+const preReviewLoading = ref(false);
 const loadingPending = ref(false);
 const pendingRuns = ref([]);
 const scoreByRun = reactive({});
@@ -106,6 +108,26 @@ async function launchReview() {
     ElMessage.error(e?.response?.data?.message || e.message || '发起失败');
   } finally {
     launching.value = false;
+  }
+}
+
+async function runPreReview() {
+  const runId = scoreForm.run_id || pendingRuns.value[0]?.id;
+  if (!runId) {
+    ElMessage.warning('请先选择或刷新待审 Run');
+    return;
+  }
+  preReviewLoading.value = true;
+  try {
+    const data = await preReviewRun(runId);
+    ElMessage.success('AI 预审完成');
+    if (data.markdown) {
+      ElMessageBox.alert(data.markdown, '预审建议', { confirmButtonText: '知道了' });
+    }
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || e.message || '预审失败');
+  } finally {
+    preReviewLoading.value = false;
   }
 }
 

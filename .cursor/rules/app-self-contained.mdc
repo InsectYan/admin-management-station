@@ -41,7 +41,8 @@ alwaysApply: true
 2. 在 `app-registry.mdc` 与 `docs-project/应用端口与命名注册表.md` 登记端口
 3. 按 `subapp-onboarding.mdc` 完成接入（子应用）
 4. 实现完整 `{app}/deploy/docker-compose.yml`
-5. 更新 `{app}/README.md`
+5. 更新 `{app}/README.md`（含「开发规范」节，见 **`subapp-development.mdc` §6**）
+6. 创建 `{app}/docs/` 架构图与评分文档（见 **`subapp-development.mdc` §3**）
 
 ## 5. 禁止
 

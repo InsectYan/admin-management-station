@@ -43,3 +43,23 @@
 - 启动时全量扫描，已移除的子应用自动禁用菜单
 
 同步脚本：[`menu-master/deploy/scripts/sync-subapps.mjs`](../menu-master/deploy/scripts/sync-subapps.mjs)
+
+## 子应用迭代开发规范
+
+在已有子应用上开发（改表、新 Skill、新页面等）须遵守：
+
+| 规则 | 路径 |
+|------|------|
+| **子应用开发规范** | [`.cursor/rules/subapp-development.mdc`](../.cursor/rules/subapp-development.mdc) |
+| **Agent / Skill 开发** | [`.cursor/rules/agent-skill-development.mdc`](../.cursor/rules/agent-skill-development.mdc) |
+| Qiankun 接入 | [`subapp-onboarding.mdc`](../.cursor/rules/subapp-onboarding.mdc) |
+| DB Schema 同步 | [`database-schema-sync.mdc`](../.cursor/rules/database-schema-sync.mdc) |
+
+要点：
+
+1. **变更登记** — DB / Skill / API / UI 变更写入 `docs/待办-开发节点追踪.md` 或 `docs/变更记录.md`
+2. **DB 联动** — 改表须同步 seed、`db:seed` / `db:reset` 等 CLI（参考 `testgen-sub`）
+3. **docs 同步** — 更新 `docs/架构关系图.md`、`docs/项目评分与后续计划.md`；缺失则创建
+4. **新 Skill** — 无明确提示时默认在 `agent-management-sub/plugins/` 开发，遵循 `agent-management-master` 规范
+
+各子应用 README 的「开发规范」节为开发者入口。

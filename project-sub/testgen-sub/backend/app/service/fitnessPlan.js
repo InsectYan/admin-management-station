@@ -144,28 +144,204 @@ class FitnessPlanService extends require('egg').Service {
   async exportReport(planId) {
     const plan = await this.findById(planId);
     if (!plan) return null;
+    const stats = await this.buildReportStats(plan);
+    const content = this.buildReportMarkdown(plan, stats);
+    await this.ctx.model.TestPlanReport.create({
+      plan_id: planId,
+      report_format: 'markdown',
+      content,
+    });
+    return { content, plan, stats };
+  }
+
+  async exportPlanDocument(planId, format = 'markdown') {
+    const plan = await this.findById(planId);
+    if (!plan) return null;
+    const stats = await this.buildReportStats(plan);
+    if (format === 'html') {
+      const content = this.buildPlanHtml(plan, stats);
+      return { format: 'html', content, plan, stats };
+    }
+    if (format === 'plan') {
+      const content = this.buildPlanMarkdown(plan, stats);
+      return { format: 'markdown', content, plan, stats };
+    }
+    const content = this.buildReportMarkdown(plan, stats);
+    return { format: 'markdown', content, plan, stats };
+  }
+
+  async buildReportStats(plan) {
+    const itemIds = (plan.items || []).map(i => i.item_id);
+    let itemMeta = {};
+    if (itemIds.length) {
+      const [ rows ] = await this.app.model.query(`
+        SELECT t.item_id, t.dimension_id, d.name AS dimension_name,
+          COALESCE(t.scheme_primary_id, cms.scheme_primary_id) AS scheme_id,
+          t.validation_primary_id AS validation_id,
+          t.priority_id
+        FROM test_item_detail t
+        LEFT JOIN test_dimension d ON d.dimension_id = t.dimension_id
+        LEFT JOIN test_category_minor_scheme cms ON cms.category_minor_id = t.category_minor_id
+        WHERE t.item_id IN (:itemIds)
+      `, { replacements: { itemIds } });
+      itemMeta = Object.fromEntries(rows.map(r => [ r.item_id, r ]));
+    }
+
+    const byDimension = {};
+    const byScheme = {};
+    const byValidation = {};
+    let passed = 0;
+    let failed = 0;
+    let pending = 0;
+
+    for (const item of plan.items || []) {
+      const meta = itemMeta[item.item_id] || {};
+      const result = (plan.results || []).find(r => r.plan_item_id === item.id);
+      const status = result?.result_status || 'pending';
+      if (status === 'passed') passed += 1;
+      else if (status === 'failed') failed += 1;
+      else pending += 1;
+
+      const dim = meta.dimension_name || meta.dimension_id || '未知';
+      if (!byDimension[dim]) byDimension[dim] = { total: 0, passed: 0, failed: 0, pending: 0 };
+      byDimension[dim].total += 1;
+      byDimension[dim][status === 'passed' ? 'passed' : status === 'failed' ? 'failed' : 'pending'] += 1;
+
+      const scheme = meta.scheme_id || '未知';
+      if (!byScheme[scheme]) byScheme[scheme] = { total: 0, passed: 0 };
+      byScheme[scheme].total += 1;
+      if (status === 'passed') byScheme[scheme].passed += 1;
+
+      const vs = meta.validation_id || '未知';
+      if (!byValidation[vs]) byValidation[vs] = { total: 0, passed: 0 };
+      byValidation[vs].total += 1;
+      if (status === 'passed') byValidation[vs].passed += 1;
+    }
+
+    const thresholdCompare = (plan.thresholds || []).map(t => ({
+      param_id: t.param_id,
+      configured: t.param_value,
+      notes: t.notes,
+    }));
+
+    const prdGoals = (plan.scope || [])
+      .filter(s => s.scope_type === 'prd_goal')
+      .map(s => s.scope_value);
+
+    return {
+      totals: {
+        items: plan.items?.length || 0,
+        passed,
+        failed,
+        pending,
+        pass_rate: plan.items?.length ? Math.round(100 * passed / plan.items.length) : 0,
+      },
+      by_dimension: byDimension,
+      by_scheme: byScheme,
+      by_validation: byValidation,
+      thresholds: thresholdCompare,
+      prd_goals: prdGoals,
+    };
+  }
+
+  buildPlanMarkdown(plan, stats) {
+    const lines = [
+      `# 测试计划 — ${plan.name}`,
+      '',
+      `- 版本: ${plan.version_tag || '-'}`,
+      `- 环境: ${plan.env_name || '-'}`,
+      `- 类型: ${plan.plan_type || 'release'}`,
+      `- 用例数: ${stats.totals.items}`,
+      '',
+      '## PRD 目标范围',
+      '',
+      ...(stats.prd_goals.length
+        ? stats.prd_goals.map(g => `- ${g}`)
+        : [ '- （未指定）' ]),
+      '',
+      '## 阈值配置',
+      '',
+      ...(stats.thresholds.length
+        ? stats.thresholds.map(t => `- ${t.param_id}: ${t.configured}${t.notes ? ` (${t.notes})` : ''}`)
+        : [ '- （未配置）' ]),
+      '',
+      '## 发版放行标准',
+      '',
+      '- P0 阻塞项自动化覆盖率须达到计划阈值（默认 ≥ 95%）',
+      '- 风险防护项无 GAP 状态',
+      '- PRD 目标关联用例通过率 ≥ 计划阈值',
+      '- 发版信号为 GREEN 或 YELLOW（RED 需豁免审批）',
+      '- 计划内所有 P0 用例 verdict 为 pass，或已登记已知缺陷',
+      '',
+      '## 用例清单',
+      '',
+    ];
+    for (const item of plan.items || []) {
+      lines.push(`- ${item.item_id}`);
+    }
+    return lines.join('\n');
+  }
+
+  buildReportMarkdown(plan, stats) {
     const lines = [
       `# 测试完成报告 — ${plan.name}`,
       '',
       `- 版本: ${plan.version_tag || '-'}`,
       `- 环境: ${plan.env_name || '-'}`,
       `- 状态: ${plan.status}`,
+      `- 通过率: ${stats.totals.pass_rate}% (${stats.totals.passed}/${stats.totals.items})`,
       '',
-      '## 执行结果',
+      '## 维度聚合',
       '',
     ];
+    for (const [ dim, row ] of Object.entries(stats.by_dimension)) {
+      const rate = row.total ? Math.round(100 * row.passed / row.total) : 0;
+      lines.push(`- ${dim}: ${rate}% (${row.passed}/${row.total})`);
+    }
+    lines.push('', '## TS 方案聚合', '');
+    for (const [ scheme, row ] of Object.entries(stats.by_scheme)) {
+      const rate = row.total ? Math.round(100 * row.passed / row.total) : 0;
+      lines.push(`- ${scheme}: ${rate}% (${row.passed}/${row.total})`);
+    }
+    lines.push('', '## VS 验证聚合', '');
+    for (const [ vs, row ] of Object.entries(stats.by_validation)) {
+      const rate = row.total ? Math.round(100 * row.passed / row.total) : 0;
+      lines.push(`- ${vs}: ${rate}% (${row.passed}/${row.total})`);
+    }
+    if (stats.thresholds.length) {
+      lines.push('', '## 阈值配置', '');
+      for (const t of stats.thresholds) {
+        lines.push(`- ${t.param_id}: ${t.configured}`);
+      }
+    }
+    lines.push('', '## 执行明细', '');
     for (const item of plan.items) {
       const result = plan.results.find(r => r.plan_item_id === item.id);
       const runHint = result?.ft_run_id ? ` (run #${result.ft_run_id})` : '';
       lines.push(`- ${item.item_id}: ${result?.result_status || 'pending'}${runHint}`);
     }
-    const content = lines.join('\n');
-    await this.ctx.model.TestPlanReport.create({
-      plan_id: planId,
-      report_format: 'markdown',
-      content,
-    });
-    return { content, plan };
+    return lines.join('\n');
+  }
+
+  buildPlanHtml(plan, stats) {
+    const md = this.buildPlanMarkdown(plan, stats);
+    const escaped = md
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const body = escaped
+      .split('\n')
+      .map(line => {
+        if (line.startsWith('# ')) return `<h1>${line.slice(2)}</h1>`;
+        if (line.startsWith('## ')) return `<h2>${line.slice(3)}</h2>`;
+        if (line.startsWith('- ')) return `<li>${line.slice(2)}</li>`;
+        if (!line.trim()) return '';
+        return `<p>${line}</p>`;
+      })
+      .join('\n');
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${plan.name}</title>
+<style>body{font-family:sans-serif;max-width:800px;margin:24px auto;line-height:1.6}h1,h2{color:#303133}li{margin:4px 0}</style>
+</head><body>${body}<p><em>导出时间 ${new Date().toISOString()}</em></p></body></html>`;
   }
 
   async launchPlan(planId, body = {}) {

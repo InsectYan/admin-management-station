@@ -22,8 +22,13 @@ class GenerationJobService extends Service {
       project_code,
       project_name,
       options = {},
+      fitness_context,
       llm_profile,
     } = payload;
+
+    if (fitness_context && typeof fitness_context === 'object') {
+      options.fitness_context = { ...(options.fitness_context || {}), ...fitness_context };
+    }
 
     let scheme_targets = options.scheme_targets || [];
     const category_major_ids = options.category_major_ids?.length
@@ -220,6 +225,7 @@ class GenerationJobService extends Service {
               scheme_target: target,
             },
             fitness_context: {
+              ...(options.fitness_context || {}),
               scheme_id: target.scheme_id,
               validation_id: target.validation_id,
               category_major_id: target.category_major_id,
@@ -365,6 +371,11 @@ class GenerationJobService extends Service {
         throw new Error('全部生成目标均未产出通过字段校验的有效用例，请检查文档内容或调整生成配置后重试');
       }
 
+      const fitnessPost = await this.runFitnessPostProcess(jobId, {
+        project_code,
+        options,
+      });
+
       await job.update({
         status: 'done',
         current_phase: 'review',
@@ -375,6 +386,7 @@ class GenerationJobService extends Service {
           target_states: targetStates,
           overall_percent: 100,
           retry_notice: null,
+          fitness_post_process: fitnessPost,
           current_direction: `全部完成，共写入 ${totalItems} 条测试项`,
           updated_at: new Date().toISOString(),
         },
@@ -541,6 +553,101 @@ class GenerationJobService extends Service {
       { replacements: { jobId: Number(jobId), limit: Number(pageSize), offset } },
     );
     return { list: rows, total, page: Number(page), pageSize: Number(pageSize) };
+  }
+
+  async runFitnessPostProcess(jobId, { project_code, options = {} } = {}) {
+    const fitnessCtx = options.fitness_context || {};
+    const result = { enrich: null, dry_run: null, auto_sample: null };
+
+    const shouldEnrich = fitnessCtx.enrich_samples || fitnessCtx.auto_sample;
+    if (shouldEnrich) {
+      try {
+        const { list } = await this.listGeneratedItems(jobId, { page: 1, pageSize: 50 });
+        const agentRes = await this.ctx.service.agentProxy.invokeTestgen({
+          action: 'enrich_samples',
+          job_id: jobId,
+          project_code,
+          items: list.map(row => ({
+            item_id: row.item_id,
+            item_name: row.item_name,
+            test_input_example: row.detail_summary,
+          })),
+          trace: { job_id: jobId },
+        });
+        result.enrich = agentRes.output || agentRes;
+        result.auto_sample = result.enrich;
+      } catch (err) {
+        this.ctx.app.logger.warn('[generationJob] enrich_samples job=%s %s', jobId, err.message);
+        result.enrich = { error: err.message };
+      }
+    }
+
+    if (fitnessCtx.dry_run) {
+      try {
+        const { list } = await this.listGeneratedItems(jobId, { page: 1, pageSize: 1 });
+        if (list.length) {
+          const item = list[0];
+          const [ envRows ] = await this.app.model.query(
+            'SELECT id FROM ft_execution_env ORDER BY id ASC LIMIT 1',
+          );
+          const envId = envRows[0]?.id;
+          const run = await this.ctx.service.fitnessExecution.orchestrator().launch(item.item_id, {
+            env_id: envId,
+            scheme_id: item.scheme_primary_id || 'TS-01-DET',
+            validation_id: item.validation_primary_id || 'VS-02-CONTRACT',
+            dry_run: true,
+          });
+          result.dry_run = {
+            run_id: run?.id,
+            item_id: item.item_id,
+            status: run?.status,
+          };
+        } else {
+          result.dry_run = { skipped: true, reason: 'no generated items' };
+        }
+      } catch (err) {
+        this.ctx.app.logger.warn('[generationJob] dry_run job=%s %s', jobId, err.message);
+        result.dry_run = { error: err.message };
+      }
+    }
+
+    return result;
+  }
+
+  async importSamples(jobId, body = {}) {
+    const job = await this.ctx.model.GenerationJob.findByPk(jobId);
+    if (!job) return null;
+
+    const sampleSetId = body.sample_set_id;
+    if (!sampleSetId) {
+      const err = new Error('sample_set_id 为必填');
+      err.status = 400;
+      throw err;
+    }
+
+    const { list } = await this.listGeneratedItems(jobId, { page: 1, pageSize: 500 });
+    if (!list.length) {
+      const err = new Error('该任务未生成可导入的测试项');
+      err.status = 400;
+      throw err;
+    }
+
+    const items = list.map((row, i) => ({
+      sort_order: i,
+      input_data: {
+        runner: 'http',
+        path: '/',
+        method: 'GET',
+        expect_status: 200,
+        source_item_id: row.item_id,
+      },
+      metadata: { source: 'generation_job', job_id: Number(jobId), item_id: row.item_id },
+    }));
+
+    return this.ctx.service.internalFitness.bulkCreateSampleItems({
+      sample_set_id: sampleSetId,
+      items,
+    });
   }
 
   async updateAgentContext(id, patch = {}) {

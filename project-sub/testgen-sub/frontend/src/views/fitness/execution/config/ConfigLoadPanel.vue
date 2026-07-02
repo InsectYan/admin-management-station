@@ -18,17 +18,20 @@
     </el-form-item>
     <el-divider content-position="left">SLO 阈值</el-divider>
     <el-form-item label="P99 上限 (ms)">
-      <el-input-number v-model="thresholdLocal.p99_max_ms" :min="1" @change="syncThreshold" />
+      <el-input-number v-model="thresholdLocal.p99_max_ms" :min="1" @change="sync" />
     </el-form-item>
     <el-form-item label="错误率上限 (%)">
-      <el-input-number v-model="thresholdLocal.error_rate_max" :min="0" :max="100" :precision="2" @change="syncThreshold" />
+      <el-input-number v-model="thresholdLocal.error_rate_max" :min="0" :max="100" :precision="2" @change="sync" />
     </el-form-item>
     <p class="hint">TS-09-LOAD 压测参数；VS-10 按 p99 与错误率判定。</p>
+    <el-button :loading="k6Loading" @click="downloadK6">导出 k6 脚本</el-button>
   </el-form>
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
+import { ElMessage } from 'element-plus';
+import { downloadK6Script, exportK6Script } from '@/services/fitnessService.js';
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -47,13 +50,24 @@ const thresholdLocal = reactive({
   p99_max_ms: props.threshold?.p99_max_ms ?? 500,
   error_rate_max: props.threshold?.error_rate_max ?? 1,
 });
+const k6Loading = ref(false);
 
 function sync() {
   emit('update:modelValue', { ...local });
+  emit('update:threshold', { ...thresholdLocal });
 }
 
-function syncThreshold() {
-  emit('update:threshold', { ...thresholdLocal });
+async function downloadK6() {
+  k6Loading.value = true;
+  try {
+    const data = await exportK6Script(props.item.item_id, 'TS-09-LOAD');
+    downloadK6Script(data.filename, data.script);
+    ElMessage.success('k6 脚本已下载');
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || e.message || '导出失败');
+  } finally {
+    k6Loading.value = false;
+  }
 }
 
 watch(() => props.modelValue, (v) => Object.assign(local, {

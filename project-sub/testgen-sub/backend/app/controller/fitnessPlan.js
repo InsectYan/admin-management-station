@@ -51,6 +51,28 @@ class FitnessPlanController extends Controller {
     this.ctx.body = { code: 0, message: 'ok', data };
   }
 
+  async exportDocument() {
+    const format = this.ctx.request.body?.format || 'plan';
+    const data = await this.service.fitnessPlan.exportPlanDocument(this.ctx.params.id, format);
+    if (!data) {
+      this.ctx.status = 404;
+      this.ctx.body = { code: 404, message: '计划不存在', data: null };
+      return;
+    }
+    this.ctx.body = { code: 0, message: 'ok', data };
+  }
+
+  async reportStats() {
+    const plan = await this.service.fitnessPlan.findById(this.ctx.params.id);
+    if (!plan) {
+      this.ctx.status = 404;
+      this.ctx.body = { code: 404, message: '计划不存在', data: null };
+      return;
+    }
+    const stats = await this.service.fitnessPlan.buildReportStats(plan);
+    this.ctx.body = { code: 0, message: 'ok', data: stats };
+  }
+
   async appendItems() {
     const itemIds = this.ctx.request.body?.item_ids || [];
     const data = await this.service.fitnessPlan.appendItems(this.ctx.params.id, itemIds);

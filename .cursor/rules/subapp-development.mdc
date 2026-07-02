@@ -1,0 +1,197 @@
+---
+description: 子应用迭代开发规范——变更登记、数据库联动 CLI、文档与架构图同步
+globs: "{project-sub/**,skills/project-developer/**,skills/sub-app-developer/**}"
+alwaysApply: false
+---
+
+# 子应用开发规范（迭代必遵）
+
+适用于 `project-sub/*/` 下所有子应用的**功能迭代**（非仅首次接入）。接入 Qiankun 见 **`subapp-onboarding.mdc`**；Schema 启动同步见 **`database-schema-sync.mdc`**。
+
+**各子应用 README 须含「开发规范」节**，指向本文件（见 §6）。
+
+---
+
+## 1. 变更须在说明文件中标识
+
+凡涉及下列变更，**同一 PR / 同一开发任务内**须在子应用说明文档中登记，不得仅改代码不留痕。
+
+| 变更类型 | 须更新的说明文件 | 登记内容 |
+|----------|------------------|----------|
+| **数据库表**（新建/改列/删表/视图/种子） | `docs/待办-开发节点追踪.md` 或 `docs/变更记录.md`；有表目录时 `database/tables/<表名>/表说明.md` | 表名、用途、关联 API、是否需 seed |
+| **新 Skill / Agent 联调** | `docs/待办-Agent开发任务清单.md` 或 `docs/待办-开发节点追踪.md`；**Skill 实现**见 **`agent-skill-development.mdc`** | Skill 名、action、BFF 路径、关联页面 |
+| **新 API 路由** | `docs/待办-开发节点追踪.md` 或设计文档；复杂子应用更新 `docs/架构关系图.md` §API | 方法、路径、Controller |
+| **新前端页面/路由** | `docs/待办-开发节点追踪.md`；更新架构图 §前端 | 路由、页面文件、所属业务域 |
+| **端口 / manifest / 环境变量** | `README.md`、`docs-project/应用端口与命名注册表.md` | 新旧值对照 |
+
+**登记格式（推荐）**：
+
+```markdown
+## [YYYY-MM-DD] 变更摘要
+- [DB] 新增表 `ft_xxx` · migration `023_*.sql` · seed 已更新
+- [Skill] 新增 `fitness-xxx-skill` action `foo` · BFF `agentProxy.invokeXxx`
+- [API] POST /api/fitness/xxx
+- [UI] /fitness/xxx · FooPage.vue
+```
+
+无上述 docs 待办文件的子应用：在 `docs/变更记录.md` 或 README「变更日志」节维护同等信息。
+
+---
+
+## 2. 数据库表变更须联动 database 工具链
+
+改表时须**同一任务内**完成下列联动，保证 `db` / `db:seed` / `db:sync` / `db:reset` 行为一致。参考实现：**`testgen-sub/`**。
+
+### 2.1 代码与 DDL 真源（缺一不可）
+
+| 层级 | 路径 | 要求 |
+|------|------|------|
+| 基线 | `database/init.sql` | 新表 `CREATE TABLE IF NOT EXISTS` |
+| 增量 | `database/migrations/NNN_*.sql` | 已有库升级；`ADD COLUMN IF NOT EXISTS` |
+| ORM | `backend/app/model/*.js` | 与表结构一致 |
+| 种子（若有） | `database/tables/<表名>/init.sql` + `data.json` | Fitness 类资产表 |
+| 启动同步 | `app/lib/schemaSync.js` + `app.js` beforeStart | 见 `database-schema-sync.mdc` |
+
+### 2.2 CLI 命令须统一覆盖新表
+
+子应用 `deploy/scripts/run.mjs`（或同等 CLI）须保证：
+
+| 命令 | 行为 | 改表后须确认 |
+|------|------|--------------|
+| `ams-{app} db` / `db:seed` | Schema 同步 + 全量/单表注入 | 新表加入 seed 顺序（外键依赖） |
+| `ams-{app} db:sync` | 仅 DDL，不注入数据 | 新表 DDL 可被 sync |
+| `ams-{app} db:reset` | 清库 → 重建 Schema → 全量注入 | 新表在 reset 后仍存在且可 seed |
+| `ams-{app} db:seed <表名>` | 单表注入（若支持） | 新表可单独注入 |
+
+**禁止**：只改 `init.sql` 不更新 seed 脚本/顺序，导致 `db:seed` 成功但 `db:reset` 缺表或外键失败。
+
+### 2.3 改表检查清单
+
+- [ ] `init.sql` + migration（如需）+ Model 已同步
+- [ ] 有种子数据时：`database/tables/` 或 seed 脚本已更新
+- [ ] `db-cli.js` / `seed-data.js` / `sync-schema.js` 表清单含新表
+- [ ] 外键顺序正确（父表先于子表 seed）
+- [ ] `README.md` DB 命令说明与 CLI help 一致
+- [ ] 说明文件（§1）已登记 `[DB]` 项
+
+简单子应用（如 `novel-sub`）若无 `db:seed` 体系，至少保证 `npm run db:init` + 启动 schema 同步覆盖新表；**有 seed 需求时应对齐 testgen 命令集**。
+
+---
+
+## 3. 开发完成后须更新 docs（缺失则生成）
+
+每次功能开发结束，须更新子应用 `docs/` 下文档；**不存在则创建并梳理**。
+
+### 3.1 必备文档
+
+| 文档 | 路径（推荐） | 内容 |
+|------|--------------|------|
+| **架构关系图** | `docs/架构关系图.md` 或 `docs/<产品名>架构关系图.md` | 系统分层、与主应用/Agent 关系、Mermaid 架构图 |
+| **流程图** | 同上文档内独立章节，或 `docs/业务流程图.md` | 核心用户流（生成、执行、CRUD 等）时序/流程图 |
+| **项目评分与后续计划** | `docs/项目评分与后续计划.md` | 维度评分、P0/P1/P2 待办、路线图 |
+
+参考模板：`testgen-sub/docs/测试平台架构关系图.md`、`testgen-sub/docs/项目评分与后续计划.md`。
+
+### 3.2 何时更新
+
+| 开发内容 | 须更新的 doc 章节 |
+|----------|-------------------|
+| 新页面/路由 | 架构图 §前端导航；流程图 |
+| 新 API | 架构图 §API 域 |
+| 新表/关系 | 架构图 §数据库 ER/分层 |
+| 新 Skill | 架构图 §Agent；评分 doc §Agent 待办 |
+| 完成功能/占位 | 评分 doc：状态 ❌→✅，重算评分（可选） |
+
+### 3.3 图表规范
+
+- 使用 **Mermaid**；`fontSize: 20px`；按层分色（前端蓝 / BFF 绿 / DB 橙 / Agent 紫）
+- 架构图与 AMS 总览的关系：复杂子应用可在 `docs-project/` 保留平台级图，子应用 `docs/` 保留**本子应用细节**
+
+### 3.4 docs 检查清单
+
+- [ ] `docs/架构关系图.md`（或等价）已反映本次变更
+- [ ] 核心业务流程图已更新
+- [ ] `docs/项目评分与后续计划.md` 待办状态已同步
+- [ ] `README.md` 文档索引链到新 docs
+
+---
+
+## 4. 与 Agent / Skill 开发的额外要求
+
+> **默认落点**：无明确提示时，新 Skill 开发在 **`agent-management-sub/plugins/`**，规范见 **`agent-skill-development.mdc`**。
+
+| 步骤 | 位置 |
+|------|------|
+| 插件实现 | `agent-management-sub/plugins/<skill>/`（**默认**，非 testgen BFF 内嵌） |
+| Skill 说明 | `plugins/<skill>/SKILL.md` |
+| 开发指南 | `agent-management-sub/docs/子Agent开发指南.md` |
+| 主仓规范 | `agent-management-master/README.md`、`.cursor/rules/database-schema-sync.mdc` |
+| BFF 代理 | `{sub}/backend/config/config.default.js` + `service/agentProxy.js` |
+| 联调说明 | `{sub}/docs/设计-Agent联调配置.md`（或等价）；任务勾选 `docs/待办-Agent开发任务清单.md` |
+| 平台 README | `agent-management-sub/README.md` Skill 总览表 |
+
+子应用侧须在 §1 说明文件中登记 `[Skill]`，并更新架构图 Agent 调用关系。
+
+---
+
+## 5. 开发完成总 Checklist
+
+```text
+[ ] 说明文件已登记 DB / Skill / API / UI 变更（§1）
+[ ] 新 Skill 在 agent-management-sub/plugins/ 实现（agent-skill-development.mdc）
+[ ] 数据库 DDL + Model + seed + CLI 联动完成（§2）
+[ ] docs 架构图、流程图、评分计划已更新或新建（§3）
+[ ] README「开发规范」与 DB 命令说明仍准确（§6）
+[ ] 仍符合 subapp-onboarding / database-schema-sync / app-registry
+```
+
+---
+
+## 6. 子应用 README 须包含的「开发规范」节
+
+每个 `project-sub/{app}-sub/README.md` **必须**有以下结构（可复制模板）：
+
+```markdown
+## 开发规范（必读）
+
+迭代开发须遵守 monorepo 规则：
+
+| 规则 | 说明 |
+|------|------|
+| [subapp-development.mdc](../../.cursor/rules/subapp-development.mdc) | **变更登记、DB 联动、docs 同步** |
+| [subapp-onboarding.mdc](../../.cursor/rules/subapp-onboarding.mdc) | Qiankun 接入 |
+| [database-schema-sync.mdc](../../.cursor/rules/database-schema-sync.mdc) | 启动 Schema 同步 |
+
+### 本应用文档
+
+| 文档 | 路径 |
+|------|------|
+| 架构与流程图 | `docs/...` |
+| 评分与后续计划 | `docs/项目评分与后续计划.md` |
+| 变更/待办 | `docs/待办-开发节点追踪.md` / `docs/待办-Agent开发任务清单.md`（若有） |
+
+### 数据库 CLI（{ams-xxx}）
+
+（列出 db / db:seed / db:sync / db:reset 及适用场景）
+```
+
+路径深度按子应用实际层级调整（`../../` 或 `../../../`）。
+
+---
+
+## 7. 参考实现
+
+| 子应用 | 说明文件 | DB CLI | docs |
+|--------|----------|--------|------|
+| `testgen-sub` | `docs/待办-开发节点追踪.md`、`docs/待办-Agent开发任务清单.md` | `ams-testgen db*` | `docs/测试平台架构关系图.md`、`docs/项目评分与后续计划.md` |
+| `novel-sub` | README + 待建 `docs/` | `npm run db:init` | 迭代时按 §3 生成 |
+
+---
+
+## 禁止
+
+- 改表不更新 seed/reset 链路，导致同事 `db:reset` 失败
+- 新增 Skill 只在 agent 仓改、子应用说明与架构图不同步
+- **在 testgen-sub BFF 内嵌 Skill / LLM 逻辑**（应放 agent-management-sub，见 `agent-skill-development.mdc`）
+- 功能已交付但 docs 仍描述旧架构或缺少流程图
+- 仅在 commit message 留变更说明、不在项目说明文件中登记
