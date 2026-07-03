@@ -70,6 +70,8 @@ class FitnessExecutionService extends require('egg').Service {
     const offset = (page - 1) * pageSize;
     const where = {};
     if (query.item_id) where.item_id = query.item_id;
+    if (query.set_type) where.set_type = query.set_type;
+    if (query.api_template_id) where.api_template_id = Number(query.api_template_id);
     const { count, rows } = await this.ctx.model.FtSampleSet.findAndCountAll({
       where,
       order: [[ 'id', 'DESC' ]],
@@ -200,11 +202,15 @@ class FitnessExecutionService extends require('egg').Service {
       where: { item_id: itemId, scheme_id: body.scheme_id },
       defaults: { config_json: {}, threshold_json: {} },
     });
+    const configJson = body.config_json || {};
     await config.update({
-      config_json: body.config_json || {},
+      config_json: configJson,
       threshold_json: body.threshold_json || {},
       env_id: body.env_id,
-      sample_set_id: body.sample_set_id,
+      sample_set_id: body.sample_set_id ?? configJson.sample_set_id ?? null,
+      api_template_id: body.api_template_id ?? configJson.api_template_id ?? null,
+      use_api_template: body.use_api_template ?? Boolean(configJson.use_api_template),
+      inject_bindings: body.inject_bindings ?? configJson.inject_bindings ?? {},
     });
     return config;
   }

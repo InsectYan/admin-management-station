@@ -10,5 +10,8 @@ module.exports = app => {
     threshold_json: { type: JSONB, defaultValue: {} },
     env_id: { type: INTEGER },
     sample_set_id: { type: INTEGER },
+    api_template_id: { type: INTEGER },
+    use_api_template: { type: require('sequelize').BOOLEAN, defaultValue: false },
+    inject_bindings: { type: JSONB, defaultValue: {} },
   }, { tableName: 'ft_run_config' });
 };

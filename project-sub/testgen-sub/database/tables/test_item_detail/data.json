@@ -47,7 +47,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s05-pi/tests/s05-pi.test.ts, server/src/stations/s05-pi/tests/memory-compress-guard.test.ts",
     "tags": [
       "A1"
     ],
@@ -241,7 +241,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": "server/tests/stations/s02",
+    "code_reference": "server/src/stations/s02-gate/tests/turn-submit-guard.test.ts, server/src/stations/s02-gate/tests/turn-submit-guard-ext.test.ts",
     "tags": [
       "A2"
     ],
@@ -307,7 +307,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": "server/tests/stations/s02",
+    "code_reference": "server/src/stations/s02-gate/tests/turn-submit-guard.test.ts, server/src/stations/s02-gate/tests/turn-submit-guard-ext.test.ts",
     "tags": [
       "A2"
     ],
@@ -372,7 +372,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": "server/tests/stations/s02",
+    "code_reference": "server/src/stations/s02-gate/tests/turn-submit-guard.test.ts, server/src/stations/s02-gate/tests/turn-submit-guard-ext.test.ts",
     "tags": [
       "A2"
     ],
@@ -438,7 +438,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": "server/tests/stations/s02",
+    "code_reference": "server/src/stations/s02-gate/tests/turn-submit-guard.test.ts, server/src/stations/s02-gate/tests/turn-submit-guard-ext.test.ts",
     "tags": [
       "A2"
     ],
@@ -504,7 +504,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s03-queue/tests/turn-job-store.test.ts, server/src/stations/s03-queue/tests/turn-job-lifecycle.test.ts",
     "tags": [
       "A2"
     ],
@@ -569,7 +569,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s06-stream/tests/turn-journey.test.ts, server/src/stations/s06-stream/tests/sse-frame.test.ts",
     "tags": [
       "A2"
     ],
@@ -1182,9 +1182,8 @@
       "local 全栈或 AgentRun 环境可用"
     ],
     "test_steps": [
-      "准备场景：SSE 解析",
-      "执行对应自动化或人工步骤",
-      "观测："
+      "运行 agent-sse / agent-sse-stream",
+      "断言：SSE 事件解析与 queue hint"
     ],
     "assertion_points": [
       ""
@@ -1215,7 +1214,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": "frontend/tests/agent-sse.unit.ts",
+    "code_reference": "frontend/tests/agent-sse.unit.ts, frontend/tests/agent-sse-stream.unit.ts",
     "tags": [
       "B1"
     ],
@@ -1245,9 +1244,8 @@
       "local 全栈或 AgentRun 环境可用"
     ],
     "test_steps": [
-      "准备场景：防串流",
-      "执行对应自动化或人工步骤",
-      "观测："
+      "运行 coach-turn-session",
+      "断言：切 session 不串流、abort 旧 SSE"
     ],
     "assertion_points": [
       ""
@@ -1260,9 +1258,9 @@
       "ARCH_B1"
     ],
     "prd_goal_ids": [],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S01",
+    "automation_command": "cd server && npm run test:stations -- coach-turn-session",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S01",
@@ -1278,7 +1276,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "frontend/tests/coach-turn-session.unit.ts",
     "tags": [
       "B1"
     ],
@@ -1442,9 +1440,8 @@
       "Internal API Key 正确；session 归属校验通过"
     ],
     "test_steps": [
-      "构造异常/边界请求体",
-      "POST submit",
-      "断言 HTTP 与 body：400"
+      "构造空白 message",
+      "断言：400"
     ],
     "assertion_points": [
       "400"
@@ -1461,7 +1458,7 @@
     ],
     "automation_status_id": "AUTO_EXISTING",
     "automation_entry_id": "AUTO_S02",
-    "automation_command": "cd server && npm run test:stations -- s02",
+    "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S02",
@@ -1477,7 +1474,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": "server/tests/stations/s02",
+    "code_reference": "server/src/stations/s02-gate/tests/turn-submit-guard.test.ts",
     "tags": [
       "B2"
     ],
@@ -1509,9 +1506,8 @@
       "同 session 已有一条 pending/processing turn"
     ],
     "test_steps": [
-      "构造异常/边界请求体",
-      "POST submit",
-      "断言 HTTP 与 body：429"
+      "pending 在途时第二条 submit",
+      "断言：429"
     ],
     "assertion_points": [
       "429"
@@ -1528,7 +1524,7 @@
     ],
     "automation_status_id": "AUTO_EXISTING",
     "automation_entry_id": "AUTO_S02",
-    "automation_command": "cd server && npm run test:stations -- s02",
+    "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
     "config_env": "TURN_SESSION_MAX_INFLIGHT",
     "config_env_id": "TURN_SESSION_MAX_INFLIGHT",
     "station_id": "S02",
@@ -1544,7 +1540,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": "server/tests/stations/s02",
+    "code_reference": "server/src/stations/s02-gate/tests/turn-submit-guard.test.ts",
     "tags": [
       "B2"
     ],
@@ -1706,9 +1702,8 @@
       "Internal API Key 正确；session 归属校验通过"
     ],
     "test_steps": [
-      "构造异常/边界请求体",
-      "POST submit",
-      "断言 HTTP 与 body：400"
+      "构造超 messageMaxLength 消息",
+      "断言：400"
     ],
     "assertion_points": [
       "400"
@@ -1725,9 +1720,9 @@
     "prd_goal_ids": [
       "G06"
     ],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S02",
+    "automation_command": "cd server && npm run test:stations -- turn-submit-guard-ext",
     "config_env": "TURN_MESSAGE_MAX_LENGTH",
     "config_env_id": "TURN_MESSAGE_MAX_LENGTH",
     "station_id": "S02",
@@ -1743,7 +1738,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": "server/tests/stations/s02",
+    "code_reference": "server/src/stations/s02-gate/tests/turn-submit-guard-ext.test.ts",
     "tags": [
       "B2"
     ],
@@ -1840,9 +1835,8 @@
       "Internal API Key 正确；session 归属校验通过"
     ],
     "test_steps": [
-      "构造异常/边界请求体",
-      "POST submit",
-      "断言 HTTP 与 body：403/404"
+      "运行 turn-submit-guard-ext",
+      "断言：非己 session 403"
     ],
     "assertion_points": [
       "403/404"
@@ -1861,7 +1855,7 @@
     ],
     "automation_status_id": "AUTO_EXISTING",
     "automation_entry_id": "AUTO_S02",
-    "automation_command": "cd server && npm run test:stations -- s02",
+    "automation_command": "cd server && npm run test:stations -- turn-submit-guard-ext",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S02",
@@ -1877,7 +1871,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": "server/tests/stations/s02",
+    "code_reference": "server/src/stations/s02-gate/tests/turn-submit-guard-ext.test.ts",
     "tags": [
       "B2"
     ],
@@ -1907,9 +1901,8 @@
       "Internal API Key 正确；session 归属校验通过"
     ],
     "test_steps": [
-      "构造异常/边界请求体",
-      "POST submit",
-      "断言 HTTP 与 body："
+      "连续 submit 超 actor 限流",
+      "断言：第 11 条 429"
     ],
     "assertion_points": [
       ""
@@ -1924,9 +1917,9 @@
     "prd_goal_ids": [
       "G06"
     ],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S02",
+    "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S02",
@@ -1942,7 +1935,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": "server/tests/stations/s02",
+    "code_reference": "server/src/stations/s02-gate/tests/turn-submit-guard.test.ts",
     "tags": [
       "B2"
     ],
@@ -1972,9 +1965,8 @@
       "Internal API Key 正确；session 归属校验通过"
     ],
     "test_steps": [
-      "准备场景：cancel",
-      "执行对应自动化或人工步骤",
-      "观测："
+      "cancel pending turn",
+      "断言：cancelled 后可再 submit"
     ],
     "assertion_points": [
       ""
@@ -1987,9 +1979,9 @@
       "ARCH_B3"
     ],
     "prd_goal_ids": [],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S02",
+    "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S03",
@@ -2005,7 +1997,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": "turnJobStore",
+    "code_reference": "server/src/stations/s02-gate/tests/turn-submit-guard.test.ts",
     "tags": [
       "B3"
     ],
@@ -2166,9 +2158,8 @@
       "Internal API Key 正确；session 归属校验通过"
     ],
     "test_steps": [
-      "准备场景：合法 submit",
-      "执行对应自动化或人工步骤",
-      "观测：turn_jobs pending + 202"
+      "enqueueTurnJob 合法 submit",
+      "断言：pending + created=true"
     ],
     "assertion_points": [
       "turn_jobs pending + 202"
@@ -2199,7 +2190,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": "turnJobStore",
+    "code_reference": "server/src/stations/s03-queue/tests/turn-job-store.test.ts",
     "tags": [
       "B3"
     ],
@@ -2632,8 +2623,8 @@
     ],
     "prd_goal_ids": [],
     "automation_status_id": "AUTO_EXISTING",
-    "automation_entry_id": "AUTO_E2E_GENERIC",
-    "automation_command": null,
+    "automation_entry_id": "AUTO_S04_BFF",
+    "automation_command": "cd server && npm run test:stations -- s04-bff",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S04",
@@ -2649,7 +2640,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s04-pipeline/tests/suites/bff-pipeline.suite.ts",
     "tags": [
       "B4",
       "STATE_MACHINE"
@@ -2714,7 +2705,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s04-pipeline/tests/suites/bff-pipeline.suite.ts",
     "tags": [
       "B4"
     ],
@@ -2763,8 +2754,8 @@
     ],
     "prd_goal_ids": [],
     "automation_status_id": "AUTO_EXISTING",
-    "automation_entry_id": "AUTO_MANUAL",
-    "automation_command": null,
+    "automation_entry_id": "AUTO_S04_BFF",
+    "automation_command": "cd server && npm run test:stations -- s04-bff",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S04",
@@ -2782,7 +2773,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s04-pipeline/tests/suites/bff-pipeline.suite.ts",
     "tags": [
       "B4",
       "TS-02-BND"
@@ -2827,8 +2818,8 @@
     ],
     "prd_goal_ids": [],
     "automation_status_id": "AUTO_EXISTING",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_entry_id": "AUTO_S05",
+    "automation_command": "cd server && npm run test:stations -- s04-outbox",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S05",
@@ -2844,7 +2835,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": "validateCoachOutbox",
+    "code_reference": "server/src/stations/s04-pipeline/tests/suites/outbox-contract.suite.ts",
     "tags": [
       "B5"
     ],
@@ -3148,8 +3139,8 @@
     ],
     "prd_goal_ids": [],
     "automation_status_id": "AUTO_EXISTING",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_entry_id": "AUTO_S06",
+    "automation_command": "cd server && npm run test:stations -- s06",
     "config_env": "turn_journeys",
     "config_env_id": null,
     "station_id": "S06",
@@ -3165,7 +3156,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s06-stream/tests/turn-journey.test.ts",
     "tags": [
       "B6"
     ],
@@ -3263,9 +3254,8 @@
       "local 全栈或 AgentRun 环境可用"
     ],
     "test_steps": [
-      "POST submit 合法 body + client_turn_id",
-      "GET stream 订阅 SSE 直至 done",
-      "断言：stream_events + result_json"
+      "GET /turns/:id?after_seq=N",
+      "断言：stream_events + completed result_json"
     ],
     "assertion_points": [
       "stream_events + result_json"
@@ -3278,9 +3268,9 @@
       "ARCH_B6"
     ],
     "prd_goal_ids": [],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S06",
+    "automation_command": "cd server && npm run test:stations -- turns-poll",
     "config_env": "COACH_TURN_STREAM_POLL_MS",
     "config_env_id": null,
     "station_id": "S06",
@@ -3296,7 +3286,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s03-queue/tests/turns-router-poll.test.ts",
     "tags": [
       "B6"
     ],
@@ -3391,9 +3381,8 @@
       "local 全栈或 AgentRun 环境可用"
     ],
     "test_steps": [
-      "POST submit 合法 body + client_turn_id",
-      "GET stream 订阅 SSE 直至 done",
-      "断言：stream max wait 断流"
+      "processing turn 超 streamMaxWaitMs",
+      "断言：SSE error Turn stream timeout"
     ],
     "assertion_points": [
       "stream max wait 断流"
@@ -3408,9 +3397,9 @@
       "ARCH_B6"
     ],
     "prd_goal_ids": [],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S06",
+    "automation_command": "cd server && npm run test:stations -- sse-timeout",
     "config_env": "TURN_STREAM_MAX_WAIT_MS",
     "config_env_id": "TURN_STREAM_MAX_WAIT_MS",
     "station_id": "S06",
@@ -3426,7 +3415,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s06-stream/tests/turn-stream-timeout.test.ts",
     "tags": [
       "B6"
     ],
@@ -10142,9 +10131,8 @@
       "对应端身份 JWT 有效"
     ],
     "test_steps": [
-      "准备场景：同 client_turn_id 重复",
-      "执行对应自动化或人工步骤",
-      "观测：缓存结果，不重复聊天记录"
+      "同 client_turn_id 重复 submit",
+      "断言：缓存 replay / 429 去重"
     ],
     "assertion_points": [
       "缓存结果，不重复聊天记录"
@@ -10155,9 +10143,9 @@
     "arch_ref_id": null,
     "arch_ref_ids": [],
     "prd_goal_ids": [],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S03",
+    "automation_command": "cd server && npm run test:stations -- turn-idempotency-poll",
     "config_env": null,
     "config_env_id": null,
     "station_id": "NONE",
@@ -10175,7 +10163,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s03-queue/tests/turn-idempotency-poll.test.ts, server/src/stations/s04-pipeline/tests/portal-turn-pipeline-replay.test.ts, server/src/stations/s02-gate/tests/turn-submit-guard.test.ts",
     "tags": [
       "C2",
       "TS-03-REP"
@@ -10205,9 +10193,8 @@
       "对应端身份 JWT 有效"
     ],
     "test_steps": [
-      "准备场景：AI 不可用/额度不足",
-      "执行对应自动化或人工步骤",
-      "观测：明确提示"
+      "429 / API key 无效 / 无 outbox",
+      "断言：降级文案"
     ],
     "assertion_points": [
       "明确提示"
@@ -10218,9 +10205,9 @@
     "arch_ref_id": null,
     "arch_ref_ids": [],
     "prd_goal_ids": [],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S05",
+    "automation_command": "cd server && npm run test:stations -- coach-fallback",
     "config_env": null,
     "config_env_id": null,
     "station_id": "NONE",
@@ -10238,7 +10225,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s05-pi/tests/coach-turn-fallback.test.ts",
     "tags": [
       "C2",
       "TS-03-REP"
@@ -13121,9 +13108,8 @@
       "local 全栈或 AgentRun 环境可用"
     ],
     "test_steps": [
-      "准备场景：pending turn",
-      "执行对应自动化或人工步骤",
-      "观测：cancelled"
+      "cancel pending turn",
+      "断言：cancelled"
     ],
     "assertion_points": [
       "cancelled"
@@ -13136,9 +13122,9 @@
       "ARCH_B2"
     ],
     "prd_goal_ids": [],
-    "automation_status_id": "AUTO_PARTIAL",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S02",
+    "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S02",
@@ -13156,7 +13142,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s02-gate/tests/turn-submit-guard.test.ts",
     "tags": [
       "D1",
       "TS-01-DET"
@@ -13251,9 +13237,8 @@
       "local 全栈或 AgentRun 环境可用"
     ],
     "test_steps": [
-      "准备场景：轮询兜底",
-      "执行对应自动化或人工步骤",
-      "观测：status + stream_events"
+      "GET /turns/:id 轮询",
+      "断言：stream_events + result_json"
     ],
     "assertion_points": [
       "status + stream_events"
@@ -13266,9 +13251,9 @@
       "ARCH_B2"
     ],
     "prd_goal_ids": [],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S06",
+    "automation_command": "cd server && npm run test:stations -- turns-poll",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S02",
@@ -13286,7 +13271,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s03-queue/tests/turns-router-poll.test.ts",
     "tags": [
       "D1",
       "TS-01-DET"
@@ -13382,9 +13367,8 @@
       "会员已有 active 训练计划（如适用）"
     ],
     "test_steps": [
-      "准备场景：会员/店长 session",
-      "执行对应自动化或人工步骤",
-      "观测：upsert FK"
+      "运行 portal-chat-session",
+      "断言：member/manager session upsert"
     ],
     "assertion_points": [
       "upsert FK"
@@ -13399,9 +13383,9 @@
     "prd_goal_ids": [
       "G03"
     ],
-    "automation_status_id": "AUTO_PARTIAL",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S03",
+    "automation_command": "cd server && npm run test:stations -- portal-chat-session",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S02",
@@ -13419,7 +13403,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s03-queue/tests/portal-chat-session.test.ts",
     "tags": [
       "D1",
       "TS-01-DET"
@@ -13710,9 +13694,8 @@
       "Internal API Key 正确；session 归属校验通过"
     ],
     "test_steps": [
-      "构造异常/边界请求体",
-      "POST submit",
-      "断言 HTTP 与 body：—"
+      "缺 message 空串",
+      "断言：400"
     ],
     "assertion_points": [
       "—"
@@ -13726,8 +13709,8 @@
     ],
     "prd_goal_ids": [],
     "automation_status_id": "AUTO_EXISTING",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_entry_id": "AUTO_S02",
+    "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S02",
@@ -13745,7 +13728,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s02-gate/tests/turn-submit-guard.test.ts",
     "tags": [
       "D2",
       "TS-01-DET"
@@ -13775,9 +13758,8 @@
       "Internal API Key 正确；session 归属校验通过"
     ],
     "test_steps": [
-      "构造异常/边界请求体",
-      "POST submit",
-      "断言 HTTP 与 body：retry_after_sec"
+      "在途第二条 submit",
+      "断言：429"
     ],
     "assertion_points": [
       "retry_after_sec"
@@ -13791,8 +13773,8 @@
     ],
     "prd_goal_ids": [],
     "automation_status_id": "AUTO_EXISTING",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_entry_id": "AUTO_S02",
+    "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S02",
@@ -13810,7 +13792,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s02-gate/tests/turn-submit-guard.test.ts",
     "tags": [
       "D2",
       "TS-02-BND"
@@ -13970,9 +13952,8 @@
       "Internal API Key 正确；session 归属校验通过"
     ],
     "test_steps": [
-      "构造异常/边界请求体",
-      "POST submit",
-      "断言 HTTP 与 body：—"
+      "非 session 所属 coach submit",
+      "断言：403"
     ],
     "assertion_points": [
       "—"
@@ -13986,8 +13967,8 @@
     ],
     "prd_goal_ids": [],
     "automation_status_id": "AUTO_EXISTING",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_entry_id": "AUTO_S02",
+    "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S02",
@@ -14005,7 +13986,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s02-gate/tests/turn-submit-guard.test.ts",
     "tags": [
       "D2",
       "TS-01-DET"
@@ -14479,9 +14460,8 @@
       "local 全栈或 AgentRun 环境可用"
     ],
     "test_steps": [
-      "准备场景：新入队 true / 幂等 false",
-      "执行对应自动化或人工步骤",
-      "观测："
+      "相同 client_turn_id 二次入队",
+      "断言：created=false 同 turn_id"
     ],
     "assertion_points": [
       ""
@@ -14494,9 +14474,9 @@
     "prd_goal_ids": [
       "G07"
     ],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S03",
+    "automation_command": "cd server && npm run test:stations -- s03",
     "config_env": null,
     "config_env_id": null,
     "station_id": "NONE",
@@ -14514,7 +14494,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s03-queue/tests/turn-job-store.test.ts",
     "tags": [
       "D4",
       "TS-01-DET"
@@ -14675,9 +14655,8 @@
       "local 全栈或 AgentRun 环境可用"
     ],
     "test_steps": [
-      "准备场景：delta",
-      "执行对应自动化或人工步骤",
-      "观测：delta"
+      "thinking 节流 append",
+      "断言：delta 合并与 done 帧"
     ],
     "assertion_points": [
       "delta"
@@ -14692,9 +14671,9 @@
     "prd_goal_ids": [
       "G07"
     ],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S04_BFF",
+    "automation_command": "cd server && npm run test:stations -- turn-job-stream",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S06",
@@ -14712,7 +14691,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s04-pipeline/tests/turn-job-stream.test.ts",
     "tags": [
       "D5",
       "TS-05-CHAIN"
@@ -20540,9 +20519,8 @@
       "local 全栈或 AgentRun 环境可用"
     ],
     "test_steps": [
-      "准备场景：表单可填可提交",
-      "执行对应自动化或人工步骤",
-      "观测：提交后进 pipeline"
+      "normalizeRequireFormData plan_form",
+      "断言：模板字段规范化"
     ],
     "assertion_points": [
       "提交后进 pipeline"
@@ -20555,9 +20533,9 @@
     "prd_goal_ids": [
       "G07"
     ],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S04_BFF",
+    "automation_command": "cd server && npm run test:stations -- form-gates",
     "config_env": null,
     "config_env_id": null,
     "station_id": "NONE",
@@ -20575,7 +20553,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s04-pipeline/tests/form-gates-normalize.test.ts",
     "tags": [
       "G5",
       "TS-05-CHAIN"
@@ -20605,9 +20583,8 @@
       "local 全栈或 AgentRun 环境可用"
     ],
     "test_steps": [
-      "准备场景：课时前置表单",
-      "执行对应自动化或人工步骤",
-      "观测：同左"
+      "require_form 课时前置",
+      "断言：pickSummaryBody / form gate"
     ],
     "assertion_points": [
       "同左"
@@ -20620,9 +20597,9 @@
     "prd_goal_ids": [
       "G07"
     ],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S04_BFF",
+    "automation_command": "cd server && npm run test:stations -- form-gates",
     "config_env": null,
     "config_env_id": null,
     "station_id": "NONE",
@@ -20640,7 +20617,7 @@
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s04-pipeline/tests/form-gates-normalize.test.ts",
     "tags": [
       "G5",
       "TS-05-CHAIN"
@@ -23062,9 +23039,8 @@
       "OTEL/SLS 或 debug_log 可访问"
     ],
     "test_steps": [
-      "完成一条 async turn",
-      "查询 ai_interaction_logs / turn_jobs / chat_messages",
-      "断言字段存在：幂等命中"
+      "幂等 client_turn_id 命中缓存",
+      "断言：poll 返回已有 response"
     ],
     "assertion_points": [
       "client_turn_id 重放"
@@ -23079,9 +23055,9 @@
     "prd_goal_ids": [
       "G10"
     ],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S03",
+    "automation_command": "cd server && npm run test:stations -- turn-idempotency-poll",
     "config_env": null,
     "config_env_id": null,
     "station_id": "NONE",
@@ -23099,7 +23075,7 @@
     "is_observability_audit": true,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s03-queue/tests/turn-idempotency-poll.test.ts, server/src/stations/s03-queue/tests/turn-job-store.test.ts",
     "tags": [
       "H2",
       "TS-08-OBS",

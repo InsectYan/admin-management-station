@@ -107,12 +107,26 @@ class ConfigTemplateService extends require('egg').Service {
       this.ctx.logger.warn('[configTemplate] 模板表 %s 不存在，返回默认配置', table);
     }
     const defaultConfig = this._defaultConfigFromItem(item, templateCode);
+    let configJson = row?.config_json || defaultConfig.config_json;
+    const schemeId = meta?.scheme_id || item.scheme_primary_id;
+    if (schemeId) {
+      const runCfg = await this.ctx.service.fitnessExecution.getRunConfig(itemId, schemeId);
+      if (runCfg) {
+        const rc = runCfg.toJSON ? runCfg.toJSON() : runCfg;
+        configJson = {
+          ...configJson,
+          use_api_template: rc.use_api_template ?? configJson.use_api_template,
+          api_template_id: rc.api_template_id ?? configJson.api_template_id,
+          inject_bindings: rc.inject_bindings || configJson.inject_bindings || {},
+        };
+      }
+    }
     return {
       item_id: itemId,
       item,
       template_code: templateCode,
       template: meta,
-      config_json: row?.config_json || defaultConfig.config_json,
+      config_json: configJson,
       threshold_json: row?.threshold_json || defaultConfig.threshold_json,
       sample_set_id: row?.sample_set_id ?? defaultConfig.sample_set_id,
       config_source: row?.config_source || 'manual',
@@ -220,6 +234,9 @@ class ConfigTemplateService extends require('egg').Service {
       threshold_json: thresholdJson,
       sample_set_id: sampleSetId,
       env_id: body.env_id,
+      api_template_id: configJson.api_template_id ?? null,
+      use_api_template: Boolean(configJson.use_api_template),
+      inject_bindings: configJson.inject_bindings || {},
     });
 
     if (templateCode === 'TPL-DET') {

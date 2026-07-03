@@ -1,6 +1,6 @@
 # testgen-sub 文档索引
 
-> 更新：2026-07-02  
+> 更新：2026-07-03  
 > 所有设计、架构、待办文档统一在本目录维护。
 
 ---
@@ -20,7 +20,7 @@
 |------|------|----------|
 | [设计-配置模板与52大类.md](./设计-配置模板与52大类.md) | 10 套 TS 配置模板、52 大类映射、ConfigPanel 体系 | `CONFIG_PAGE_DESIGN.md` |
 | [设计-Agent协作与Skill嵌入.md](./设计-Agent协作与Skill嵌入.md) | Agent 全景、Skill 清单、引擎 hook、实施顺序 | `FITNESS_AGENT_DIRECTION.md` |
-| [设计-Agent联调配置.md](./设计-Agent联调配置.md) | 端口、环境变量、双向 API、部署验证 | `AGENT_LINKAGE.md` |
+| [设计-Agent联调配置.md](./设计-Agent联调配置.md) | 端口、环境变量、双向 API、验证脚本、缺口清单 | `AGENT_LINKAGE.md` |
 
 **外部设计（agent 仓）**
 

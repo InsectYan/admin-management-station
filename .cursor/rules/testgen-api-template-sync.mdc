@@ -1,0 +1,33 @@
+---
+description: 接口模板、样本集类型与 ft_run_config 注入字段同步规范
+globs: "{**/ft_api_template*,**/apiTemplate*,**/apiTemplateRender*,**/021_api_template*,**/ApiTemplate*,**/ApiInject*,**/ConfigDetPanel*,**/FitnessSamplesPage*,**/ft_run_config*,**/ft_sample_set*}"
+alwaysApply: false
+---
+
+# 接口模板与样本集同步
+
+## 变更须同步
+
+1. **DDL**：`database/migrations/021_api_template_and_sample_types.sql` + `database/tables/ft_api_template/init.sql`
+2. **Model**：`ft_api_template.js`、`ft_sample_set.js`（set_type）、`ft_run_config.js`（inject 列）
+3. **后端**：`apiTemplate` service/controller、`apiTemplateRender.js`、`ts01DetEngine.js`、`configTemplate.saveItemConfig` → `saveRunConfig`
+4. **前端**：`/config/api-templates`、`ConfigDetPanel`、`FitnessSamplesPage` Tab、`fitnessService` API
+5. **文档**：`docs/设计-接口模板与样本集.md`
+
+## inject_bindings 约定
+
+```json
+{
+  "message": { "mode": "sample_set", "sample_set_id": 1, "field_key": "text" },
+  "coach_id": { "mode": "manual", "value": "1" }
+}
+```
+
+- `mode=sample_set` 且样本集有多条 → **多次执行**（expandApiTemplateRuns）
+- 文本样本 `input_data`: `{ "text": "..." }` 或 `{ "<field_key>": "..." }`
+- 注入样本 `input_data`: `{ "message": "...", "coach_id": 1 }`
+
+## 禁止
+
+- init.sql / seed INSERT 字符串内出现未转义 `;`
+- 删除 `ft_api_template` 行时用 `is_active=false`，勿硬删被引用的模板

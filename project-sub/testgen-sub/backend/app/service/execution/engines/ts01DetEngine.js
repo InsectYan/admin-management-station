@@ -2,6 +2,7 @@
 
 const BaseTsEngine = require('./baseTsEngine');
 const { resolveHttpBody, methodNeedsBody } = require('../../../lib/httpRequestBody');
+const { expandApiTemplateRuns } = require('../../../lib/apiTemplateRender');
 const { runCli } = require('../runners/cliRunner');
 const { runHttp } = require('../runners/httpRunner');
 
@@ -12,8 +13,8 @@ class Ts01DetEngine extends BaseTsEngine {
 
   /** @param {import('../runOrchestrator').ExecutionContext} ctx */
   async execute(ctx) {
-    const { item, env, run } = ctx;
-    const configJson = ctx.runConfig?.config_json || {};
+    const { item, env, run, runConfig, ctx: eggCtx } = ctx;
+    const configJson = runConfig?.config_json || {};
 
     if (item.automation_command) {
       const cliResult = await runCli(ctx.ctx, {
@@ -35,6 +36,16 @@ class Ts01DetEngine extends BaseTsEngine {
         sub_verdict: cliResult.exitCode === 0 ? 'pass' : 'fail',
         artifacts: { cli: cliResult, output_tail: outputTail },
       }];
+    }
+
+    const useApiTemplate = runConfig?.use_api_template || configJson.use_api_template;
+    const apiTemplateId = runConfig?.api_template_id || configJson.api_template_id;
+    if (useApiTemplate && apiTemplateId && env?.bff_coach_url) {
+      return this._executeApiTemplate(ctx, {
+        apiTemplateId,
+        bindings: runConfig?.inject_bindings || configJson.inject_bindings || {},
+        configJson,
+      });
     }
 
     if (item.endpoint_path && env?.bff_coach_url) {
@@ -77,6 +88,78 @@ class Ts01DetEngine extends BaseTsEngine {
     err.status = 400;
     err.code = 'RUNNER_NOT_AVAILABLE';
     throw err;
+  }
+
+  /** @param {import('../runOrchestrator').ExecutionContext} ctx */
+  async _executeApiTemplate(ctx, { apiTemplateId, bindings, configJson }) {
+    const { item, env, run, ctx: eggCtx } = ctx;
+    const template = await eggCtx.model.FtApiTemplate.findByPk(apiTemplateId);
+    if (!template || !template.is_active) {
+      const err = new Error(`接口模板 #${apiTemplateId} 不存在或已停用`);
+      err.status = 400;
+      err.code = 'API_TEMPLATE_NOT_FOUND';
+      throw err;
+    }
+
+    let sampleRows = [];
+    const sampleSetId = Object.values(bindings || {}).find(b => b?.mode === 'sample_set')?.sample_set_id;
+    if (sampleSetId) {
+      const items = await eggCtx.model.FtSampleItem.findAll({
+        where: { sample_set_id: sampleSetId },
+        order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
+      });
+      sampleRows = items.map(r => r.toJSON());
+      if (!sampleRows.length) {
+        const err = new Error('注入样本集为空，请添加至少一条样本');
+        err.status = 400;
+        err.code = 'SAMPLE_SET_EMPTY';
+        throw err;
+      }
+    }
+
+    const tplJson = template.toJSON();
+    const requests = expandApiTemplateRuns(tplJson, bindings, sampleRows);
+    const expectStatus = configJson.http_status_expected ?? item.http_status_expected ?? 200;
+    const results = [];
+
+    for (let i = 0; i < requests.length; i += 1) {
+      const req = requests[i];
+      const headers = {
+        'X-Test-Run-Id': String(run.id),
+        'X-Test-Item-Id': item.item_id,
+        ...(configJson.headers || {}),
+        ...(req.headers || {}),
+      };
+      const body = methodNeedsBody(req.method) ? req.body : undefined;
+      const httpResult = await runHttp(eggCtx, {
+        baseUrl: env.bff_coach_url,
+        path: req.path,
+        method: req.method,
+        headers,
+        body,
+      });
+
+      const assertions = configJson.assertions || [];
+      if (!assertions.length) {
+        assertions.push({ type: 'status', expect: expectStatus });
+      }
+      const { passed, details } = await eggCtx.service.executionEngine.runAssertions(assertions, {
+        statusCode: httpResult.statusCode,
+        body: httpResult.body,
+        responseTimeMs: httpResult.responseTimeMs,
+      });
+
+      results.push({
+        sub_index: i,
+        input_summary: `${httpResult.method} ${httpResult.url}`,
+        output_summary: `HTTP ${httpResult.statusCode} (${httpResult.responseTimeMs}ms)`,
+        assertion_detail: details,
+        sub_verdict: passed ? 'pass' : 'fail',
+        artifacts: { http: httpResult, api_template_id: apiTemplateId, inject_index: i },
+      });
+    }
+
+    return results;
   }
 }
 

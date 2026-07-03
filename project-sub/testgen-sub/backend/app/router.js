@@ -52,6 +52,14 @@ module.exports = app => {
   router.patch('/api/internal/fitness/items/:itemId', controller.internalFitness.patchItem);
   router.post('/api/internal/fitness/run/:itemId/dry-run', controller.internalFitness.dryRunLaunch);
 
+  // 接口请求模板（配置管理）
+  router.get('/api/fitness/api-templates', controller.apiTemplate.index);
+  router.post('/api/fitness/api-templates', controller.apiTemplate.create);
+  router.get('/api/fitness/api-templates/:id', controller.apiTemplate.show);
+  router.put('/api/fitness/api-templates/:id', controller.apiTemplate.update);
+  router.delete('/api/fitness/api-templates/:id', controller.apiTemplate.destroy);
+  router.get('/api/fitness/api-templates/:id/linked-items', controller.apiTemplate.linkedItems);
+
   router.get('/api/env-configs', controller.envConfig.index);
   router.post('/api/env-configs', controller.envConfig.create);
   router.get('/api/env-configs/:id', controller.envConfig.show);

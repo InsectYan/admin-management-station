@@ -1,0 +1,56 @@
+---
+description: fitness-agent 单测落地后同步 test_item_detail 自动化字段（data.json + init.sql + DB）
+globs: "{**/fitness-agent/**/*.{test,unit}.{ts,tsx},**/test-project/fitness-agent/**,**/database/tables/test_item_detail/**}"
+alwaysApply: false
+---
+
+# fitness-agent · 测试自动化状态同步
+
+在 fitness-agent **新增或修改站级/平台单测**时，须同步 testgen-sub 主表 `test_item_detail`，避免 UI「已有自动化」与 `data.json` 漂移。
+
+## 真源与注入机制
+
+| 文件 | 角色 |
+|------|------|
+| `test-project/fitness-agent/scripts/sync-automation-status.mjs` | **PATCH 映射**（item_id → 自动化字段） |
+| `database/tables/test_item_detail/data.json` | 平台展示 / enrich 真源 |
+| `database/tables/test_item_detail/init.sql` | **db:seed 实际读取**（有 INSERT 时不用 data.json） |
+
+`db-cli.js` 的 `seedTable`：存在 `init.sql` INSERT 时只执行 init.sql，且 `ON CONFLICT DO NOTHING` **不会更新已有行**。  
+因此改自动化状态须 **同时改 data.json + init.sql**，并对已有库执行 **`db:reset test_item_detail`**（不是仅 `db:seed`）。
+
+## 开发检查清单（每次补单测后立即执行）
+
+- [ ] 在 `sync-automation-status.mjs` 的 `PATCH` 追加或更新条目（至少含 `automation_status_id`、`automation_entry_id`、`automation_command`、`code_reference`）
+- [ ] 同步更新 [站级测试清单.md](../project-sub/testgen-sub/test-project/fitness-agent/站级测试清单.md) / [单测缺口梳理.md](../project-sub/testgen-sub/test-project/fitness-agent/单测缺口梳理.md) / [测试成熟度评分.md](../project-sub/testgen-sub/test-project/fitness-agent/测试成熟度评分.md)（如有覆盖变化）
+- [ ] 运行同步脚本（写回 JSON + init.sql）：
+  ```bash
+  cd project-sub/testgen-sub
+  node test-project/fitness-agent/scripts/sync-automation-status.mjs
+  ```
+- [ ] 脚本输出 `AUTO_EXISTING: data.json=N, init.sql=N` 须一致；不一致则补 PATCH 或排查 init.sql 漂移
+- [ ] 注入 Postgres（需 `ams-testgen local` 或 infra 在跑）：
+  ```bash
+  cd deploy && ams-testgen db:reset test_item_detail
+  ```
+- [ ] 可选验证：`SELECT automation_status_id, COUNT(*) FROM test_item_detail WHERE is_active GROUP BY 1`
+
+## PATCH 字段规范
+
+```javascript
+"ITEM-ID": {
+  automation_status_id: "AUTO_EXISTING",   // 站级可跑才标 EXISTING
+  automation_entry_id: "AUTO_S02",         // 见 automation_entry_enum
+  automation_command: "cd server && npm run test:stations -- <filter>",
+  code_reference: "server/src/.../xxx.test.ts",
+}
+```
+
+- 命令前缀统一 `cd server &&`，filter 与 `fitness-agent/server/scripts/run-station-tests.mjs` 一致
+- `code_reference` 内 **不要用分号**（init.sql 按 `;` 切分 INSERT）；多文件用逗号分隔
+- 无对应 `item_id` 的新测例：先在清单中登记 item_id，再写 PATCH
+
+## 相关文档
+
+- [数据库自动化同步.md](../project-sub/testgen-sub/test-project/fitness-agent/数据库自动化同步.md)
+- [subapp-development.mdc](./subapp-development.mdc) · DB 联动总则

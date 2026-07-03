@@ -32,7 +32,8 @@ export const navMenus = [
     title: '配置管理',
     icon: 'Setting',
     children: [
-      { path: '/config/templates', title: '模板管理', activePrefix: '/config' },
+      { path: '/config/templates', title: '模板管理', activePrefix: '/config/templates' },
+      { path: '/config/api-templates', title: '接口模板', activePrefix: '/config/api-templates' },
       { path: '/fitness/settings/enums', title: '枚举配置', activePrefix: '/fitness/settings' },
     ],
   },

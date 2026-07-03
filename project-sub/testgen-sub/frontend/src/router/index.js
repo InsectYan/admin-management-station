@@ -97,6 +97,18 @@ export function createAppRouter(basename) {
             component: () => import('../views/config/TemplateManagePage.vue'),
             meta: { title: '模板管理', group: 'config' },
           },
+          {
+            path: 'config/api-templates',
+            name: 'config-api-templates',
+            component: () => import('../views/config/ApiTemplateListPage.vue'),
+            meta: { title: '接口模板', group: 'config' },
+          },
+          {
+            path: 'config/api-templates/:id',
+            name: 'config-api-template-detail',
+            component: () => import('../views/config/ApiTemplateDetailPage.vue'),
+            meta: { title: '接口模板详情', group: 'config', hideInNav: true },
+          },
 
           // ── 通用执行监控（旧链路，保留兼容） ──
           {

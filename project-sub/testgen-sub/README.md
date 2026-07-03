@@ -24,6 +24,8 @@ docker exec ams-testgen-postgres psql -U admin -d testgen_db -f - < ../database/
 
 或在容器内执行：`ALTER TABLE generation_jobs ADD COLUMN IF NOT EXISTS agent_context JSONB DEFAULT '{}';`
 
+页面配置docker环境域名：host.docker.internal
+
 ## 架构
 
 - **frontend/** — Vue 3 + Element Plus + AntV（测试范围 / 进度 / 用例管理）
@@ -42,6 +44,7 @@ Agent 能力由 `agent-management-sub/plugins/testgen-skill` 提供，不在本�
 | [agent-skill-development.mdc](../../.cursor/rules/agent-skill-development.mdc) | **新 Skill 默认落点 agent-management-sub** |
 | [subapp-onboarding.mdc](../../.cursor/rules/subapp-onboarding.mdc) | Qiankun 接入 |
 | [database-schema-sync.mdc](../../.cursor/rules/database-schema-sync.mdc) | 启动 Schema 同步 |
+| [fitness-agent-test-automation-sync.mdc](../../.cursor/rules/fitness-agent-test-automation-sync.mdc) | **fitness-agent 单测 → test_item_detail 自动化同步** |
 
 ### 变更须登记的文件
 
@@ -50,7 +53,7 @@ Agent 能力由 `agent-management-sub/plugins/testgen-skill` 提供，不在本�
 | **文档索引** | [docs/README.md](./docs/README.md) |
 | 待办 / 功能节点 | [docs/待办-开发节点追踪.md](./docs/待办-开发节点追踪.md) |
 | Agent 任务 | [docs/待办-Agent开发任务清单.md](./docs/待办-Agent开发任务清单.md) |
-| Agent 联调 | [docs/设计-Agent联调配置.md](./docs/设计-Agent联调配置.md) |
+| Agent 联调 | [设计-Agent联调配置.md](./docs/设计-Agent联调配置.md)（含 `smoke:agent-linkage`） |
 | 表结构说明 | [database/tables/\<表名\>/表说明.md](./database/tables/) |
 
 改表、新 Skill、新 API/页面时须在上述文件中标识（格式见 `subapp-development.mdc` §1）。
@@ -77,6 +80,10 @@ ams-testgen db:seed test_item_detail   # 仅注入指定表
 ams-testgen db:sync            # 仅 DDL，不注入数据
 ams-testgen db:reset           # 清空全库 → 重建 Schema → 全量注入
 ams-testgen db:reset test_item_detail  # 删表重建 + 仅注入指定表
+# 以下是每次更新数测试用例状态后，以此处理
+cd project-sub/testgen-sub
+node test-project/fitness-agent/scripts/sync-automation-status.mjs
+cd deploy && ams-testgen db:reset test_item_detail
 ```
 
 **改表时须同步**：`init.sql` / `migrations/` / Model / `database/tables/` seed / `deploy/scripts/run.mjs` 表顺序，保证 `db:seed` 与 `db:reset` 行为一致（见 `subapp-development.mdc` §2）。

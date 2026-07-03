@@ -30,7 +30,15 @@ ams-testgen help
 
 ## Agent 联调
 
-BFF 通过 `agentProxy` 调用 Agent 平台 Skill，配置项见 `backend/config/config.default.js` → `agentPlatform`。本地开发需先启动 `agent-management-sub` 或配置 mock baseUrl。
+BFF 通过 `agentProxy` 调用 Agent 平台 Skill（配置见 `backend/config/config.default.js` → `agentPlatform`）。
+
+| 步骤 | 命令 |
+|------|------|
+| 完整说明 | [../docs/设计-Agent联调配置.md](../docs/设计-Agent联调配置.md) |
+| 在线探活 | `cd ../backend && npm run smoke:agent-linkage`（需 BFF + Agent 已启动） |
+| 离线规则 | `cd ../backend && npm run smoke:e6` |
+
+本地开发须先启动 Agent 平台（`PORT=4001`）并配置 `TESTGEN_BFF_URL` / Token，见联调文档 §4～§5。
 
 ## 接入主应用
 

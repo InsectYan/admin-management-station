@@ -10,6 +10,8 @@
     "dev": "egg-bin dev",
     "start": "egg-scripts start --daemon --title=testgen-sub-backend",
     "stop": "egg-scripts stop --title=testgen-sub-backend",
+    "smoke:e6": "node scripts/e6-smoke.js",
+    "smoke:agent-linkage": "node scripts/agent-linkage-smoke.js",
     "db:init": "node scripts/init-db.js",
     "db:sync": "node scripts/sync-schema.js",
     "db:seed": "node scripts/seed-data.js",

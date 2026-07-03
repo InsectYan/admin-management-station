@@ -392,3 +392,33 @@ export async function generateItemTemplateConfig(itemId, payload = {}) {
   );
   return data.data;
 }
+
+export async function fetchApiTemplates(params) {
+  const { data } = await api.get('/fitness/api-templates', { params });
+  return data.data;
+}
+
+export async function fetchApiTemplate(id) {
+  const { data } = await api.get(`/fitness/api-templates/${id}`);
+  return data.data;
+}
+
+export async function createApiTemplate(payload) {
+  const { data } = await api.post('/fitness/api-templates', payload);
+  return data.data;
+}
+
+export async function updateApiTemplate(id, payload) {
+  const { data } = await api.put(`/fitness/api-templates/${id}`, payload);
+  return data.data;
+}
+
+export async function deleteApiTemplate(id) {
+  const { data } = await api.delete(`/fitness/api-templates/${id}`);
+  return data.data;
+}
+
+export async function fetchApiTemplateLinkedItems(id) {
+  const { data } = await api.get(`/fitness/api-templates/${id}/linked-items`);
+  return data.data;
+}
