@@ -89,6 +89,12 @@ export function createAppRouter(basename) {
             component: () => import('../views/GenerationProgressPage.vue'),
             meta: { title: '生成进度', group: 'testgen', hideInNav: true },
           },
+          {
+            path: 'testgen/generation-queue',
+            name: 'generation-queue',
+            component: () => import('../views/GenerationQueueListPage.vue'),
+            meta: { title: '生成任务列表', group: 'testgen' },
+          },
 
           // ── 配置管理 ──
           {

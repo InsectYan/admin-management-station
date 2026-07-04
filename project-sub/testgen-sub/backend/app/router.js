@@ -38,12 +38,18 @@ module.exports = app => {
 
   router.get('/api/modules', controller.module.index);
 
+  router.get('/api/generation-queue', controller.generationQueue.index);
+  router.post('/api/generation-queue/:jobId/pause', controller.generationQueue.pause);
+  router.post('/api/generation-queue/:jobId/resume', controller.generationQueue.resume);
+  router.post('/api/generation-queue/:jobId/cancel', controller.generationQueue.cancel);
+
   router.post('/api/generation-jobs', controller.generationJob.create);
   router.post('/api/generation-jobs/estimate', controller.generationJob.estimate);
   router.get('/api/generation-tasks', controller.generationTask.index);
   router.post('/api/generation-tasks/sync', controller.generationTask.sync);
   router.get('/api/generation-jobs/:id', controller.generationJob.show);
   router.post('/api/generation-jobs/:id/cancel', controller.generationJob.cancel);
+  router.post('/api/generation-jobs/:id/pause', controller.generationJob.pause);
   router.post('/api/generation-jobs/:id/retry', controller.generationJob.retry);
   router.post('/api/generation-jobs/:id/import-samples', controller.generationJob.importSamples);
   router.get('/api/generation-jobs/:id/generated-items', controller.generationJob.testCases);

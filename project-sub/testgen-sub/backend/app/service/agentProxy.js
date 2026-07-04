@@ -4,14 +4,28 @@ const Service = require('egg').Service;
 const { extractAgentTools } = require('../lib/agentToolsExtract');
 
 class AgentProxyService extends Service {
+  /** urllib/egg-curl 未显式 timeout 时默认仅 5s；本地 Ollama 须传足够大的值 */
+  _localOllamaHttpTimeoutMs() {
+    const cfg = this._skillConfig();
+    const fromEnv = Number(process.env.AGENT_LOCAL_OLLAMA_TIMEOUT_MS || 0);
+    if (fromEnv > 0) return fromEnv;
+    return cfg.generateTimeoutMs || cfg.timeout || 900000;
+  }
+
   _skillConfig() {
     return this.config.agentPlatform || {};
+  }
+
+  /** 本地 Ollama 模型：BFF 侧不设 HTTP 超时，等待 Agent 自然结束或报错 */
+  _isLocalOllamaProfile(profileId) {
+    const id = String(profileId || 'ollama-qwen').trim().toLowerCase();
+    return !profileId || id.startsWith('ollama') || id === 'env-fallback';
   }
 
   /**
    * @param {string} invokePath
    * @param {object} payload
-   * @param {number} [timeoutMs]
+   * @param {number} [timeoutMs] 0 表示不设超时（本地 Ollama）
    */
   async invokeSkill(invokePath, payload, timeoutMs) {
     const { baseUrl, timeout } = this._skillConfig();
@@ -23,13 +37,18 @@ class AgentProxyService extends Service {
     };
     const started = Date.now();
 
-    const res = await this.ctx.curl(`${baseUrl}${path}`, {
+    const curlOpts = {
       method: 'POST',
       contentType: 'json',
       data,
       dataType: 'json',
-      timeout: timeoutMs || timeout || 120000,
-    });
+    };
+    const effectiveTimeout = timeoutMs === 0
+      ? this._localOllamaHttpTimeoutMs()
+      : (timeoutMs || timeout || 120000);
+    curlOpts.timeout = effectiveTimeout;
+
+    const res = await this.ctx.curl(`${baseUrl}${path}`, curlOpts);
 
     const skill = payload._skill || path.split('/').slice(-2, -1)[0] || 'unknown';
     const action = payload.action || 'invoke';
@@ -97,15 +116,27 @@ class AgentProxyService extends Service {
   }
 
   async invokeTestgen(payload, timeoutMs) {
-    const { invokePath, estimateTimeoutMs, timeout } = this._skillConfig();
-    const ms = timeoutMs ?? estimateTimeoutMs ?? timeout ?? 120000;
+    const { invokePath, estimateTimeoutMs, generateTimeoutMs, timeout } = this._skillConfig();
+    const isEstimate = payload?.action === 'estimate_case_count'
+      || payload?.trace?.action === 'estimate';
+    let ms = timeoutMs
+      ?? (isEstimate ? estimateTimeoutMs : generateTimeoutMs)
+      ?? timeout
+      ?? 120000;
+    if (this._isLocalOllamaProfile(payload?.llm_profile)) {
+      ms = 0;
+    }
     return this.invokeSkill(invokePath, { ...payload, _skill: 'testgen-skill' }, ms);
   }
 
-  async invokeFitnessJudge(payload) {
-    const { judgeInvokePath, judgeTimeoutMs } = this._skillConfig();
+  async invokeFitnessJudge(payload, timeoutMs) {
+    const { judgeInvokePath, judgeTimeoutMs, generateTimeoutMs, timeout } = this._skillConfig();
     const path = judgeInvokePath || '/api/skills/fitness-judge-skill/invoke';
-    return this.invokeSkill(path, { ...payload, _skill: 'fitness-judge-skill' }, judgeTimeoutMs);
+    let ms = timeoutMs ?? judgeTimeoutMs ?? generateTimeoutMs ?? timeout ?? 120000;
+    if (this._isLocalOllamaProfile(payload?.llm_profile)) {
+      ms = 0;
+    }
+    return this.invokeSkill(path, { ...payload, _skill: 'fitness-judge-skill' }, ms);
   }
 
   async invokeFitnessSample(payload) {

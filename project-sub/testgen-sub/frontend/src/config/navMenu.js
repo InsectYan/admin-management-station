@@ -19,6 +19,11 @@ export const navMenus = [
         activeAliases: [ '/scope', '/jobs' ],
       },
       {
+        path: '/testgen/generation-queue',
+        title: '生成任务列表',
+        activePrefix: '/testgen/generation-queue',
+      },
+      {
         path: '/testgen/items',
         title: '用例库',
         activePrefix: '/testgen/items',

@@ -12,6 +12,100 @@ function assertionEntries(detail) {
   return [];
 }
 
+function truncateExplainText(value, max = 2048) {
+  const s = typeof value === 'string' ? value : JSON.stringify(value ?? '');
+  return s.length > max ? `${s.slice(0, max)}…` : s;
+}
+
+/**
+ * 将 ft_run_result 转为 fitness-judge-skill explain 所需的 observation
+ * @param {object} row
+ * @param {object|null} item
+ */
+function buildExplainObservationFromResult(row, item) {
+  const detail = row.assertion_detail;
+  const isWrapped = detail && typeof detail === 'object' && !Array.isArray(detail);
+  const artifacts = isWrapped ? detail.artifacts : undefined;
+  const assertions = assertionEntries(detail);
+  const http = artifacts?.http;
+  const cli = artifacts?.cli;
+
+  let httpStatus = http?.statusCode ?? null;
+  if (httpStatus == null && cli?.exitCode != null) {
+    httpStatus = cli.exitCode === 0 ? 200 : 500;
+  }
+  if (httpStatus == null) {
+    for (const a of assertions) {
+      if (a.actual_status != null) httpStatus = a.actual_status;
+      else if (a.status_code != null) httpStatus = a.status_code;
+      else if (a.actual != null && typeof a.actual === 'number') httpStatus = a.actual;
+    }
+    const m = String(row.output_summary || '').match(/HTTP\s+(\d{3})/i);
+    if (httpStatus == null && m) httpStatus = Number(m[1]);
+  }
+
+  let responseExcerpt = '';
+  if (http?.body != null) {
+    responseExcerpt = truncateExplainText(http.body);
+  } else if (cli?.stderr) {
+    responseExcerpt = truncateExplainText(cli.stderr);
+  } else if (cli?.stdout || artifacts?.output_tail) {
+    responseExcerpt = truncateExplainText(cli?.stdout || artifacts.output_tail);
+  } else if (row.output_summary) {
+    responseExcerpt = truncateExplainText(row.output_summary);
+  }
+
+  const failedAssertions = assertions.filter(a =>
+    a.pass === false || a.ok === false || a.status === 'fail' || a.status === 'failed',
+  );
+  const assertionFailures = failedAssertions.length
+    ? failedAssertions.map(a =>
+      `${a.type || 'assert'}: ${a.message || a.detail || truncateExplainText(a, 160)}`,
+    ).join('; ')
+    : null;
+
+  return {
+    sub_run_index: row.sub_index,
+    sub_verdict: row.sub_verdict,
+    pass: row.sub_verdict === 'pass',
+    verdict: row.sub_verdict,
+    http_status: httpStatus,
+    input_summary: row.input_summary || '',
+    output_summary: row.output_summary || '',
+    response_excerpt: responseExcerpt,
+    expected_hint: item?.expected_observation || item?.expected_result || '',
+    journey_summary: artifacts?.journey || artifacts?.obs || null,
+    assertion_failures: assertionFailures,
+    error_message: cli?.stderr
+      ? truncateExplainText(String(cli.stderr).split('\n').find(l => /Error:|FAIL|ENOENT|MODULE_NOT_FOUND/i.test(l)) || cli.stderr, 500)
+      : (artifacts?.error || row.error_message || null),
+    cli_command: cli?.command || null,
+    cli_exit_code: cli?.exitCode ?? null,
+    cli_cwd: cli?.cwd || null,
+  };
+}
+
+function buildRunExplainContext(runData, item, runConfig, results) {
+  const passCount = results.filter(r => r.sub_verdict === 'pass').length;
+  const failCount = results.filter(r => r.sub_verdict === 'fail').length;
+  return {
+    status: runData.status,
+    verdict: runData.verdict,
+    scheme_id: runData.scheme_id,
+    validation_id: runData.validation_id,
+    item_id: runData.item_id,
+    item_name: item?.item_name || '',
+    detail_summary: item?.detail_summary || '',
+    expected_observation: item?.expected_observation || '',
+    pass_count: passCount,
+    fail_count: failCount,
+    total_count: results.length,
+    error_message: runData.error_message || null,
+    progress: runData.progress || {},
+    threshold_json: runConfig?.threshold_json || {},
+  };
+}
+
 function dbResultToSubResult(row) {
   const detail = row.assertion_detail;
   const isWrapped = detail && typeof detail === 'object' && !Array.isArray(detail);
@@ -287,30 +381,53 @@ class FitnessExecutionService extends require('egg').Service {
     return this.orchestrator().executeSchemeDebug(schemeId, body);
   }
 
-  async explainRun(runId) {
+  async explainRun(runId, options = {}) {
     const runData = await this.getRun(runId);
     if (!runData) return null;
 
+    const results = (runData.results || []).map(r => (r.toJSON ? r.toJSON() : r));
+    if (!results.length) {
+      const err = new Error('该运行无子项结果，无法解读');
+      err.status = 400;
+      err.code = 'NO_RUN_RESULTS';
+      throw err;
+    }
+
     const item = await this.orchestrator().loadItem(runData.item_id);
-    const observations = (runData.results || []).map(r => ({
-      sub_run_index: r.sub_index,
-      input_summary: r.input_summary,
-      output_summary: r.output_summary,
-      sub_verdict: r.sub_verdict,
-      assertion_detail: r.assertion_detail,
-    }));
+    const runConfig = await this.getRunConfig(runData.item_id, runData.scheme_id);
+    const runContext = buildRunExplainContext(runData, item, runConfig, results);
+
+    const failedRows = results.filter(r => r.sub_verdict === 'fail');
+    const focusFailed = options.focus !== 'all';
+    const sourceRows = focusFailed && failedRows.length ? failedRows : results;
+
+    const observations = sourceRows.map(r => buildExplainObservationFromResult(r, item));
 
     const agentRes = await this.ctx.service.agentProxy.invokeFitnessJudge({
       action: 'explain',
-      run_id: runId,
+      run_id: Number(runId),
       item_id: runData.item_id,
+      llm_profile: options.llm_profile,
+      focus: focusFailed && failedRows.length ? 'failed' : 'all',
       observations,
+      run_context: runContext,
       trace: { run_id: runId, item_id: runData.item_id },
     });
 
+    const markdown = agentRes.output?.markdown || agentRes.reply || '';
+    if (!markdown.trim()) {
+      const err = new Error('Agent 未返回解读内容，请确认 Agent 与 LLM 配置可用');
+      err.status = 502;
+      err.code = 'EXPLAIN_EMPTY';
+      throw err;
+    }
+
     return {
-      run_id: runId,
-      markdown: agentRes.output?.markdown || agentRes.reply || '',
+      run_id: Number(runId),
+      markdown,
+      focus: focusFailed && failedRows.length ? 'failed' : 'all',
+      observation_count: observations.length,
+      run_context: runContext,
       meta: agentRes.meta || {},
     };
   }

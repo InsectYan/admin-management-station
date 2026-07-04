@@ -16,21 +16,34 @@ export const useGenerationJobStore = defineStore('generationJob', {
     pollingTimer: null,
   }),
   getters: {
-    overallPercent: (s) => {
-      const fromProgress = s.progress?.overall_percent;
-      if (fromProgress != null && !Number.isNaN(Number(fromProgress))) {
-        return Math.round(Number(fromProgress));
-      }
-      const fromCtx = s.agentContext?.overall_percent;
+    totalConfigured: (s) => {
+      const schemes = s.agentContext?.scheme_targets || s.jobOptions?.scheme_targets || [];
+      const fromSchemes = schemes.reduce((sum, t) => sum + (Number(t.count) || 0), 0);
+      if (fromSchemes > 0) return fromSchemes;
+      const targets = s.agentContext?.target_states || [];
+      return targets.reduce((sum, t) => sum + (Number(t.count) || 0), 0);
+    },
+    totalProduced: (s) => {
+      const fromCtx = s.agentContext?.total_produced;
       if (fromCtx != null && !Number.isNaN(Number(fromCtx))) {
-        return Math.round(Number(fromCtx));
+        return Number(fromCtx);
       }
-      return 0;
+      const targets = s.agentContext?.target_states || [];
+      return targets.reduce((sum, t) => sum + (Number(t.produced) || 0), 0);
+    },
+    /** 顶部进度条：已写入条数 / 目标总条数 */
+    overallPercent() {
+      const total = this.totalConfigured;
+      if (!total) return 0;
+      return Math.min(100, Math.round((this.totalProduced / total) * 100));
     },
     currentTarget: (s) => s.agentContext?.current_target || null,
     targetStates: (s) => s.agentContext?.target_states || [],
     schemeTargets: (s) => s.agentContext?.scheme_targets || s.jobOptions?.scheme_targets || [],
-    isTerminal: (s) => ['done', 'failed', 'cancelled'].includes(s.status),
+    isTerminal: (s) => [ 'done', 'partial', 'failed', 'cancelled' ].includes(s.status),
+    isActive: (s) => [ 'waiting', 'running', 'paused', 'pending' ].includes(s.status),
+    /** 任务正常执行结束（含未达目标条数），可查看用例库等后续操作 */
+    canViewResults: (s) => [ 'done', 'partial' ].includes(s.status) && !s.errorMessage,
   },
   actions: {
     async fetchJob(jobId) {

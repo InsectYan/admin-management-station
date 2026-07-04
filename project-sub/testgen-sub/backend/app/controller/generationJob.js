@@ -47,12 +47,17 @@ class GenerationJobController extends Controller {
   async cancel() {
     try {
       const data = await this.service.generationJob.cancel(this.ctx.params.id);
-      if (!data) {
-        this.ctx.status = 404;
-        this.ctx.body = { code: 404, message: 'generation job not found', data: null };
-        return;
-      }
       this.ctx.body = { code: 0, message: 'cancelled', data };
+    } catch (err) {
+      this.ctx.status = err.status || 400;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
+  async pause() {
+    try {
+      const data = await this.service.generationQueue.pause(Number(this.ctx.params.id));
+      this.ctx.body = { code: 0, message: 'paused', data };
     } catch (err) {
       this.ctx.status = err.status || 400;
       this.ctx.body = { code: this.ctx.status, message: err.message, data: null };

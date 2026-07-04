@@ -94,7 +94,8 @@ function buildTemplateOutputFormatText(templateCode) {
   ].filter(Boolean).join('\n');
 }
 
-function buildFitnessPrimaryContextText(target = {}) {
+function buildFitnessPrimaryContextText(target = {}, extras = {}) {
+  const { existingCases = [], regenerateCount } = extras;
   const lines = [
     '## 测试平台生成目标（仅供理解范围，以下分类字段由平台入库时自动写入，Agent 勿输出）',
     `- 测试大类：${target.category_major_id || '—'} ${target.category_major_name || ''}`.trim(),
@@ -102,15 +103,42 @@ function buildFitnessPrimaryContextText(target = {}) {
     `- 主验证 (VS)：${target.validation_id || '—'} ${target.validation_name || ''}`.trim(),
     `- 配置模板：${target.template_code || '—'} ${target.template_name || ''}`.trim(),
     `- 目标条数：${target.count ?? '—'}`,
+    target.batch_index != null
+      ? `- 当前批次：第 ${target.batch_index}/${target.batch_total} 批，本批生成 ${target.count} 条（不跨方案/验证）`
+      : null,
+    regenerateCount != null && regenerateCount !== target.count
+      ? `- 本批补生成：仅需再生成 ${regenerateCount} 条（其余已通过审查）`
+      : null,
     '平台自动填入：dimension_id、category_major_id、category_minor_id、scheme_primary_id、validation_primary_id、template_code、item_id',
   ];
   if (target.dimension_id) lines.push(`- 维度：${target.dimension_id}`);
   if (target.category_minor_id) lines.push(`- 默认子类：${target.category_minor_id}`);
-  return lines.join('\n');
+  const existingBlock = buildExistingCasesContextText(existingCases, regenerateCount);
+  if (existingBlock) lines.push('', existingBlock);
+  return lines.filter(Boolean).join('\n');
+}
+
+/** 已通过审查的用例摘要，供 Agent 避免重复生成 */
+function buildExistingCasesContextText(existingCases = [], regenerateCount) {
+  if (!Array.isArray(existingCases) || !existingCases.length) return '';
+  const lines = existingCases.map((tc, i) => {
+    const name = String(tc.item_name || tc.title || '—').trim();
+    const summary = String(tc.detail_summary || tc.summary || '').trim().slice(0, 100);
+    return `${i + 1}. ${name}${summary ? ` — ${summary}` : ''}`;
+  });
+  const regenHint = regenerateCount != null
+    ? `共 ${existingCases.length} 条已锁定，本次仅需再生成 ${regenerateCount} 条不同用例，勿重复上述主题。`
+    : `共 ${existingCases.length} 条已通过审查，勿重复生成。`;
+  return [
+    '## 本批已通过审查的用例（勿重复生成）',
+    ...lines,
+    regenHint,
+  ].join('\n');
 }
 
 module.exports = {
   TEMPLATE_OUTPUT_FORMATS,
   buildTemplateOutputFormatText,
   buildFitnessPrimaryContextText,
+  buildExistingCasesContextText,
 };

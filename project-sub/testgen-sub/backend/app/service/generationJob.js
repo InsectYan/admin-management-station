@@ -6,11 +6,86 @@ const { buildSchemeTargetsFromMajors } = require('../lib/generationTemplateHelpe
 const {
   buildFitnessPrimaryContextText,
   buildTemplateOutputFormatText,
+  buildExistingCasesContextText,
 } = require('../lib/templateOutputFormats');
 
 const PHASES = [ 'analyze', 'generate', 'review' ];
-const MAX_TARGET_ATTEMPTS = 5;
+const MAX_BATCH_ATTEMPTS = 5;
+const ROUND_SIZE_LOCAL = 5;
+const ROUND_SIZE_CLOUD = 10;
 const ESTIMATE_AGENT_TIMEOUT_MS = 5000;
+
+function isLocalOllamaProfile(profileId) {
+  const id = String(profileId || 'ollama-qwen').trim().toLowerCase();
+  return !profileId || id.startsWith('ollama') || id === 'env-fallback';
+}
+
+/** 每轮固定请求条数：本地 5，云端 10（与剩余条数无关） */
+function roundRequestSize(llmProfile) {
+  return isLocalOllamaProfile(llmProfile) ? ROUND_SIZE_LOCAL : ROUND_SIZE_CLOUD;
+}
+
+function caseDedupeKey(tc) {
+  const n = normalizeCaseFields(tc);
+  const name = String(n.item_name || '').trim().toLowerCase();
+  const summary = String(n.detail_summary || '').trim().toLowerCase();
+  return name || summary ? `${name}::${summary}` : '';
+}
+
+/** 逐条合规审查：通过的保留，未通过的记录原因 */
+function reviewCasesIndividually(cases) {
+  const approved = [];
+  const rejected = [];
+  for (const tc of cases) {
+    const audit = auditItemDetailFields(normalizeCaseFields(tc));
+    if (audit.valid) {
+      approved.push(audit.normalized);
+    } else {
+      rejected.push({
+        item_name: String(audit.normalized?.item_name || tc?.item_name || tc?.title || '—'),
+        errors: audit.errors,
+      });
+    }
+  }
+  return { approved, rejected };
+}
+
+function summarizeExistingCases(cases) {
+  return cases.map(tc => {
+    const n = normalizeCaseFields(tc);
+    return {
+      item_name: n.item_name,
+      detail_summary: n.detail_summary,
+      expected_observation: n.expected_observation,
+    };
+  });
+}
+
+/** 从候选中挑选未重复且通过校验的用例，最多 limit 条；registerKeys=false 时不写入 seenKeys */
+function pickUniqueApprovedCases(candidates, seenKeys, limit, registerKeys = true) {
+  const picked = [];
+  for (const tc of candidates) {
+    if (picked.length >= limit) break;
+    const normalized = normalizeCaseFields(tc);
+    if (!isApprovedCase(normalized)) continue;
+    const key = caseDedupeKey(tc);
+    if (key && seenKeys.has(key)) continue;
+    if (key && registerKeys) seenKeys.add(key);
+    picked.push(tc);
+  }
+  return picked;
+}
+
+function registerCaseKeys(cases, seenKeys) {
+  for (const tc of cases) {
+    const key = caseDedupeKey(tc);
+    if (key) seenKeys.add(key);
+  }
+}
+
+function batchCountForTarget(count, roundSize = ROUND_SIZE_CLOUD) {
+  return Math.max(1, Math.ceil(Number(count || 0) / roundSize));
+}
 
 function analyzeDocumentHeuristic(content, schemeTargets, categoryMajorIds, validationIds) {
   const text = content || '';
@@ -154,11 +229,11 @@ class GenerationJobService extends Service {
       project_name,
       test_types: [],
       options,
-      status: 'running',
+      status: 'waiting',
       current_phase: 'analyze',
       progress: { overall_percent: 0, analyze: 0, generate: 0, review: 0 },
       agent_context: {
-        current_direction: '任务已创建，等待 Agent 启动…',
+        current_direction: '已加入队列，等待执行…',
         current_phase: 'analyze',
         current_target_index: 0,
         current_target: scheme_targets[0],
@@ -172,23 +247,22 @@ class GenerationJobService extends Service {
         llm_profile_id: llm_profile || '',
         updated_at: new Date().toISOString(),
       },
-      started_at: new Date(),
+      started_at: null,
       created_by: this.ctx.state?.user?.id || null,
-    });
-
-    this.ctx.runInBackground(async () => {
-      const bgCtx = this.app.createAnonymousContext();
-      try {
-        await bgCtx.service.generationJob.executeJob(job.id, jobPayload);
-      } catch (err) {
-        bgCtx.app.logger.error('[generationJob] background job=%s %s', job.id, err.message);
-      }
     });
 
     const resolvedTaskName = task_name?.trim() || `任务 #${job.id}`;
     await this.ctx.service.generationTask.register(job.id, resolvedTaskName);
 
-    return { job_id: job.id, id: job.id, status: 'running', task_name: resolvedTaskName };
+    await this.ctx.service.generationQueue.enqueue({
+      jobId: job.id,
+      taskName: resolvedTaskName,
+      payload: jobPayload,
+      projectCode: project_code,
+      projectName: project_name,
+    });
+
+    return { job_id: job.id, id: job.id, status: 'waiting', task_name: resolvedTaskName };
   }
 
   async estimateCaseCount(payload = {}) {
@@ -316,12 +390,15 @@ class GenerationJobService extends Service {
     } = payload;
 
     const job = await this.ctx.model.GenerationJob.findByPk(jobId);
-    if (!job || job.status === 'cancelled') return;
+    if (!job || job.status === 'cancelled' || job.status === 'paused') return;
+
+    const effectiveLlmProfile = llm_profile || job.agent_context?.llm_profile_id || null;
 
     const scheme_targets = options.scheme_targets || job.options?.scheme_targets || [];
     const targetStates = scheme_targets.map(t => ({ ...t, status: 'pending', produced: 0 }));
     const allSteps = [];
     let totalItems = 0;
+    let lastFailureReason = null;
 
     try {
       const doc = await this.ctx.service.document.findById(document_id);
@@ -331,148 +408,245 @@ class GenerationJobService extends Service {
 
       for (let ti = 0; ti < scheme_targets.length; ti++) {
         await job.reload();
-        if (job.status === 'cancelled') return;
+        if (job.status === 'cancelled' || job.status === 'paused') return;
 
         const target = scheme_targets[ti];
         targetStates[ti].status = 'running';
-        let approvedCases = [];
-        let attempts = 0;
+        targetStates[ti].produced = 0;
 
-        while (approvedCases.length < target.count && attempts < MAX_TARGET_ATTEMPTS) {
-          attempts += 1;
+        const roundSize = roundRequestSize(effectiveLlmProfile);
+        const batchTotal = batchCountForTarget(target.count, roundSize);
+        const seenKeys = new Set();
+        let produced = 0;
+        let writtenSummaries = [];
+        let roundAttempts = 0;
+
+        while (produced < target.count && roundAttempts < MAX_BATCH_ATTEMPTS) {
+          roundAttempts += 1;
           await job.reload();
-          if (job.status === 'cancelled') return;
+          if (job.status === 'cancelled' || job.status === 'paused') return;
 
-          for (let pi = 0; pi < PHASES.length; pi++) {
-            const phase = PHASES[pi];
-            await this.updateSchemeProgress(jobId, {
-              targetIndex: ti,
-              phaseIndex: pi,
-              target,
-              targetStates,
-              scheme_targets,
-              direction: `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id} — ${this.phaseLabel(phase)}`,
-            });
-          }
+          const requestCount = roundSize;
+          const remaining = target.count - produced;
+          const batchIndex = Math.min(batchTotal, Math.floor(produced / roundSize) + 1);
+          targetStates[ti].batch_index = batchIndex;
+          targetStates[ti].batch_total = batchTotal;
+          targetStates[ti].current_batch_size = requestCount;
+          targetStates[ti].round_request_size = requestCount;
 
-          const agentRes = await this.ctx.service.agentProxy.invokeTestgen({
-            action: 'generate_for_fitness',
-            doc_id: document_id,
-            doc_content: rawContent,
-            doc_title: doc.title,
-            document_content: rawContent,
-            document_title: doc.title,
-            module: project_name,
-            project_code,
-            project_name,
-            test_types: [ '功能测试', '边界值测试' ],
-            options: {
-              ...options,
-              hint: options.hint,
-              category_major_id: target.category_major_id,
-              type_counts: {
-                '功能测试': target.count,
-                '边界值测试': target.count,
-              },
-              scheme_target: target,
-            },
-            fitness_context: {
-              ...(options.fitness_context || {}),
-              scheme_id: target.scheme_id,
-              validation_id: target.validation_id,
-              category_major_id: target.category_major_id,
-              template_code: target.template_code,
-            },
-            fitness_primary_context: buildFitnessPrimaryContextText(target),
-            template_output_format: buildTemplateOutputFormatText(target.template_code),
-            scheme_id: target.scheme_id,
-            validation_id: target.validation_id,
-            template_code: target.template_code,
-            job_id: jobId,
-            llm_profile,
-            trace: { job_id: jobId },
-          });
-
-          const rawCases = this.collectTestCasesFromOutput(agentRes.output || {});
-          const batchApproved = rawCases.filter(tc => isApprovedCase(normalizeCaseFields(tc)));
-          if (rawCases.length && !batchApproved.length) {
-            const sample = auditItemDetailFields(normalizeCaseFields(rawCases[0]));
-            this.ctx.app.logger.warn(
-              '[generationJob] job=%s target=%s attempt=%s raw=%s approved=0 sample_errors=%j',
-              jobId, target.scheme_id, attempts, rawCases.length, sample.errors,
-            );
-          }
-          approvedCases.push(...batchApproved);
-
-          const steps = agentRes.output?.steps || [];
-          allSteps.push(...steps.map(s => ({
-            ...s,
-            scheme_id: target.scheme_id,
-            validation_id: target.validation_id,
-            attempt: attempts,
-            test_case_count: batchApproved.length,
-          })));
-
-          targetStates[ti].produced = approvedCases.length;
-          targetStates[ti].attempt = attempts;
-          targetStates[ti].last_batch_approved = batchApproved.length;
+          const batchTarget = {
+            ...target,
+            count: requestCount,
+            batch_index: batchIndex,
+            batch_total: batchTotal,
+          };
 
           const targetLabel = `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id}`;
-          let retryNotice = null;
-          let direction = '';
+          const existingCasesContext = buildExistingCasesContextText(writtenSummaries, requestCount);
 
-          if (batchApproved.length === 0) {
-            targetStates[ti].last_attempt_empty = true;
-            retryNotice = `第 ${attempts} 次生成：${targetLabel} 字段校验后无有效用例`;
-            const willRetry = approvedCases.length < target.count && attempts < MAX_TARGET_ATTEMPTS;
-            direction = willRetry
-              ? `${retryNotice}，正在重试…（已通过 ${approvedCases.length}/${target.count} 条）`
-              : `${retryNotice}（已通过 ${approvedCases.length}/${target.count} 条）`;
-          } else if (approvedCases.length < target.count) {
-            targetStates[ti].last_attempt_empty = false;
-            retryNotice = null;
-            const willRetry = attempts < MAX_TARGET_ATTEMPTS;
-            direction = willRetry
-              ? `${targetLabel}：已通过 ${approvedCases.length}/${target.count} 条，继续补全…`
-              : `${targetLabel}：已通过 ${approvedCases.length}/${target.count} 条`;
-          } else {
-            targetStates[ti].last_attempt_empty = false;
-            retryNotice = null;
-            direction = `${targetLabel}：已通过 ${approvedCases.length}/${target.count} 条`;
-          }
+          await this.updateSchemeProgress(jobId, {
+            targetIndex: ti,
+            phaseIndex: 1,
+            target: batchTarget,
+            targetStates,
+            scheme_targets,
+            direction: `${targetLabel} · 第 ${roundAttempts} 轮（固定请求 ${requestCount} 条，还需入库 ${remaining} 条，已入库 ${produced}/${target.count}）`,
+          });
 
-          if (approvedCases.length < target.count) {
+          let agentRes;
+          try {
+            agentRes = await this.ctx.service.agentProxy.invokeTestgen({
+              action: 'generate_for_fitness',
+              doc_id: document_id,
+              doc_content: rawContent,
+              doc_title: doc.title,
+              document_content: rawContent,
+              document_title: doc.title,
+              module: project_name,
+              project_code,
+              project_name,
+              test_types: [ '功能测试', '边界值测试' ],
+              existing_cases_context: existingCasesContext,
+              options: {
+                ...options,
+                hint: options.hint,
+                category_major_id: target.category_major_id,
+                type_counts: {
+                  '功能测试': requestCount,
+                  '边界值测试': requestCount,
+                },
+                scheme_target: batchTarget,
+                batch_index: batchIndex,
+                batch_total: batchTotal,
+                batch_size: requestCount,
+                regenerate_count: requestCount,
+                target_total: target.count,
+                target_produced: produced,
+                existing_cases: writtenSummaries,
+                existing_cases_context: existingCasesContext,
+              },
+              fitness_context: {
+                ...(options.fitness_context || {}),
+                scheme_id: target.scheme_id,
+                validation_id: target.validation_id,
+                category_major_id: target.category_major_id,
+                template_code: target.template_code,
+              },
+              fitness_primary_context: buildFitnessPrimaryContextText(batchTarget, {
+                existingCases: writtenSummaries,
+                regenerateCount: requestCount,
+              }),
+              template_output_format: buildTemplateOutputFormatText(target.template_code),
+              scheme_id: target.scheme_id,
+              validation_id: target.validation_id,
+              template_code: target.template_code,
+              job_id: jobId,
+              llm_profile: effectiveLlmProfile,
+              trace: { job_id: jobId },
+            });
+          } catch (invokeErr) {
+            const brief = String(invokeErr.message || 'Agent 调用失败').split('\n')[0].slice(0, 200);
+            lastFailureReason = brief;
+            this.ctx.app.logger.warn(
+              '[generationJob] job=%s target=%s round=%s invoke failed: %s',
+              jobId, target.scheme_id, roundAttempts, invokeErr.message,
+            );
+            const willRetry = roundAttempts < MAX_BATCH_ATTEMPTS && produced < target.count;
+            const retryNotice = `第 ${roundAttempts} 轮：${brief}${willRetry ? '，正在重试…' : ''}`;
+            allSteps.push({
+              bff_milestone: true,
+              phase: 'retry',
+              note: `${targetLabel} · ${retryNotice}（已入库 ${produced}/${target.count}）`,
+              scheme_id: target.scheme_id,
+              validation_id: target.validation_id,
+              batch_index: batchIndex,
+              batch_total: batchTotal,
+              attempt: roundAttempts,
+            });
             await this.updateSchemeProgress(jobId, {
               targetIndex: ti,
               phaseIndex: PHASES.length - 1,
-              target,
+              target: batchTarget,
               targetStates,
               scheme_targets,
-              direction,
+              direction: `${targetLabel} · ${retryNotice}`,
               steps_log: allSteps,
               retry_notice: retryNotice,
             });
+            if (!willRetry) break;
+            continue;
+          }
+
+          const rawCases = this.collectTestCasesFromOutput(agentRes.output || {});
+          const { approved, rejected } = reviewCasesIndividually(rawCases);
+
+          if (rejected.length) {
             this.ctx.app.logger.warn(
-              '[generationJob] job=%s target=%s attempt=%s approved=%s need=%s batch=%s',
-              jobId, target.scheme_id, attempts, approvedCases.length, target.count, batchApproved.length,
+              '[generationJob] job=%s target=%s round=%s review rejected=%j',
+              jobId, target.scheme_id, roundAttempts,
+              rejected.map(r => ({ name: r.item_name, errors: r.errors })),
             );
+          }
+          if (rawCases.length && !approved.length) {
+            const sample = rejected[0] || {};
+            lastFailureReason = sample.errors?.length
+              ? `字段校验未通过：${sample.errors.join('；')}`
+              : 'Agent 返回用例但未通过字段校验';
+          }
+
+          const picked = pickUniqueApprovedCases(approved, seenKeys, requestCount, false);
+          const toInsert = picked.slice(0, remaining);
+          registerCaseKeys(toInsert, seenKeys);
+          const truncated = picked.length - toInsert.length;
+          let retryNotice = null;
+          let direction = '';
+
+          if (toInsert.length > 0) {
+            const itemIds = await this.ctx.service.generationItemWriter.bulkInsertItems(
+              toInsert,
+              {
+                job_id: jobId,
+                project_code,
+                project_name,
+                scheme_id: target.scheme_id,
+                validation_id: target.validation_id,
+                category_major_id: target.category_major_id,
+                category_minor_id: target.category_minor_id,
+                dimension_id: target.dimension_id,
+                template_code: target.template_code,
+              },
+            );
+
+            produced += itemIds.length;
+            totalItems += itemIds.length;
+            targetStates[ti].produced = produced;
+            writtenSummaries.push(...summarizeExistingCases(toInsert));
+
+            const rejectPart = rejected.length ? `，字段未通过 ${rejected.length} 条` : '';
+            const truncatePart = truncated > 0 ? `，余 ${truncated} 条已通过但未入库（目标已满）` : '';
+            const milestoneNote = `${targetLabel} · 第 ${roundAttempts} 轮：请求 ${requestCount} 条，审查入库 ${itemIds.length} 条${rejectPart}${truncatePart}（累计 ${produced}/${target.count}）`;
+            direction = milestoneNote;
+            allSteps.push({
+              bff_milestone: true,
+              phase: 'persist',
+              note: milestoneNote,
+              scheme_id: target.scheme_id,
+              validation_id: target.validation_id,
+              batch_index: batchIndex,
+              batch_total: batchTotal,
+              attempt: roundAttempts,
+              review_approved: itemIds.length,
+              review_rejected: rejected.length,
+              persisted_count: itemIds.length,
+              total_produced: produced,
+              target_total: target.count,
+            });
+
+            targetStates[ti].last_batch_approved = itemIds.length;
+            targetStates[ti].last_review_rejected = rejected.length;
+            targetStates[ti].last_attempt_empty = false;
           } else {
-            await this.updateSchemeProgress(jobId, {
-              targetIndex: ti,
-              phaseIndex: PHASES.length - 1,
-              target,
-              targetStates,
-              scheme_targets,
-              direction,
-              steps_log: allSteps,
-              retry_notice: null,
+            targetStates[ti].last_attempt_empty = true;
+            targetStates[ti].last_batch_approved = 0;
+            targetStates[ti].last_review_rejected = rejected.length;
+            const rejectPart = rejected.length ? `，字段未通过 ${rejected.length} 条` : '';
+            const willRetry = roundAttempts < MAX_BATCH_ATTEMPTS && produced < target.count;
+            retryNotice = `第 ${roundAttempts} 轮：无新增可入库用例${rejectPart}${willRetry ? '，继续补生成…' : ''}`;
+            direction = `${targetLabel} · ${retryNotice}（已入库 ${produced}/${target.count}）`;
+            allSteps.push({
+              bff_milestone: true,
+              phase: 'retry',
+              note: direction,
+              scheme_id: target.scheme_id,
+              validation_id: target.validation_id,
+              batch_index: batchIndex,
+              batch_total: batchTotal,
+              attempt: roundAttempts,
+              review_approved: 0,
+              review_rejected: rejected.length,
+              total_produced: produced,
+              target_total: target.count,
             });
           }
+
+          targetStates[ti].attempt = roundAttempts;
+          targetStates[ti].last_review_passed = produced;
+
+          await this.updateSchemeProgress(jobId, {
+            targetIndex: ti,
+            phaseIndex: PHASES.length - 1,
+            target: batchTarget,
+            targetStates,
+            scheme_targets,
+            direction,
+            steps_log: allSteps,
+            retry_notice: retryNotice,
+          });
+
+          if (produced >= target.count) break;
         }
 
-        approvedCases = approvedCases.slice(0, target.count);
-
-        if (!approvedCases.length) {
+        if (produced === 0) {
           targetStates[ti].status = 'failed';
           targetStates[ti].produced = 0;
           await this.updateSchemeProgress(jobId, {
@@ -483,63 +657,77 @@ class GenerationJobService extends Service {
             scheme_targets,
             direction: `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id}：未生成任何通过字段校验的用例`,
             steps_log: allSteps,
-            retry_notice: `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id} 在 ${attempts} 次尝试后仍无有效用例`,
+            retry_notice: `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id} 分批生成后仍无有效用例`,
           });
           continue;
         }
 
-        const itemIds = await this.ctx.service.generationItemWriter.bulkInsertItems(
-          approvedCases,
-          {
-            job_id: jobId,
-            project_code,
-            project_name,
-            scheme_id: target.scheme_id,
-            validation_id: target.validation_id,
-            category_major_id: target.category_major_id,
-            category_minor_id: target.category_minor_id,
-            dimension_id: target.dimension_id,
-            template_code: target.template_code,
-          },
-        );
-
-        totalItems += itemIds.length;
-        targetStates[ti].status = 'done';
-        targetStates[ti].produced = itemIds.length;
-
-        await this.updateSchemeProgress(jobId, {
-          targetIndex: ti,
-          phaseIndex: PHASES.length,
-          target,
-          targetStates,
-          scheme_targets,
-          direction: `${target.scheme_name || target.scheme_id} 已完成，写入 ${itemIds.length} 条`,
-          steps_log: allSteps,
-          retry_notice: null,
-        });
+        targetStates[ti].status = produced >= target.count ? 'done' : 'partial';
+        if (produced < target.count) {
+          await this.updateSchemeProgress(jobId, {
+            targetIndex: ti,
+            phaseIndex: PHASES.length,
+            target,
+            targetStates,
+            scheme_targets,
+            direction: `${target.scheme_name || target.scheme_id} 部分完成，写入 ${produced}/${target.count} 条`,
+            steps_log: allSteps,
+            retry_notice: `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id} 未达目标条数，已写入 ${produced}/${target.count} 条`,
+          });
+        } else {
+          await this.updateSchemeProgress(jobId, {
+            targetIndex: ti,
+            phaseIndex: PHASES.length,
+            target,
+            targetStates,
+            scheme_targets,
+            direction: `${target.scheme_name || target.scheme_id} 已完成，写入 ${produced} 条`,
+            steps_log: allSteps,
+            retry_notice: null,
+          });
+        }
       }
 
       if (totalItems === 0) {
-        throw new Error('全部生成目标均未产出通过字段校验的有效用例，请检查文档内容或调整生成配置后重试');
+        const llmOrAgent = lastFailureReason && /LLM|ECONNREFUSED|fetch failed|Authentication|socket hang|Agent|api key|超时|timeout/i.test(lastFailureReason);
+        const msg = llmOrAgent
+          ? `生成失败：${lastFailureReason}。请确认 Agent（:4001）与所选 LLM 服务可用后重试。`
+          : lastFailureReason
+            ? `全部生成目标均未产出有效用例。最近原因：${lastFailureReason}`
+            : '全部生成目标均未产出通过字段校验的有效用例，请检查文档内容或调整生成配置后重试';
+        throw new Error(msg);
       }
+
+      const hasIncomplete = targetStates.some(t => t.status === 'partial' || t.status === 'failed');
+      const finalStatus = hasIncomplete ? 'partial' : 'done';
+      const finalDirection = hasIncomplete
+        ? `部分完成，共写入 ${totalItems} 条（部分方案/验证未达目标）`
+        : `全部完成，共写入 ${totalItems} 条测试项`;
 
       const fitnessPost = await this.runFitnessPostProcess(jobId, {
         project_code,
         options,
       });
 
+      const totalConfigured = scheme_targets.reduce((s, t) => s + (Number(t.count) || 0), 0);
+      const finalPercent = totalConfigured
+        ? Math.min(100, Math.round((totalItems / totalConfigured) * 100))
+        : (totalItems > 0 ? 100 : 0);
+
       await job.update({
-        status: 'done',
+        status: finalStatus,
         current_phase: 'review',
-        progress: { overall_percent: 100, analyze: 100, generate: 100, review: 100 },
+        progress: { overall_percent: finalPercent, analyze: 100, generate: 100, review: 100 },
         steps_log: allSteps,
         agent_context: {
           ...(job.agent_context || {}),
           target_states: targetStates,
-          overall_percent: 100,
+          overall_percent: finalPercent,
+          total_produced: totalItems,
+          total_configured: totalConfigured,
           retry_notice: null,
           fitness_post_process: fitnessPost,
-          current_direction: `全部完成，共写入 ${totalItems} 条测试项`,
+          current_direction: finalDirection,
           updated_at: new Date().toISOString(),
         },
         finished_at: new Date(),
@@ -587,9 +775,11 @@ class GenerationJobService extends Service {
     steps_log,
     retry_notice,
   }) {
-    const totalSteps = scheme_targets.length * PHASES.length;
-    const completedSteps = targetIndex * PHASES.length + Math.min(phaseIndex, PHASES.length);
-    const overallPercent = Math.min(99, Math.round((completedSteps / totalSteps) * 100));
+    const totalConfigured = scheme_targets.reduce((s, t) => s + (Number(t.count) || 0), 0);
+    const totalProduced = targetStates.reduce((s, t) => s + (Number(t.produced) || 0), 0);
+    const overallPercent = totalConfigured
+      ? Math.min(100, Math.round((totalProduced / totalConfigured) * 100))
+      : 0;
     const phase = PHASES[Math.min(phaseIndex, PHASES.length - 1)] || 'review';
 
     const phaseProgress = Object.fromEntries(
@@ -613,6 +803,8 @@ class GenerationJobService extends Service {
         target_states: targetStates,
         scheme_targets,
         overall_percent: overallPercent,
+        total_produced: totalProduced,
+        total_configured: totalConfigured,
         current_phase: phase,
         current_direction: direction,
         retry_notice: retry_notice !== undefined ? retry_notice : (row.agent_context?.retry_notice ?? null),
@@ -621,6 +813,15 @@ class GenerationJobService extends Service {
     };
     if (steps_log) updates.steps_log = steps_log;
     await row.update(updates);
+
+    try {
+      await this.ctx.service.generationQueue.syncProgress(jobId, {
+        progressPercent: overallPercent,
+        currentPhase: phase,
+      });
+    } catch (syncErr) {
+      this.ctx.app.logger.warn('[generationJob] queue sync job=%s %s', jobId, syncErr.message);
+    }
   }
 
   async retry(id, options = {}) {
@@ -640,12 +841,13 @@ class GenerationJobService extends Service {
     };
 
     await row.update({
-      status: 'running',
+      status: 'waiting',
       error_message: null,
       current_phase: 'analyze',
       progress: { overall_percent: 0, analyze: 0, generate: 0, review: 0 },
       agent_context: {
-        current_direction: '任务已重新提交…',
+        ...(row.agent_context || {}),
+        current_direction: '任务已重新提交，排队等待执行…',
         scheme_targets: row.options?.scheme_targets || [],
         overall_percent: 0,
         updated_at: new Date().toISOString(),
@@ -653,14 +855,12 @@ class GenerationJobService extends Service {
       finished_at: null,
     });
 
-    this.ctx.runInBackground(async () => {
-      const bgCtx = this.app.createAnonymousContext();
-      try {
-        await bgCtx.service.generationJob.executeJob(id, payload);
-      } catch (err) {
-        bgCtx.app.logger.error('[generationJob] retry job=%s %s', id, err.message);
-      }
-    });
+    const registry = await this.ctx.model.GenerationTaskRegistry.findOne({
+      where: { job_id: id },
+    }).catch(() => null);
+    const taskName = registry?.task_name || `任务 #${id}`;
+
+    await this.ctx.service.generationQueue.reenqueueFailed(id, payload, taskName);
 
     return this.findById(id);
   }
@@ -819,15 +1019,7 @@ class GenerationJobService extends Service {
   }
 
   async cancel(id) {
-    const row = await this.ctx.model.GenerationJob.findByPk(id);
-    if (!row) return null;
-    if ([ 'done', 'failed', 'cancelled' ].includes(row.status)) {
-      const err = new Error(`job cannot be cancelled in status: ${row.status}`);
-      err.status = 400;
-      throw err;
-    }
-    await row.update({ status: 'cancelled', finished_at: new Date() });
-    return this.findById(id);
+    return this.ctx.service.generationQueue.cancel(Number(id));
   }
 
   collectTestCasesFromOutput(output = {}) {

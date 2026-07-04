@@ -320,8 +320,8 @@ export async function healthCheckEnv(payload) {
   return data.data;
 }
 
-export async function explainFtRun(runId) {
-  const { data } = await api.post(`/fitness/runs/${runId}/explain`);
+export async function explainFtRun(runId, payload = {}) {
+  const { data } = await api.post(`/fitness/runs/${runId}/explain`, payload);
   return data.data;
 }
 

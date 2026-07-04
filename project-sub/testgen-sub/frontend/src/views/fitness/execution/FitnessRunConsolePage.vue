@@ -103,9 +103,18 @@
       :closable="false"
       style="margin-bottom:16px"
     />
+
     <el-tabs v-model="resultTab" style="margin-top:16px">
       <el-tab-pane label="子项结果" name="subs">
-        <el-table :data="run?.results||[]" size="small">
+        <el-table :data="run?.results||[]" size="small" row-key="sub_index">
+          <el-table-column type="expand">
+            <template #default="{ row }">
+              <div v-if="row.sub_verdict === 'fail'" class="expand-failure">
+                <RunSubResultExpand :row="row" />
+              </div>
+              <span v-else class="expand-ok">已通过</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="sub_index" label="#" width="50" />
           <el-table-column prop="input_summary" label="输入" min-width="160" />
           <el-table-column prop="output_summary" label="输出" min-width="160" />
@@ -153,13 +162,22 @@
       <template #header>
         <div style="display:flex;align-items:center;justify-content:space-between">
           <span>AI 解读</span>
-          <el-button size="small" type="primary" :loading="explainLoading" @click="loadExplain">
+          <el-button
+            size="small"
+            type="primary"
+            :loading="explainLoading"
+            :disabled="failCount === 0"
+            @click="loadExplain"
+          >
             解读失败原因
           </el-button>
         </div>
       </template>
-      <div v-if="explainMarkdown" class="explain-md">{{ explainMarkdown }}</div>
-      <el-empty v-else description="点击按钮生成解读（不改变 verdict）" />
+      <div v-if="failCount === 0" class="explain-hint">
+        全部子项已通过，无需失败解读。
+      </div>
+      <div v-else-if="explainMarkdown" class="explain-md">{{ explainMarkdown }}</div>
+      <el-empty v-else :description="`共 ${failCount} 条失败子项，点击按钮生成解读（不改变 verdict）`" />
     </el-card>
 
     <el-dialog v-model="showPlanDialog" title="写入计划报告" width="420px">
@@ -187,6 +205,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '@/components/PageShell.vue';
 import PassFailChart from '@/components/fitness/PassFailChart.vue';
+import RunSubResultExpand from '@/components/fitness/RunSubResultExpand.vue';
 import ToolChainTracePanel from '@/components/observability/ToolChainTracePanel.vue';
 import RunStepGanttPanel from '@/components/observability/RunStepGanttPanel.vue';
 import {
@@ -202,7 +221,9 @@ import {
   explainFtRun,
 } from '@/services/fitnessService.js';
 import { downloadJson } from '@/utils/fitnessExport.js';
+import { getLlmProfileId } from '@/utils/llmProfileSession.js';
 import { buildItemDetailRoute, buildRunConsoleRoute } from '@/utils/itemListQuery.js';
+import { buildRunFailurePanels, truncateLogText } from '@/utils/runResultDetail.js';
 
 const TERMINAL = new Set([ 'success', 'failed', 'cancelled' ]);
 
@@ -224,6 +245,7 @@ const writingPlan = ref(false);
 const showPlanDialog = ref(false);
 const selectedPlanId = ref(null);
 const planOptions = ref([]);
+const failureCollapseActive = ref('');
 /** @type {EventSource | null} */
 let es = null;
 
@@ -262,6 +284,18 @@ const passCount = computed(() =>
 const failCount = computed(() =>
   (run.value?.results || []).filter(r => r.sub_verdict === 'fail').length,
 );
+
+const failurePanels = computed(() => buildRunFailurePanels(run.value?.results || []));
+
+const runLogTail = computed(() => {
+  const tail = run.value?.progress?.log_tail;
+  if (!Array.isArray(tail) || !tail.length) return '';
+  return tail.join('\n');
+});
+
+function formatLog(text) {
+  return truncateLogText(text);
+}
 
 const journeyArtifacts = computed(() => {
   const out = [];
@@ -321,6 +355,9 @@ const canRerunFailed = computed(() =>
 async function reloadRun() {
   run.value = await fetchFtRun(route.params.runId);
   if (isTerminal.value) liveSteps.value = run.value?.steps || [];
+  if (failurePanels.value.length) {
+    failureCollapseActive.value = failurePanels.value[0].sub_index;
+  }
 }
 
 function goItemDetail() {
@@ -332,12 +369,25 @@ function goItemDetail() {
 }
 
 async function loadExplain() {
+  if (failCount.value === 0) {
+    ElMessage.info('全部子项已通过');
+    return;
+  }
   explainLoading.value = true;
   try {
-    const data = await explainFtRun(route.params.runId);
+    const llm_profile = getLlmProfileId();
+    const data = await explainFtRun(route.params.runId, {
+      ...(llm_profile ? { llm_profile } : {}),
+      focus: 'failed',
+    });
     explainMarkdown.value = data.markdown || '';
+    if (!explainMarkdown.value) {
+      ElMessage.warning('未返回解读内容');
+    }
   } catch (e) {
-    explainMarkdown.value = e?.response?.data?.message || e.message || '解读失败';
+    const msg = e?.response?.data?.message || e.message || '解读失败';
+    explainMarkdown.value = msg;
+    ElMessage.error(msg);
   } finally {
     explainLoading.value = false;
   }
@@ -511,5 +561,9 @@ onBeforeUnmount(closeStream);
   white-space: pre-wrap;
   font-size: 14px;
   line-height: 1.6;
+}
+.explain-hint {
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
 }
 </style>

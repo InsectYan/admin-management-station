@@ -318,8 +318,33 @@ async function loadGenerationTasks() {
   }
 }
 
-async function refreshAfterDelete() {
+/** 删除后刷新：任务下拉、总条数、表格；清理已失效的生成任务筛选 */
+async function refreshAfterDelete(options = {}) {
+  const { deleted = 0, resetPage = false } = options;
   await loadGenerationTasks();
+
+  let routeNeedsSync = false;
+
+  if (filters.generation_job_id) {
+    const jobId = String(filters.generation_job_id);
+    const exists = generationTaskOptions.value.some(t => String(t.job_id) === jobId);
+    if (!exists) {
+      filters.generation_job_id = '';
+      routeNeedsSync = true;
+    }
+  }
+
+  if (resetPage) {
+    page.value = 1;
+    routeNeedsSync = true;
+  } else if (deleted > 0 && list.value.length <= deleted && page.value > 1) {
+    page.value -= 1;
+    routeNeedsSync = true;
+  }
+
+  if (routeNeedsSync) {
+    syncRouteQuery();
+  }
   await loadData();
 }
 
@@ -333,7 +358,7 @@ async function handleDeleteRow(row) {
     await deleteTestItem(row.item_id);
     ElMessage.success('已删除');
     clearTableSelection();
-    await refreshAfterDelete();
+    await refreshAfterDelete({ deleted: 1 });
   } catch (err) {
     if (err !== 'cancel' && err !== 'close') {
       ElMessage.error(err.message || '删除失败');
@@ -354,7 +379,7 @@ async function handleBatchDelete() {
     const result = await batchDeleteTestItems(selectedRows.value.map(r => r.item_id));
     clearTableSelection();
     ElMessage.success(`已删除 ${result.deleted ?? count} 条`);
-    await refreshAfterDelete();
+    await refreshAfterDelete({ deleted: result.deleted ?? count });
   } catch (err) {
     if (err !== 'cancel' && err !== 'close') {
       ElMessage.error(err.message || '批量删除失败');
@@ -376,9 +401,7 @@ async function handleDeleteAllFiltered() {
     const result = await deleteTestItemsByFilter(apiFilterParams());
     clearTableSelection();
     ElMessage.success(`已删除 ${result.deleted ?? 0} 条`);
-    page.value = 1;
-    syncRouteQuery();
-    await loadGenerationTasks();
+    await refreshAfterDelete({ deleted: result.deleted ?? total.value, resetPage: true });
   } catch (err) {
     if (err !== 'cancel' && err !== 'close') {
       ElMessage.error(err.message || '删除失败');

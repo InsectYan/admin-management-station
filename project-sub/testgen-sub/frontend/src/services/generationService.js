@@ -65,6 +65,26 @@ export async function pauseJob(jobId) {
   return data.data;
 }
 
+export async function fetchGenerationQueue() {
+  const { data } = await api.get(`${base()}/generation-queue`);
+  return data.data;
+}
+
+export async function pauseQueueJob(jobId) {
+  const { data } = await api.post(`${base()}/generation-queue/${jobId}/pause`);
+  return data.data;
+}
+
+export async function resumeQueueJob(jobId) {
+  const { data } = await api.post(`${base()}/generation-queue/${jobId}/resume`);
+  return data.data;
+}
+
+export async function cancelQueueJob(jobId) {
+  const { data } = await api.post(`${base()}/generation-queue/${jobId}/cancel`);
+  return data.data;
+}
+
 export async function cancelJob(jobId) {
   const { data } = await api.post(`${base()}/generation-jobs/${jobId}/cancel`);
   return data.data;

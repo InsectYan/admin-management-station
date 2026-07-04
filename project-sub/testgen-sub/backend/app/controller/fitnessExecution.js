@@ -260,7 +260,10 @@ class FitnessExecutionController extends Controller {
 
   async explainRun() {
     try {
-      const data = await this.service.fitnessExecution.explainRun(this.ctx.params.runId);
+      const data = await this.service.fitnessExecution.explainRun(
+        this.ctx.params.runId,
+        this.ctx.request.body || {},
+      );
       if (!data) {
         this.ctx.status = 404;
         this.ctx.body = { code: 404, message: '运行记录不存在', data: null };

@@ -119,7 +119,9 @@ const normalizedGenerationTasks = computed(() =>
     if (item && typeof item === 'object') {
       const jobId = item.job_id ?? item.id;
       const taskName = item.task_name || `任务 #${jobId}`;
-      return { job_id: jobId, label: `#${jobId} · ${taskName}` };
+      const count = item.item_count != null ? Number(item.item_count) : null;
+      const countSuffix = count != null && !Number.isNaN(count) ? ` · ${count} 条` : '';
+      return { job_id: jobId, label: `#${jobId} · ${taskName}${countSuffix}` };
     }
     return { job_id: item, label: `#${item}` };
   }),

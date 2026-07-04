@@ -1,5 +1,29 @@
 <template>
   <PageShell title="生成进度">
+    <template #extra>
+      <el-button @click="router.push({ name: 'generation-queue' })">
+        查看任务列表
+      </el-button>
+    </template>
+
+    <el-alert
+      v-if="store.status === 'waiting'"
+      type="info"
+      title="等待中：当前任务在队列中排队，待前序任务执行完成后自动开始"
+      show-icon
+      :closable="false"
+      style="margin-bottom: 16px"
+    />
+
+    <el-alert
+      v-if="store.status === 'paused'"
+      type="warning"
+      title="任务已暂停，可在任务列表中恢复执行"
+      show-icon
+      :closable="false"
+      style="margin-bottom: 16px"
+    />
+
     <el-alert
       v-if="retryNotice"
       type="warning"
@@ -39,7 +63,9 @@
     <el-card shadow="never" class="testgen-progress-card">
       <div class="testgen-progress-summary">
         <span class="testgen-progress-label">整体进度</span>
-        <span class="testgen-progress-percent">{{ store.overallPercent }}%</span>
+        <span class="testgen-progress-percent">
+          {{ store.totalProduced }} / {{ store.totalConfigured }} 条 · {{ store.overallPercent }}%
+        </span>
       </div>
       <el-progress
         :percentage="store.overallPercent"
@@ -49,8 +75,11 @@
         striped-flow
         :duration="10"
       />
+      <div v-if="store.totalConfigured" class="testgen-progress-phase testgen-progress-count-hint">
+        每轮固定请求 {{ roundRequestSizeLabel }} 条（与剩余条数无关），审查通过立即入库，超出目标部分自动截断
+      </div>
       <div v-if="currentTargetLabel" class="testgen-progress-phase">
-        当前目标：{{ currentTargetLabel }}
+        当前目标：{{ currentTargetLabel }}<span v-if="currentBatchLabel"> · {{ currentBatchLabel }}</span>
       </div>
       <div class="testgen-progress-phase">
         当前阶段：{{ currentPhaseLabel }}
@@ -81,6 +110,12 @@
         </template>
       </el-table-column>
       <el-table-column prop="count" label="目标条数" width="88" />
+      <el-table-column label="分批进度" width="100">
+        <template #default="{ row }">
+          <span v-if="row.batch_total">{{ row.batch_index || 0 }}/{{ row.batch_total }}</span>
+          <span v-else class="target-count-hint">—</span>
+        </template>
+      </el-table-column>
       <el-table-column label="已通过/已写入" width="110">
         <template #default="{ row }">
           <span>{{ row.produced ?? 0 }}</span>
@@ -103,7 +138,9 @@
         <el-tag :type="statusTagType">{{ statusLabel }}</el-tag>
       </el-descriptions-item>
       <el-descriptions-item label="当前阶段">{{ store.currentPhase }}</el-descriptions-item>
-      <el-descriptions-item label="总进度">{{ store.overallPercent }}%</el-descriptions-item>
+      <el-descriptions-item label="总进度">
+        {{ store.totalProduced }} / {{ store.totalConfigured }} 条（{{ store.overallPercent }}%）
+      </el-descriptions-item>
     </el-descriptions>
 
     <el-row :gutter="16" style="margin-top: 16px">
@@ -115,14 +152,14 @@
       </el-col>
     </el-row>
 
-    <el-timeline v-if="store.steps.length" style="margin-top: 24px">
+    <el-timeline v-if="milestoneSteps.length" style="margin-top: 24px">
       <el-timeline-item
-        v-for="(step, index) in store.steps"
+        v-for="(step, index) in milestoneSteps"
         :key="index"
         :timestamp="stepTimestamp(step)"
+        :type="step.phase === 'persist' ? 'success' : step.phase === 'retry' ? 'warning' : 'primary'"
       >
-        {{ step.note || step.message || `阶段 ${step.phase}` }}
-        <span v-if="step.test_case_count != null">（{{ step.test_case_count }} 条）</span>
+        {{ stepDisplayText(step) }}
       </el-timeline-item>
     </el-timeline>
 
@@ -135,7 +172,15 @@
 
     <div class="testgen-progress-actions">
       <el-button
-        v-if="store.status === 'running' || store.status === 'pending'"
+        v-if="store.status === 'running' || store.status === 'waiting'"
+        type="warning"
+        :loading="actionLoading"
+        @click="handlePause"
+      >
+        暂停任务
+      </el-button>
+      <el-button
+        v-if="store.status === 'running' || store.status === 'waiting' || store.status === 'pending'"
         type="danger"
         :loading="actionLoading"
         @click="handleCancel"
@@ -151,14 +196,14 @@
         重试
       </el-button>
       <el-button
-        v-if="store.status === 'done'"
+        v-if="store.canViewResults"
         type="primary"
         @click="goToSuite"
       >
         查看用例库
       </el-button>
       <el-button
-        v-if="store.status === 'done'"
+        v-if="store.canViewResults"
         :loading="importLoading"
         @click="openImportDialog"
       >
@@ -241,6 +286,29 @@ const currentTargetLabel = computed(() => {
   return `${t.scheme_id || ''} ${t.scheme_name || ''} · ${t.validation_id || ''} ${t.validation_name || ''}`.trim();
 });
 
+const currentBatchLabel = computed(() => {
+  const t = store.currentTarget;
+  if (!t?.batch_index) return '';
+  const size = t.round_request_size || t.current_batch_size || 10;
+  return `第 ${t.batch_index}/${t.batch_total} 段（每轮固定 ${size} 条）`;
+});
+
+const roundRequestSizeLabel = computed(() => {
+  const profile = store.agentContext?.llm_profile_id || '';
+  const id = String(profile || 'ollama-qwen').toLowerCase();
+  const isLocal = !profile || id.startsWith('ollama') || id === 'env-fallback';
+  return isLocal ? '5（本地模型）' : '10（云端模型）';
+});
+
+/** 仅展示 BFF 入库/补生成里程碑，隐藏 Agent 内部 analyze/functional/edge/review 步 */
+const milestoneSteps = computed(() =>
+  (store.steps || []).filter(step => {
+    if (step.bff_milestone) return true;
+    if (step.phase === 'persist' || step.phase === 'retry') return true;
+    return false;
+  }),
+);
+
 const retryNotice = computed(() => store.agentContext?.retry_notice || '');
 
 const fitnessPostNotice = computed(() => {
@@ -264,15 +332,18 @@ const failedTargetsNotice = computed(() => {
 
 const progressStatus = computed(() => {
   if (store.status === 'failed') return 'exception';
-  if (store.status === 'done') return 'success';
+  if (store.status === 'done' || store.status === 'partial') return 'success';
   return undefined;
 });
 
 const statusLabel = computed(() => {
   const map = {
     pending: '等待中',
+    waiting: '等待中',
     running: '生成中',
+    paused: '已暂停',
     done: '已完成',
+    partial: '部分完成',
     failed: '失败',
     cancelled: '已取消',
   };
@@ -282,8 +353,11 @@ const statusLabel = computed(() => {
 const statusTagType = computed(() => {
   const map = {
     pending: 'info',
+    waiting: 'info',
     running: 'primary',
+    paused: 'warning',
     done: 'success',
+    partial: 'warning',
     failed: 'danger',
     cancelled: 'warning',
   };
@@ -299,19 +373,41 @@ function phaseProgress(key) {
 }
 
 function targetStatusLabel(status) {
-  const map = { pending: '等待', running: '进行中', done: '完成', failed: '未生成' };
+  const map = {
+    pending: '等待',
+    running: '进行中',
+    done: '完成',
+    partial: '部分完成',
+    failed: '未生成',
+  };
   return map[status] || status || '—';
 }
 
 function targetStatusType(status) {
-  const map = { pending: 'info', running: 'primary', done: 'success', failed: 'danger' };
+  const map = {
+    pending: 'info',
+    running: 'primary',
+    done: 'success',
+    partial: 'warning',
+    failed: 'danger',
+  };
   return map[status] || 'info';
 }
 
+function stepDisplayText(step) {
+  if (step.note) return step.note;
+  if (step.message) return step.message;
+  return `阶段 ${step.phase || '—'}`;
+}
+
 function stepTimestamp(step) {
-  const parts = [step.phase];
+  const parts = [];
+  if (step.phase === 'persist') parts.push('入库');
+  else if (step.phase === 'retry') parts.push('补生成');
+  else parts.push(step.phase || '步骤');
   if (step.scheme_id) parts.push(step.scheme_id);
   if (step.validation_id) parts.push(step.validation_id);
+  if (step.attempt != null) parts.push(`第 ${step.attempt} 轮`);
   return parts.join(' · ');
 }
 
@@ -329,6 +425,18 @@ async function handleCancel() {
     ElMessage.success('任务已取消');
   } catch (err) {
     ElMessage.error(err.message || '取消失败');
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
+async function handlePause() {
+  actionLoading.value = true;
+  try {
+    await store.pause();
+    ElMessage.success('任务已暂停');
+  } catch (err) {
+    ElMessage.error(err.message || '暂停失败');
   } finally {
     actionLoading.value = false;
   }
@@ -377,6 +485,11 @@ async function confirmImport() {
 
 <style scoped>
 .target-count-hint {
+  color: #909399;
+  font-size: 12px;
+}
+.testgen-progress-count-hint {
+  margin-top: 8px;
   color: #909399;
   font-size: 12px;
 }
