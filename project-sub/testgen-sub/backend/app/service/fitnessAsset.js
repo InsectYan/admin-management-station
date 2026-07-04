@@ -547,6 +547,7 @@ class FitnessAssetService extends require('egg').Service {
       err.status = 404;
       throw err;
     }
+    await this.ctx.service.generationTask.syncFromItems();
     return { deleted: 1, item_id: itemId };
   }
 
@@ -562,6 +563,7 @@ class FitnessAssetService extends require('egg').Service {
        WHERE item_id IN (:ids) AND is_active = TRUE`,
       { replacements: { ids } },
     );
+    await this.ctx.service.generationTask.syncFromItems();
     return { deleted: meta?.rowCount ?? 0, item_ids: ids };
   }
 
@@ -578,6 +580,7 @@ class FitnessAssetService extends require('egg').Service {
       ${where}
     `;
     const [, meta] = await this.app.model.query(updateSql, { replacements });
+    await this.ctx.service.generationTask.syncFromItems();
     return { deleted: meta?.rowCount ?? total, total };
   }
 }

@@ -702,5 +702,45 @@
     "sort_order": 1,
     "category_major_name": "可观测缺口",
     "project_code": "fitness-agent"
+  },
+  {
+    "category_minor_id": "C4_INVITE",
+    "category_major_id": "C4",
+    "name": "会员邀请与授权",
+    "sort_order": 10,
+    "category_major_name": "横切业务与状态机",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_minor_id": "B_REL_IDEM",
+    "category_major_id": "B_REL",
+    "name": "幂等法则",
+    "sort_order": 1,
+    "category_major_name": "可靠性法则",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_minor_id": "B_REL_SER",
+    "category_major_id": "B_REL",
+    "name": "串行法则",
+    "sort_order": 2,
+    "category_major_name": "可靠性法则",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_minor_id": "B_REL_CAN",
+    "category_major_id": "B_REL",
+    "name": "可取消",
+    "sort_order": 3,
+    "category_major_name": "可靠性法则",
+    "project_code": "fitness-agent"
+  },
+  {
+    "category_minor_id": "B_REL_REC",
+    "category_major_id": "B_REL",
+    "name": "可恢复",
+    "sort_order": 4,
+    "category_major_name": "可靠性法则",
+    "project_code": "fitness-agent"
   }
 ]

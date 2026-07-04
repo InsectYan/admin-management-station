@@ -25,14 +25,14 @@
       placeholder="生成任务"
       clearable
       filterable
-      style="width: 140px"
+      style="width: 220px"
       @change="emitChange"
     >
       <el-option
-        v-for="id in generationJobOptions"
-        :key="id"
-        :label="`任务 #${id}`"
-        :value="String(id)"
+        v-for="task in normalizedGenerationTasks"
+        :key="task.job_id"
+        :label="task.label"
+        :value="String(task.job_id)"
       />
     </el-select>
     <el-input
@@ -113,6 +113,17 @@ const props = defineProps({
   generationJobOptions: { type: Array, default: () => [] },
   showClear: { type: Boolean, default: true },
 });
+
+const normalizedGenerationTasks = computed(() =>
+  props.generationJobOptions.map(item => {
+    if (item && typeof item === 'object') {
+      const jobId = item.job_id ?? item.id;
+      const taskName = item.task_name || `任务 #${jobId}`;
+      return { job_id: jobId, label: `#${jobId} · ${taskName}` };
+    }
+    return { job_id: item, label: `#${item}` };
+  }),
+);
 
 const emit = defineEmits([ 'update:modelValue', 'change', 'clear' ]);
 

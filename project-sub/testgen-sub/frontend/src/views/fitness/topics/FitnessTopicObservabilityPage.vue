@@ -1,6 +1,19 @@
 <template>
   <PageShell title="可观测性专题">
-    <p class="topic-desc">Journey / 字段可观测相关测试项与自动化覆盖。</p>
+    <p class="topic-desc">OpenTelemetry 工具调度链路与 Journey / 字段可观测测试覆盖。</p>
+    <el-row :gutter="16" style="margin-bottom:16px">
+      <el-col :span="24">
+        <el-card shadow="never">
+          <template #header>OTel 采集栈状态</template>
+          <el-descriptions v-if="otelHealth" :column="3" border size="small">
+            <el-descriptions-item label="查询启用">{{ otelHealth.enabled ? '是' : '否' }}</el-descriptions-item>
+            <el-descriptions-item label="Jaeger">{{ otelHealth.jaeger_reachable ? '可达' : '不可达' }}</el-descriptions-item>
+            <el-descriptions-item label="Query URL">{{ otelHealth.jaeger_query_url || '—' }}</el-descriptions-item>
+          </el-descriptions>
+          <el-skeleton v-else :rows="2" animated />
+        </el-card>
+      </el-col>
+    </el-row>
     <el-row :gutter="16">
       <el-col :span="12">
         <el-card shadow="never">
@@ -30,10 +43,12 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import PageShell from '@/components/PageShell.vue';
 import { fetchView } from '@/services/fitnessService.js';
+import { fetchObservabilityHealth } from '@/services/observabilityService.js';
 
 const router = useRouter();
 const dimRows = ref([]);
 const readiness = ref(null);
+const otelHealth = ref(null);
 
 const signalTag = computed(() => {
   const s = (readiness.value?.release_signal || readiness.value?.signal || '').toUpperCase();
@@ -44,12 +59,14 @@ const signalTag = computed(() => {
 });
 
 onMounted(async () => {
-  const [ dim, ready ] = await Promise.all([
+  const [ dim, ready, health ] = await Promise.all([
     fetchView('v_metric_dimension_summary', { pageSize: 8 }),
     fetchView('v_analysis_release_readiness', { page: 1, pageSize: 1 }),
+    fetchObservabilityHealth().catch(() => null),
   ]);
   dimRows.value = dim.list || [];
   readiness.value = ready.list?.[0] || null;
+  otelHealth.value = health;
 });
 </script>
 

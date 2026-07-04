@@ -1146,5 +1146,70 @@
     "category_minor_name": "可观测缺口",
     "scheme_primary_name": "可观测稽核",
     "validation_primary_name": "存在性"
+  },
+  {
+    "category_minor_id": "C4_INVITE",
+    "item_prefix": "C4-PLAN-ST-",
+    "scheme_primary_id": "TS-02-BND",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-02-CONTRACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": "计划状态机",
+    "mapping_source": "scheme-map.json",
+    "category_minor_name": "会员邀请与授权",
+    "scheme_primary_name": "边界/等价类矩阵",
+    "validation_primary_name": "契约通过"
+  },
+  {
+    "category_minor_id": "B_REL_IDEM",
+    "item_prefix": "B-REL-",
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": "可靠性法则单次",
+    "mapping_source": "scheme-map.json",
+    "category_minor_name": "幂等法则",
+    "scheme_primary_name": "确定性单次",
+    "validation_primary_name": "精确匹配"
+  },
+  {
+    "category_minor_id": "B_REL_SER",
+    "item_prefix": "B-REL-",
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": "可靠性法则单次",
+    "mapping_source": "scheme-map.json",
+    "category_minor_name": "串行法则",
+    "scheme_primary_name": "确定性单次",
+    "validation_primary_name": "精确匹配"
+  },
+  {
+    "category_minor_id": "B_REL_CAN",
+    "item_prefix": "B-REL-",
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": "可靠性法则单次",
+    "mapping_source": "scheme-map.json",
+    "category_minor_name": "可取消",
+    "scheme_primary_name": "确定性单次",
+    "validation_primary_name": "精确匹配"
+  },
+  {
+    "category_minor_id": "B_REL_REC",
+    "item_prefix": "B-REL-",
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": "可靠性法则单次",
+    "mapping_source": "scheme-map.json",
+    "category_minor_name": "可恢复",
+    "scheme_primary_name": "确定性单次",
+    "validation_primary_name": "精确匹配"
   }
 ]

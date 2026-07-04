@@ -1,6 +1,7 @@
 'use strict';
 
 const { emitProgress } = require('../../lib/fitnessRunEvents');
+const { RunStepTracker } = require('../../lib/runStepTracker');
 const engineRegistry = require('./engineRegistry');
 const vsRegistry = require('./vsRegistry');
 const jobQueue = require('./jobQueue');
@@ -247,6 +248,7 @@ class RunOrchestrator {
       started_at: new Date(),
       progress: { phase: 'running', percent: 5, log_tail: [ 'RunOrchestrator: started' ] },
     });
+    await RunStepTracker.clearForRun(this.ctx, runId);
     emitProgress(runId, { phase: 'running', percent: 5, run_id: runId });
 
     try {

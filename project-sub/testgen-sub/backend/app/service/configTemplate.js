@@ -13,10 +13,174 @@ const { normalizeDetConfigJson } = require('../lib/httpRequestBody');
 class ConfigTemplateService extends require('egg').Service {
   async listTemplates() {
     const rows = await this.app.model.query(
-      'SELECT * FROM config_template_enum ORDER BY sort_order ASC',
+      `SELECT t.*, s.name AS scheme_name
+       FROM config_template_enum t
+       LEFT JOIN test_scheme_enum s ON s.scheme_id = t.scheme_id
+       ORDER BY t.sort_order ASC`,
       { type: QueryTypes.SELECT },
     );
     return rows;
+  }
+
+  async listMajorsOverview() {
+    const rows = await this.app.model.query(
+      `SELECT m.category_major_id, m.name AS major_name, m.dimension_id,
+              d.name AS dimension_name, m.description AS major_description,
+              m.default_scheme_id, m.default_validation_id,
+              mt.template_code, mt.note AS template_note,
+              t.name AS template_name, COALESCE(t.scheme_id, m.default_scheme_id) AS scheme_id,
+              t.function_desc, t.scenario_desc,
+              ts.name AS scheme_name,
+              v.name AS validation_name,
+              CASE WHEN m.category_major_id IN ('C1','C2','C3','C4') THEN TRUE ELSE FALSE END AS is_mixed
+       FROM test_category_major m
+       LEFT JOIN test_dimension d ON d.dimension_id = m.dimension_id
+       LEFT JOIN test_category_major_template mt ON mt.category_major_id = m.category_major_id
+       LEFT JOIN config_template_enum t ON t.template_code = mt.template_code
+       LEFT JOIN test_scheme_enum ts ON ts.scheme_id = COALESCE(t.scheme_id, m.default_scheme_id)
+       LEFT JOIN test_validation_enum v ON v.validation_id = m.default_validation_id
+       ORDER BY m.dimension_id, m.category_major_id`,
+      { type: QueryTypes.SELECT },
+    );
+    return rows;
+  }
+
+  async listTemplatesOverview() {
+    const templates = await this.listTemplates();
+    const majorLinks = await this.app.model.query(
+      `SELECT mt.template_code, mt.category_major_id, m.name AS major_name,
+              m.default_validation_id, v.name AS validation_name
+       FROM test_category_major_template mt
+       JOIN test_category_major m ON m.category_major_id = mt.category_major_id
+       LEFT JOIN test_validation_enum v ON v.validation_id = m.default_validation_id
+       ORDER BY mt.template_code, mt.category_major_id`,
+      { type: QueryTypes.SELECT },
+    );
+    const byTemplate = {};
+    for (const row of majorLinks) {
+      if (!byTemplate[row.template_code]) byTemplate[row.template_code] = [];
+      byTemplate[row.template_code].push(row);
+    }
+    return templates.map(t => ({
+      ...t,
+      linked_majors: byTemplate[t.template_code] || [],
+      validation_ids: [ ...new Set((byTemplate[t.template_code] || [])
+        .map(m => m.default_validation_id).filter(Boolean)) ],
+    }));
+  }
+
+  async getValidationsForScheme(schemeId) {
+    if (!schemeId) return [];
+    return this.app.model.query(
+      `SELECT v.validation_id, v.name, p.is_primary
+       FROM test_scheme_validation_pair p
+       JOIN test_validation_enum v ON v.validation_id = p.validation_id
+       WHERE p.scheme_id = :schemeId
+       ORDER BY p.is_primary DESC, v.validation_id`,
+      { replacements: { schemeId }, type: QueryTypes.SELECT },
+    );
+  }
+
+  async updateMajorTemplate(categoryMajorId, templateCode) {
+    if (MIXED_TS_MAJORS.has(categoryMajorId)) {
+      const err = new Error('混合 TS 大类不支持大类级模板切换');
+      err.status = 400;
+      throw err;
+    }
+    const meta = await this.getTemplateMeta(templateCode);
+    if (!meta) {
+      const err = new Error('模板不存在');
+      err.status = 404;
+      throw err;
+    }
+    await this.app.model.query(
+      `INSERT INTO test_category_major_template (category_major_id, template_code, note)
+       VALUES (:majorId, :code, :note)
+       ON CONFLICT (category_major_id) DO UPDATE
+         SET template_code = EXCLUDED.template_code, note = EXCLUDED.note`,
+      {
+        replacements: {
+          majorId: categoryMajorId,
+          code: templateCode,
+          note: meta.name,
+        },
+      },
+    );
+    await this.app.model.query(
+      `UPDATE test_category_major SET default_scheme_id = :schemeId
+       WHERE category_major_id = :majorId`,
+      { replacements: { majorId: categoryMajorId, schemeId: meta.scheme_id } },
+    );
+    return this.getTemplateByMajor(categoryMajorId);
+  }
+
+  async updateMajorValidation(categoryMajorId, validationId) {
+    const majorRows = await this.app.model.query(
+      `SELECT m.default_scheme_id, mt.template_code, t.scheme_id
+       FROM test_category_major m
+       LEFT JOIN test_category_major_template mt ON mt.category_major_id = m.category_major_id
+       LEFT JOIN config_template_enum t ON t.template_code = mt.template_code
+       WHERE m.category_major_id = :majorId LIMIT 1`,
+      { replacements: { majorId: categoryMajorId }, type: QueryTypes.SELECT },
+    );
+    const major = majorRows[0];
+    const schemeId = major?.scheme_id || major?.default_scheme_id;
+    if (schemeId) {
+      const pairs = await this.app.model.query(
+        `SELECT validation_id FROM test_scheme_validation_pair
+         WHERE scheme_id = :schemeId AND validation_id = :validationId LIMIT 1`,
+        { replacements: { schemeId, validationId }, type: QueryTypes.SELECT },
+      );
+      if (!pairs.length) {
+        const err = new Error('验证方案与当前大类方案不兼容');
+        err.status = 400;
+        throw err;
+      }
+    }
+    await this.app.model.query(
+      `UPDATE test_category_major SET default_validation_id = :validationId
+       WHERE category_major_id = :majorId`,
+      { replacements: { majorId: categoryMajorId, validationId } },
+    );
+    const rows = await this.app.model.query(
+      `SELECT m.*, v.name AS validation_name
+       FROM test_category_major m
+       LEFT JOIN test_validation_enum v ON v.validation_id = m.default_validation_id
+       WHERE m.category_major_id = :majorId`,
+      { replacements: { majorId: categoryMajorId }, type: QueryTypes.SELECT },
+    );
+    return rows[0];
+  }
+
+  async updateTemplateValidation(templateCode, validationId) {
+    const meta = await this.getTemplateMeta(templateCode);
+    if (!meta) {
+      const err = new Error('模板不存在');
+      err.status = 404;
+      throw err;
+    }
+    const pairs = await this.app.model.query(
+      `SELECT validation_id FROM test_scheme_validation_pair
+       WHERE scheme_id = :schemeId AND validation_id = :validationId LIMIT 1`,
+      { replacements: { schemeId: meta.scheme_id, validationId }, type: QueryTypes.SELECT },
+    );
+    if (!pairs.length) {
+      const err = new Error('验证方案与模板方案不兼容');
+      err.status = 400;
+      throw err;
+    }
+    const [, metaResult] = await this.app.model.query(
+      `UPDATE test_category_major m SET default_validation_id = :validationId
+       FROM test_category_major_template mt
+       WHERE mt.category_major_id = m.category_major_id
+         AND mt.template_code = :templateCode`,
+      { replacements: { templateCode, validationId } },
+    );
+    return {
+      template_code: templateCode,
+      validation_id: validationId,
+      updated_majors: metaResult?.rowCount ?? 0,
+    };
   }
 
   async getTemplateMeta(templateCode) {

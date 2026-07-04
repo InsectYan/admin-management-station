@@ -370,6 +370,43 @@ export async function fetchTemplateList() {
   return data.data;
 }
 
+export async function fetchTemplatesOverview() {
+  const { data } = await api.get('/fitness/template-config/templates/overview');
+  return data.data;
+}
+
+export async function fetchMajorsTemplateOverview() {
+  const { data } = await api.get('/fitness/template-config/majors/overview');
+  return data.data;
+}
+
+export async function fetchSchemeValidations(schemeId) {
+  const { data } = await api.get(`/fitness/template-config/schemes/${encodeURIComponent(schemeId)}/validations`);
+  return data.data;
+}
+
+export async function updateMajorTemplate(majorId, templateCode) {
+  const { data } = await api.put(`/fitness/template-config/major/${encodeURIComponent(majorId)}/template`, {
+    template_code: templateCode,
+  });
+  return data.data;
+}
+
+export async function updateMajorValidation(majorId, validationId) {
+  const { data } = await api.put(`/fitness/template-config/major/${encodeURIComponent(majorId)}/validation`, {
+    validation_id: validationId,
+  });
+  return data.data;
+}
+
+export async function updateTemplateValidation(templateCode, validationId) {
+  const { data } = await api.put(
+    `/fitness/template-config/templates/${encodeURIComponent(templateCode)}/validation`,
+    { validation_id: validationId },
+  );
+  return data.data;
+}
+
 export async function fetchMajorTemplateMapping(majorId) {
   const { data } = await api.get(`/fitness/template-config/major/${encodeURIComponent(majorId)}`);
   return data.data;

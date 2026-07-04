@@ -27,11 +27,17 @@ class Ts05ChainEngine extends BaseTsEngine {
     let passCount = 0;
     const total = steps.length;
     const runId = run.id;
+    let globalStepIndex = 0;
 
     for (let i = 0; i < steps.length; i += 1) {
       const rawStep = steps[i];
       const row = applyVarsToRow(rawStep, vars);
-      const sub = await executeMatrixRow(ctx, row, i);
+      const sub = await executeMatrixRow(ctx, row, i, {
+        step_index: globalStepIndex,
+        source: 'config',
+        step_name: rawStep.name || rawStep.path || `config-step-${i + 1}`,
+      });
+      globalStepIndex += 1;
 
       if (sub.artifacts?.http?.body && rawStep.extract) {
         applyExtract(vars, sub.artifacts.http.body, rawStep.extract);
@@ -76,7 +82,12 @@ class Ts05ChainEngine extends BaseTsEngine {
         const plan = await hookRunner.planExploreStep(ctx, history, goal);
         if (!plan || plan.done) break;
         const row = applyVarsToRow(plan.step || plan, vars);
-        const sub = await executeMatrixRow(ctx, row, results.length);
+        const sub = await executeMatrixRow(ctx, row, results.length, {
+          step_index: globalStepIndex,
+          source: 'explore',
+          step_name: (plan.step || plan).name || `explore-step-${e + 1}`,
+        });
+        globalStepIndex += 1;
         if (sub.artifacts?.http?.body && (plan.step || plan).extract) {
           applyExtract(vars, sub.artifacts.http.body, (plan.step || plan).extract);
         }

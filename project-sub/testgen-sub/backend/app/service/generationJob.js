@@ -10,6 +10,40 @@ const {
 
 const PHASES = [ 'analyze', 'generate', 'review' ];
 const MAX_TARGET_ATTEMPTS = 5;
+const ESTIMATE_AGENT_TIMEOUT_MS = 5000;
+
+function analyzeDocumentHeuristic(content, schemeTargets, categoryMajorIds, validationIds) {
+  const text = content || '';
+  const len = text.length;
+  const sectionCount = (text.match(/^#{1,3}\s+/gm) || []).length;
+  const apiMethodCount = (text.match(/\b(GET|POST|PUT|PATCH|DELETE)\b/gi) || []).length;
+  const endpointCount = Math.min((text.match(/\/[a-zA-Z0-9_\-/{:?=.&]+/g) || []).length, 30);
+  const listItemCount = (text.match(/^\s*[-*]\s+/gm) || []).length;
+
+  const complexity = sectionCount + apiMethodCount + Math.ceil(endpointCount / 2) + Math.ceil(listItemCount / 5);
+  const basePerTarget = Math.max(3, Math.min(30, Math.ceil(len / 1200) + Math.ceil(complexity / 2)));
+
+  let estimated;
+  if (schemeTargets.length) {
+    estimated = schemeTargets.reduce((sum) => sum + basePerTarget, 0);
+  } else {
+    const majorN = Math.max(categoryMajorIds.length, 1);
+    const valN = Math.max(validationIds.length, 1);
+    estimated = majorN * valN * basePerTarget;
+  }
+
+  const parts = [
+    `文档约 ${len} 字`,
+    sectionCount ? `${sectionCount} 个章节` : null,
+    apiMethodCount ? `${apiMethodCount} 处 HTTP 方法` : null,
+    endpointCount ? `${endpointCount} 处路径/接口` : null,
+  ].filter(Boolean);
+
+  return {
+    estimated_count: estimated,
+    reasoning: `${parts.join('、')}；结合 ${schemeTargets.length || categoryMajorIds.length} 个大类与 ${schemeTargets.length || '默认'} 个生成目标，建议约 ${estimated} 条`,
+  };
+}
 
 class GenerationJobService extends Service {
   async createAndRun(payload) {
@@ -21,6 +55,7 @@ class GenerationJobService extends Service {
       document_type,
       project_code,
       project_name,
+      task_name,
       options = {},
       fitness_context,
       llm_profile,
@@ -150,7 +185,124 @@ class GenerationJobService extends Service {
       }
     });
 
-    return { job_id: job.id, id: job.id, status: 'running' };
+    const resolvedTaskName = task_name?.trim() || `任务 #${job.id}`;
+    await this.ctx.service.generationTask.register(job.id, resolvedTaskName);
+
+    return { job_id: job.id, id: job.id, status: 'running', task_name: resolvedTaskName };
+  }
+
+  async estimateCaseCount(payload = {}) {
+    const {
+      staging_id,
+      document_id,
+      document_content,
+      document_title,
+      document_type,
+      project_code,
+      project_name,
+      options = {},
+      llm_profile,
+    } = payload;
+
+    let resolvedContent = document_content || null;
+    let resolvedTitle = document_title || null;
+    let contentWarning = null;
+
+    if (staging_id) {
+      try {
+        const staged = await this.ctx.service.documentStaging.resolveFullContent(staging_id);
+        resolvedContent = staged.content;
+        resolvedTitle = staged.title;
+      } catch (err) {
+        contentWarning = err.message || '文档暂不可用';
+        this.ctx.app.logger.warn('[generationJob] estimate staging failed: %s', contentWarning);
+      }
+    } else if (!resolvedContent && document_id) {
+      try {
+        const doc = await this.ctx.service.document.findById(document_id);
+        if (doc) {
+          resolvedContent = doc.content;
+          resolvedTitle = doc.title;
+        }
+      } catch (err) {
+        contentWarning = err.message || '文档读取失败';
+      }
+    }
+
+    const category_major_ids = options.category_major_ids || [];
+    const validation_ids = options.validation_ids || [];
+    const major_counts = options.major_counts || {};
+    const scheme_targets = options.scheme_targets?.length
+      ? options.scheme_targets
+      : await buildSchemeTargetsFromMajors(this.app, {
+        category_major_ids,
+        validation_ids,
+        major_counts,
+        default_count: options.default_count || 5,
+      });
+
+    const configuredTotal = scheme_targets.reduce((sum, t) => sum + (t.count || 0), 0);
+
+    if (!resolvedContent) {
+      return {
+        estimated_count: configuredTotal,
+        configured_count: configuredTotal,
+        source: 'configured',
+        reasoning: contentWarning
+          ? `${contentWarning}，按当前配置合计 ${configuredTotal} 条`
+          : `基于当前配置：${scheme_targets.length} 个生成目标，合计 ${configuredTotal} 条`,
+        scheme_target_count: scheme_targets.length,
+      };
+    }
+
+    const heuristic = analyzeDocumentHeuristic(
+      resolvedContent,
+      scheme_targets,
+      category_major_ids,
+      validation_ids,
+    );
+    let estimatedCount = heuristic.estimated_count;
+    let source = 'heuristic';
+    let reasoning = heuristic.reasoning;
+
+    try {
+      const agentRes = await this.ctx.service.agentProxy.invokeTestgen({
+        action: 'estimate_case_count',
+        document_content: resolvedContent,
+        document_title: resolvedTitle || '文档',
+        document_type: document_type || 'markdown',
+        project_code,
+        project_name,
+        options: {
+          category_major_ids,
+          validation_ids,
+          scheme_targets,
+          major_counts,
+          hint: options.hint,
+        },
+        llm_profile,
+        trace: { action: 'estimate' },
+      }, ESTIMATE_AGENT_TIMEOUT_MS);
+      const output = agentRes.output || agentRes;
+      const agentEstimate = Number(output.estimated_count ?? output.estimate ?? output.count);
+      if (Number.isFinite(agentEstimate) && agentEstimate > 0) {
+        estimatedCount = Math.round(agentEstimate);
+        source = 'agent';
+        reasoning = output.reasoning || output.summary || reasoning;
+      }
+    } catch (err) {
+      const brief = String(err.message || '超时').split('\n')[0].slice(0, 120);
+      this.ctx.app.logger.warn('[generationJob] estimate agent failed: %s', err.message);
+      reasoning = `Agent 暂不可用（${brief}），${reasoning}`;
+    }
+
+    return {
+      estimated_count: estimatedCount,
+      configured_count: configuredTotal,
+      source,
+      reasoning,
+      scheme_target_count: scheme_targets.length,
+    };
   }
 
   async executeJob(jobId, payload) {

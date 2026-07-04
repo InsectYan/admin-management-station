@@ -14,7 +14,7 @@ export const navMenus = [
     children: [
       {
         path: '/testgen/scope',
-        title: '生成配置',
+        title: '自动生成用例',
         activePrefix: '/testgen/scope',
         activeAliases: [ '/scope', '/jobs' ],
       },
@@ -32,9 +32,9 @@ export const navMenus = [
     title: '配置管理',
     icon: 'Setting',
     children: [
-      { path: '/config/templates', title: '模板管理', activePrefix: '/config/templates' },
-      { path: '/config/api-templates', title: '接口模板', activePrefix: '/config/api-templates' },
-      { path: '/fitness/settings/enums', title: '枚举配置', activePrefix: '/fitness/settings' },
+      { path: '/config/templates', title: '用例模板', activePrefix: '/config/templates' },
+      { path: '/config/api-templates', title: '接口模板', activePrefix: '/config/api-templates', activeAliases: [ '/config/api-template-jobs' ] },
+      { path: '/fitness/settings/enums', title: '枚举字典', activePrefix: '/fitness/settings' },
     ],
   },
   {

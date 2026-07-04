@@ -75,5 +75,13 @@ CREATE INDEX IF NOT EXISTS idx_generation_jobs_document ON generation_jobs (docu
 CREATE INDEX IF NOT EXISTS idx_generation_jobs_created_at ON generation_jobs (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_generation_jobs_project ON generation_jobs (project_code);
 
+CREATE TABLE IF NOT EXISTS generation_task_registry (
+  job_id INT PRIMARY KEY REFERENCES generation_jobs(id) ON DELETE CASCADE,
+  task_name VARCHAR(255) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_generation_task_registry_name ON generation_task_registry (task_name);
+
 -- 已有库升级见 database/migrations/001_add_agent_context.sql
 -- test_cases 已废弃，见 database/migrations/019_drop_test_cases.sql

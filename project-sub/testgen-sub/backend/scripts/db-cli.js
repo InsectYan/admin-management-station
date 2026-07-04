@@ -60,8 +60,9 @@ async function syncSchema() {
     { ...pgConfig(), dialect: 'postgres', logging: false },
   );
   try {
-    await bootstrapFitnessSchema(sequelize, { baseDir: path.join(__dirname, '..') });
-    console.log('[db] Schema 同步完成（DDL + Fitness 表 + 运行时表）');
+    const dbDir = await bootstrapFitnessSchema(sequelize, { baseDir: path.join(__dirname, '..') });
+    await runPostSeedMigrations(sequelize, dbDir, console);
+    console.log('[db] Schema 同步完成（DDL + Fitness 表 + 运行时表 + post-seed 迁移）');
   } finally {
     await sequelize.close();
   }

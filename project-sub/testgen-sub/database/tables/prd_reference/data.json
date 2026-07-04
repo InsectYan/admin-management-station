@@ -214,5 +214,59 @@
     "section": "§6",
     "title": "管理端权限",
     "project_code": "fitness-agent"
+  },
+  {
+    "prd_ref_id": "PRD_INV_3",
+    "section": "§3",
+    "title": "邀请核心设计结论",
+    "project_code": "fitness-agent"
+  },
+  {
+    "prd_ref_id": "PRD_INV_5",
+    "section": "§5",
+    "title": "管理端邀请规则",
+    "project_code": "fitness-agent"
+  },
+  {
+    "prd_ref_id": "PRD_INV_6",
+    "section": "§6",
+    "title": "品牌教练邀请规则",
+    "project_code": "fitness-agent"
+  },
+  {
+    "prd_ref_id": "PRD_INV_7",
+    "section": "§7",
+    "title": "自由教练邀请预留",
+    "project_code": "fitness-agent"
+  },
+  {
+    "prd_ref_id": "PRD_INV_9",
+    "section": "§9",
+    "title": "多关系并存规则",
+    "project_code": "fitness-agent"
+  },
+  {
+    "prd_ref_id": "PRD_INV_10",
+    "section": "§10",
+    "title": "权限与可见范围",
+    "project_code": "fitness-agent"
+  },
+  {
+    "prd_ref_id": "PRD_INV_12",
+    "section": "§12",
+    "title": "邀请异常场景",
+    "project_code": "fitness-agent"
+  },
+  {
+    "prd_ref_id": "PRD_INV_14",
+    "section": "§14",
+    "title": "邀请留痕规则",
+    "project_code": "fitness-agent"
+  },
+  {
+    "prd_ref_id": "PRD_INV_15",
+    "section": "§15",
+    "title": "邀请验收标准",
+    "project_code": "fitness-agent"
   }
 ]

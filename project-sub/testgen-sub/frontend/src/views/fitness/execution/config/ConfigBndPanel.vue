@@ -29,7 +29,7 @@
           <el-input v-else v-model="row.path" size="small" placeholder="/health" @input="sync" />
         </template>
       </el-table-column>
-      <el-table-column label="Method" width="90">
+      <el-table-column label="Method" width="100">
         <template #default="{ row }">
           <el-select v-if="row.runner !== 'cli'" v-model="row.method" size="small" @change="sync">
             <el-option label="GET" value="GET" />
@@ -38,7 +38,7 @@
           <span v-else>-</span>
         </template>
       </el-table-column>
-      <el-table-column label="Expect" width="100">
+      <el-table-column label="Expect" width="140">
         <template #default="{ row }">
           <el-input-number
             v-if="row.runner !== 'cli'"

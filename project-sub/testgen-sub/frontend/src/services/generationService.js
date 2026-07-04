@@ -16,6 +16,7 @@ export async function startGeneration({
   document_type,
   project_code,
   project_name,
+  task_name,
   options,
   fitness_context,
 }) {
@@ -27,9 +28,20 @@ export async function startGeneration({
     document_type,
     project_code,
     project_name,
+    task_name,
     options,
     fitness_context,
   }));
+  return data.data;
+}
+
+export async function estimateGeneration(payload) {
+  const { data } = await api.post(`${base()}/generation-jobs/estimate`, withLlmProfile(payload));
+  return data.data;
+}
+
+export async function fetchGenerationTasks() {
+  const { data } = await api.get(`${base()}/generation-tasks`);
   return data.data;
 }
 

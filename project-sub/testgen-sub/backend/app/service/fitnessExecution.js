@@ -190,11 +190,37 @@ class FitnessExecutionService extends require('egg').Service {
   async getRun(id) {
     const run = await this.ctx.model.FtRun.findByPk(id);
     if (!run) return null;
-    const results = await this.ctx.model.FtRunResult.findAll({
-      where: { ft_run_id: id },
-      order: [[ 'sub_index', 'ASC' ]],
+    const [ results, steps ] = await Promise.all([
+      this.ctx.model.FtRunResult.findAll({
+        where: { ft_run_id: id },
+        order: [[ 'sub_index', 'ASC' ]],
+      }),
+      this.ctx.model.FtRunStep.findAll({
+        where: { ft_run_id: id },
+        order: [[ 'step_index', 'ASC' ]],
+      }),
+    ]);
+    return { ...run.toJSON(), results, steps };
+  }
+
+  async listRunSteps(runId) {
+    const run = await this.ctx.model.FtRun.findByPk(runId);
+    if (!run) return null;
+    const steps = await this.ctx.model.FtRunStep.findAll({
+      where: { ft_run_id: runId },
+      order: [[ 'step_index', 'ASC' ]],
     });
-    return { ...run.toJSON(), results };
+    return { run_id: Number(runId), steps: steps.map(s => s.toJSON()) };
+  }
+
+  async listRunAgentAudit(runId) {
+    const run = await this.ctx.model.FtRun.findByPk(runId);
+    if (!run) return null;
+    const logs = await this.ctx.service.agentAudit.listForRun(runId);
+    return {
+      run_id: Number(runId),
+      logs: logs.map(l => l.toJSON()),
+    };
   }
 
   async saveRunConfig(itemId, body) {

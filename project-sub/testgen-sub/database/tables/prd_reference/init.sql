@@ -41,3 +41,12 @@ INSERT INTO prd_reference (prd_ref_id, section, title) VALUES ('PRD_7_3', '§7.3
 INSERT INTO prd_reference (prd_ref_id, section, title) VALUES ('PRD_7_PAYLOAD', '§7', '载荷契约') ON CONFLICT (prd_ref_id) DO NOTHING;
 INSERT INTO prd_reference (prd_ref_id, section, title) VALUES ('PRD_8', '§8', 'Agent高风险误判') ON CONFLICT (prd_ref_id) DO NOTHING;
 INSERT INTO prd_reference (prd_ref_id, section, title) VALUES ('PRD_6_PERM', '§6', '管理端权限') ON CONFLICT (prd_ref_id) DO NOTHING;
+INSERT INTO prd_reference (prd_ref_id, section, title, project_code) VALUES ('PRD_INV_3', '§3', '邀请核心设计结论', 'fitness-agent') ON CONFLICT (prd_ref_id) DO NOTHING;
+INSERT INTO prd_reference (prd_ref_id, section, title, project_code) VALUES ('PRD_INV_5', '§5', '管理端邀请规则', 'fitness-agent') ON CONFLICT (prd_ref_id) DO NOTHING;
+INSERT INTO prd_reference (prd_ref_id, section, title, project_code) VALUES ('PRD_INV_6', '§6', '品牌教练邀请规则', 'fitness-agent') ON CONFLICT (prd_ref_id) DO NOTHING;
+INSERT INTO prd_reference (prd_ref_id, section, title, project_code) VALUES ('PRD_INV_7', '§7', '自由教练邀请预留', 'fitness-agent') ON CONFLICT (prd_ref_id) DO NOTHING;
+INSERT INTO prd_reference (prd_ref_id, section, title, project_code) VALUES ('PRD_INV_9', '§9', '多关系并存规则', 'fitness-agent') ON CONFLICT (prd_ref_id) DO NOTHING;
+INSERT INTO prd_reference (prd_ref_id, section, title, project_code) VALUES ('PRD_INV_10', '§10', '权限与可见范围', 'fitness-agent') ON CONFLICT (prd_ref_id) DO NOTHING;
+INSERT INTO prd_reference (prd_ref_id, section, title, project_code) VALUES ('PRD_INV_12', '§12', '邀请异常场景', 'fitness-agent') ON CONFLICT (prd_ref_id) DO NOTHING;
+INSERT INTO prd_reference (prd_ref_id, section, title, project_code) VALUES ('PRD_INV_14', '§14', '邀请留痕规则', 'fitness-agent') ON CONFLICT (prd_ref_id) DO NOTHING;
+INSERT INTO prd_reference (prd_ref_id, section, title, project_code) VALUES ('PRD_INV_15', '§15', '邀请验收标准', 'fitness-agent') ON CONFLICT (prd_ref_id) DO NOTHING;

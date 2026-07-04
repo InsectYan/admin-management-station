@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <PageShell title="运行控制台" v-loading="loading">
     <template #extra>
       <div v-if="run" class="console-toolbar">
@@ -130,6 +130,23 @@
           </el-collapse-item>
         </el-collapse>
       </el-tab-pane>
+      <el-tab-pane label="步骤甘特图" name="steps">
+        <RunStepGanttPanel
+          v-if="run?.id"
+          :run-id="String(run.id)"
+          :initial-steps="run.steps || []"
+          :live-steps="liveSteps"
+          @select-trace="onSelectTrace"
+        />
+      </el-tab-pane>
+      <el-tab-pane label="工具调度链路" name="toolchain">
+        <ToolChainTracePanel
+          v-if="run?.id"
+          :run-id="String(run.id)"
+          :initial-trace-ids="collectedTraceIds"
+          :focus-trace-id="focusTraceId"
+        />
+      </el-tab-pane>
     </el-tabs>
 
     <el-card v-if="run && isTerminal" shadow="never" style="margin-top:16px">
@@ -170,6 +187,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '@/components/PageShell.vue';
 import PassFailChart from '@/components/fitness/PassFailChart.vue';
+import ToolChainTracePanel from '@/components/observability/ToolChainTracePanel.vue';
+import RunStepGanttPanel from '@/components/observability/RunStepGanttPanel.vue';
 import {
   analyzeLoadRun,
   exportRunLog,
@@ -193,6 +212,8 @@ const loading = ref(false);
 const run = ref(null);
 const liveProgress = ref(null);
 const resultTab = ref('subs');
+const liveSteps = ref([]);
+const focusTraceId = ref('');
 const explainLoading = ref(false);
 const explainMarkdown = ref('');
 const rerunning = ref(false);
@@ -259,6 +280,18 @@ const journeyArtifacts = computed(() => {
   return out;
 });
 
+const collectedTraceIds = computed(() => {
+  const ids = new Set();
+  for (const row of run.value?.results || []) {
+    const wrapped = row.assertion_detail;
+    const artifacts = row.artifacts
+      || (wrapped && typeof wrapped === 'object' && !Array.isArray(wrapped) ? wrapped.artifacts : null);
+    const tid = artifacts?.http?.trace_id || artifacts?.trace_id;
+    if (tid) ids.add(String(tid));
+  }
+  return [ ...ids ];
+});
+
 const progressLabel = computed(() => {
   const phase = liveProgress.value?.phase ?? run.value?.progress?.phase ?? run.value?.status;
   const rate = liveProgress.value?.pass_rate ?? run.value?.progress?.pass_rate;
@@ -287,6 +320,7 @@ const canRerunFailed = computed(() =>
 
 async function reloadRun() {
   run.value = await fetchFtRun(route.params.runId);
+  if (isTerminal.value) liveSteps.value = run.value?.steps || [];
 }
 
 function goItemDetail() {
@@ -402,9 +436,31 @@ function closeStream() {
   }
 }
 
+function onSelectTrace(traceId) {
+  focusTraceId.value = traceId;
+  resultTab.value = 'toolchain';
+}
+
+function upsertLiveStep(payload) {
+  const key = payload.step_id || `${payload.step_index}-${payload.started_at}`;
+  const idx = liveSteps.value.findIndex(s =>
+    (s.step_id && s.step_id === payload.step_id)
+    || (`${s.step_index}-${s.started_at}` === key),
+  );
+  if (idx >= 0) {
+    liveSteps.value[idx] = { ...liveSteps.value[idx], ...payload };
+  } else {
+    liveSteps.value.push(payload);
+  }
+}
+
 function startStream() {
   closeStream();
   es = streamFtRun(route.params.runId, async payload => {
+    if (payload.event_type === 'step') {
+      upsertLiveStep(payload);
+      return;
+    }
     liveProgress.value = payload;
     if (payload.status && TERMINAL.has(payload.status)) {
       await reloadRun();

@@ -81,7 +81,7 @@ ams-testgen db:sync            # 仅 DDL，不注入数据
 ams-testgen db:reset           # 清空全库 → 重建 Schema → 全量注入
 ams-testgen db:reset test_item_detail  # 删表重建 + 仅注入指定表
 # 以下是每次更新数测试用例状态后，以此处理
-cd project-sub/testgen-sub
+cd admin-management-station/project-sub/testgen-sub
 node test-project/fitness-agent/scripts/sync-automation-status.mjs
 cd deploy && ams-testgen db:reset test_item_detail
 ```

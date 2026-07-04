@@ -1,6 +1,7 @@
 'use strict';
 
 const Service = require('egg').Service;
+const { extractAgentTools } = require('../lib/agentToolsExtract');
 
 class AgentProxyService extends Service {
   _skillConfig() {
@@ -20,6 +21,7 @@ class AgentProxyService extends Service {
       ...payload,
       trace_id: payload.trace_id || trace.trace_id || undefined,
     };
+    const started = Date.now();
 
     const res = await this.ctx.curl(`${baseUrl}${path}`, {
       method: 'POST',
@@ -31,15 +33,24 @@ class AgentProxyService extends Service {
 
     const skill = payload._skill || path.split('/').slice(-2, -1)[0] || 'unknown';
     const action = payload.action || 'invoke';
+    const durationMs = Date.now() - started;
+    const responseTraceId = res.data?.trace_id || data.trace_id || null;
+    const tools = extractAgentTools(res.data);
+
+    const auditBase = {
+      skill,
+      action,
+      run_id: trace.run_id,
+      job_id: trace.job_id,
+      item_id: trace.item_id,
+      trace_id: responseTraceId,
+      duration_ms: durationMs,
+      tools,
+    };
 
     if (res.status !== 200) {
-      this.ctx.service.agentAudit.log({
-        skill,
-        action,
-        run_id: trace.run_id,
-        job_id: trace.job_id,
-        item_id: trace.item_id,
-        trace_id: data.trace_id,
+      await this.ctx.service.agentAudit.log({
+        ...auditBase,
         ok: false,
         error: res.data?.error || res.data?.message || `HTTP ${res.status}`,
       });
@@ -52,13 +63,8 @@ class AgentProxyService extends Service {
     }
 
     if (res.data?.error) {
-      this.ctx.service.agentAudit.log({
-        skill,
-        action,
-        run_id: trace.run_id,
-        job_id: trace.job_id,
-        item_id: trace.item_id,
-        trace_id: data.trace_id,
+      await this.ctx.service.agentAudit.log({
+        ...auditBase,
         ok: false,
         error: res.data.error,
       });
@@ -70,13 +76,8 @@ class AgentProxyService extends Service {
 
     const stoppedReason = res.data?.output?.stoppedReason;
     if (stoppedReason === 'llm_error') {
-      this.ctx.service.agentAudit.log({
-        skill,
-        action,
-        run_id: trace.run_id,
-        job_id: trace.job_id,
-        item_id: trace.item_id,
-        trace_id: data.trace_id,
+      await this.ctx.service.agentAudit.log({
+        ...auditBase,
         ok: false,
         error: res.data?.reply || 'LLM 调用失败',
       });
@@ -86,22 +87,19 @@ class AgentProxyService extends Service {
       throw err;
     }
 
-    this.ctx.service.agentAudit.log({
-      skill,
-      action,
-      run_id: trace.run_id,
-      job_id: trace.job_id,
-      item_id: trace.item_id,
-      trace_id: data.trace_id,
+    await this.ctx.service.agentAudit.log({
+      ...auditBase,
       ok: true,
+      detail: { stopped_reason: stoppedReason || null },
     });
 
     return res.data;
   }
 
-  async invokeTestgen(payload) {
-    const { invokePath } = this._skillConfig();
-    return this.invokeSkill(invokePath, { ...payload, _skill: 'testgen-skill' });
+  async invokeTestgen(payload, timeoutMs) {
+    const { invokePath, estimateTimeoutMs, timeout } = this._skillConfig();
+    const ms = timeoutMs ?? estimateTimeoutMs ?? timeout ?? 120000;
+    return this.invokeSkill(invokePath, { ...payload, _skill: 'testgen-skill' }, ms);
   }
 
   async invokeFitnessJudge(payload) {
@@ -132,6 +130,16 @@ class AgentProxyService extends Service {
     const { perfInvokePath, timeout } = this._skillConfig();
     const path = perfInvokePath || '/api/skills/perf-bottleneck-skill/invoke';
     return this.invokeSkill(path, { ...payload, _skill: 'perf-bottleneck-skill' }, timeout || 120000);
+  }
+
+  async invokeApiTemplate(payload) {
+    const { apiTemplateInvokePath, apiTemplateTimeoutMs, timeout } = this._skillConfig();
+    const path = apiTemplateInvokePath || '/api/skills/api-template-skill/invoke';
+    return this.invokeSkill(
+      path,
+      { ...payload, _skill: 'api-template-skill' },
+      apiTemplateTimeoutMs || timeout || 300000,
+    );
   }
 }
 

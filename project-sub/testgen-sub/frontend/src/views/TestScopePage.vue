@@ -1,5 +1,5 @@
 <template>
-  <PageShell title="生成配置">
+  <PageShell title="自动生成用例">
     <template #extra>
       <el-button
         type="primary"
@@ -17,6 +17,15 @@
       label-width="100px"
       class="testgen-scope-form"
     >
+      <el-form-item label="任务名称" prop="task_name">
+        <el-input
+          v-model="form.task_name"
+          placeholder="为本次生成任务命名，便于在用例库中筛选"
+          maxlength="100"
+          show-word-limit
+        />
+      </el-form-item>
+
       <el-form-item label="项目" prop="project_code">
         <el-select
           v-model="form.project_code"
@@ -252,6 +261,28 @@
         />
       </el-form-item>
 
+      <el-form-item label="Agent 分析">
+        <div class="testgen-agent-estimate">
+          <el-button
+            type="primary"
+            plain
+            :loading="estimating"
+            :disabled="!canEstimate"
+            @click="handleAgentEstimate"
+          >
+            Agent 分析
+          </el-button>
+          <span v-if="estimateResult" class="testgen-estimate-result">
+            建议生成约 <strong>{{ estimateResult.estimated_count }}</strong> 条
+            <el-tag size="small" type="info">{{ estimateSourceLabel }}</el-tag>
+          </span>
+          <div v-if="estimateResult?.reasoning" class="testgen-estimate-reason">
+            {{ estimateResult.reasoning }}
+          </div>
+          <div class="testgen-estimate-hint">基于文档与所选大类/方案分析，仅供参考，不参与实际生成</div>
+        </div>
+      </el-form-item>
+
       <el-divider content-position="left">Fitness 联动（可选）</el-divider>
       <el-form-item label="后处理">
         <el-checkbox v-model="form.fitness_auto_sample">完成后 AI 补全样本（enrich_samples）</el-checkbox>
@@ -268,7 +299,7 @@ import { ElMessage } from 'element-plus';
 import { UploadFilled } from '@element-plus/icons-vue';
 import PageShell from '../components/PageShell.vue';
 import { listDocuments, previewDocument, getDocumentPreview } from '../services/documentService';
-import { startGeneration } from '../services/generationService';
+import { startGeneration, estimateGeneration } from '../services/generationService';
 import { fetchEnums, fetchMajorTemplateMapping } from '../services/fitnessService.js';
 import { fetchProjects } from '../services/projectService.js';
 
@@ -279,6 +310,8 @@ const PREVIEW_SNIPPET_LEN = 500;
 const router = useRouter();
 const formRef = ref(null);
 const submitting = ref(false);
+const estimating = ref(false);
+const estimateResult = ref(null);
 const uploading = ref(false);
 const documents = ref([]);
 const projectOptions = ref([]);
@@ -310,6 +343,7 @@ const emptyPreview = () => ({
 const previewData = ref(emptyPreview());
 
 const form = ref({
+  task_name: '',
   project_code: '',
   category_major_ids: [],
   major_counts: {},
@@ -397,13 +431,26 @@ function buildSchemeTargets() {
 const schemeTargetPreview = computed(() => buildSchemeTargets());
 
 const rules = {
+  task_name: [{ required: true, message: '请输入任务名称', trigger: 'blur' }],
   project_code: [{ required: true, message: '请选择项目', trigger: 'change' }],
   category_major_ids: [{ type: 'array', min: 1, message: '请至少选择一个测试大类', trigger: 'change' }],
   validation_ids: [{ type: 'array', min: 1, message: '至少选择一项主验证', trigger: 'change' }],
 };
 
+const canEstimate = computed(() =>
+  form.value.category_major_ids.length > 0
+  && form.value.validation_ids.length > 0
+  && hasPreview.value,
+);
+
+const estimateSourceLabel = computed(() => {
+  const map = { agent: 'Agent', heuristic: '文档分析', configured: '配置合计' };
+  return map[estimateResult.value?.source] || estimateResult.value?.source || '';
+});
+
 const canSubmit = computed(() =>
-  form.value.project_code
+  form.value.task_name?.trim()
+  && form.value.project_code
   && form.value.category_major_ids.length > 0
   && form.value.validation_ids.length > 0
   && contentConfirmed.value
@@ -621,6 +668,59 @@ async function onExistingDocSelect(id) {
   }
 }
 
+async function buildGenerationPayload() {
+  const scheme_targets = buildSchemeTargets();
+  const options = {
+    category_major_ids: form.value.category_major_ids,
+    validation_ids: form.value.validation_ids,
+    major_counts: form.value.major_counts,
+    scheme_targets,
+    fitness_context: {
+      auto_sample: form.value.fitness_auto_sample,
+      enrich_samples: form.value.fitness_auto_sample,
+      dry_run: form.value.fitness_dry_run,
+    },
+  };
+  if (form.value.hint) options.hint = form.value.hint;
+
+  const payload = {
+    project_code: form.value.project_code,
+    project_name: selectedProject.value?.project_name || form.value.project_code,
+    task_name: form.value.task_name.trim(),
+    options,
+    fitness_context: options.fitness_context,
+  };
+
+  if (previewData.value.staging_id) {
+    payload.staging_id = previewData.value.staging_id;
+  } else if (docInputMode.value === 'existing' && previewData.value.document_id) {
+    payload.document_id = previewData.value.document_id;
+  } else if (pasteFullContent.value) {
+    payload.document_content = pasteFullContent.value;
+    payload.document_title = previewData.value.title;
+    payload.document_type = previewData.value.doc_type;
+  }
+  return payload;
+}
+
+async function handleAgentEstimate() {
+  if (!canEstimate.value) {
+    ElMessage.warning('请先选择大类、验证并确认文档');
+    return;
+  }
+  estimating.value = true;
+  estimateResult.value = null;
+  try {
+    const payload = await buildGenerationPayload();
+    estimateResult.value = await estimateGeneration(payload);
+    ElMessage.success('分析完成（仅供参考）');
+  } catch (err) {
+    ElMessage.error(err.message || 'Agent 分析失败');
+  } finally {
+    estimating.value = false;
+  }
+}
+
 async function handleStartGeneration() {
   const valid = await formRef.value?.validate().catch(() => false);
   if (!valid) return;
@@ -632,37 +732,7 @@ async function handleStartGeneration() {
 
   submitting.value = true;
   try {
-    const scheme_targets = buildSchemeTargets();
-    const options = {
-      category_major_ids: form.value.category_major_ids,
-      validation_ids: form.value.validation_ids,
-      major_counts: form.value.major_counts,
-      scheme_targets,
-      fitness_context: {
-        auto_sample: form.value.fitness_auto_sample,
-        enrich_samples: form.value.fitness_auto_sample,
-        dry_run: form.value.fitness_dry_run,
-      },
-    };
-    if (form.value.hint) options.hint = form.value.hint;
-
-    const payload = {
-      project_code: form.value.project_code,
-      project_name: selectedProject.value?.project_name || form.value.project_code,
-      options,
-      fitness_context: options.fitness_context,
-    };
-
-    if (previewData.value.staging_id) {
-      payload.staging_id = previewData.value.staging_id;
-    } else if (docInputMode.value === 'existing' && previewData.value.document_id) {
-      payload.document_id = previewData.value.document_id;
-    } else if (pasteFullContent.value) {
-      payload.document_content = pasteFullContent.value;
-      payload.document_title = previewData.value.title;
-      payload.document_type = previewData.value.doc_type;
-    }
-
+    const payload = await buildGenerationPayload();
     const result = await startGeneration(payload);
     const jobId = result.job_id ?? result.id;
     router.push({ name: 'generation-progress', params: { id: jobId } });
@@ -726,6 +796,24 @@ onMounted(() => {
   color: #909399;
 }
 .testgen-major-summary-hint {
+  color: #909399;
+}
+.testgen-agent-estimate {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.testgen-estimate-result {
+  font-size: 14px;
+  color: #303133;
+}
+.testgen-estimate-reason {
+  font-size: 12px;
+  color: #606266;
+  line-height: 1.5;
+}
+.testgen-estimate-hint {
+  font-size: 12px;
   color: #909399;
 }
 </style>

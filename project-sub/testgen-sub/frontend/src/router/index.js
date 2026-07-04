@@ -73,7 +73,7 @@ export function createAppRouter(basename) {
             path: 'testgen/scope',
             name: 'test-scope',
             component: () => import('../views/TestScopePage.vue'),
-            meta: { title: '生成配置', group: 'testgen' },
+            meta: { title: '自动生成用例', group: 'testgen' },
           },
           { path: 'scope', redirect: '/testgen/scope' },
           {
@@ -95,7 +95,7 @@ export function createAppRouter(basename) {
             path: 'config/templates',
             name: 'config-templates',
             component: () => import('../views/config/TemplateManagePage.vue'),
-            meta: { title: '模板管理', group: 'config' },
+            meta: { title: '用例模板', group: 'config' },
           },
           {
             path: 'config/api-templates',
@@ -108,6 +108,18 @@ export function createAppRouter(basename) {
             name: 'config-api-template-detail',
             component: () => import('../views/config/ApiTemplateDetailPage.vue'),
             meta: { title: '接口模板详情', group: 'config', hideInNav: true },
+          },
+          {
+            path: 'config/api-templates/gen',
+            name: 'api-template-gen',
+            component: () => import('../views/config/ApiTemplateGenPage.vue'),
+            meta: { title: '自动化配置接口模板', group: 'config', hideInNav: true },
+          },
+          {
+            path: 'config/api-template-jobs/:id',
+            name: 'api-template-gen-progress',
+            component: () => import('../views/config/ApiTemplateGenProgressPage.vue'),
+            meta: { title: '接口模板生成进度', group: 'config', hideInNav: true },
           },
 
           // ── 通用执行监控（旧链路，保留兼容） ──
@@ -308,7 +320,7 @@ export function createAppRouter(basename) {
             path: 'fitness/settings/enums',
             name: 'fitness-settings',
             component: () => import('../views/fitness/settings/FitnessSettingsPage.vue'),
-            meta: { title: '枚举配置', group: 'config' },
+            meta: { title: '枚举字典', group: 'config' },
           },
         ],
       },

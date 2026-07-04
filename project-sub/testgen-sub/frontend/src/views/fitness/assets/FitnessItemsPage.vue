@@ -2,7 +2,8 @@
   <PageShell title="用例库" table-layout>
     <ItemFilterBar
       :model-value="filters"
-      :show-generation-job-input="true"
+      :show-generation-job="true"
+      :generation-job-options="generationTaskOptions"
       @update:model-value="applyFilters"
       @change="onFilterChange"
       @clear="onFilterClear"
@@ -124,6 +125,7 @@ import {
   fetchPlans,
   fetchTestItems,
 } from '@/services/fitnessService.js';
+import { fetchGenerationTasks } from '@/services/generationService.js';
 import { downloadBlob, downloadJson } from '@/utils/fitnessExport.js';
 import {
   categoryMajorTagProps,
@@ -158,6 +160,7 @@ const filters = reactive({ ...FILTER_DEFAULTS, ...initialQuery.filters });
 const planDialogVisible = ref(false);
 const planOptions = ref([]);
 const targetPlanId = ref(null);
+const generationTaskOptions = ref([]);
 
 const EXECUTION_STATUS_TAG = {
   pending: 'info',
@@ -183,7 +186,7 @@ const itemColumns = [
   { prop: 'item_id', label: '用例编码', width: 180 },
   { prop: 'project_name', label: '项目名称', width: 220 },
   { prop: 'detail_summary', label: '测试用例名称', minWidth: 220 },
-  { prop: 'dimension_name', label: '维度', width: 88 },
+  { prop: 'dimension_name', label: '维度', width: 140 },
   { prop: 'category_major_name', label: '大类', width: 100 },
   { prop: 'template_name', label: '配置模板', width: 110 },
   { prop: 'priority_name', label: '优先级', width: 88 },
@@ -226,6 +229,8 @@ watch(() => route.query, (q) => {
   pageSize.value = parsed.pageSize;
   loadData();
 }, { deep: true, immediate: true });
+
+loadGenerationTasks();
 
 function onFilterChange() {
   page.value = 1;
@@ -305,6 +310,19 @@ function clearTableSelection() {
   tableRef.value?.clearSelection?.();
 }
 
+async function loadGenerationTasks() {
+  try {
+    generationTaskOptions.value = await fetchGenerationTasks();
+  } catch {
+    generationTaskOptions.value = [];
+  }
+}
+
+async function refreshAfterDelete() {
+  await loadGenerationTasks();
+  await loadData();
+}
+
 async function handleDeleteRow(row) {
   try {
     await ElMessageBox.confirm(
@@ -315,7 +333,7 @@ async function handleDeleteRow(row) {
     await deleteTestItem(row.item_id);
     ElMessage.success('已删除');
     clearTableSelection();
-    await loadData();
+    await refreshAfterDelete();
   } catch (err) {
     if (err !== 'cancel' && err !== 'close') {
       ElMessage.error(err.message || '删除失败');
@@ -336,7 +354,7 @@ async function handleBatchDelete() {
     const result = await batchDeleteTestItems(selectedRows.value.map(r => r.item_id));
     clearTableSelection();
     ElMessage.success(`已删除 ${result.deleted ?? count} 条`);
-    await loadData();
+    await refreshAfterDelete();
   } catch (err) {
     if (err !== 'cancel' && err !== 'close') {
       ElMessage.error(err.message || '批量删除失败');
@@ -360,6 +378,7 @@ async function handleDeleteAllFiltered() {
     ElMessage.success(`已删除 ${result.deleted ?? 0} 条`);
     page.value = 1;
     syncRouteQuery();
+    await loadGenerationTasks();
   } catch (err) {
     if (err !== 'cancel' && err !== 'close') {
       ElMessage.error(err.message || '删除失败');

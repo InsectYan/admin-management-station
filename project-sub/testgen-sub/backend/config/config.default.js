@@ -61,6 +61,8 @@ module.exports = appInfo => {
     sampleInvokePath: process.env.FITNESS_SAMPLE_INVOKE_PATH || '/api/skills/fitness-sample-skill/invoke',
     configInvokePath: process.env.FITNESS_CONFIG_INVOKE_PATH || '/api/skills/fitness-config-skill/invoke',
     exploreInvokePath: process.env.FITNESS_EXPLORE_INVOKE_PATH || '/api/skills/fitness-explore-skill/invoke',
+    apiTemplateInvokePath: process.env.API_TEMPLATE_INVOKE_PATH || '/api/skills/api-template-skill/invoke',
+    apiTemplateTimeoutMs: Number(process.env.API_TEMPLATE_TIMEOUT_MS || 300000),
     perfInvokePath: process.env.PERF_SKILL_INVOKE_PATH || '/api/skills/perf-bottleneck-skill/invoke',
     timeout: Number(process.env.AGENT_PLATFORM_TIMEOUT || 300000),
     judgeTimeoutMs: Number(process.env.FITNESS_JUDGE_TIMEOUT_MS || 120000),
@@ -94,6 +96,12 @@ module.exports = appInfo => {
     parseCacheTtl: Number(process.env.PARSE_CACHE_TTL || 3600),
     uploadDir: process.env.UPLOAD_DIR || '/tmp/testgen-uploads',
     maxUploadBytes: Number(process.env.MAX_UPLOAD_BYTES || 20 * 1024 * 1024),
+  };
+
+  config.observability = {
+    enabled: process.env.OTEL_QUERY_ENABLED !== 'false',
+    jaegerQueryUrl: process.env.JAEGER_QUERY_URL || 'http://127.0.0.1:16686',
+    collectorOtlpHttpUrl: process.env.OTEL_COLLECTOR_HTTP_URL || 'http://127.0.0.1:4318',
   };
 
   config.internalApiToken = process.env.INTERNAL_API_TOKEN || '';

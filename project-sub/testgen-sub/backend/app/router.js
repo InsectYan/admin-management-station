@@ -39,6 +39,9 @@ module.exports = app => {
   router.get('/api/modules', controller.module.index);
 
   router.post('/api/generation-jobs', controller.generationJob.create);
+  router.post('/api/generation-jobs/estimate', controller.generationJob.estimate);
+  router.get('/api/generation-tasks', controller.generationTask.index);
+  router.post('/api/generation-tasks/sync', controller.generationTask.sync);
   router.get('/api/generation-jobs/:id', controller.generationJob.show);
   router.post('/api/generation-jobs/:id/cancel', controller.generationJob.cancel);
   router.post('/api/generation-jobs/:id/retry', controller.generationJob.retry);
@@ -59,6 +62,13 @@ module.exports = app => {
   router.put('/api/fitness/api-templates/:id', controller.apiTemplate.update);
   router.delete('/api/fitness/api-templates/:id', controller.apiTemplate.destroy);
   router.get('/api/fitness/api-templates/:id/linked-items', controller.apiTemplate.linkedItems);
+
+  router.post('/api/api-template-jobs', controller.apiTemplateGenerationJob.create);
+  router.get('/api/api-template-jobs/:id', controller.apiTemplateGenerationJob.show);
+  router.post('/api/api-template-jobs/:id/cancel', controller.apiTemplateGenerationJob.cancel);
+  router.post('/api/api-template-jobs/:id/retry', controller.apiTemplateGenerationJob.retry);
+  router.post('/api/api-template-jobs/:id/confirm-import', controller.apiTemplateGenerationJob.confirmImport);
+  router.post('/api/internal/api-template-jobs/:id/agent-context', controller.apiTemplateGenerationJob.updateAgentContext);
 
   router.get('/api/env-configs', controller.envConfig.index);
   router.post('/api/env-configs', controller.envConfig.create);
@@ -135,6 +145,12 @@ module.exports = app => {
   router.post('/api/fitness/samples/generate', controller.fitnessExecution.generateSamples);
   router.post('/api/fitness/samples/enrich-csv', controller.fitnessExecution.enrichCsvSamples);
   router.get('/api/fitness/template-config/templates', controller.configTemplate.listTemplates);
+  router.get('/api/fitness/template-config/templates/overview', controller.configTemplate.listTemplatesOverview);
+  router.put('/api/fitness/template-config/templates/:templateCode/validation', controller.configTemplate.updateTemplateValidation);
+  router.get('/api/fitness/template-config/majors/overview', controller.configTemplate.listMajorsOverview);
+  router.put('/api/fitness/template-config/major/:majorId/template', controller.configTemplate.updateMajorTemplate);
+  router.put('/api/fitness/template-config/major/:majorId/validation', controller.configTemplate.updateMajorValidation);
+  router.get('/api/fitness/template-config/schemes/:schemeId/validations', controller.configTemplate.getSchemeValidations);
   router.get('/api/fitness/template-config/major/:majorId', controller.configTemplate.getByMajor);
   router.get('/api/fitness/template-config/items/:itemId', controller.configTemplate.getItemConfig);
   router.post('/api/fitness/template-config/items/:itemId', controller.configTemplate.saveItemConfig);
@@ -145,4 +161,11 @@ module.exports = app => {
   router.post('/api/fitness/run-config/:itemId', controller.fitnessExecution.saveRunConfig);
   router.post('/api/fitness/run/:itemId/launch', controller.fitnessExecution.launch);
   router.post('/api/fitness/engines/:scheme/execute', controller.fitnessExecution.executeEngine);
+
+  // OpenTelemetry 可观测链路
+  router.get('/api/fitness/observability/health', controller.observability.health);
+  router.get('/api/fitness/observability/traces/:traceId', controller.observability.showTrace);
+  router.get('/api/fitness/runs/:runId/traces', controller.observability.runTraces);
+  router.get('/api/fitness/runs/:runId/steps', controller.observability.runSteps);
+  router.get('/api/fitness/runs/:runId/agent-audit', controller.observability.runAgentAudit);
 };

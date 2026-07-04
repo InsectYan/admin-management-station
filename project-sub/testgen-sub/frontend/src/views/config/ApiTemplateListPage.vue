@@ -9,6 +9,7 @@
         @keyup.enter="reload"
         @clear="reload"
       />
+      <el-button style="margin-right:8px" @click="goAutoGen">自动化配置模板</el-button>
       <el-button type="primary" @click="openCreate">新建接口模板</el-button>
     </template>
     <FitnessLabeledTable
@@ -144,6 +145,10 @@ async function submitCreate() {
 
 function goDetail(row) {
   router.push(`/config/api-templates/${row.id}`);
+}
+
+function goAutoGen() {
+  router.push({ name: 'api-template-gen' });
 }
 
 async function remove(row) {

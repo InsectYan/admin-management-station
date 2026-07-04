@@ -94,3 +94,8 @@ INSERT INTO test_category_minor (category_minor_id, category_major_id, name, sor
 INSERT INTO test_category_minor (category_minor_id, category_major_id, name, sort_order) VALUES ('H6_SLS', 'H6', 'SLS监控', 1) ON CONFLICT (category_minor_id) DO NOTHING;
 INSERT INTO test_category_minor (category_minor_id, category_major_id, name, sort_order) VALUES ('H7_CHK', 'H7', '排障速查', 1) ON CONFLICT (category_minor_id) DO NOTHING;
 INSERT INTO test_category_minor (category_minor_id, category_major_id, name, sort_order) VALUES ('H8_GAP', 'H8', '可观测缺口', 1) ON CONFLICT (category_minor_id) DO NOTHING;
+INSERT INTO test_category_minor (category_minor_id, category_major_id, name, sort_order) VALUES ('C4_INVITE', 'C4', '会员邀请与授权', 10) ON CONFLICT (category_minor_id) DO NOTHING;
+INSERT INTO test_category_minor (category_minor_id, category_major_id, name, sort_order) VALUES ('B_REL_IDEM', 'B_REL', '幂等法则', 1) ON CONFLICT (category_minor_id) DO NOTHING;
+INSERT INTO test_category_minor (category_minor_id, category_major_id, name, sort_order) VALUES ('B_REL_SER', 'B_REL', '串行法则', 2) ON CONFLICT (category_minor_id) DO NOTHING;
+INSERT INTO test_category_minor (category_minor_id, category_major_id, name, sort_order) VALUES ('B_REL_CAN', 'B_REL', '可取消', 3) ON CONFLICT (category_minor_id) DO NOTHING;
+INSERT INTO test_category_minor (category_minor_id, category_major_id, name, sort_order) VALUES ('B_REL_REC', 'B_REL', '可恢复', 4) ON CONFLICT (category_minor_id) DO NOTHING;

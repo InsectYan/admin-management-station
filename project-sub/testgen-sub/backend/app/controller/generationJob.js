@@ -8,6 +8,16 @@ class GenerationJobController extends Controller {
     this.ctx.body = { code: 0, message: 'ok', data };
   }
 
+  async estimate() {
+    try {
+      const data = await this.service.generationJob.estimateCaseCount(this.ctx.request.body || {});
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
   async show() {
     const job = await this.service.generationJob.findById(this.ctx.params.id);
     if (!job) {
