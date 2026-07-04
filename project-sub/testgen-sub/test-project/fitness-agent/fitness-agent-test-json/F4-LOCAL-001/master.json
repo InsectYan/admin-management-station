@@ -1,0 +1,5 @@
+{
+  "_execution": "cli",
+  "_note": "TS-01-DET 执行时读取 test_item_detail.automation_command，无需 HTTP path",
+  "automation_command": "fitness local"
+}

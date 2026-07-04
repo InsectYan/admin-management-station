@@ -1,0 +1,289 @@
+{
+  "B4-PERSIST-001": {
+    "master": {
+      "matrix": [
+        { "name": "P1 · text 助手气泡", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-text" },
+        { "name": "P2 · plan_form + form_data", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-plan-form" },
+        { "name": "P3 · training_plan 载荷", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-training-plan" },
+        { "name": "P4 · session_plan 载荷", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-session-plan" },
+        { "name": "P5 · require_form 表单", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-require-form" },
+        { "name": "P6 · session_summary 总结", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-session-summary" },
+        { "name": "P7 · disambiguation", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-disambiguation" },
+        { "name": "P8 · member_switch", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-member-switch" },
+        { "name": "P9 · intent_clarification", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-intent-clarification" }
+      ]
+    },
+    "sub": {
+      "vars": { "coach_id": 1, "user_id": 10003 },
+      "steps": [
+        {
+          "name": "0 · create chat session",
+          "runner": "http",
+          "method": "POST",
+          "path": "/api/sessions",
+          "body": { "coach_id": 1, "user_id": 10003 },
+          "expect_status": 200,
+          "extract": { "session_id": "$.session_id" }
+        },
+        {
+          "name": "1 · submit turn（text 助手气泡）",
+          "runner": "http",
+          "method": "POST",
+          "path": "/api/chat/turns/submit",
+          "body": {
+            "session_id": "{{session_id}}",
+            "coach_id": 1,
+            "user_id": 10003,
+            "message": "你好",
+            "client_turn_id": "{{uuid}}"
+          },
+          "expect_status": 202,
+          "extract": { "turn_id": "$.turn_id" }
+        },
+        {
+          "name": "2 · poll turn status",
+          "runner": "http",
+          "method": "GET",
+          "path": "/api/chat/turns/{{turn_id}}",
+          "expect_status": 200
+        }
+      ]
+    },
+    "threshold_sub": { "require_complete": false }
+  },
+  "B5-CONTRACT-001": {
+    "master": {
+      "matrix": [
+        { "name": "O1 · training_plan 契约", "runner": "cli", "command": "cd server && npm run test:stations -- s04-outbox-training-plan" },
+        { "name": "O2 · session_plan 契约", "runner": "cli", "command": "cd server && npm run test:stations -- s04-outbox-session-plan" },
+        { "name": "O3 · disambiguation 契约", "runner": "cli", "command": "cd server && npm run test:stations -- s04-outbox-disambiguation" },
+        { "name": "O4 · member_switch 契约", "runner": "cli", "command": "cd server && npm run test:stations -- s04-outbox-member-switch" },
+        { "name": "O5 · intent_clarification 契约", "runner": "cli", "command": "cd server && npm run test:stations -- s04-outbox-intent-clarification" }
+      ]
+    }
+  },
+  "C1-MACRO-008": {
+    "master": {
+      "vars": { "coach_id": 1, "user_id": 10002 },
+      "steps": [
+        {
+          "name": "0 · CLI 宏观计划门禁全量",
+          "runner": "cli",
+          "command": "cd server && npm run test:stations -- s04-macro"
+        },
+        {
+          "name": "1 · create session",
+          "runner": "http",
+          "method": "POST",
+          "path": "/api/sessions",
+          "body": { "coach_id": 1, "user_id": 10002 },
+          "expect_status": 200,
+          "extract": { "session_id": "$.session_id" }
+        },
+        {
+          "name": "2 · submit 生成计划",
+          "runner": "http",
+          "method": "POST",
+          "path": "/api/chat/turns/submit",
+          "body": {
+            "session_id": "{{session_id}}",
+            "coach_id": 1,
+            "user_id": 10002,
+            "message": "请给张三生成训练计划",
+            "client_turn_id": "{{uuid}}"
+          },
+          "expect_status": 202,
+          "extract": { "turn_id": "$.turn_id" }
+        },
+        {
+          "name": "3 · poll 至 plan_form/draft",
+          "runner": "http",
+          "method": "GET",
+          "path": "/api/chat/turns/{{turn_id}}",
+          "expect_status": 200
+        }
+      ]
+    },
+    "sub": {
+      "matrix": [
+        { "name": "M1 · 无 Active → plan_form", "runner": "cli", "command": "cd server && npm run test:stations -- s04-macro-plan-form" },
+        { "name": "M2 · modify → 澄清", "runner": "cli", "command": "cd server && npm run test:stations -- s04-macro-modify-clarify" },
+        { "name": "M3 · regenerate marker", "runner": "cli", "command": "cd server && npm run test:stations -- s04-macro-regenerate" },
+        { "name": "M4 · mirror → draft 展示", "runner": "cli", "command": "cd server && npm run test:stations -- s04-macro-mirror-draft" },
+        { "name": "M5 · draft→pending→active", "runner": "cli", "command": "cd server && npm run test:stations -- s04-macro-lifecycle" }
+      ]
+    },
+    "sub_obs": {
+      "checks": [
+        { "mode": "journey_list", "limit": 5 },
+        { "mode": "http_fields", "path": "/health", "method": "GET", "expect_status": 200, "required_fields": [ "status", "runtime" ] }
+      ]
+    }
+  },
+  "C1-SESSION-001": {
+    "master": {
+      "vars": { "coach_id": 1, "user_id": 10003 },
+      "steps": [
+        {
+          "name": "1 · create session",
+          "runner": "http",
+          "method": "POST",
+          "path": "/api/sessions",
+          "body": { "coach_id": 1, "user_id": 10003 },
+          "expect_status": 200,
+          "extract": { "session_id": "$.session_id" }
+        },
+        {
+          "name": "2 · submit 准备最近训练",
+          "runner": "http",
+          "method": "POST",
+          "path": "/api/chat/turns/submit",
+          "body": {
+            "session_id": "{{session_id}}",
+            "coach_id": 1,
+            "user_id": 10003,
+            "message": "给李四准备最近一次训练内容",
+            "client_turn_id": "{{uuid}}"
+          },
+          "expect_status": 202,
+          "extract": { "turn_id": "$.turn_id" }
+        },
+        {
+          "name": "3 · poll turn",
+          "runner": "http",
+          "method": "GET",
+          "path": "/api/chat/turns/{{turn_id}}",
+          "expect_status": 200
+        }
+      ]
+    },
+    "sub": {
+      "matrix": [
+        { "name": "S1 · 无课时 → require_form", "runner": "cli", "command": "cd server && npm run test:stations -- s04-session-require-form" },
+        { "name": "S2 · active → session_plan", "runner": "cli", "command": "cd server && npm run test:stations -- s04-session-active-plan" },
+        { "name": "S3 · modify → 澄清", "runner": "cli", "command": "cd server && npm run test:stations -- s04-session-modify-clarify" },
+        { "name": "S4 · regenerate marker", "runner": "cli", "command": "cd server && npm run test:stations -- s04-session-regenerate" },
+        { "name": "S5 · mirror → draft", "runner": "cli", "command": "cd server && npm run test:stations -- s04-session-mirror-draft" },
+        { "name": "S6 · draft+active 并存", "runner": "cli", "command": "cd server && npm run test:stations -- s04-session-draft-active" },
+        { "name": "S7 · commit 归档", "runner": "cli", "command": "cd server && npm run test:stations -- s04-session-commit-archive" },
+        { "name": "S8 · commit REST", "runner": "cli", "command": "cd server && npm run test:stations -- s04-session-commit-rest" },
+        { "name": "S9 · 消歧→require_form", "runner": "cli", "command": "cd server && npm run test:stations -- s04-session-disambiguation" }
+      ]
+    }
+  },
+  "C2-PAYLOAD-001": {
+    "master": {
+      "pairs": [
+        { "role": "member", "path": "/api/member/chat/turns/submit", "method": "POST", "expect_status": 202, "forbidden_patterns": [ "plan_form", "training_plan", "session_plan" ] },
+        { "role": "manager", "path": "/api/admin/chat/turns/submit", "method": "POST", "expect_status": 202, "forbidden_patterns": [ "session_plan", "plan_form" ] },
+        { "role": "coach", "path": "/api/chat/turns/submit", "method": "POST", "expect_status": 202, "forbidden_patterns": [] }
+      ]
+    },
+    "sub": {
+      "matrix": [
+        { "name": "P1 · member 仅 text", "runner": "cli", "command": "cd server && npm run test:stations -- s04-portal-member" },
+        { "name": "P2 · manager 仅 text", "runner": "cli", "command": "cd server && npm run test:stations -- s04-portal-manager" },
+        { "name": "P3 · empty reply 拒绝", "runner": "cli", "command": "cd server && npm run test:stations -- s04-portal-empty-reply" }
+      ]
+    }
+  },
+  "G5-UI-001": {
+    "master": {
+      "matrix": [
+        { "name": "F1 · pickSummary 长 Markdown", "runner": "cli", "command": "cd server && npm run test:stations -- form-gates-pick-long" },
+        { "name": "F2 · pickSummary 短 caption", "runner": "cli", "command": "cd server && npm run test:stations -- form-gates-pick-short" },
+        { "name": "F3 · require_form HAS_PLAN", "runner": "cli", "command": "cd server && npm run test:stations -- form-gates-has-plan" },
+        { "name": "F4 · require_form NO_PLAN", "runner": "cli", "command": "cd server && npm run test:stations -- form-gates-no-plan" }
+      ]
+    }
+  },
+  "B6-SSE-001": {
+    "master": {
+      "vars": { "coach_id": 1, "user_id": 10003 },
+      "steps": [
+        { "name": "0 · CLI SSE 帧契约", "runner": "cli", "command": "cd server && npm run test:stations -- sse-frame" },
+        {
+          "name": "1 · create session",
+          "runner": "http",
+          "method": "POST",
+          "path": "/api/sessions",
+          "body": { "coach_id": 1, "user_id": 10003 },
+          "expect_status": 200,
+          "extract": { "session_id": "$.session_id" }
+        },
+        {
+          "name": "2 · submit turn",
+          "runner": "http",
+          "method": "POST",
+          "path": "/api/chat/turns/submit",
+          "body": {
+            "session_id": "{{session_id}}",
+            "coach_id": 1,
+            "user_id": 10003,
+            "message": "SSE 探针",
+            "client_turn_id": "{{uuid}}"
+          },
+          "expect_status": 202,
+          "extract": { "turn_id": "$.turn_id" }
+        },
+        {
+          "name": "3 · GET stream SSE",
+          "runner": "http",
+          "method": "GET",
+          "path": "/api/chat/turns/{{turn_id}}/stream",
+          "expect_status": 200
+        }
+      ]
+    },
+    "sub_obs": {
+      "checks": [
+        { "mode": "http_fields", "path": "/health", "method": "GET", "expect_status": 200, "required_fields": [ "status", "runtime" ] }
+      ]
+    }
+  },
+  "B6-JOURNEY-001": {
+    "master": {
+      "vars": { "coach_id": 1, "user_id": 10003 },
+      "steps": [
+        { "name": "0 · CLI journey 六站", "runner": "cli", "command": "cd server && npm run test:stations -- s06" },
+        {
+          "name": "1 · create session",
+          "runner": "http",
+          "method": "POST",
+          "path": "/api/sessions",
+          "body": { "coach_id": 1, "user_id": 10003 },
+          "expect_status": 200,
+          "extract": { "session_id": "$.session_id" }
+        },
+        {
+          "name": "2 · submit",
+          "runner": "http",
+          "method": "POST",
+          "path": "/api/chat/turns/submit",
+          "body": {
+            "session_id": "{{session_id}}",
+            "coach_id": 1,
+            "user_id": 10003,
+            "message": "journey 探针",
+            "client_turn_id": "{{uuid}}"
+          },
+          "expect_status": 202,
+          "extract": { "turn_id": "$.turn_id", "client_turn_id": "$.client_turn_id" }
+        },
+        {
+          "name": "3 · poll turn",
+          "runner": "http",
+          "method": "GET",
+          "path": "/api/chat/turns/{{turn_id}}",
+          "expect_status": 200
+        }
+      ]
+    },
+    "sub_obs": {
+      "checks": [
+        { "mode": "journey_get", "session_id": "{{session_id}}", "client_turn_id": "{{client_turn_id}}" }
+      ],
+      "threshold": { "require_complete": true }
+    }
+  }
+}

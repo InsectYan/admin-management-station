@@ -1,0 +1,15 @@
+{
+  "vars": {
+    "coach_id": 1,
+    "user_id": 10003
+  },
+  "steps": [
+    {
+      "name": "教练已提交待确认计划",
+      "runner": "http",
+      "method": "GET",
+      "path": "/health",
+      "expect_status": 200
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "matrix": [
+    {
+      "name": "O1 · training_plan 契约",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-outbox-training-plan"
+    },
+    {
+      "name": "O2 · session_plan 契约",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-outbox-session-plan"
+    },
+    {
+      "name": "O3 · disambiguation 契约",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-outbox-disambiguation"
+    },
+    {
+      "name": "O4 · member_switch 契约",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-outbox-member-switch"
+    },
+    {
+      "name": "O5 · intent_clarification 契约",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-outbox-intent-clarification"
+    }
+  ]
+}

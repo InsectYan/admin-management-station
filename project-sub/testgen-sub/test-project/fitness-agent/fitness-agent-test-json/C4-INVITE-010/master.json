@@ -1,0 +1,15 @@
+{
+  "vars": {
+    "coach_id": 1,
+    "user_id": 10003
+  },
+  "steps": [
+    {
+      "name": "同一手机号多次扫码不同邀请",
+      "runner": "http",
+      "method": "GET",
+      "path": "/health",
+      "expect_status": 200
+    }
+  ]
+}

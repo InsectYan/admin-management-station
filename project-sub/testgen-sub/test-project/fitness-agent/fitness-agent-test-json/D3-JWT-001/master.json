@@ -1,0 +1,25 @@
+{
+  "pairs": [
+    {
+      "role": "coach",
+      "path": "/health",
+      "method": "GET",
+      "expect_status": 200,
+      "forbidden_patterns": []
+    },
+    {
+      "role": "member",
+      "path": "/health",
+      "method": "GET",
+      "expect_status": 200,
+      "forbidden_patterns": []
+    },
+    {
+      "role": "manager",
+      "path": "/health",
+      "method": "GET",
+      "expect_status": 200,
+      "forbidden_patterns": []
+    }
+  ]
+}

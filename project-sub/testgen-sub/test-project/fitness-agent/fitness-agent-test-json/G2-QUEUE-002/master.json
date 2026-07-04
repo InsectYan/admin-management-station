@@ -1,0 +1,5 @@
+{
+  "endpoint_path": "/health",
+  "http_method": "GET",
+  "http_status_expected": 200
+}

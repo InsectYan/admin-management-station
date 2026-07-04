@@ -1,0 +1,16 @@
+{
+  "checks": [
+    {
+      "mode": "http_fields",
+      "path": "/health",
+      "method": "GET",
+      "expect_status": 200,
+      "required_fields": [
+        "stages_ms"
+      ]
+    }
+  ],
+  "_threshold": {
+    "require_complete": true
+  }
+}

@@ -17,6 +17,7 @@ const outRoot = join(testgenRoot, '../../../fitness-agent-test-json');
 const dataFile = join(testgenRoot, 'database/tables/test_item_detail/data.json');
 const majorTplFile = join(testgenRoot, 'database/tables/test_category_major_template/data.json');
 const tplBndFile = join(testgenRoot, 'database/tables/tpl_config_bnd/data.json');
+const profilesFile = join(here, '../enriched-test-json-profiles.json');
 
 const itemFilter = (() => {
   const i = process.argv.indexOf('--item');
@@ -50,8 +51,8 @@ const THRESHOLD_DEFAULTS = {
   'VS-06-COMPLETE': { require_complete: true },
 };
 
-/** 已有手工配置，生成时保留 master/sub 文件内容 */
-const PRESERVE_DIRS = new Set([ 'B4-PERSIST-001' ]);
+/** @deprecated 已由 enriched-test-json-profiles.json 覆盖 */
+const PRESERVE_DIRS = new Set([]);
 
 function readJson(path, fallback = null) {
   if (!existsSync(path)) return fallback;
@@ -371,10 +372,38 @@ function writeJson(path, data) {
   writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
 }
 
+function writeEnrichedProfile(dir, profile, item, files) {
+  if (profile.master) {
+    writeJson(join(dir, 'master.json'), profile.master);
+    files.push('master.json');
+  }
+  if (profile.sub) {
+    writeJson(join(dir, 'sub.json'), profile.sub);
+    files.push('sub.json');
+  }
+  if (profile.sub_obs) {
+    writeJson(join(dir, 'sub-obs.json'), profile.sub_obs);
+    files.push('sub-obs.json');
+  }
+  const threshold = buildThreshold(item, item.scheme_primary_id);
+  if (threshold) {
+    writeJson(join(dir, 'threshold.json'), threshold);
+    files.push('threshold.json');
+  }
+  const subThreshold = profile.threshold_sub
+    || (profile.sub_obs?.threshold ? profile.sub_obs.threshold : null)
+    || buildThreshold(item, item.scheme_secondary_id);
+  if (subThreshold && Object.keys(subThreshold).length) {
+    writeJson(join(dir, 'threshold-sub.json'), subThreshold);
+    files.push('threshold-sub.json');
+  }
+}
+
 function main() {
   const items = readJson(dataFile, []);
   const tplBnd = readJson(tplBndFile, []);
   const tplBndMap = new Map(tplBnd.map(r => [ r.item_id, r ]));
+  const enrichedProfiles = readJson(profilesFile, {});
 
   const manifest = {
     generated_at: new Date().toISOString(),
@@ -405,6 +434,26 @@ function main() {
         files: [ 'master.json', ...(existsSync(subPath) ? [ 'sub.json' ] : []) ],
       });
       skipped += 1;
+      continue;
+    }
+
+    const enriched = enrichedProfiles[item.item_id];
+    if (enriched) {
+      const files = [];
+      writeEnrichedProfile(dir, enriched, item, files);
+      manifest.items.push({
+        item_id: item.item_id,
+        item_name: item.item_name,
+        scheme_primary_id: item.scheme_primary_id,
+        scheme_secondary_id: item.scheme_secondary_id,
+        template: SCHEME_TO_TEMPLATE[item.scheme_primary_id],
+        sub_template: item.scheme_secondary_id ? SCHEME_TO_TEMPLATE[item.scheme_secondary_id] : null,
+        automation_command: item.automation_command || null,
+        endpoint_path: item.endpoint_path || null,
+        status: 'enriched-profile',
+        files,
+      });
+      written += 1;
       continue;
     }
 

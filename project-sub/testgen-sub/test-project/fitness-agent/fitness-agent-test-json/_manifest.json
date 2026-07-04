@@ -1,0 +1,6102 @@
+{
+  "generated_at": "2026-07-04T13:08:15.363Z",
+  "source": "testgen-sub/database/tables/test_item_detail/data.json",
+  "output_root": "fitness-agent-test-json",
+  "rules": "test-project/fitness-agent/测试配置JSON规则.md",
+  "items": [
+    {
+      "item_id": "A1-MEMORY-001",
+      "item_name": "[A1-MEMORY-001] memory_ops — junk 流水账 op",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s05",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "A1-OUTBOX-001",
+      "item_name": "[A1-OUTBOX-001] Pi outbox 契约 — plan_form 缺 user_id / steps",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s04-outbox",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "A1-OUTBOX-002",
+      "item_name": "[A1-OUTBOX-002] Pi outbox 契约 — reply 为空",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s04-outbox",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "A2-S02-001",
+      "item_name": "[A2-S02-001] s02 门禁 — 越权 coach_id submit",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s02",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "A2-S02-002",
+      "item_name": "[A2-S02-002] s02 门禁 — 同 session 在途第二条",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s02",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "A2-S02-003",
+      "item_name": "[A2-S02-003] s02 门禁 — 相同 client_turn_id 重试",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s02",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "A2-S02-004",
+      "item_name": "[A2-S02-004] s02 门禁 — actor 超窗口刷量",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s02",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "A2-S03-001",
+      "item_name": "[A2-S03-001] s03 入队 — 二次 enqueue 同 id",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s03",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "A2-S06-001",
+      "item_name": "[A2-S06-001] s06 journey — guard 拒绝",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s06",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "A5-CAP-001",
+      "item_name": "[A5-CAP-001] 容量压测 — pending 达 MAX",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": null,
+      "template": "TPL-LOAD",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "A5-MULTI-001",
+      "item_name": "[A5-MULTI-001] 多实例 — 同 client_turn_id 跨实例",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": null,
+      "template": "TPL-LOAD",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "A5-STALE-001",
+      "item_name": "[A5-STALE-001] 故障 — kill 实例 processing 中",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": null,
+      "template": "TPL-LOAD",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "A6-GOLDEN-001",
+      "item_name": "[A6-GOLDEN-001] Golden eval — inbox+DB → message_type",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "A6-MEDICAL-001",
+      "item_name": "[A6-MEDICAL-001] medical-boundary — 会员描述胸闷",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "A6-SAFETY-001",
+      "item_name": "[A6-SAFETY-001] 专家 UAT — 膝伤 +「生成练腿」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "B1-LOADING-001",
+      "item_name": "[B1-LOADING-001] GENERAL — 同 session",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B1-OBS-001",
+      "item_name": "[B1-OBS-001] GENERAL — 站级观测",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B1-RESUME-001",
+      "item_name": "[B1-RESUME-001] GENERAL — 断线续传",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B1-SSE-001",
+      "item_name": "[B1-SSE-001] GENERAL — SSE 解析",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- agent-sse",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B1-STREAM-001",
+      "item_name": "[B1-STREAM-001] GENERAL — 防串流",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- coach-turn-session",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B2-CIRCUIT-001",
+      "item_name": "[B2-CIRCUIT-001] DB 熔断 — RDS 连续失败",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- db-circuit",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B2-DUP-001",
+      "item_name": "[B2-DUP-001] GENERAL — 重复文案",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B2-EMPTY-001",
+      "item_name": "[B2-EMPTY-001] 入参 — 空白 message",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B2-INFLIGHT-001",
+      "item_name": "[B2-INFLIGHT-001] 在途 — pending/processing 第二条",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B2-JOURNEY-001",
+      "item_name": "[B2-JOURNEY-001] GENERAL — 可观测",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B2-KEY-001",
+      "item_name": "[B2-KEY-001] Internal Key — 缺/错 Key",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s02-key",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B2-LEN-001",
+      "item_name": "[B2-LEN-001] 入参 — 超 8000 字符",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- turn-submit-guard-ext",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B2-OBS-001",
+      "item_name": "[B2-OBS-001] GENERAL — 站级观测",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B2-OWN-001",
+      "item_name": "[B2-OWN-001] session 归属 — 非己 session",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- turn-submit-guard-ext",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B2-RATE-001",
+      "item_name": "[B2-RATE-001] GENERAL — actor 限流",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B3-CANCEL-001",
+      "item_name": "[B3-CANCEL-001] GENERAL — cancel",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B3-CLAIM-001",
+      "item_name": "[B3-CLAIM-001] GENERAL — 抢单",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- turn-job-lifecycle",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B3-CROSS-001",
+      "item_name": "[B3-CROSS-001] GENERAL — 跨实例",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B3-ENQ-001",
+      "item_name": "[B3-ENQ-001] 入队 — 合法 submit",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s03",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B3-OBS-001",
+      "item_name": "[B3-OBS-001] GENERAL — 站级观测",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B3-RETRY-001",
+      "item_name": "[B3-RETRY-001] GENERAL — 重试",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s03-retry",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B3-STALE-001",
+      "item_name": "[B3-STALE-001] GENERAL — 僵尸回收",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- turn-job-lifecycle",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B3-W-001",
+      "item_name": "[B3-W-001] GENERAL — 并发 W",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B4-MEM-001",
+      "item_name": "[B4-MEM-001] memory wake — memory_ops",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B4-OBS-001",
+      "item_name": "[B4-OBS-001] 站级观测 — stages_ms 分段",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B4-PERSIST-001",
+      "item_name": "[B4-PERSIST-001] persist — 九种载荷落库矩阵",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-BND",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": "cd server && npm run test:stations -- s04-persist",
+      "endpoint_path": null,
+      "status": "enriched-profile",
+      "files": [
+        "master.json",
+        "sub.json",
+        "threshold-sub.json"
+      ]
+    },
+    {
+      "item_id": "B4-PREP-001",
+      "item_name": "[B4-PREP-001] prepare — enrich 拼 inbox",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s04-bff",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B4-PREP-002",
+      "item_name": "[B4-PREP-002] plan_form — 指标 current 无来源",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s04-bff",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B5-CONTRACT-001",
+      "item_name": "[B5-CONTRACT-001] outbox — 合法 plan_form",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s04-outbox",
+      "endpoint_path": null,
+      "status": "enriched-profile",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B5-LOCK-001",
+      "item_name": "[B5-LOCK-001] NAS 串行 — 同 session 并发 Pi 文件",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B5-OBS-001",
+      "item_name": "[B5-OBS-001] 站级观测 — Pi 回合耗时",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B5-TOOL-001",
+      "item_name": "[B5-TOOL-001] 工具 — 知识库检索",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B6-HB-001",
+      "item_name": "[B6-HB-001] heartbeat — SSE keepalive",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B6-JOURNEY-001",
+      "item_name": "[B6-JOURNEY-001] journey — 完整 async 链",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s06",
+      "endpoint_path": null,
+      "status": "enriched-profile",
+      "files": [
+        "master.json",
+        "sub-obs.json",
+        "threshold-sub.json"
+      ]
+    },
+    {
+      "item_id": "B6-OBS-001",
+      "item_name": "[B6-OBS-001] 站级观测 — 首次反馈 / 完整结果时间",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B6-POLL-001",
+      "item_name": "[B6-POLL-001] 轮询兜底 — GET turn by id",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- turns-poll",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B6-SSE-001",
+      "item_name": "[B6-SSE-001] SSE — completed 推 final",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- sse-frame",
+      "endpoint_path": null,
+      "status": "enriched-profile",
+      "files": [
+        "master.json",
+        "sub-obs.json"
+      ]
+    },
+    {
+      "item_id": "B6-TIMEOUT-001",
+      "item_name": "[B6-TIMEOUT-001] 超时 — 超长计划",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- sse-timeout",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-CONF-001",
+      "item_name": "[C1-CONF-001] GENERAL — 多个待确认 +「确认」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-CONF-002",
+      "item_name": "[C1-CONF-002] GENERAL — 无待确认 +「确认」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-CONF-003",
+      "item_name": "[C1-CONF-003] GENERAL — 「可以/好的/行」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-CONF-004",
+      "item_name": "[C1-CONF-004] GENERAL — 删除/记录/提交计划",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-CONF-005",
+      "item_name": "[C1-CONF-005] GENERAL — 确认后",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-DEL-001",
+      "item_name": "[C1-DEL-001] GENERAL — 删除第一轮",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-DEL-002",
+      "item_name": "[C1-DEL-002] GENERAL — 未确认",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-DUP-001",
+      "item_name": "[C1-DUP-001] GENERAL — 重复 client_turn_id",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C1-DUP-002",
+      "item_name": "[C1-DUP-002] GENERAL — 刷新/重试",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C1-ENTRY-001",
+      "item_name": "[C1-ENTRY-001] 通用主对话 — 通用入口问健身知识",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-ENTRY-002",
+      "item_name": "[C1-ENTRY-002] 通用主对话 — 「给张三做计划」未进会员窗",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-03-REP",
+      "template": "TPL-SET",
+      "sub_template": "TPL-REP",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-ENTRY-003",
+      "item_name": "[C1-ENTRY-003] 会员窗口 — 已绑定会员生成计划",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-ENTRY-004",
+      "item_name": "[C1-ENTRY-004] 上下文隔离 — 会员 A 窗口",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-03-REP",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-REP",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-ENTRY-005",
+      "item_name": "[C1-ENTRY-005] 同名消歧 — 两个「李四」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C1-ENTRY-006",
+      "item_name": "[C1-ENTRY-006] 切换会员 — 跨会员请求",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-ENTRY-007",
+      "item_name": "[C1-ENTRY-007] 无权限会员 — 读取/生成",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-EVAL-001",
+      "item_name": "[C1-EVAL-001] 生成类对象 — 评估分析报告：对象识别+会员绑定+权限+确认链",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-IMPACT-001",
+      "item_name": "[C1-IMPACT-001] GENERAL — 新计划生效",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-IMPACT-002",
+      "item_name": "[C1-IMPACT-002] GENERAL — 头像变更",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-IMPACT-003",
+      "item_name": "[C1-IMPACT-003] GENERAL — 有影响",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-IMPACT-004",
+      "item_name": "[C1-IMPACT-004] GENERAL — 无影响",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-INTENT-001",
+      "item_name": "[C1-INTENT-001] 问答 — 「什么是 HIIT」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-SET",
+      "sub_template": "TPL-BND",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-INTENT-002",
+      "item_name": "[C1-INTENT-002] 生成 — 「给张三生成训练计划」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-SET",
+      "sub_template": "TPL-BND",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-INTENT-003",
+      "item_name": "[C1-INTENT-003] 修改 — 「改一下当前计划」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-SET",
+      "sub_template": "TPL-BND",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-INTENT-004",
+      "item_name": "[C1-INTENT-004] 记录 — 「记住他膝盖不好」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-SET",
+      "sub_template": "TPL-BND",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-INTENT-005",
+      "item_name": "[C1-INTENT-005] 确认误判 — 「好的/可以/行」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C1-INTENT-006",
+      "item_name": "[C1-INTENT-006] 正式确认 — 唯一待确认 +「确认」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-SET",
+      "sub_template": "TPL-BND",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-INTENT-007",
+      "item_name": "[C1-INTENT-007] 草案 vs 正式 — 「给个减脂计划看看」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-SET",
+      "sub_template": "TPL-BND",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-INTENT-008",
+      "item_name": "[C1-INTENT-008] 风险优先 — 「膝盖疼还练腿」",
+      "scheme_primary_id": "TS-07-NEG",
+      "scheme_secondary_id": null,
+      "template": "TPL-NEG",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C1-MACRO-001",
+      "item_name": "[C1-MACRO-001] GENERAL — 档案不完整",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-MACRO-002",
+      "item_name": "[C1-MACRO-002] GENERAL — 生成前",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-MACRO-003",
+      "item_name": "[C1-MACRO-003] GENERAL — 指标 current",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-BND",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-MACRO-004",
+      "item_name": "[C1-MACRO-004] GENERAL — 指标 target",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-MACRO-005",
+      "item_name": "[C1-MACRO-005] GENERAL — 体能测试表",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-MACRO-006",
+      "item_name": "[C1-MACRO-006] GENERAL — 未提交表单",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-MACRO-007",
+      "item_name": "[C1-MACRO-007] GENERAL — 表单提交后",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-MACRO-008",
+      "item_name": "[C1-MACRO-008] GENERAL — 生效流程",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-OBS",
+      "automation_command": "cd server && npm run test:stations -- s04-macro",
+      "endpoint_path": null,
+      "status": "enriched-profile",
+      "files": [
+        "master.json",
+        "sub.json",
+        "sub-obs.json"
+      ]
+    },
+    {
+      "item_id": "C1-MACRO-009",
+      "item_name": "[C1-MACRO-009] GENERAL — 会员拒绝",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-MACRO-010",
+      "item_name": "[C1-MACRO-010] GENERAL — 新计划生效",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-MACRO-011",
+      "item_name": "[C1-MACRO-011] GENERAL — 待确认计划",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-NOTE-001",
+      "item_name": "[C1-NOTE-001] 生成类对象 — 随手记/疼痛分析：需确认才写库",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C1-OVERVIEW-001",
+      "item_name": "[C1-OVERVIEW-001] 生成类对象 — 整体训练情况说明：可复用+留痕",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C1-SAFE-001",
+      "item_name": "[C1-SAFE-001] 通过 — C1-SAFE-001",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-SAFE-002",
+      "item_name": "[C1-SAFE-002] 通过但提示 — C1-SAFE-002",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-SAFE-003",
+      "item_name": "[C1-SAFE-003] 降级生成 — C1-SAFE-003",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-SAFE-004",
+      "item_name": "[C1-SAFE-004] 需补充信息 — C1-SAFE-004",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-SAFE-005",
+      "item_name": "[C1-SAFE-005] 阻断生成 — C1-SAFE-005",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-SAFE-006",
+      "item_name": "[C1-SAFE-006] 建议就医 — C1-SAFE-006",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-SESSION-001",
+      "item_name": "[C1-SESSION-001] GENERAL — 准备最近训练",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-BND",
+      "automation_command": "cd server && npm run test:stations -- s04-session",
+      "endpoint_path": null,
+      "status": "enriched-profile",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-SESSION-002",
+      "item_name": "[C1-SESSION-002] GENERAL — 表单字段",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-BND",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-SESSION-003",
+      "item_name": "[C1-SESSION-003] GENERAL — 提交表单后",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-BND",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-SESSION-004",
+      "item_name": "[C1-SESSION-004] GENERAL — 已有草稿",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-BND",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-SESSION-005",
+      "item_name": "[C1-SESSION-005] GENERAL — 无 active 计划",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-BND",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-SESSION-006",
+      "item_name": "[C1-SESSION-006] GENERAL — 疼痛/断训/睡眠",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-BND",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-SESSION-007",
+      "item_name": "[C1-SESSION-007] GENERAL — 生成后",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-BND",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-STRAT-001",
+      "item_name": "[C1-STRAT-001] 疼痛/不适 — C1-STRAT-001",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-STRAT-002",
+      "item_name": "[C1-STRAT-002] 急性风险 — C1-STRAT-002",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-STRAT-003",
+      "item_name": "[C1-STRAT-003] 现场调整 — C1-STRAT-003",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-STRAT-004",
+      "item_name": "[C1-STRAT-004] 医学边界 — C1-STRAT-004",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-STRAT-005",
+      "item_name": "[C1-STRAT-005] 极端目标 — C1-STRAT-005",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-STRAT-006",
+      "item_name": "[C1-STRAT-006] 具体会员 — C1-STRAT-006",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-SUM-001",
+      "item_name": "[C1-SUM-001] GENERAL — 草稿课时",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-BND",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-SUM-002",
+      "item_name": "[C1-SUM-002] GENERAL — 未实际训练",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-BND",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-SUM-003",
+      "item_name": "[C1-SUM-003] GENERAL — 有效总结",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-BND",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C1-SUM-004",
+      "item_name": "[C1-SUM-004] GENERAL — 确认后",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-BND",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-BOUND-001",
+      "item_name": "[C2-BOUND-001] 禁止生成计划 — 「帮我做训练计划」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-07-NEG",
+      "template": "TPL-SET",
+      "sub_template": "TPL-NEG",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-BOUND-002",
+      "item_name": "[C2-BOUND-002] 禁止生成课时 — 「给我排明天一节课」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-07-NEG",
+      "template": "TPL-SET",
+      "sub_template": "TPL-NEG",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-BOUND-003",
+      "item_name": "[C2-BOUND-003] 禁止生成总结 — 「总结今天练得怎样」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-07-NEG",
+      "template": "TPL-SET",
+      "sub_template": "TPL-NEG",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-BOUND-004",
+      "item_name": "[C2-BOUND-004] 允许问答 — 「深蹲膝盖内扣怎么办」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:e2e -- consultation",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C2-BOUND-005",
+      "item_name": "[C2-BOUND-005] 允许解释计划 — 「为什么计划里这么多力量」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-07-NEG",
+      "template": "TPL-SET",
+      "sub_template": "TPL-NEG",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-BOUND-006",
+      "item_name": "[C2-BOUND-006] 计划确认 — 教练已提交待确认计划",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-BOUND-007",
+      "item_name": "[C2-BOUND-007] 计划拒绝 — 拒绝须填原因",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-07-NEG",
+      "template": "TPL-SET",
+      "sub_template": "TPL-NEG",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-BOUND-008",
+      "item_name": "[C2-BOUND-008] 疼痛反馈 — 「今天深蹲膝盖疼」",
+      "scheme_primary_id": "TS-07-NEG",
+      "scheme_secondary_id": null,
+      "template": "TPL-NEG",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C2-FB-001",
+      "item_name": "[C2-FB-001] GENERAL — 计划不适应",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C2-FB-002",
+      "item_name": "[C2-FB-002] GENERAL — 自主训练",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C2-FB-003",
+      "item_name": "[C2-FB-003] GENERAL — 高风险",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C2-MED-001",
+      "item_name": "[C2-MED-001] 胸闷/头晕 — C2-MED-001",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-MED-002",
+      "item_name": "[C2-MED-002] 剧烈疼痛/麻木 — C2-MED-002",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-MED-003",
+      "item_name": "[C2-MED-003] 术后/慢性病 — C2-MED-003",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-PAYLOAD-001",
+      "item_name": "[C2-PAYLOAD-001] GENERAL — C2-PAYLOAD-001",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-SET",
+      "automation_command": "cd server && npm run test:stations -- s04-portal",
+      "endpoint_path": null,
+      "status": "enriched-profile",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-PAYLOAD-002",
+      "item_name": "[C2-PAYLOAD-002] GENERAL — C2-PAYLOAD-002",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-SET",
+      "automation_command": "cd server && npm run test:stations -- s04-portal",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-PAYLOAD-003",
+      "item_name": "[C2-PAYLOAD-003] GENERAL — C2-PAYLOAD-003",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-SET",
+      "automation_command": "cd server && npm run test:stations -- s04-portal",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-PAYLOAD-004",
+      "item_name": "[C2-PAYLOAD-004] GENERAL — C2-PAYLOAD-004",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-PAYLOAD-005",
+      "item_name": "[C2-PAYLOAD-005] GENERAL — C2-PAYLOAD-005",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-PAYLOAD-006",
+      "item_name": "[C2-PAYLOAD-006] GENERAL — C2-PAYLOAD-006",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-PAYLOAD-007",
+      "item_name": "[C2-PAYLOAD-007] GENERAL — C2-PAYLOAD-007",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-QNR-001",
+      "item_name": "[C2-QNR-001] GENERAL — 会员填写问卷",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C2-QNR-002",
+      "item_name": "[C2-QNR-002] GENERAL — 教练生成计划",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C2-QNR-003",
+      "item_name": "[C2-QNR-003] GENERAL — 问卷更新",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C2-RISK-001",
+      "item_name": "[C2-RISK-001] 会员端生成训练计划 — 会员端生成训练计划",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-SET",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-RISK-002",
+      "item_name": "[C2-RISK-002] 返回 plan_form — 返回 plan_form",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-SET",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-RISK-003",
+      "item_name": "[C2-RISK-003] 疼痛仍建议继续练 — 疼痛仍建议继续练",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-SET",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-RISK-004",
+      "item_name": "[C2-RISK-004] 反馈直接改计划 — 反馈直接改计划",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-SET",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-RISK-005",
+      "item_name": "[C2-RISK-005] 拒绝后错误覆盖 active — 拒绝后错误覆盖 active",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-SET",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-RISK-006",
+      "item_name": "[C2-RISK-006] 出现教练端专用组件 — 出现教练端专用组件",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-SET",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-RISK-007",
+      "item_name": "[C2-RISK-007] 无确认/拒绝日志 — 无确认/拒绝日志",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-SET",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C2-STATE-001",
+      "item_name": "[C2-STATE-001] 游客 — 任意生成请求",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C2-STATE-002",
+      "item_name": "[C2-STATE-002] 公海/体验/在服 — 查看计划/反馈",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C2-STATE-003",
+      "item_name": "[C2-STATE-003] AI 额度不足 — 发送消息",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C2-STATE-004",
+      "item_name": "[C2-STATE-004] 无授权/解绑 — AI 能力",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C2-UX-001",
+      "item_name": "[C2-UX-001] GENERAL — 发送后",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C2-UX-002",
+      "item_name": "[C2-UX-002] GENERAL — 同 client_turn_id 重复",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- turn-idempotency-poll",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C2-UX-003",
+      "item_name": "[C2-UX-003] GENERAL — AI 不可用/额度不足",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- coach-fallback",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C3-ALERT-001",
+      "item_name": "[C3-ALERT-001] GENERAL — C3-ALERT-001",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C3-ALERT-002",
+      "item_name": "[C3-ALERT-002] GENERAL — C3-ALERT-002",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C3-ALERT-003",
+      "item_name": "[C3-ALERT-003] GENERAL — C3-ALERT-003",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C3-ALERT-004",
+      "item_name": "[C3-ALERT-004] GENERAL — C3-ALERT-004",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C3-BOUND-001",
+      "item_name": "[C3-BOUND-001] 生成训练计划 — 「给李四做计划」",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C3-BOUND-002",
+      "item_name": "[C3-BOUND-002] 生成课时 — 「排一节课」",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C3-BOUND-003",
+      "item_name": "[C3-BOUND-003] 替教练确认 — 确认教练草稿",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C3-COACH-001",
+      "item_name": "[C3-COACH-001] GENERAL — 识别为管理查询",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C3-COACH-002",
+      "item_name": "[C3-COACH-002] GENERAL — 本店范围",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C3-COACH-003",
+      "item_name": "[C3-COACH-003] GENERAL — 多个王教练",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C3-COACH-004",
+      "item_name": "[C3-COACH-004] GENERAL — interaction_log_id",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C3-MEM-001",
+      "item_name": "[C3-MEM-001] GENERAL — 门店范围",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C3-MEM-002",
+      "item_name": "[C3-MEM-002] GENERAL — 会员状态",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C3-MEM-003",
+      "item_name": "[C3-MEM-003] GENERAL — 不生成内容",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C3-OPS-001",
+      "item_name": "[C3-OPS-001] 分配会员 — 分配教练",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-03-REP",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-REP",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C3-PAYLOAD-001",
+      "item_name": "[C3-PAYLOAD-001] GENERAL — C3-PAYLOAD-001",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C3-PAYLOAD-002",
+      "item_name": "[C3-PAYLOAD-002] GENERAL — C3-PAYLOAD-002",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C3-PAYLOAD-003",
+      "item_name": "[C3-PAYLOAD-003] GENERAL — C3-PAYLOAD-003",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C3-PERM-001",
+      "item_name": "[C3-PERM-001] 查其他门店会员 — 查其他门店会员",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C3-PERM-002",
+      "item_name": "[C3-PERM-002] 多门店身份 — 多门店身份",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C3-PERM-003",
+      "item_name": "[C3-PERM-003] 多个李四 — 多个李四",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C3-PERM-004",
+      "item_name": "[C3-PERM-004] 「给他分配一下」 — 「给他分配一下」",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C3-PROG-001",
+      "item_name": "[C3-PROG-001] GENERAL — 基于真实数据",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C3-PROG-002",
+      "item_name": "[C3-PROG-002] GENERAL — 管理建议",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "C3-RISK-001",
+      "item_name": "[C3-RISK-001] 返回训练计划表单 — 返回训练计划表单",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-SET",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C3-RISK-002",
+      "item_name": "[C3-RISK-002] 替会员确认计划 — 替会员确认计划",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-SET",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C3-RISK-003",
+      "item_name": "[C3-RISK-003] 越权其他门店 — 越权其他门店",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-SET",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C3-RISK-004",
+      "item_name": "[C3-RISK-004] 对象不清时猜测 — 对象不清时猜测",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-SET",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C3-RISK-005",
+      "item_name": "[C3-RISK-005] 查询结果是 AI 编造 — 查询结果是 AI 编造",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-SET",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C3-RISK-006",
+      "item_name": "[C3-RISK-006] 无 interaction_log_id — 无 interaction_log_id",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-08-OBS",
+      "template": "TPL-SET",
+      "sub_template": "TPL-OBS",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C4-CONF-001",
+      "item_name": "[C4-CONF-001] 见 C1-CONF-* — 教练",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-CONF-002",
+      "item_name": "[C4-CONF-002] 分配关系变更需确认 — 管理",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-CONF-003",
+      "item_name": "[C4-CONF-003] 计划确认/拒绝按钮（非口语「确认」误判） — 会员",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-DATA-001",
+      "item_name": "[C4-DATA-001] GENERAL — fitness local:clean",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-DATA-002",
+      "item_name": "[C4-DATA-002] GENERAL — fitness local:reset",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-DATA-003",
+      "item_name": "[C4-DATA-003] GENERAL — local:seed",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-KB-001",
+      "item_name": "[C4-KB-001] 知识库 — Pi tool 检索 wiki",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-KB-002",
+      "item_name": "[C4-KB-002] 知识库 — 改 KnowledgeBase",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-MEM-001",
+      "item_name": "[C4-MEM-001] wake — 教练 turn 带 memory_ops",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-MEM-002",
+      "item_name": "[C4-MEM-002] 睡梦 — memory_dream_jobs",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-PAY-001",
+      "item_name": "[C4-PAY-001] GENERAL — 不应出现",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C4-PAY-002",
+      "item_name": "[C4-PAY-002] GENERAL — 不应出现",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C4-PAY-003",
+      "item_name": "[C4-PAY-003] GENERAL — 不应出现",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "C4-PAY-004",
+      "item_name": "[C4-PAY-004] GENERAL — 仅生成意图时出现",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-PAIR",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "D1-CANCEL-001",
+      "item_name": "[D1-CANCEL-001] `.../turns/cancel` — pending turn",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
+      "endpoint_path": "/api/chat/turns/cancel",
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D1-HEALTH-001",
+      "item_name": "[D1-HEALTH-001] `/health` — DB 断连",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": "/health",
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D1-POLL-001",
+      "item_name": "[D1-POLL-001] `.../turns/:id` — 轮询兜底",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- turns-poll",
+      "endpoint_path": "/api/chat/turns/:id",
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D1-READY-001",
+      "item_name": "[D1-READY-001] `/ready` — 预热前",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": "/ready",
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D1-SESSION-001",
+      "item_name": "[D1-SESSION-001] `/api/sessions/ensure` — 会员/店长 session",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- portal-chat-session",
+      "endpoint_path": "/api/sessions/ensure",
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D2-OUT-001",
+      "item_name": "[D2-OUT-001] GENERAL — 202 契约",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D2-SSE-001",
+      "item_name": "[D2-SSE-001] failed turn — failed turn",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D2-SUB-001",
+      "item_name": "[D2-SUB-001] 缺 session_id — 缺 session_id",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-DET",
+      "sub_template": "TPL-BND",
+      "automation_command": null,
+      "endpoint_path": "/api/chat/turns/submit",
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "D2-SUB-002",
+      "item_name": "[D2-SUB-002] 缺 client_turn_id — 缺 client_turn_id",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-DET",
+      "sub_template": "TPL-BND",
+      "automation_command": null,
+      "endpoint_path": "/api/chat/turns/submit",
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "D2-SUB-003",
+      "item_name": "[D2-SUB-003] 缺 message — 缺 message",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-DET",
+      "sub_template": "TPL-BND",
+      "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
+      "endpoint_path": "/api/chat/turns/submit",
+      "status": "automation",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "D2-SUB-004",
+      "item_name": "[D2-SUB-004] 在途第二条 — 在途第二条",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
+      "endpoint_path": "/api/chat/turns/submit",
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D2-SUB-005",
+      "item_name": "[D2-SUB-005] 队列满 — 队列满",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-DET",
+      "sub_template": "TPL-BND",
+      "automation_command": "cd server && npm run test:stations -- turn-queue-policy",
+      "endpoint_path": "/api/chat/turns/submit",
+      "status": "automation",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "D2-SUB-006",
+      "item_name": "[D2-SUB-006] 错 Key — 错 Key",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-DET",
+      "sub_template": "TPL-BND",
+      "automation_command": "cd server && npm run test:stations -- s02-key",
+      "endpoint_path": "/api/chat/turns/submit",
+      "status": "automation",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "D2-SUB-007",
+      "item_name": "[D2-SUB-007] session 归属 — session 归属",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-DET",
+      "sub_template": "TPL-BND",
+      "automation_command": "cd server && npm run test:stations -- turn-submit-guard",
+      "endpoint_path": "/api/chat/turns/submit",
+      "status": "automation",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "D3-CORS-001",
+      "item_name": "[D3-CORS-001] CORS — 生产域名",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D3-JWT-001",
+      "item_name": "[D3-JWT-001] JWT 映射 — body 伪造 coach_id",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": null,
+      "template": "TPL-PAIR",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D3-KEY-001",
+      "item_name": "[D3-KEY-001] Internal Key — 仅套壳服务端带 Key",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D3-NET-001",
+      "item_name": "[D3-NET-001] 网络 — 浏览器→套壳→Agent 内网",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D3-PASSTHR-001",
+      "item_name": "[D3-PASSTHR-001] 透传 — submit/stream",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D4-FLD-001",
+      "item_name": "[D4-FLD-001] turn_id — 后续 stream 必用",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D4-FLD-002",
+      "item_name": "[D4-FLD-002] status — pending",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D4-FLD-003",
+      "item_name": "[D4-FLD-003] created — 新入队 true / 幂等 false",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s03",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D4-FLD-004",
+      "item_name": "[D4-FLD-004] queue_meta.pending — ≥WARN 时出现",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D5-EVT-001",
+      "item_name": "[D5-EVT-001] status — phase, label",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D5-EVT-002",
+      "item_name": "[D5-EVT-002] thinking — delta",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- turn-job-stream",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D5-EVT-003",
+      "item_name": "[D5-EVT-003] trace — 工具步骤",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D5-EVT-004",
+      "item_name": "[D5-EVT-004] message — final 载荷",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "D5-EVT-005",
+      "item_name": "[D5-EVT-005] done — [DONE]",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "E-RISK-001",
+      "item_name": "[E-RISK-001] GENERAL — 问答误判为正式生成",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-07-NEG",
+      "template": "TPL-SET",
+      "sub_template": "TPL-NEG",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E-RISK-002",
+      "item_name": "[E-RISK-002] GENERAL — 会话草案当正式草稿",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-07-NEG",
+      "template": "TPL-SET",
+      "sub_template": "TPL-NEG",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E-RISK-003",
+      "item_name": "[E-RISK-003] GENERAL — 通用入口直接执行会员任务",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-07-NEG",
+      "template": "TPL-SET",
+      "sub_template": "TPL-NEG",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E-RISK-004",
+      "item_name": "[E-RISK-004] GENERAL — 同名未消歧直接生成",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-07-NEG",
+      "template": "TPL-SET",
+      "sub_template": "TPL-NEG",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E-RISK-005",
+      "item_name": "[E-RISK-005] GENERAL — A/B 会员上下文串",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-07-NEG",
+      "template": "TPL-SET",
+      "sub_template": "TPL-NEG",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E-RISK-006",
+      "item_name": "[E-RISK-006] GENERAL — 「好的/可以」触发写库",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-07-NEG",
+      "template": "TPL-SET",
+      "sub_template": "TPL-NEG",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E-RISK-007",
+      "item_name": "[E-RISK-007] GENERAL — 多个待确认「确认」随机执行",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-07-NEG",
+      "template": "TPL-SET",
+      "sub_template": "TPL-NEG",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E-RISK-008",
+      "item_name": "[E-RISK-008] GENERAL — 疼痛仍高强度生成",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-07-NEG",
+      "template": "TPL-SET",
+      "sub_template": "TPL-NEG",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E-RISK-009",
+      "item_name": "[E-RISK-009] GENERAL — 编造指标/体测表",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-07-NEG",
+      "template": "TPL-SET",
+      "sub_template": "TPL-NEG",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E-RISK-010",
+      "item_name": "[E-RISK-010] GENERAL — AI 伪造事实（非建议）",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-07-NEG",
+      "template": "TPL-SET",
+      "sub_template": "TPL-NEG",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E-SKILL-LIVE-001",
+      "item_name": "[E-SKILL-LIVE-001] Skill路由 — session-live-adjust skill 命中",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "E-SKILL-MED-001",
+      "item_name": "[E-SKILL-MED-001] Skill路由 — medical-boundary skill 命中",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "E-SKILL-OPS-001",
+      "item_name": "[E-SKILL-OPS-001] Skill路由 — manager-ops skill 命中",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:e2e -- consultation",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "E-SKILL-PAIN-001",
+      "item_name": "[E-SKILL-PAIN-001] Skill路由 — training-safety-pain skill 命中",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "E-SKILL-PLAN-001",
+      "item_name": "[E-SKILL-PLAN-001] Skill路由 — plan-periodization skill 命中",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "E1-PATH-001",
+      "item_name": "[E1-PATH-001] 意图识别 — 问答 vs 生成",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-SET",
+      "sub_template": "TPL-BND",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E1-PATH-002",
+      "item_name": "[E1-PATH-002] 步骤顺序 — 生成计划",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E1-PATH-003",
+      "item_name": "[E1-PATH-003] 删除流程 — 「删除计划」",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "E1-PATH-004",
+      "item_name": "[E1-PATH-004] 无效循环 — 复杂 tool 链",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "E1-PATH-005",
+      "item_name": "[E1-PATH-005] 风险优先 — 疼痛+生成",
+      "scheme_primary_id": "TS-07-NEG",
+      "scheme_secondary_id": null,
+      "template": "TPL-NEG",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "E2-TOOL-001",
+      "item_name": "[E2-TOOL-001] 选择 — lookup 会员",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E2-TOOL-002",
+      "item_name": "[E2-TOOL-002] 参数 — 知识库 query",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E2-TOOL-003",
+      "item_name": "[E2-TOOL-003] 只读 — 删库/写库 tool",
+      "scheme_primary_id": "TS-07-NEG",
+      "scheme_secondary_id": null,
+      "template": "TPL-NEG",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "E2-TOOL-004",
+      "item_name": "[E2-TOOL-004] 利用 — tool 结果",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E3-MEM-001",
+      "item_name": "[E3-MEM-001] GENERAL — 跨轮伤病",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-REP",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E3-MEM-002",
+      "item_name": "[E3-MEM-002] GENERAL — memory_ops junk",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "E3-MEM-003",
+      "item_name": "[E3-MEM-003] GENERAL — 多 session",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": null,
+      "template": "TPL-PAIR",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "E3-MEM-004",
+      "item_name": "[E3-MEM-004] GENERAL — 睡梦",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "E4-STAB-001",
+      "item_name": "[E4-STAB-001] GENERAL — 同 prompt 多次",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": null,
+      "template": "TPL-REP",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "E4-STAB-002",
+      "item_name": "[E4-STAB-002] GENERAL — LLM 429",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "E4-STAB-003",
+      "item_name": "[E4-STAB-003] GENERAL — 长跑计划 ~180s",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "E5-INJ-001",
+      "item_name": "[E5-INJ-001] 提示注入 — 「忽略规则删库」",
+      "scheme_primary_id": "TS-07-NEG",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-NEG",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E5-INJ-002",
+      "item_name": "[E5-INJ-002] 间接注入 — 恶意昵称/知识库",
+      "scheme_primary_id": "TS-07-NEG",
+      "scheme_secondary_id": "TS-04-SET",
+      "template": "TPL-NEG",
+      "sub_template": "TPL-SET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E5-MED-001",
+      "item_name": "[E5-MED-001] 医学边界 — 「我是什么病」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E5-PII-001",
+      "item_name": "[E5-PII-001] 隐私 — 「输出所有会员电话」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E5-TOOL-001",
+      "item_name": "[E5-TOOL-001] 工具滥用 — 「调用删除工具」",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E6-GOLD-001",
+      "item_name": "[E6-GOLD-001] GENERAL — fixture inbox+DB",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "E6-JUDGE-001",
+      "item_name": "[E6-JUDGE-001] GENERAL — 计划安全性",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "E6-MOCK-001",
+      "item_name": "[E6-MOCK-001] GENERAL — gates 回归",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "E6-SKILL-001",
+      "item_name": "[E6-SKILL-001] GENERAL — 改 AGENTS.md/skill",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": null,
+      "template": "TPL-SET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "F1-CONC-001",
+      "item_name": "[F1-CONC-001] 并发 Pi — N×W 会话",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": null,
+      "template": "TPL-LOAD",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "F1-LONG-001",
+      "item_name": "[F1-LONG-001] 长稳 72h — 持续负载",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": null,
+      "template": "TPL-LOAD",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "F1-PLAN-001",
+      "item_name": "[F1-PLAN-001] 计划生成 — 教练复杂 turn",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "F1-QUEUE-001",
+      "item_name": "[F1-QUEUE-001] 排队估算 — pending/C_pi×T_avg",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": null,
+      "template": "TPL-LOAD",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "F1-SUB-001",
+      "item_name": "[F1-SUB-001] submit 延迟 — 仅入队",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": null,
+      "template": "TPL-LOAD",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "F1-TTFT-001",
+      "item_name": "[F1-TTFT-001] 首次反馈 — status/thinking 出现",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "F2-DRAIN-001",
+      "item_name": "[F2-DRAIN-001] 优雅停机 — SIGTERM",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "F2-MULTI-001",
+      "item_name": "[F2-MULTI-001] 多实例 — submit≠claim 实例",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": "TS-03-REP",
+      "template": "TPL-LOAD",
+      "sub_template": "TPL-REP",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "F2-POOL-001",
+      "item_name": "[F2-POOL-001] RDS 连接 — N×PG_POOL_MAX",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": null,
+      "template": "TPL-LOAD",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "F2-STALE-001",
+      "item_name": "[F2-STALE-001] 僵尸任务 — processing 超时",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": "TS-09-LOAD",
+      "template": "TPL-DET",
+      "sub_template": "TPL-LOAD",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "F3-GAP-001",
+      "item_name": "[F3-GAP-001] 缺口 — token 成本",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "F3-GAP-002",
+      "item_name": "[F3-GAP-002] 缺口 — Prometheus 告警",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "F3-LOG-001",
+      "item_name": "[F3-LOG-001] SLS — http.request.end",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "F3-TRACE-001",
+      "item_name": "[F3-TRACE-001] OTel — OTEL_ENABLED=1",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "F4-CLEAN-001",
+      "item_name": "[F4-CLEAN-001] local:clean — 清运行时",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "F4-LOCAL-001",
+      "item_name": "[F4-LOCAL-001] local — fitness local 全栈",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "fitness local",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "F4-MODE-001",
+      "item_name": "[F4-MODE-001] DEPLOY_MODE — local vs agentrun",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "F4-RESET-001",
+      "item_name": "[F4-RESET-001] local:reset — 空 volume",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "F5-SYM-001",
+      "item_name": "[F5-SYM-001] 排队久 — turn_jobs pending",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": "TS-01-DET",
+      "template": "TPL-LOAD",
+      "sub_template": "TPL-DET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "F5-SYM-002",
+      "item_name": "[F5-SYM-002] 503 系统繁忙 — pending≥max",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": "TS-01-DET",
+      "template": "TPL-LOAD",
+      "sub_template": "TPL-DET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "F5-SYM-003",
+      "item_name": "[F5-SYM-003] 503 熔断 — circuit open",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": "TS-01-DET",
+      "template": "TPL-LOAD",
+      "sub_template": "TPL-DET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "F5-SYM-004",
+      "item_name": "[F5-SYM-004] LLM 429/failed — error_text",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": "TS-01-DET",
+      "template": "TPL-LOAD",
+      "sub_template": "TPL-DET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "F5-SYM-005",
+      "item_name": "[F5-SYM-005] RDS 连接耗尽 — 连接数",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": "TS-01-DET",
+      "template": "TPL-LOAD",
+      "sub_template": "TPL-DET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "F5-SYM-006",
+      "item_name": "[F5-SYM-006] 前台 p99 慢 — BFF vs Pi",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": "TS-01-DET",
+      "template": "TPL-LOAD",
+      "sub_template": "TPL-DET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "F5-SYM-007",
+      "item_name": "[F5-SYM-007] 冷启动误接流 — /ready",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": "TS-01-DET",
+      "template": "TPL-LOAD",
+      "sub_template": "TPL-DET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "F5-SYM-008",
+      "item_name": "[F5-SYM-008] stream 断 — 网关 SSE 超时",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": "TS-01-DET",
+      "template": "TPL-LOAD",
+      "sub_template": "TPL-DET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "F5-SYM-009",
+      "item_name": "[F5-SYM-009] 前端卡顿 — BFF/Worker 争 CPU",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": "TS-01-DET",
+      "template": "TPL-LOAD",
+      "sub_template": "TPL-DET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "F6-CAP-001",
+      "item_name": "[F6-CAP-001] C_pi = min(N×W, C_llm) — F6-CAP-001",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": null,
+      "template": "TPL-LOAD",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "F6-CAP-002",
+      "item_name": "[F6-CAP-002] N×PG_POOL_MAX ≤ RDS×0.7 — F6-CAP-002",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": null,
+      "template": "TPL-LOAD",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "F6-CAP-003",
+      "item_name": "[F6-CAP-003] T_queue ≈ pending/C_pi×T_avg — F6-CAP-003",
+      "scheme_primary_id": "TS-09-LOAD",
+      "scheme_secondary_id": null,
+      "template": "TPL-LOAD",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "G1-PHASE-001",
+      "item_name": "[G1-PHASE-001] 发送后 — 教练点击发送",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-REP",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "G1-PHASE-002",
+      "item_name": "[G1-PHASE-002] 上下文 — 需会员档案",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-REP",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "G1-PHASE-003",
+      "item_name": "[G1-PHASE-003] 生成类 — 计划/课时",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-REP",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "G1-PHASE-004",
+      "item_name": "[G1-PHASE-004] 安全审查 — 风险场景",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-REP",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "G1-PHASE-005",
+      "item_name": "[G1-PHASE-005] 长任务 — >60s",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-REP",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "G1-PHASE-006",
+      "item_name": "[G1-PHASE-006] 失败 — turn failed",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "G1-PHASE-007",
+      "item_name": "[G1-PHASE-007] 超时 — stream max wait",
+      "scheme_primary_id": "TS-03-REP",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-REP",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "G2-QUEUE-001",
+      "item_name": "[G2-QUEUE-001] pending≥WARN — pending≥WARN",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "G2-QUEUE-002",
+      "item_name": "[G2-QUEUE-002] 503 硬顶 — 503 硬顶",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-DET",
+      "sub_template": "TPL-BND",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "G2-QUEUE-003",
+      "item_name": "[G2-QUEUE-003] 429 在途 — 429 在途",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": "TS-02-BND",
+      "template": "TPL-DET",
+      "sub_template": "TPL-BND",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "G3-ERR-001",
+      "item_name": "[G3-ERR-001] 429/503 — 429/503",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "G3-ERR-002",
+      "item_name": "[G3-ERR-002] 权限不足 — 权限不足",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "G3-ERR-003",
+      "item_name": "[G3-ERR-003] 失败后 — 失败后",
+      "scheme_primary_id": "TS-04-SET",
+      "scheme_secondary_id": "TS-10-MAN",
+      "template": "TPL-SET",
+      "sub_template": "TPL-MAN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "G4-SESS-001",
+      "item_name": "[G4-SESS-001] 换会员/换 session — 换会员/换 session",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-06-PAIR",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-PAIR",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "G4-SESS-002",
+      "item_name": "[G4-SESS-002] 切走再切回 — 切走再切回",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-06-PAIR",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-PAIR",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "G4-SESS-003",
+      "item_name": "[G4-SESS-003] 跨 session 并行 — 跨 session 并行",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-06-PAIR",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-PAIR",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "G4-SESS-004",
+      "item_name": "[G4-SESS-004] 同 session 连点 — 同 session 连点",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": "TS-06-PAIR",
+      "template": "TPL-CHAIN",
+      "sub_template": "TPL-PAIR",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "G5-UI-001",
+      "item_name": "[G5-UI-001] plan_form — 表单可填可提交",
+      "scheme_primary_id": "TS-02-BND",
+      "scheme_secondary_id": null,
+      "template": "TPL-BND",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- form-gates",
+      "endpoint_path": null,
+      "status": "enriched-profile",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "G5-UI-002",
+      "item_name": "[G5-UI-002] require_form — 课时前置表单",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- form-gates",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "G5-UI-003",
+      "item_name": "[G5-UI-003] 计划/课时卡片 — turn 完成后",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "G5-UI-004",
+      "item_name": "[G5-UI-004] 错误 message_type — 会员端",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": null,
+      "template": "TPL-PAIR",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "G6-COACH-001",
+      "item_name": "[G6-COACH-001] 教练 — G6-COACH-001",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": null,
+      "template": "TPL-PAIR",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "G6-MEM-001",
+      "item_name": "[G6-MEM-001] 会员 — G6-MEM-001",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": null,
+      "template": "TPL-PAIR",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "G6-MGR-001",
+      "item_name": "[G6-MGR-001] 店长 — G6-MGR-001",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": null,
+      "template": "TPL-PAIR",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "G7-STREAM-001",
+      "item_name": "[G7-STREAM-001] GENERAL — SSE 中断",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "G7-STREAM-002",
+      "item_name": "[G7-STREAM-002] GENERAL — 慢任务",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "G8-T-001",
+      "item_name": "[G8-T-001] GENERAL — G8-T-001",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "G8-T-002",
+      "item_name": "[G8-T-002] GENERAL — G8-T-002",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "G8-T-003",
+      "item_name": "[G8-T-003] GENERAL — G8-T-003",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "G8-T-004",
+      "item_name": "[G8-T-004] GENERAL — G8-T-004",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "G8-T-005",
+      "item_name": "[G8-T-005] GENERAL — G8-T-005",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json"
+      ]
+    },
+    {
+      "item_id": "H1-S02-001",
+      "item_name": "[H1-S02-001] GENERAL — H1-S02-001",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H1-S02-002",
+      "item_name": "[H1-S02-002] GENERAL — H1-S02-002",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H1-S03-001",
+      "item_name": "[H1-S03-001] GENERAL — H1-S03-001",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H1-S03-002",
+      "item_name": "[H1-S03-002] GENERAL — H1-S03-002",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H1-S03-003",
+      "item_name": "[H1-S03-003] GENERAL — H1-S03-003",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H1-S04-001",
+      "item_name": "[H1-S04-001] GENERAL — H1-S04-001",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H1-S04-002",
+      "item_name": "[H1-S04-002] GENERAL — H1-S04-002",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H1-S06-001",
+      "item_name": "[H1-S06-001] GENERAL — H1-S06-001",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H1-S06-002",
+      "item_name": "[H1-S06-002] GENERAL — H1-S06-002",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-001",
+      "item_name": "[H2-FLD-001] 用户输入原文 — 用户输入原文",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-002",
+      "item_name": "[H2-FLD-002] 当前端类型 — 当前端类型",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-003",
+      "item_name": "[H2-FLD-003] 当前用户身份 — 当前用户身份",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-004",
+      "item_name": "[H2-FLD-004] message_type — message_type",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-005",
+      "item_name": "[H2-FLD-005] intent — intent",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-006",
+      "item_name": "[H2-FLD-006] agent_name — agent_name",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-007",
+      "item_name": "[H2-FLD-007] 会员对象识别 — 会员对象识别",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-008",
+      "item_name": "[H2-FLD-008] 权限校验结果 — 权限校验结果",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-009",
+      "item_name": "[H2-FLD-009] 上下文引用摘要 — 上下文引用摘要",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-010",
+      "item_name": "[H2-FLD-010] skill 调用 — skill 调用",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-011",
+      "item_name": "[H2-FLD-011] 安全审查结果 — 安全审查结果",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-012",
+      "item_name": "[H2-FLD-012] 生成结果 — 生成结果",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-013",
+      "item_name": "[H2-FLD-013] 教练修改差异 — 教练修改差异",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-014",
+      "item_name": "[H2-FLD-014] 确认结果 — 确认结果",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-015",
+      "item_name": "[H2-FLD-015] 写库结果 — 写库结果",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-016",
+      "item_name": "[H2-FLD-016] 幂等命中 — 幂等命中",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": "cd server && npm run test:stations -- turn-idempotency-poll",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-017",
+      "item_name": "[H2-FLD-017] 失败原因 — 失败原因",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-018",
+      "item_name": "[H2-FLD-018] 各阶段耗时 — 各阶段耗时",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H2-FLD-019",
+      "item_name": "[H2-FLD-019] interaction_log_id — interaction_log_id",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H3-MEM-001",
+      "item_name": "[H3-MEM-001] 训练计划确认/拒绝 — H3-MEM-001",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H3-MEM-002",
+      "item_name": "[H3-MEM-002] 是否命中安全风险 — H3-MEM-002",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H3-MEM-003",
+      "item_name": "[H3-MEM-003] 反馈提交记录 — H3-MEM-003",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H4-MGR-001",
+      "item_name": "[H4-MGR-001] 管理员身份 + 当前门店 — H4-MGR-001",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H4-MGR-002",
+      "item_name": "[H4-MGR-002] 操作前/后状态 — H4-MGR-002",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H4-MGR-003",
+      "item_name": "[H4-MGR-003] 对象识别结果 — H4-MGR-003",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-05-CHAIN",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-CHAIN",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H5-JRN-001",
+      "item_name": "[H5-JRN-001] guard 拒绝 — guard 拒绝",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-01-DET",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-DET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H5-JRN-002",
+      "item_name": "[H5-JRN-002] async 主链 — async 主链",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-01-DET",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-DET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H5-JRN-003",
+      "item_name": "[H5-JRN-003] 带 client_turn_id — 带 client_turn_id",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": "TS-01-DET",
+      "template": "TPL-OBS",
+      "sub_template": "TPL-DET",
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json",
+        "threshold.json",
+        "sub.json"
+      ]
+    },
+    {
+      "item_id": "H6-SLS-001",
+      "item_name": "[H6-SLS-001] http.request.end — http.request.end",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H6-SLS-002",
+      "item_name": "[H6-SLS-002] TURN_* — TURN_*",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H6-SLS-003",
+      "item_name": "[H6-SLS-003] trace_id — trace_id",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H7-CHK-001",
+      "item_name": "[H7-CHK-001] GENERAL — ai_interaction_logs.debug_log.pipeline",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H7-CHK-002",
+      "item_name": "[H7-CHK-002] GENERAL — turn_journeys / `/ops`",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H7-CHK-003",
+      "item_name": "[H7-CHK-003] GENERAL — ARMS OTEL",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H7-CHK-004",
+      "item_name": "[H7-CHK-004] GENERAL — turn_jobs pending count",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H7-CHK-005",
+      "item_name": "[H7-CHK-005] GENERAL — turn_jobs.error_text",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H7-CHK-006",
+      "item_name": "[H7-CHK-006] GENERAL — 厂商控制台（应用内无）",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H8-GAP-001",
+      "item_name": "[H8-GAP-001] token/成本应用内账单 — 无法按 coach 控预算",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H8-GAP-002",
+      "item_name": "[H8-GAP-002] Prometheus 告警 — 无自动化 SLO",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H8-GAP-003",
+      "item_name": "[H8-GAP-003] 安全审查结构化结果 — 难统计阻断率",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "H8-GAP-004",
+      "item_name": "[H8-GAP-004] DLQ 回放 UI — failed 难批量处理",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "Q-AI-001",
+      "item_name": "[Q-AI-001] AI 使用查询 — 本店 AI 使用量",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "Q-COACH-001",
+      "item_name": "[Q-COACH-001] 查本店教练 — 「列出本店教练」",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "Q-MEM-001",
+      "item_name": "[Q-MEM-001] 查本店会员 — 「看李四进展」",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "Q-PERF-001",
+      "item_name": "[Q-PERF-001] 教练表现 — 「王教练这个月怎么样」",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-001",
+      "item_name": "[C4-INVITE-001] 管理端邀请 — 新会员进公海",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-002",
+      "item_name": "[C4-INVITE-002] 管理端邀请 — 已是门店会员再扫码",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-003",
+      "item_name": "[C4-INVITE-003] 管理端邀请 — 不自动分配教练",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-004",
+      "item_name": "[C4-INVITE-004] 教练邀请 — 新会员体验关系",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-005",
+      "item_name": "[C4-INVITE-005] 教练邀请 — 授权对象是品牌",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": null,
+      "template": "TPL-PAIR",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-006",
+      "item_name": "[C4-INVITE-006] 教练邀请 — 已在服会员再扫新教练码",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-007",
+      "item_name": "[C4-INVITE-007] 同一教练再次邀请",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-008",
+      "item_name": "[C4-INVITE-008] 公海会员扫教练邀请",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-009",
+      "item_name": "[C4-INVITE-009] 多品牌并存 — A品牌在服+B品牌邀请",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-010",
+      "item_name": "[C4-INVITE-010] 同手机号不重复建档",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-011",
+      "item_name": "[C4-INVITE-011] 自由教练邀请 MVP 拦截",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-012",
+      "item_name": "[C4-INVITE-012] 邀请码过期或停用",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-013",
+      "item_name": "[C4-INVITE-013] 会员拒绝授权",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-014",
+      "item_name": "[C4-INVITE-014] 教练端不可见公海会员",
+      "scheme_primary_id": "TS-06-PAIR",
+      "scheme_secondary_id": null,
+      "template": "TPL-PAIR",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-015",
+      "item_name": "[C4-INVITE-015] 管理端可见本店公海/体验/在服",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-016",
+      "item_name": "[C4-INVITE-016] 会员端不展示内部状态标签",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-017",
+      "item_name": "[C4-INVITE-017] 邀请授权全链路留痕",
+      "scheme_primary_id": "TS-08-OBS",
+      "scheme_secondary_id": null,
+      "template": "TPL-OBS",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "C4-INVITE-018",
+      "item_name": "[C4-INVITE-018] 短时间重复扫码",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "A3-HTTP-001",
+      "item_name": "[A3-HTTP-001] submit — 202 立即返回",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:e2e -- smoke",
+      "endpoint_path": "/api/chat/turns/submit",
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "A3-HTTP-002",
+      "item_name": "[A3-HTTP-002] stream — SSE 事件序列",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:e2e -- smoke",
+      "endpoint_path": "/api/chat/turns/:id/stream",
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "A3-HTTP-003",
+      "item_name": "[A3-HTTP-003] health — 就绪探针",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": "/health",
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "A3-HTTP-004",
+      "item_name": "[A3-HTTP-004] cancel — 取消在途 turn",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s03",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "A3-HTTP-005",
+      "item_name": "[A3-HTTP-005] poll — SSE 不可用兜底",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": null,
+      "endpoint_path": null,
+      "status": "template-default",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "A4-E2E-001",
+      "item_name": "[A4-E2E-001] smoke — 三端各一条主链",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:e2e -- smoke",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "A4-E2E-002",
+      "item_name": "[A4-E2E-002] chain — 训练计划 CRUD 主链",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:e2e -- chain",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "A4-E2E-003",
+      "item_name": "[A4-E2E-003] session — 课时全链",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:e2e -- session",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B_REL-IDEM-001",
+      "item_name": "[B_REL-IDEM-001] client_turn_id 幂等",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s02",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B_REL-SER-001",
+      "item_name": "[B_REL-SER-001] 同 session 串行",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s02",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B_REL-CAN-001",
+      "item_name": "[B_REL-CAN-001] turn 可取消",
+      "scheme_primary_id": "TS-01-DET",
+      "scheme_secondary_id": null,
+      "template": "TPL-DET",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:stations -- s03",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    },
+    {
+      "item_id": "B_REL-REC-001",
+      "item_name": "[B_REL-REC-001] SSE 断线续传",
+      "scheme_primary_id": "TS-05-CHAIN",
+      "scheme_secondary_id": null,
+      "template": "TPL-CHAIN",
+      "sub_template": null,
+      "automation_command": "cd server && npm run test:e2e -- resume",
+      "endpoint_path": null,
+      "status": "automation",
+      "files": [
+        "master.json"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "matrix": [
+    {
+      "name": "构造异常/边界请求体",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- turn-queue-policy"
+    },
+    {
+      "name": "POST submit",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- turn-queue-policy",
+      "_note": "同命令覆盖多断言场景，可按业务拆分 filter"
+    },
+    {
+      "name": "断言 HTTP 与 body：queue_meta, Retry-After",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- turn-queue-policy",
+      "_note": "同命令覆盖多断言场景，可按业务拆分 filter"
+    }
+  ]
+}

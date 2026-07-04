@@ -1,0 +1,24 @@
+{
+  "matrix": [
+    {
+      "name": "F1 · pickSummary 长 Markdown",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- form-gates-pick-long"
+    },
+    {
+      "name": "F2 · pickSummary 短 caption",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- form-gates-pick-short"
+    },
+    {
+      "name": "F3 · require_form HAS_PLAN",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- form-gates-has-plan"
+    },
+    {
+      "name": "F4 · require_form NO_PLAN",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- form-gates-no-plan"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "checks": [
+    {
+      "mode": "http_fields",
+      "path": "/health",
+      "method": "GET",
+      "expect_status": 200,
+      "required_fields": [
+        "单轮回查"
+      ]
+    }
+  ],
+  "_threshold": {
+    "require_complete": true
+  }
+}

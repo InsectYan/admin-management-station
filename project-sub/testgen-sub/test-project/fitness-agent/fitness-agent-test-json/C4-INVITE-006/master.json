@@ -1,0 +1,15 @@
+{
+  "vars": {
+    "coach_id": 1,
+    "user_id": 10003
+  },
+  "steps": [
+    {
+      "name": "A教练在服会员扫B教练邀请码",
+      "runner": "http",
+      "method": "GET",
+      "path": "/health",
+      "expect_status": 200
+    }
+  ]
+}

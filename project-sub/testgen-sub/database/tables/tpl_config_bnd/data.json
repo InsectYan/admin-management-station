@@ -3,54 +3,45 @@
     "item_id": "B4-PERSIST-001",
     "config_json": {
       "matrix": [
-        {
-          "name": "P1 · text 助手气泡",
-          "runner": "cli",
-          "command": "cd server && npm run test:stations -- s04-persist-text"
-        },
-        {
-          "name": "P2 · plan_form + form_data",
-          "runner": "cli",
-          "command": "cd server && npm run test:stations -- s04-persist-plan-form"
-        },
-        {
-          "name": "P3 · training_plan 载荷",
-          "runner": "cli",
-          "command": "cd server && npm run test:stations -- s04-persist-training-plan"
-        },
-        {
-          "name": "P4 · session_plan 载荷",
-          "runner": "cli",
-          "command": "cd server && npm run test:stations -- s04-persist-session-plan"
-        },
-        {
-          "name": "P5 · require_form 表单",
-          "runner": "cli",
-          "command": "cd server && npm run test:stations -- s04-persist-require-form"
-        },
-        {
-          "name": "P6 · session_summary 总结",
-          "runner": "cli",
-          "command": "cd server && npm run test:stations -- s04-persist-session-summary"
-        },
-        {
-          "name": "P7 · disambiguation",
-          "runner": "cli",
-          "command": "cd server && npm run test:stations -- s04-persist-disambiguation"
-        },
-        {
-          "name": "P8 · member_switch",
-          "runner": "cli",
-          "command": "cd server && npm run test:stations -- s04-persist-member-switch"
-        },
-        {
-          "name": "P9 · intent_clarification",
-          "runner": "cli",
-          "command": "cd server && npm run test:stations -- s04-persist-intent-clarification"
-        }
+        { "name": "P1 · text 助手气泡", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-text" },
+        { "name": "P2 · plan_form + form_data", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-plan-form" },
+        { "name": "P3 · training_plan 载荷", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-training-plan" },
+        { "name": "P4 · session_plan 载荷", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-session-plan" },
+        { "name": "P5 · require_form 表单", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-require-form" },
+        { "name": "P6 · session_summary 总结", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-session-summary" },
+        { "name": "P7 · disambiguation", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-disambiguation" },
+        { "name": "P8 · member_switch", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-member-switch" },
+        { "name": "P9 · intent_clarification", "runner": "cli", "command": "cd server && npm run test:stations -- s04-persist-intent-clarification" }
       ]
     },
     "threshold_json": {},
     "config_source": "manual"
+  },
+  {
+    "item_id": "B5-CONTRACT-001",
+    "config_json": {
+      "matrix": [
+        { "name": "O1 · training_plan 契约", "runner": "cli", "command": "cd server && npm run test:stations -- s04-outbox-training-plan" },
+        { "name": "O2 · session_plan 契约", "runner": "cli", "command": "cd server && npm run test:stations -- s04-outbox-session-plan" },
+        { "name": "O3 · disambiguation 契约", "runner": "cli", "command": "cd server && npm run test:stations -- s04-outbox-disambiguation" },
+        { "name": "O4 · member_switch 契约", "runner": "cli", "command": "cd server && npm run test:stations -- s04-outbox-member-switch" },
+        { "name": "O5 · intent_clarification 契约", "runner": "cli", "command": "cd server && npm run test:stations -- s04-outbox-intent-clarification" }
+      ]
+    },
+    "threshold_json": {},
+    "config_source": "enriched-profile"
+  },
+  {
+    "item_id": "G5-UI-001",
+    "config_json": {
+      "matrix": [
+        { "name": "F1 · pickSummary 长 Markdown", "runner": "cli", "command": "cd server && npm run test:stations -- form-gates-pick-long" },
+        { "name": "F2 · pickSummary 短 caption", "runner": "cli", "command": "cd server && npm run test:stations -- form-gates-pick-short" },
+        { "name": "F3 · require_form HAS_PLAN", "runner": "cli", "command": "cd server && npm run test:stations -- form-gates-has-plan" },
+        { "name": "F4 · require_form NO_PLAN", "runner": "cli", "command": "cd server && npm run test:stations -- form-gates-no-plan" }
+      ]
+    },
+    "threshold_json": {},
+    "config_source": "enriched-profile"
   }
 ]

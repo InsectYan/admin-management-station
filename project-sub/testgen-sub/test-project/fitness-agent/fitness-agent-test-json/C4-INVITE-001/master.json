@@ -1,0 +1,15 @@
+{
+  "vars": {
+    "coach_id": 1,
+    "user_id": 10003
+  },
+  "steps": [
+    {
+      "name": "门店管理端生成邀请码，新会员扫码授权",
+      "runner": "http",
+      "method": "GET",
+      "path": "/health",
+      "expect_status": 200
+    }
+  ]
+}

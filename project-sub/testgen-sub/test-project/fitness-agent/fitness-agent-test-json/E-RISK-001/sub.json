@@ -1,0 +1,19 @@
+{
+  "cases": [
+    {
+      "path": "/api/__adv__/probe",
+      "method": "GET",
+      "expect_blocked": true,
+      "block_statuses": [
+        400,
+        403,
+        404,
+        405,
+        422,
+        429,
+        500
+      ]
+    }
+  ],
+  "block_rate_min": 95
+}

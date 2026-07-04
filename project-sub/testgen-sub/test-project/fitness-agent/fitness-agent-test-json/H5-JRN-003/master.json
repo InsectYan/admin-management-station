@@ -1,0 +1,16 @@
+{
+  "checks": [
+    {
+      "mode": "journey_list",
+      "limit": 5
+    },
+    {
+      "mode": "journey_get",
+      "session_id": "",
+      "client_turn_id": ""
+    }
+  ],
+  "_threshold": {
+    "require_complete": true
+  }
+}

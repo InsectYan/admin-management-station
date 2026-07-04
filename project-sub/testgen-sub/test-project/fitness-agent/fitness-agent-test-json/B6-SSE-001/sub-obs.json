@@ -1,0 +1,14 @@
+{
+  "checks": [
+    {
+      "mode": "http_fields",
+      "path": "/health",
+      "method": "GET",
+      "expect_status": 200,
+      "required_fields": [
+        "status",
+        "runtime"
+      ]
+    }
+  ]
+}

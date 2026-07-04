@@ -1,0 +1,12 @@
+{
+  "vu": 10,
+  "duration_sec": 30,
+  "path": "/api/chat/turns/submit",
+  "method": "POST",
+  "body": {
+    "session_id": "{{session_id}}",
+    "coach_id": 1,
+    "message": "压测探针",
+    "client_turn_id": "{{uuid}}"
+  }
+}

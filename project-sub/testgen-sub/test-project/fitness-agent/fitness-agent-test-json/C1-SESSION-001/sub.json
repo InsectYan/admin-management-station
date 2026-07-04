@@ -1,0 +1,49 @@
+{
+  "matrix": [
+    {
+      "name": "S1 · 无课时 → require_form",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-session-require-form"
+    },
+    {
+      "name": "S2 · active → session_plan",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-session-active-plan"
+    },
+    {
+      "name": "S3 · modify → 澄清",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-session-modify-clarify"
+    },
+    {
+      "name": "S4 · regenerate marker",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-session-regenerate"
+    },
+    {
+      "name": "S5 · mirror → draft",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-session-mirror-draft"
+    },
+    {
+      "name": "S6 · draft+active 并存",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-session-draft-active"
+    },
+    {
+      "name": "S7 · commit 归档",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-session-commit-archive"
+    },
+    {
+      "name": "S8 · commit REST",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-session-commit-rest"
+    },
+    {
+      "name": "S9 · 消歧→require_form",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-session-disambiguation"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "matrix": [
+    {
+      "name": "M1 · 无 Active → plan_form",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-macro-plan-form"
+    },
+    {
+      "name": "M2 · modify → 澄清",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-macro-modify-clarify"
+    },
+    {
+      "name": "M3 · regenerate marker",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-macro-regenerate"
+    },
+    {
+      "name": "M4 · mirror → draft 展示",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-macro-mirror-draft"
+    },
+    {
+      "name": "M5 · draft→pending→active",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-macro-lifecycle"
+    }
+  ]
+}

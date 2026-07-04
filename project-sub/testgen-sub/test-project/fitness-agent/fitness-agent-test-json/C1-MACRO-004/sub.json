@@ -1,0 +1,13 @@
+{
+  "checks": [
+    {
+      "mode": "http_fields",
+      "path": "/health",
+      "method": "GET",
+      "expect_status": 200,
+      "required_fields": [
+        "Agent 不自动编目标值"
+      ]
+    }
+  ]
+}

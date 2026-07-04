@@ -1,0 +1,13 @@
+{
+  "checks": [
+    {
+      "mode": "http_fields",
+      "path": "/health",
+      "method": "GET",
+      "expect_status": 200,
+      "required_fields": [
+        "返回 plan_form（目标/频次/评估步骤）"
+      ]
+    }
+  ]
+}

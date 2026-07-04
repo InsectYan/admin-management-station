@@ -1,0 +1,11 @@
+{
+  "matrix": [
+    {
+      "name": "缺 client_turn_id",
+      "runner": "http",
+      "method": "POST",
+      "path": "/api/chat/turns/submit",
+      "expect_status": 200
+    }
+  ]
+}

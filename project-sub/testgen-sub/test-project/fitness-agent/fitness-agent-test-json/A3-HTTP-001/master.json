@@ -1,0 +1,7 @@
+{
+  "endpoint_path": "/api/chat/turns/submit",
+  "http_method": "POST",
+  "http_status_expected": 202,
+  "runner": "cli",
+  "command": "cd server && npm run test:e2e -- smoke"
+}

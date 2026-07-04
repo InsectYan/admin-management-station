@@ -2813,8 +2813,11 @@
       "local 全栈或 AgentRun 环境可用"
     ],
     "test_steps": [
-      "调用纯函数/validator 或 s05 单测",
-      "断言：validate 通过"
+      "O1 training_plan：合法载荷 + 空 plan_text 拒绝",
+      "O2 session_plan：合法载荷 + 空 session_plan 拒绝",
+      "O3 disambiguation：members 非空",
+      "O4 member_switch：member_switch_data 必填",
+      "O5 intent_clarification：options 必填"
     ],
     "assertion_points": [
       "validate 通过"
@@ -2853,7 +2856,7 @@
     "source_doc": "B-六站流水线.md",
     "source_section": "B5",
     "is_active": true,
-    "scheme_primary_id": "TS-01-DET",
+    "scheme_primary_id": "TS-02-BND",
     "validation_primary_id": "VS-02-CONTRACT",
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
@@ -5866,12 +5869,12 @@
     "prd_goal_ids": [
       "G03"
     ],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S04_BFF",
+    "automation_command": "cd server && npm run test:stations -- s04-macro",
     "config_env": null,
     "config_env_id": null,
-    "station_id": "NONE",
+    "station_id": "S04",
     "role_scope_id": "COACH",
     "endpoint_path": null,
     "http_method": null,
@@ -6674,12 +6677,12 @@
     "prd_goal_ids": [
       "G03"
     ],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "automation_command": null,
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S04_BFF",
+    "automation_command": "cd server && npm run test:stations -- s04-session",
     "config_env": null,
     "config_env_id": null,
-    "station_id": "NONE",
+    "station_id": "S04",
     "role_scope_id": "COACH",
     "endpoint_path": null,
     "http_method": null,
@@ -20529,8 +20532,10 @@
       "local 全栈或 AgentRun 环境可用"
     ],
     "test_steps": [
-      "normalizeRequireFormData plan_form",
-      "断言：模板字段规范化"
+      "F1 pickSummary 长 Markdown 优先",
+      "F2 pickSummary 短 caption 跳过",
+      "F3 require_form HAS_PLAN 挂载 macro",
+      "F4 require_form NO_PLAN 推断"
     ],
     "assertion_points": [
       "提交后进 pipeline"
@@ -20553,7 +20558,7 @@
     "endpoint_path": null,
     "http_method": null,
     "http_status_expected": null,
-    "scheme_primary_id": "TS-05-CHAIN",
+    "scheme_primary_id": "TS-02-BND",
     "scheme_secondary_id": null,
     "validation_primary_id": "VS-04-CHAIN",
     "validation_secondary_id": null,

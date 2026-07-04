@@ -1,0 +1,14 @@
+{
+  "pairs": [
+    {
+      "role": "manager",
+      "path": "/health",
+      "method": "GET",
+      "expect_status": 200,
+      "forbidden_patterns": [
+        "plan_form",
+        "training_plan"
+      ]
+    }
+  ]
+}

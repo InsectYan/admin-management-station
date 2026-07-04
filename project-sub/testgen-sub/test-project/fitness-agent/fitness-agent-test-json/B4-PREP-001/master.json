@@ -1,0 +1,21 @@
+{
+  "matrix": [
+    {
+      "name": "准备场景：enrich 拼 inbox",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-bff"
+    },
+    {
+      "name": "执行对应自动化或人工步骤",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-bff",
+      "_note": "同命令覆盖多断言场景，可按业务拆分 filter"
+    },
+    {
+      "name": "观测：NAS inbox.md 正确",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-bff",
+      "_note": "同命令覆盖多断言场景，可按业务拆分 filter"
+    }
+  ]
+}

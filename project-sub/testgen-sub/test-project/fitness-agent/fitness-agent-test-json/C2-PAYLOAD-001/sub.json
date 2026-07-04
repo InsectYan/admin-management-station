@@ -1,0 +1,19 @@
+{
+  "matrix": [
+    {
+      "name": "P1 · member 仅 text",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-portal-member"
+    },
+    {
+      "name": "P2 · manager 仅 text",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-portal-manager"
+    },
+    {
+      "name": "P3 · empty reply 拒绝",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- s04-portal-empty-reply"
+    }
+  ]
+}

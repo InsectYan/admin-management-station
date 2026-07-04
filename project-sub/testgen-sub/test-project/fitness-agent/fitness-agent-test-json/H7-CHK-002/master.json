@@ -1,0 +1,8 @@
+{
+  "checks": [
+    {
+      "mode": "journey_list",
+      "limit": 5
+    }
+  ]
+}

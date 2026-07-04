@@ -1,0 +1,8 @@
+{
+  "repeat_count": 5,
+  "runner": "cli",
+  "path": "/health",
+  "method": "GET",
+  "expect_status": 200,
+  "command": "cd server && npm run test:stations -- turn-idempotency-poll"
+}

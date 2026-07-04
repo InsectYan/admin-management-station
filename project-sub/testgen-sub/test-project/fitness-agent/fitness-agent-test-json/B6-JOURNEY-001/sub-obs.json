@@ -1,0 +1,12 @@
+{
+  "checks": [
+    {
+      "mode": "journey_get",
+      "session_id": "{{session_id}}",
+      "client_turn_id": "{{client_turn_id}}"
+    }
+  ],
+  "threshold": {
+    "require_complete": true
+  }
+}

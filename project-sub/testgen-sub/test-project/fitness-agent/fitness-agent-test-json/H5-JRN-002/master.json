@@ -1,0 +1,11 @@
+{
+  "checks": [
+    {
+      "mode": "journey_list",
+      "limit": 5
+    }
+  ],
+  "_threshold": {
+    "require_complete": true
+  }
+}

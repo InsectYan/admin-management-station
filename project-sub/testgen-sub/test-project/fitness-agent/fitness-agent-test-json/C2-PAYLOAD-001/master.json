@@ -1,0 +1,32 @@
+{
+  "pairs": [
+    {
+      "role": "member",
+      "path": "/api/member/chat/turns/submit",
+      "method": "POST",
+      "expect_status": 202,
+      "forbidden_patterns": [
+        "plan_form",
+        "training_plan",
+        "session_plan"
+      ]
+    },
+    {
+      "role": "manager",
+      "path": "/api/admin/chat/turns/submit",
+      "method": "POST",
+      "expect_status": 202,
+      "forbidden_patterns": [
+        "session_plan",
+        "plan_form"
+      ]
+    },
+    {
+      "role": "coach",
+      "path": "/api/chat/turns/submit",
+      "method": "POST",
+      "expect_status": 202,
+      "forbidden_patterns": []
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "vars": {
+    "coach_id": 1,
+    "user_id": 10003
+  },
+  "steps": [
+    {
+      "name": "1 · create session",
+      "runner": "http",
+      "method": "POST",
+      "path": "/api/sessions",
+      "body": {
+        "coach_id": 1,
+        "user_id": 10003
+      },
+      "expect_status": 200,
+      "extract": {
+        "session_id": "$.session_id"
+      }
+    },
+    {
+      "name": "2 · submit turn",
+      "runner": "http",
+      "method": "POST",
+      "path": "/api/chat/turns/submit",
+      "body": {
+        "session_id": "{{session_id}}",
+        "coach_id": 1,
+        "user_id": 10003,
+        "message": "lookup 会员",
+        "client_turn_id": "{{uuid}}"
+      },
+      "expect_status": 202,
+      "extract": {
+        "turn_id": "$.turn_id"
+      }
+    },
+    {
+      "name": "3 · poll turn",
+      "runner": "http",
+      "method": "GET",
+      "path": "/api/chat/turns/{{turn_id}}",
+      "expect_status": 200
+    }
+  ]
+}

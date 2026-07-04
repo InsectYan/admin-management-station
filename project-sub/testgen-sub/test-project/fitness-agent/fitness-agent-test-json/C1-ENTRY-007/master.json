@@ -1,0 +1,12 @@
+{
+  "matrix": [
+    {
+      "name": "读取/生成",
+      "runner": "http",
+      "method": "GET",
+      "path": "/health",
+      "expect_status": 200
+    }
+  ],
+  "_note": "待补 automation_command 或 endpoint_path"
+}

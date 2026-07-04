@@ -1,0 +1,15 @@
+{
+  "matrix": [
+    {
+      "name": "在途第二条 submit",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- turn-submit-guard"
+    },
+    {
+      "name": "断言：429",
+      "runner": "cli",
+      "command": "cd server && npm run test:stations -- turn-submit-guard",
+      "_note": "同命令覆盖多断言场景，可按业务拆分 filter"
+    }
+  ]
+}
