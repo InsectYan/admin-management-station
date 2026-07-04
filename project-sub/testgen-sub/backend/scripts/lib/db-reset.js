@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { stripInsertStatements, loadTablesOrder } = require('../../app/lib/schemaSync');
+const { loadViewsOrder } = require('./schema-bootstrap');
 
 /**
  * 清空 public schema 下全部对象（表、视图、序列等）
@@ -56,7 +57,7 @@ async function dropTableOrView(client, tableName) {
  * @param {string} [targetTable]
  */
 function assertKnownTable(dbDir, targetTable) {
-  const known = loadTablesOrder(dbDir);
+  const known = [ ...loadTablesOrder(dbDir), ...loadViewsOrder(dbDir) ];
   if (!known.includes(targetTable)) {
     const hint = known.filter(n => !n.startsWith('v_')).slice(0, 8).join(', ');
     throw new Error(`未知表名: ${targetTable}（示例: ${hint}…）`);

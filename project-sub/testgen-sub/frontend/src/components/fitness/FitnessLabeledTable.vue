@@ -39,7 +39,12 @@
             >
               <span class="fitness-cell-text">
                 <slot :name="`col-${col.prop}`" :row="row" :value="cellDisplayValue(row, col.prop)">
-                  {{ cellDisplayValue(row, col.prop) }}
+                  <FitnessStatusTag
+                    v-if="isStatusColumn(col.prop, row)"
+                    :prop="col.prop"
+                    :row="row"
+                  />
+                  <template v-else>{{ cellDisplayValue(row, col.prop) }}</template>
                 </slot>
               </span>
             </el-tooltip>
@@ -54,7 +59,9 @@
 <script setup>
 import { computed, ref } from 'vue';
 import DataTablePanel from '@/components/DataTablePanel.vue';
+import FitnessStatusTag from '@/components/fitness/FitnessStatusTag.vue';
 import { cellDisplayValue, cellTooltipValue, inferColumnsFromRow } from '@/utils/fitnessTableColumns.js';
+import { isStatusColumn } from '@/utils/fitnessStatusTags.js';
 
 const tableRef = ref(null);
 
@@ -92,7 +99,11 @@ function clearSelection() {
   tableRef.value?.clearSelection?.();
 }
 
-defineExpose({ clearSelection });
+function toggleRowSelection(row, selected) {
+  tableRef.value?.toggleRowSelection?.(row, selected);
+}
+
+defineExpose({ clearSelection, toggleRowSelection });
 </script>
 
 <style scoped>

@@ -1,12 +1,14 @@
 'use strict';
 
 /**
- * 按 display-labels.json 的 fk 规则，为 data.json 补充 *_name 冗余字段
+ * 按 display-labels.json 的 fk 规则，为 data.json 补充 *_name 展示字段（不写入 DB seed）
+ * 名称值去掉 id/code 前缀，避免 "TS-01-DET 确定性单次" 类重复
  * 用法: node backend/scripts/enrich-data-json-fk.js
  */
 
 const fs = require('fs');
 const path = require('path');
+const { stripIdPrefixFromLabel } = require('./lib/display-field-rules');
 
 const dbDir = path.join(__dirname, '../../database');
 const tablesDir = path.join(dbDir, 'tables');
@@ -38,8 +40,10 @@ function enrichAll() {
     let changed = false;
     for (const row of rows) {
       for (const [ field, { as, map } ] of Object.entries(lookups)) {
-        if (row[field] && map[row[field]] && row[as] !== map[row[field]]) {
-          row[as] = map[row[field]];
+        if (!row[field] || !map[row[field]]) continue;
+        const next = stripIdPrefixFromLabel(row[field], map[row[field]]);
+        if (row[as] !== next) {
+          row[as] = next;
           changed = true;
         }
       }

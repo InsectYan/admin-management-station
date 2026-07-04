@@ -2,61 +2,85 @@
   {
     "station_id": "NONE",
     "role_scope_id": "ALL",
-    "item_count": 162
+    "item_count": 162,
+    "station_name": "非站级/横切",
+    "role_scope_name": "三端/横切"
   },
   {
     "station_id": "NONE",
     "role_scope_id": "COACH",
-    "item_count": 72
+    "item_count": 72,
+    "station_name": "非站级/横切",
+    "role_scope_name": "教练端"
   },
   {
     "station_id": "NONE",
     "role_scope_id": "MEMBER",
-    "item_count": 41
+    "item_count": 41,
+    "station_name": "非站级/横切",
+    "role_scope_name": "会员端"
   },
   {
     "station_id": "NONE",
     "role_scope_id": "MANAGER",
-    "item_count": 33
+    "item_count": 33,
+    "station_name": "非站级/横切",
+    "role_scope_name": "管理端"
   },
   {
     "station_id": "S01",
     "role_scope_id": "ALL",
-    "item_count": 5
+    "item_count": 5,
+    "station_name": "① 前端",
+    "role_scope_name": "三端/横切"
   },
   {
     "station_id": "S02",
     "role_scope_id": "ALL",
-    "item_count": 19
+    "item_count": 19,
+    "station_name": "② 门禁",
+    "role_scope_name": "三端/横切"
   },
   {
     "station_id": "S02",
     "role_scope_id": "COACH",
-    "item_count": 9
+    "item_count": 9,
+    "station_name": "② 门禁",
+    "role_scope_name": "教练端"
   },
   {
     "station_id": "S02",
     "role_scope_id": "SYSTEM",
-    "item_count": 2
+    "item_count": 2,
+    "station_name": "② 门禁",
+    "role_scope_name": "系统/探针"
   },
   {
     "station_id": "S03",
     "role_scope_id": "ALL",
-    "item_count": 12
+    "item_count": 12,
+    "station_name": "③ 队列",
+    "role_scope_name": "三端/横切"
   },
   {
     "station_id": "S04",
     "role_scope_id": "ALL",
-    "item_count": 7
+    "item_count": 7,
+    "station_name": "④ Pipeline",
+    "role_scope_name": "三端/横切"
   },
   {
     "station_id": "S05",
     "role_scope_id": "ALL",
-    "item_count": 7
+    "item_count": 7,
+    "station_name": "⑤ Pi",
+    "role_scope_name": "三端/横切"
   },
   {
     "station_id": "S06",
     "role_scope_id": "ALL",
-    "item_count": 14
+    "item_count": 14,
+    "station_name": "⑥ 回传",
+    "role_scope_name": "三端/横切"
   }
 ]

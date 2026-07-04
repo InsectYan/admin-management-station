@@ -98,7 +98,34 @@
         "rate_level": "达标率档",
         "block_level": "阻塞档",
         "slo_level": "SLO档",
+        "threshold_hint": "阈值提示",
         "description": "说明"
+      }
+    },
+    "config_template_enum": {
+      "label": "配置模板",
+      "columns": {
+        "template_code": "模板编码",
+        "name": "模板名称",
+        "scheme_id": "关联方案",
+        "description": "说明",
+        "sort_order": "排序"
+      },
+      "fk": {
+        "scheme_id": { "ref": "test_scheme_enum", "key": "scheme_id", "label": "name", "as": "scheme_name" }
+      }
+    },
+    "test_category_major_template": {
+      "label": "大类模板挂载",
+      "columns": {
+        "category_major_id": "大类编码",
+        "template_code": "模板编码",
+        "category_major_name": "大类名称",
+        "template_name": "模板名称"
+      },
+      "fk": {
+        "category_major_id": { "ref": "test_category_major", "key": "category_major_id", "label": "name", "as": "category_major_name" },
+        "template_code": { "ref": "config_template_enum", "key": "template_code", "label": "name", "as": "template_name" }
       }
     },
     "test_scheme_validation_pair": {
@@ -218,13 +245,20 @@
         "item_prefix": "前缀",
         "scheme_primary_id": "主方案",
         "scheme_primary_name": "主方案名称",
+        "scheme_secondary_id": "辅方案",
+        "scheme_secondary_name": "辅方案名称",
         "validation_primary_id": "主验证",
         "validation_primary_name": "主验证名称",
+        "validation_secondary_id": "辅验证",
+        "validation_secondary_name": "辅验证名称",
+        "sample_execution_note": "执行说明",
         "mapping_source": "来源"
       },
       "fk": {
         "scheme_primary_id": { "ref": "test_scheme_enum", "key": "scheme_id", "label": "name", "as": "scheme_primary_name" },
-        "validation_primary_id": { "ref": "test_validation_enum", "key": "validation_id", "label": "name", "as": "validation_primary_name" }
+        "scheme_secondary_id": { "ref": "test_scheme_enum", "key": "scheme_id", "label": "name", "as": "scheme_secondary_name" },
+        "validation_primary_id": { "ref": "test_validation_enum", "key": "validation_id", "label": "name", "as": "validation_primary_name" },
+        "validation_secondary_id": { "ref": "test_validation_enum", "key": "validation_id", "label": "name", "as": "validation_secondary_name" }
       }
     },
     "test_item_relation_type_enum": {
@@ -350,13 +384,17 @@
     "v_risk_link_bidirectional": {
       "label": "风险双向关联",
       "columns": {
+        "direction": "方向",
         "source_item_id": "源用例",
         "source_item_name": "源用例名称",
         "target_item_id": "目标用例",
         "target_item_name": "目标用例名称",
         "relation_type_id": "关系类型",
         "relation_type_name": "关系名称",
-        "direction": "方向"
+        "risk_category": "风险分类",
+        "is_primary": "主关联",
+        "description": "说明",
+        "link_id": "关联编码"
       },
       "fk": {
         "source_item_id": { "ref": "test_item_detail", "key": "item_id", "label": "item_name", "as": "source_item_name" },
@@ -367,14 +405,199 @@
     "v_metric_dimension_summary": {
       "label": "维度指标",
       "columns": {
-        "dimension_id": "维度编码",
-        "dimension_name": "维度名称",
+        "dimension_name": "维度",
         "total_items": "用例总数",
         "pct_of_all": "占比%",
         "p0_count": "P0数",
-        "auto_coverage_pct": "自动化覆盖率%"
+        "p0_blocker_count": "P0阻塞数",
+        "risk_item_count": "风险项数",
+        "auto_existing_count": "已有自动化",
+        "auto_todo_count": "待建自动化",
+        "auto_coverage_pct": "自动化覆盖率%",
+        "observability_count": "可观测稽核数"
+      },
+      "fk": {
+        "dimension_id": { "ref": "test_dimension", "key": "dimension_id", "label": "name", "as": "dimension_name" }
+      }
+    },
+    "v_metric_prd_goal_coverage": {
+      "label": "PRD目标覆盖率",
+      "columns": {
+        "goal_no": "目标序号",
+        "goal_name": "目标名称",
+        "linked_item_count": "关联用例数",
+        "linked_p0_count": "关联P0数",
+        "coverage_note": "覆盖状态"
+      },
+      "fk": {
+        "prd_goal_id": { "ref": "prd_goal", "key": "prd_goal_id", "label": "name", "as": "goal_name" }
+      }
+    },
+    "v_metric_automation_coverage": {
+      "label": "自动化覆盖率",
+      "columns": {
+        "status_name": "自动化状态",
+        "item_count": "用例数",
+        "pct_of_all": "占比%"
+      },
+      "fk": {
+        "automation_status_id": { "ref": "test_automation_status_enum", "key": "automation_status_id", "label": "name", "as": "status_name" }
+      }
+    },
+    "v_metric_risk_guard_coverage": {
+      "label": "风险防护覆盖率",
+      "columns": {
+        "risk_name": "风险项",
+        "risk_category": "风险分类",
+        "priority_name": "优先级",
+        "guard_link_count": "防护链接数",
+        "primary_guard_count": "主防护数",
+        "has_primary_guard": "有主防护",
+        "coverage_status": "覆盖状态"
+      },
+      "fk": {
+        "risk_item_id": { "ref": "test_item_detail", "key": "item_id", "label": "item_name", "as": "risk_name" },
+        "priority_id": { "ref": "test_priority_enum", "key": "priority_id", "label": "name", "as": "priority_name" }
+      }
+    },
+    "v_metric_priority_distribution": {
+      "label": "优先级分布",
+      "columns": {
+        "priority_name": "优先级",
+        "item_count": "用例数",
+        "pct_of_all": "占比%"
+      },
+      "fk": {
+        "priority_id": { "ref": "test_priority_enum", "key": "priority_id", "label": "name", "as": "priority_name" }
+      }
+    },
+    "v_metric_station_role_matrix": {
+      "label": "六站×三端矩阵",
+      "columns": {
+        "station_name": "六站",
+        "role_scope_name": "三端角色",
+        "item_count": "用例数"
+      },
+      "fk": {
+        "station_id": { "ref": "test_station_enum", "key": "station_id", "label": "name", "as": "station_name" },
+        "role_scope_id": { "ref": "test_role_enum", "key": "role_scope_id", "label": "name", "as": "role_scope_name" }
+      }
+    },
+    "v_analysis_release_readiness": {
+      "label": "发版就绪分析",
+      "columns": {
+        "total_items": "用例总数",
+        "p0_total": "P0总数",
+        "p0_auto_todo": "P0待建自动化",
+        "p0_auto_todo_pct": "P0待建占比%",
+        "risk_total": "风险项总数",
+        "risk_gap_count": "风险缺口数",
+        "risk_partial_count": "风险部分覆盖",
+        "risk_covered_count": "风险已覆盖",
+        "prd_goal_low_count": "PRD低覆盖数",
+        "prd_goal_gap_count": "PRD缺口数",
+        "release_signal": "发版信号"
+      }
+    },
+    "v_analysis_risk_gap": {
+      "label": "风险覆盖缺口",
+      "columns": {
+        "risk_name": "风险项",
+        "risk_category": "风险分类",
+        "priority_name": "优先级",
+        "guard_link_count": "防护链接数",
+        "primary_guard_count": "主防护数",
+        "has_primary_guard": "有主防护",
+        "coverage_status": "覆盖状态"
+      },
+      "fk": {
+        "risk_item_id": { "ref": "test_item_detail", "key": "item_id", "label": "item_name", "as": "risk_name" },
+        "priority_id": { "ref": "test_priority_enum", "key": "priority_id", "label": "name", "as": "priority_name" }
+      }
+    },
+    "v_analysis_scheme_validation_matrix": {
+      "label": "TS×VS组合矩阵",
+      "columns": {
+        "scheme_name": "方案",
+        "validation_name": "验证标准",
+        "item_count": "用例数"
+      }
+    },
+    "v_analysis_dimension_automation": {
+      "label": "维度自动化就绪",
+      "columns": {
+        "dimension_name": "维度",
+        "total": "用例总数",
+        "existing": "已有自动化",
+        "partial": "部分自动化",
+        "todo": "待建自动化",
+        "manual": "仅手工",
+        "automation_ready_pct": "自动化就绪率%"
+      },
+      "fk": {
+        "dimension_id": { "ref": "test_dimension", "key": "dimension_id", "label": "name", "as": "dimension_name" }
+      }
+    },
+    "v_analysis_p0_blockers_todo": {
+      "label": "P0待建自动化清单",
+      "columns": {
+        "item_name": "用例名称",
+        "dimension_name": "维度",
+        "category_major_name": "大类",
+        "scheme_primary_name": "主方案",
+        "validation_primary_name": "主验证",
+        "automation_entry_name": "自动化入口",
+        "is_risk_flag": "风险项"
+      },
+      "fk": {
+        "dimension_id": { "ref": "test_dimension", "key": "dimension_id", "label": "name", "as": "dimension_name" },
+        "category_major_id": { "ref": "test_category_major", "key": "category_major_id", "label": "name", "as": "category_major_name" },
+        "scheme_primary_id": { "ref": "test_scheme_enum", "key": "scheme_id", "label": "name", "as": "scheme_primary_name" },
+        "validation_primary_id": { "ref": "test_validation_enum", "key": "validation_id", "label": "name", "as": "validation_primary_name" },
+        "automation_entry_id": { "ref": "automation_entry_enum", "key": "automation_entry_id", "label": "name", "as": "automation_entry_name" }
       }
     }
+  },
+  "commonColumns": {
+    "item_id": "用例编码",
+    "item_name": "用例名称",
+    "dimension_id": "维度",
+    "dimension_name": "维度名称",
+    "category_major_id": "大类",
+    "category_major_name": "大类名称",
+    "category_minor_id": "子类",
+    "priority_id": "优先级",
+    "scheme_primary_id": "主方案",
+    "scheme_primary_name": "主方案名称",
+    "validation_primary_id": "主验证",
+    "validation_primary_name": "主验证名称",
+    "coverage_status": "覆盖状态",
+    "guard_link_count": "防护链接数",
+    "primary_guard_count": "主防护数",
+    "item_count": "用例数",
+    "pct_of_all": "占比%",
+    "release_signal": "发版信号",
+    "coverage_note": "覆盖状态",
+    "linked_item_count": "关联用例数",
+    "goal_name": "目标名称",
+    "prd_goal_id": "PRD目标编码",
+    "station_id": "六站",
+    "role_scope_id": "三端角色",
+    "automation_status_id": "自动化状态",
+    "is_risk_flag": "风险项",
+    "is_primary": "主关联",
+    "description": "说明",
+    "link_id": "关联编码",
+    "direction": "方向",
+    "risk_category": "风险分类",
+    "has_primary_guard": "有主防护",
+    "total": "总数",
+    "existing": "已有",
+    "partial": "部分",
+    "todo": "待建",
+    "manual": "手工",
+    "automation_ready_pct": "就绪率%",
+    "threshold_hint": "阈值提示"
   },
   "defaultColumnLabel": "字段"
 }

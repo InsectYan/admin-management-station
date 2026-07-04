@@ -52,6 +52,7 @@ class GenerationItemWriterService extends require('egg').Service {
       template_code: templateCode,
       dimension_id: majorMeta?.dimension_id,
       category_minor_id: majorMeta?.category_minor_id,
+      id_offset: Math.max(0, Number(ctx.id_offset) || 0),
     };
 
     const usedIds = new Set();
@@ -87,6 +88,14 @@ class GenerationItemWriterService extends require('egg').Service {
 
     const [ result ] = await this.app.model.query(sql, { replacements });
     const itemIds = (result || []).map(r => r.item_id);
+    const skipped = rows.length - itemIds.length;
+    if (skipped > 0) {
+      this.ctx.app.logger.warn(
+        '[generationItemWriter] job=%s skipped %s duplicate item_id(s)',
+        ctx.job_id,
+        skipped,
+      );
+    }
     const insertedRows = rows.filter(r => itemIds.includes(r.item_id));
     await seedTemplateConfigs(this.app, insertedRows);
     return itemIds;

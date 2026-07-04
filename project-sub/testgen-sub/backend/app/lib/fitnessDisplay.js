@@ -2,6 +2,11 @@
 
 const fs = require('fs');
 const path = require('path');
+const {
+  preferNameOnlyColumns,
+  stripIdPrefixFromLabel,
+  resolveNameField,
+} = require('../../scripts/lib/display-field-rules');
 
 let cachedLabels = null;
 
@@ -34,30 +39,32 @@ function getTableMeta(tableName, baseDir) {
 
 function getColumnLabel(tableName, columnName, baseDir) {
   const meta = getTableMeta(tableName, baseDir);
-  if (!meta?.columns?.[columnName]) {
-    const labels = loadDisplayLabels(baseDir);
-    return labels.defaultColumnLabel || columnName;
-  }
-  return meta.columns[columnName];
+  if (meta?.columns?.[columnName]) return meta.columns[columnName];
+  const labels = loadDisplayLabels(baseDir);
+  if (labels.commonColumns?.[columnName]) return labels.commonColumns[columnName];
+  return labels.defaultColumnLabel || columnName;
 }
 
 function getDisplayColumns(tableName, rowKeys, baseDir) {
   const meta = getTableMeta(tableName, baseDir);
+  let columns;
   if (!meta?.columns) {
-    return rowKeys.map(key => ({ prop: key, label: key }));
+    columns = rowKeys.map(key => ({ prop: key, label: getColumnLabel(tableName, key, baseDir) }));
+  } else {
+    const ordered = Object.keys(meta.columns).filter(k => rowKeys.includes(k));
+    const rest = rowKeys.filter(k => !ordered.includes(k) && (!k.endsWith('_id') || meta.columns[k]));
+    const props = [ ...ordered, ...rest.filter(k => !ordered.includes(k)) ];
+    const seen = new Set();
+    columns = props.filter(p => {
+      if (seen.has(p)) return false;
+      seen.add(p);
+      return rowKeys.includes(p);
+    }).map(prop => ({
+      prop,
+      label: getColumnLabel(tableName, prop, baseDir),
+    }));
   }
-  const ordered = Object.keys(meta.columns).filter(k => rowKeys.includes(k));
-  const rest = rowKeys.filter(k => !ordered.includes(k) && !k.endsWith('_id') || meta.columns[k]);
-  const props = [ ...ordered, ...rest.filter(k => !ordered.includes(k)) ];
-  const seen = new Set();
-  return props.filter(p => {
-    if (seen.has(p)) return false;
-    seen.add(p);
-    return rowKeys.includes(p);
-  }).map(prop => ({
-    prop,
-    label: meta.columns[prop] || prop,
-  }));
+  return preferNameOnlyColumns(columns, rowKeys);
 }
 
 /**
@@ -87,7 +94,9 @@ async function enrichRowsWithFkNames(model, tableName, rows, baseDir) {
     }
     const map = lookupCache[cacheKey];
     for (const row of rows) {
-      if (row[field] && map[row[field]]) row[as] = map[row[field]];
+      if (row[field] && map[row[field]]) {
+        row[as] = stripIdPrefixFromLabel(row[field], map[row[field]]);
+      }
     }
   }
   return rows;
@@ -112,4 +121,6 @@ module.exports = {
   enrichRowsWithFkNames,
   paginateRows,
   resolveDatabaseDir,
+  preferNameOnlyColumns,
+  resolveNameField,
 };

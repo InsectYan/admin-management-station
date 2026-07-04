@@ -42,8 +42,22 @@ export const useGenerationJobStore = defineStore('generationJob', {
     schemeTargets: (s) => s.agentContext?.scheme_targets || s.jobOptions?.scheme_targets || [],
     isTerminal: (s) => [ 'done', 'partial', 'failed', 'cancelled' ].includes(s.status),
     isActive: (s) => [ 'waiting', 'running', 'paused', 'pending' ].includes(s.status),
-    /** 任务正常执行结束（含未达目标条数），可查看用例库等后续操作 */
-    canViewResults: (s) => [ 'done', 'partial' ].includes(s.status) && !s.errorMessage,
+    /** 任务结束且已有入库条数时可查看用例库（含取消/失败保留数据） */
+    canViewResults(s) {
+      const produced = s.agentContext?.total_produced != null
+        ? Number(s.agentContext.total_produced)
+        : (s.agentContext?.target_states || []).reduce((sum, t) => sum + (Number(t.produced) || 0), 0);
+      if (!produced) return false;
+      return [ 'done', 'partial', 'cancelled', 'failed' ].includes(s.status);
+    },
+    /** 各目标已执行轮次的最大值 */
+    totalRoundAttempts(s) {
+      const targets = s.agentContext?.target_states || [];
+      if (!targets.length) {
+        return Number(s.agentContext?.current_target?.round_attempts || 0);
+      }
+      return Math.max(...targets.map(t => Number(t.round_attempts || t.attempt || 0)), 0);
+    },
   },
   actions: {
     async fetchJob(jobId) {

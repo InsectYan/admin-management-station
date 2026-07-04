@@ -43,6 +43,15 @@
     />
 
     <el-alert
+      v-if="interruptNotice"
+      :type="store.status === 'cancelled' ? 'warning' : 'info'"
+      :title="interruptNotice"
+      show-icon
+      :closable="false"
+      style="margin-bottom: 16px"
+    />
+
+    <el-alert
       v-if="store.errorMessage"
       type="error"
       :title="store.errorMessage"
@@ -76,10 +85,23 @@
         :duration="10"
       />
       <div v-if="store.totalConfigured" class="testgen-progress-phase testgen-progress-count-hint">
-        每轮固定请求 {{ roundRequestSizeLabel }} 条（与剩余条数无关），审查通过立即入库，超出目标部分自动截断
+        每轮固定请求 {{ roundRequestSizeLabel }} 条（与剩余条数无关），审查通过立即入库；未达目标将自动继续补生成
+      </div>
+      <div
+        v-if="totalRoundAttempts > 0"
+        class="testgen-progress-round-hint"
+        :class="roundHintClass"
+      >
+        已执行 <strong>{{ totalRoundAttempts }}</strong> 轮（每轮 {{ roundSizeNumber }} 条）· 目标 {{ store.totalConfigured }} 条
+      </div>
+      <div
+        v-if="roundOveruseWarning"
+        class="testgen-progress-round-warn"
+      >
+        {{ roundOveruseWarning }}
       </div>
       <div v-if="currentTargetLabel" class="testgen-progress-phase">
-        当前目标：{{ currentTargetLabel }}<span v-if="currentBatchLabel"> · {{ currentBatchLabel }}</span>
+        当前目标：{{ currentTargetLabel }}<span v-if="currentRoundLabel"> · {{ currentRoundLabel }}</span>
       </div>
       <div class="testgen-progress-phase">
         当前阶段：{{ currentPhaseLabel }}
@@ -110,9 +132,9 @@
         </template>
       </el-table-column>
       <el-table-column prop="count" label="目标条数" width="88" />
-      <el-table-column label="分批进度" width="100">
+      <el-table-column label="执行轮数" width="100">
         <template #default="{ row }">
-          <span v-if="row.batch_total">{{ row.batch_index || 0 }}/{{ row.batch_total }}</span>
+          <span v-if="row.round_attempts || row.attempt">{{ row.round_attempts || row.attempt }}</span>
           <span v-else class="target-count-hint">—</span>
         </template>
       </el-table-column>
@@ -200,7 +222,7 @@
         type="primary"
         @click="goToSuite"
       >
-        查看用例库
+        查看用例库（{{ store.totalProduced }} 条）
       </el-button>
       <el-button
         v-if="store.canViewResults"
@@ -286,12 +308,49 @@ const currentTargetLabel = computed(() => {
   return `${t.scheme_id || ''} ${t.scheme_name || ''} · ${t.validation_id || ''} ${t.validation_name || ''}`.trim();
 });
 
-const currentBatchLabel = computed(() => {
+const roundSizeNumber = computed(() => {
   const t = store.currentTarget;
-  if (!t?.batch_index) return '';
-  const size = t.round_request_size || t.current_batch_size || 10;
-  return `第 ${t.batch_index}/${t.batch_total} 段（每轮固定 ${size} 条）`;
+  if (t?.round_request_size) return Number(t.round_request_size);
+  const profile = store.agentContext?.llm_profile_id || '';
+  const id = String(profile || 'ollama-qwen').toLowerCase();
+  const isLocal = !profile || id.startsWith('ollama') || id === 'env-fallback';
+  return isLocal ? 5 : 10;
 });
+
+const totalRoundAttempts = computed(() => store.totalRoundAttempts);
+
+const roundGreenMax = computed(() => {
+  const total = store.totalConfigured;
+  if (!total) return 0;
+  return Math.ceil(total / roundSizeNumber.value);
+});
+
+const roundWarnMax = computed(() => Math.ceil(store.totalConfigured / 2));
+
+const roundHintClass = computed(() => {
+  const rounds = totalRoundAttempts.value;
+  if (!rounds || !store.totalConfigured) return 'round-hint--info';
+  if (rounds <= roundGreenMax.value) return 'round-hint--success';
+  if (rounds <= roundWarnMax.value) return 'round-hint--warning';
+  return 'round-hint--danger';
+});
+
+const roundOveruseWarning = computed(() => {
+  const rounds = totalRoundAttempts.value;
+  if (!rounds || !store.totalConfigured) return '';
+  if (rounds <= roundWarnMax.value) return '';
+  return '执行轮次过多，请注意 Token 消耗，或检查审查规则是否异常导致通过率过低';
+});
+
+const currentRoundLabel = computed(() => {
+  const t = store.currentTarget;
+  const rounds = t?.round_attempts || t?.attempt;
+  if (!rounds) return '';
+  const size = t.round_request_size || roundSizeNumber.value;
+  return `第 ${rounds} 轮（每轮 ${size} 条）`;
+});
+
+const interruptNotice = computed(() => store.agentContext?.interrupt_notice || '');
 
 const roundRequestSizeLabel = computed(() => {
   const profile = store.agentContext?.llm_profile_id || '';
@@ -492,5 +551,29 @@ async function confirmImport() {
   margin-top: 8px;
   color: #909399;
   font-size: 12px;
+}
+.testgen-progress-round-hint {
+  margin-top: 8px;
+  font-size: 13px;
+}
+.testgen-progress-round-hint strong {
+  font-weight: 700;
+}
+.round-hint--success {
+  color: var(--el-color-success);
+}
+.round-hint--warning {
+  color: var(--el-color-warning);
+}
+.round-hint--danger {
+  color: var(--el-color-danger);
+}
+.round-hint--info {
+  color: var(--el-text-color-secondary);
+}
+.testgen-progress-round-warn {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--el-color-danger);
 }
 </style>

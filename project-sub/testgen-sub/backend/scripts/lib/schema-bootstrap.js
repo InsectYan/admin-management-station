@@ -52,19 +52,53 @@ async function runTablesBootstrap(sequelize, dbDir, logger, { includeViews = fal
 async function runViewsBootstrap(sequelize, dbDir, logger) {
   const tablesDir = path.join(dbDir, 'tables');
   if (!fs.existsSync(tablesDir)) return;
-  for (const name of loadTablesOrder(dbDir)) {
-    if (!name.startsWith('v_')) continue;
+
+  const orderFile = path.join(dbDir, 'views-order.json');
+  let viewNames = [];
+  if (fs.existsSync(orderFile)) {
+    viewNames = JSON.parse(fs.readFileSync(orderFile, 'utf8'));
+  } else {
+    viewNames = fs.readdirSync(tablesDir)
+      .filter(name => name.startsWith('v_') && fs.statSync(path.join(tablesDir, name)).isDirectory())
+      .sort();
+  }
+
+  let applied = 0;
+  let failed = 0;
+  for (const name of viewNames) {
     const initFile = path.join(tablesDir, name, 'init.sql');
-    if (!fs.existsSync(initFile)) continue;
+    if (!fs.existsSync(initFile)) {
+      logger.warn('[SchemaSync] View %s skipped: init.sql 不存在', name);
+      failed += 1;
+      continue;
+    }
     const sql = stripInsertStatements(fs.readFileSync(initFile, 'utf8'));
     if (!sql.trim()) continue;
     try {
       await sequelize.query(sql);
       logger.info('[SchemaSync] Applied view %s', name);
+      applied += 1;
     } catch (err) {
-      logger.warn('[SchemaSync] View %s skipped: %s', name, err.message);
+      logger.warn('[SchemaSync] View %s failed: %s', name, err.message);
+      failed += 1;
     }
   }
+  if (viewNames.length && !applied) {
+    logger.warn('[SchemaSync] 未成功创建任何分析视图（%d 失败）', failed);
+  }
+}
+
+/** @param {string} dbDir @returns {string[]} */
+function loadViewsOrder(dbDir) {
+  const orderFile = path.join(dbDir, 'views-order.json');
+  if (fs.existsSync(orderFile)) {
+    return JSON.parse(fs.readFileSync(orderFile, 'utf8'));
+  }
+  const tablesDir = path.join(dbDir, 'tables');
+  if (!fs.existsSync(tablesDir)) return [];
+  return fs.readdirSync(tablesDir)
+    .filter(name => name.startsWith('v_') && fs.statSync(path.join(tablesDir, name)).isDirectory())
+    .sort();
 }
 
 /**
@@ -99,4 +133,5 @@ module.exports = {
   runTablesBootstrap,
   runViewsBootstrap,
   runPostSeedMigrations,
+  loadViewsOrder,
 };

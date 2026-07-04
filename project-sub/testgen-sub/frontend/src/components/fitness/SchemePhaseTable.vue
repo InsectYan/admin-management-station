@@ -19,16 +19,12 @@
     </el-table-column>
     <el-table-column label="状态" width="100">
       <template #default="{ row }">
-        <el-tag :type="statusTagType(row.status)" size="small">
-          {{ row.status_label || row.status || '—' }}
-        </el-tag>
+        <FitnessStatusTag prop="status" :row="row" :value="row.status" />
       </template>
     </el-table-column>
     <el-table-column v-if="showVerdict" label="判定" width="80">
       <template #default="{ row }">
-        <el-tag v-if="row.verdict" :type="row.verdict === 'pass' ? 'success' : 'danger'" size="small">
-          {{ row.verdict }}
-        </el-tag>
+        <FitnessStatusTag v-if="row.verdict" prop="verdict" :row="row" />
         <span v-else>—</span>
       </template>
     </el-table-column>
@@ -36,22 +32,12 @@
 </template>
 
 <script setup>
+import FitnessStatusTag from '@/components/fitness/FitnessStatusTag.vue';
+
 defineProps({
   phases: { type: Array, default: () => [] },
   showVerdict: { type: Boolean, default: false },
 });
-
-const STATUS_TAG = {
-  pending: 'info',
-  running: 'warning',
-  success: 'success',
-  failed: 'danger',
-  cancelled: 'info',
-};
-
-function statusTagType(status) {
-  return STATUS_TAG[status] || 'info';
-}
 </script>
 
 <style scoped>

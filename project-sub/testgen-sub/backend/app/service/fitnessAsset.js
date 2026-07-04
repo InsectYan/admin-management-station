@@ -293,13 +293,22 @@ class FitnessAssetService extends require('egg').Service {
     const page = Number(query.page) || 1;
     const pageSize = Number(query.pageSize) || 20;
 
-    const [ rows ] = await this.app.model.query(`SELECT * FROM "${viewName}"`);
-    await enrichRowsWithFkNames(this.app.model, viewName, rows, this.app.baseDir);
-    const paged = paginateRows(rows, page, pageSize);
-    paged.columns = rows.length
-      ? getDisplayColumns(viewName, Object.keys(rows[0]), this.app.baseDir)
-      : [];
-    return paged;
+    try {
+      const [ rows ] = await this.app.model.query(`SELECT * FROM "${viewName}"`);
+      await enrichRowsWithFkNames(this.app.model, viewName, rows, this.app.baseDir);
+      const paged = paginateRows(rows, page, pageSize);
+      paged.columns = rows.length
+        ? getDisplayColumns(viewName, Object.keys(rows[0]), this.app.baseDir)
+        : [];
+      return paged;
+    } catch (err) {
+      if (/does not exist|不存在/.test(String(err.message))) {
+        const e = new Error(`分析视图 ${viewName} 未创建，请重启 BFF 或执行 ams-testgen db:sync`);
+        e.status = 503;
+        throw e;
+      }
+      throw err;
+    }
   }
 
   async listTestItems(query = {}) {
@@ -511,7 +520,8 @@ class FitnessAssetService extends require('egg').Service {
     const total = Number(countRows[0]?.total || 0);
 
     const sql = `
-      SELECT t.*, m.coverage_status, m.guard_count, m.detect_count
+      SELECT t.item_id, t.item_name, t.priority_id, t.risk_category,
+        m.coverage_status, m.guard_link_count, m.primary_guard_count, m.has_primary_guard
       FROM test_item_detail t
       LEFT JOIN v_metric_risk_guard_coverage m ON m.risk_item_id = t.item_id
       ${where}
@@ -519,7 +529,13 @@ class FitnessAssetService extends require('egg').Service {
       LIMIT :limit OFFSET :offset
     `;
     const [ rows ] = await this.app.model.query(sql, { replacements });
-    return { list: rows, total, page: Number(page), pageSize: Number(pageSize) };
+    await enrichRowsWithFkNames(this.app.model, 'v_metric_risk_guard_coverage', rows, this.app.baseDir);
+    const columns = getDisplayColumns(
+      'v_metric_risk_guard_coverage',
+      rows.length ? Object.keys(rows[0]) : [ 'item_name', 'coverage_status', 'guard_link_count' ],
+      this.app.baseDir,
+    );
+    return { list: rows, total, page: Number(page), pageSize: Number(pageSize), columns };
   }
 
   async listRiskLinks(query = {}) {

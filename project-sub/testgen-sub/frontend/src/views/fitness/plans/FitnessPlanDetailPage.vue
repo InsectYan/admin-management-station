@@ -17,7 +17,7 @@
       <el-descriptions-item label="版本">{{ plan.version_tag || '-' }}</el-descriptions-item>
       <el-descriptions-item label="环境">{{ plan.env_name || '-' }}</el-descriptions-item>
       <el-descriptions-item label="状态">
-        <el-tag :type="statusTagType">{{ plan.status }}</el-tag>
+        <FitnessStatusTag prop="status" :row="plan" />
       </el-descriptions-item>
       <el-descriptions-item label="用例数">{{ plan.items?.length || 0 }}</el-descriptions-item>
     </el-descriptions>
@@ -48,10 +48,12 @@
           <el-form-item label="执行状态">
             <el-select v-model="statusFilter" placeholder="全部状态" clearable style="width: 100%">
               <el-option label="全部" value="" />
-              <el-option label="待执行 pending" value="pending" />
-              <el-option label="通过 passed" value="passed" />
-              <el-option label="失败 failed" value="failed" />
-              <el-option label="跳过 skipped" value="skipped" />
+              <el-option
+                v-for="opt in resultStatusOptions"
+                :key="opt.value"
+                :label="opt.label"
+                :value="opt.value"
+              />
             </el-select>
           </el-form-item>
         </el-col>
@@ -73,14 +75,19 @@
       @selection-change="selectedRows = $event"
     >
       <el-table-column type="selection" width="48" reserve-selection />
-      <el-table-column prop="item_id" label="用例 ID" width="160" />
+      <el-table-column prop="item_id" label="用例 ID" width="160" show-overflow-tooltip />
+      <el-table-column prop="item_name" label="用例名称" min-width="220" show-overflow-tooltip />
       <el-table-column prop="scheme_primary_id" label="TS" width="120" />
       <el-table-column label="结果" width="100">
         <template #default="{ row }">
-          <el-tag size="small" :type="resultTagType(row.result_status)">{{ row.result_status }}</el-tag>
+          <FitnessStatusTag prop="result_status" :row="row" />
         </template>
       </el-table-column>
-      <el-table-column prop="validation_result" label="VS 判定" width="100" />
+      <el-table-column label="VS 判定" width="100">
+        <template #default="{ row }">
+          <FitnessStatusTag prop="validation_result" :row="row" />
+        </template>
+      </el-table-column>
       <el-table-column label="Run" width="80">
         <template #default="{ row }">
           <el-button v-if="row.ft_run_id" link @click="router.push(`/fitness/execution/runs/${row.ft_run_id}`)">
@@ -129,7 +136,9 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '@/components/PageShell.vue';
+import FitnessStatusTag from '@/components/fitness/FitnessStatusTag.vue';
 import { parsePlanMeta } from '@/constants/planReleaseCriteria.js';
+import { STATUS_FILTER_OPTIONS } from '@/utils/fitnessStatusTags.js';
 import {
   fetchEnvironments,
   fetchPlan,
@@ -151,19 +160,13 @@ const selectedRows = ref([]);
 const tableRef = ref(null);
 let pollTimer = null;
 
+const resultStatusOptions = STATUS_FILTER_OPTIONS.result_status;
+
 const planMeta = computed(() => parsePlanMeta(plan.value?.notes));
 
 const scopeGoals = computed(() =>
   (plan.value?.scope || []).filter(s => s.scope_type === 'prd_goal'),
 );
-
-const statusTagType = computed(() => {
-  const s = plan.value?.status;
-  if (s === 'completed') return 'success';
-  if (s === 'running') return 'warning';
-  if (s === 'partial_failed' || s === 'failed') return 'danger';
-  return 'info';
-});
 
 const tableRows = computed(() => {
   const items = plan.value?.items || [];
@@ -203,13 +206,6 @@ watch(statusFilter, () => {
   tableRef.value?.clearSelection?.();
   selectedRows.value = [];
 });
-
-function resultTagType(status) {
-  if (status === 'passed') return 'success';
-  if (status === 'failed') return 'danger';
-  if (status === 'skipped') return 'info';
-  return 'warning';
-}
 
 async function reload() {
   plan.value = await fetchPlan(id);

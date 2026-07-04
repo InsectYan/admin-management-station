@@ -10,7 +10,8 @@ const {
 } = require('../lib/templateOutputFormats');
 
 const PHASES = [ 'analyze', 'generate', 'review' ];
-const MAX_BATCH_ATTEMPTS = 5;
+/** @deprecated 不再限制轮次上限，补生成直至达目标条数 */
+const MAX_BATCH_ATTEMPTS = 9999;
 const ROUND_SIZE_LOCAL = 5;
 const ROUND_SIZE_CLOUD = 10;
 const ESTIMATE_AGENT_TIMEOUT_MS = 5000;
@@ -379,6 +380,98 @@ class GenerationJobService extends Service {
     };
   }
 
+  async loadExistingCaseContext(jobId, schemeId, validationId) {
+    const { QueryTypes } = require('sequelize');
+    const rows = await this.app.model.query(
+      `SELECT item_name, detail_summary, expected_observation
+       FROM test_item_detail
+       WHERE generation_job_id = :jobId
+         AND scheme_primary_id = :schemeId
+         AND validation_primary_id = :validationId`,
+      {
+        replacements: { jobId, schemeId, validationId },
+        type: QueryTypes.SELECT,
+      },
+    );
+    const seenKeys = new Set();
+    for (const row of rows) {
+      const key = caseDedupeKey(row);
+      if (key) seenKeys.add(key);
+    }
+    return {
+      produced: rows.length,
+      writtenSummaries: summarizeExistingCases(rows),
+      seenKeys,
+    };
+  }
+
+  async syncTargetStatesFromDb(jobId, targetStates = []) {
+    const { QueryTypes } = require('sequelize');
+    const counts = await this.app.model.query(
+      `SELECT scheme_primary_id, validation_primary_id, COUNT(*)::int AS cnt
+       FROM test_item_detail
+       WHERE generation_job_id = :jobId
+       GROUP BY scheme_primary_id, validation_primary_id`,
+      { replacements: { jobId }, type: QueryTypes.SELECT },
+    );
+    const map = new Map(
+      counts.map(c => [
+        `${c.scheme_primary_id}::${c.validation_primary_id}`,
+        Number(c.cnt) || 0,
+      ]),
+    );
+    return targetStates.map(t => ({
+      ...t,
+      produced: map.get(`${t.scheme_id}::${t.validation_id}`) ?? (Number(t.produced) || 0),
+    }));
+  }
+
+  /** 取消/失败时从 DB 同步已入库条数，保留已通过审查的数据 */
+  async finalizeJobProgress(jobId, { status, errorMessage } = {}) {
+    const row = await this.ctx.model.GenerationJob.findByPk(jobId);
+    if (!row) return null;
+
+    const scheme_targets = row.options?.scheme_targets || row.agent_context?.scheme_targets || [];
+    const baseStates = row.agent_context?.target_states?.length
+      ? row.agent_context.target_states
+      : scheme_targets.map(t => ({ ...t, status: 'pending', produced: 0 }));
+    const targetStates = await this.syncTargetStatesFromDb(jobId, baseStates);
+    const totalProduced = targetStates.reduce((s, t) => s + (Number(t.produced) || 0), 0);
+    const totalConfigured = scheme_targets.reduce((s, t) => s + (Number(t.count) || 0), 0);
+    const overallPercent = totalConfigured
+      ? Math.min(100, Math.round((totalProduced / totalConfigured) * 100))
+      : 0;
+
+    let finalStatus = status || row.status;
+    if (status === 'failed' && totalProduced > 0) {
+      finalStatus = 'partial';
+    }
+
+    let interruptNotice = null;
+    if (status === 'cancelled' && totalProduced > 0) {
+      interruptNotice = `任务已取消，已通过审查的 ${totalProduced} 条用例已保留入库`;
+    } else if (status === 'failed' && totalProduced > 0) {
+      interruptNotice = `任务异常结束，已通过审查的 ${totalProduced} 条用例已保留入库`;
+    }
+
+    await row.update({
+      status: finalStatus,
+      error_message: errorMessage !== undefined ? errorMessage : row.error_message,
+      agent_context: {
+        ...(row.agent_context || {}),
+        target_states: targetStates,
+        scheme_targets,
+        total_produced: totalProduced,
+        total_configured: totalConfigured,
+        overall_percent: overallPercent,
+        interrupt_notice: interruptNotice,
+        updated_at: new Date().toISOString(),
+      },
+      finished_at: row.finished_at || new Date(),
+    });
+    return row;
+  }
+
   async executeJob(jobId, payload) {
     const {
       document_id,
@@ -397,7 +490,12 @@ class GenerationJobService extends Service {
     const scheme_targets = options.scheme_targets || job.options?.scheme_targets || [];
     const targetStates = scheme_targets.map(t => ({ ...t, status: 'pending', produced: 0 }));
     const allSteps = [];
-    let totalItems = 0;
+    const { QueryTypes } = require('sequelize');
+    const [ countRow ] = await this.app.model.query(
+      `SELECT COUNT(*)::int AS cnt FROM test_item_detail WHERE generation_job_id = :jobId`,
+      { replacements: { jobId }, type: QueryTypes.SELECT },
+    );
+    let totalItems = Number(countRow?.cnt) || 0;
     let lastFailureReason = null;
 
     try {
@@ -412,33 +510,33 @@ class GenerationJobService extends Service {
 
         const target = scheme_targets[ti];
         targetStates[ti].status = 'running';
-        targetStates[ti].produced = 0;
 
         const roundSize = roundRequestSize(effectiveLlmProfile);
-        const batchTotal = batchCountForTarget(target.count, roundSize);
-        const seenKeys = new Set();
-        let produced = 0;
-        let writtenSummaries = [];
+        const existing = await this.loadExistingCaseContext(jobId, target.scheme_id, target.validation_id);
+        const seenKeys = existing.seenKeys;
+        let produced = existing.produced;
+        let writtenSummaries = [ ...existing.writtenSummaries ];
+        targetStates[ti].produced = produced;
+        targetStates[ti].round_request_size = roundSize;
         let roundAttempts = 0;
 
-        while (produced < target.count && roundAttempts < MAX_BATCH_ATTEMPTS) {
+        while (produced < target.count) {
           roundAttempts += 1;
           await job.reload();
           if (job.status === 'cancelled' || job.status === 'paused') return;
 
           const requestCount = roundSize;
           const remaining = target.count - produced;
-          const batchIndex = Math.min(batchTotal, Math.floor(produced / roundSize) + 1);
-          targetStates[ti].batch_index = batchIndex;
-          targetStates[ti].batch_total = batchTotal;
+          targetStates[ti].round_attempts = roundAttempts;
           targetStates[ti].current_batch_size = requestCount;
-          targetStates[ti].round_request_size = requestCount;
 
           const batchTarget = {
             ...target,
             count: requestCount,
-            batch_index: batchIndex,
-            batch_total: batchTotal,
+            round_attempts: roundAttempts,
+            round_request_size: requestCount,
+            target_produced: produced,
+            target_total: target.count,
           };
 
           const targetLabel = `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id}`;
@@ -476,8 +574,8 @@ class GenerationJobService extends Service {
                   '边界值测试': requestCount,
                 },
                 scheme_target: batchTarget,
-                batch_index: batchIndex,
-                batch_total: batchTotal,
+                round_attempts: roundAttempts,
+                round_request_size: requestCount,
                 batch_size: requestCount,
                 regenerate_count: requestCount,
                 target_total: target.count,
@@ -511,7 +609,7 @@ class GenerationJobService extends Service {
               '[generationJob] job=%s target=%s round=%s invoke failed: %s',
               jobId, target.scheme_id, roundAttempts, invokeErr.message,
             );
-            const willRetry = roundAttempts < MAX_BATCH_ATTEMPTS && produced < target.count;
+            const willRetry = produced < target.count;
             const retryNotice = `第 ${roundAttempts} 轮：${brief}${willRetry ? '，正在重试…' : ''}`;
             allSteps.push({
               bff_milestone: true,
@@ -519,8 +617,7 @@ class GenerationJobService extends Service {
               note: `${targetLabel} · ${retryNotice}（已入库 ${produced}/${target.count}）`,
               scheme_id: target.scheme_id,
               validation_id: target.validation_id,
-              batch_index: batchIndex,
-              batch_total: batchTotal,
+              round_attempts: roundAttempts,
               attempt: roundAttempts,
             });
             await this.updateSchemeProgress(jobId, {
@@ -574,6 +671,7 @@ class GenerationJobService extends Service {
                 category_minor_id: target.category_minor_id,
                 dimension_id: target.dimension_id,
                 template_code: target.template_code,
+                id_offset: produced,
               },
             );
 
@@ -592,8 +690,7 @@ class GenerationJobService extends Service {
               note: milestoneNote,
               scheme_id: target.scheme_id,
               validation_id: target.validation_id,
-              batch_index: batchIndex,
-              batch_total: batchTotal,
+              round_attempts: roundAttempts,
               attempt: roundAttempts,
               review_approved: itemIds.length,
               review_rejected: rejected.length,
@@ -610,7 +707,7 @@ class GenerationJobService extends Service {
             targetStates[ti].last_batch_approved = 0;
             targetStates[ti].last_review_rejected = rejected.length;
             const rejectPart = rejected.length ? `，字段未通过 ${rejected.length} 条` : '';
-            const willRetry = roundAttempts < MAX_BATCH_ATTEMPTS && produced < target.count;
+            const willRetry = produced < target.count;
             retryNotice = `第 ${roundAttempts} 轮：无新增可入库用例${rejectPart}${willRetry ? '，继续补生成…' : ''}`;
             direction = `${targetLabel} · ${retryNotice}（已入库 ${produced}/${target.count}）`;
             allSteps.push({
@@ -619,8 +716,7 @@ class GenerationJobService extends Service {
               note: direction,
               scheme_id: target.scheme_id,
               validation_id: target.validation_id,
-              batch_index: batchIndex,
-              batch_total: batchTotal,
+              round_attempts: roundAttempts,
               attempt: roundAttempts,
               review_approved: 0,
               review_rejected: rejected.length,
@@ -629,6 +725,7 @@ class GenerationJobService extends Service {
             });
           }
 
+          targetStates[ti].round_attempts = roundAttempts;
           targetStates[ti].attempt = roundAttempts;
           targetStates[ti].last_review_passed = produced;
 
@@ -735,16 +832,9 @@ class GenerationJobService extends Service {
     } catch (err) {
       await job.reload();
       if (job.status !== 'cancelled') {
-        await job.update({
+        await this.finalizeJobProgress(jobId, {
           status: 'failed',
-          error_message: err.message,
-          agent_context: {
-            ...(job.agent_context || {}),
-            target_states: targetStates,
-            current_direction: `执行失败：${err.message}`,
-            updated_at: new Date().toISOString(),
-          },
-          finished_at: new Date(),
+          errorMessage: err.message,
         });
       }
       this.ctx.app.logger.error('[generationJob] failed job=%s %s', jobId, err.message);

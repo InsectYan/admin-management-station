@@ -29,6 +29,15 @@
       </template>
     </ItemFilterBar>
     <div class="items-toolbar">
+      <el-button
+        type="primary"
+        plain
+        :loading="selectingAll"
+        :disabled="!total"
+        @click="handleSelectAllFiltered"
+      >
+        一键选中 ({{ total }})
+      </el-button>
       <el-button :disabled="!selectedRows.length" @click="openAddToPlan">加入计划 ({{ selectedRows.length || 0 }})</el-button>
       <el-button :loading="exporting" @click="exportJson">导出 JSON</el-button>
       <el-button :loading="exporting" @click="exportCsv">导出 CSV</el-button>
@@ -44,15 +53,10 @@
       :table-props="{ rowKey: 'item_id' }"
       @update:page="onPageChange"
       @update:page-size="onPageSizeChange"
-      @selection-change="selectedRows = $event"
+      @selection-change="onSelectionChange"
     >
       <template #prefix>
         <el-table-column type="selection" width="48" reserve-selection />
-      </template>
-      <template #col-execution_status="{ row }">
-        <el-tag :type="executionStatusTagType(row.execution_status)" size="small">
-          {{ row.execution_status_name || '未执行' }}
-        </el-tag>
       </template>
       <template #col-dimension_name="{ row }">
         <el-tag v-bind="dimensionTagProps(row)" size="small">
@@ -122,7 +126,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch } from 'vue';
+import { nextTick, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import PageShell from '@/components/PageShell.vue';
@@ -162,31 +166,21 @@ const loading = ref(false);
 const exporting = ref(false);
 const deleting = ref(false);
 const deletingAll = ref(false);
+const selectingAll = ref(false);
+const selectingProgrammatically = ref(false);
 const addingToPlan = ref(false);
 const list = ref([]);
 const total = ref(0);
 const page = ref(initialQuery.page);
 const pageSize = ref(initialQuery.pageSize);
 const selectedRows = ref([]);
+const selectedRowById = ref(new Map());
 const tableRef = ref(null);
 const filters = reactive({ ...FILTER_DEFAULTS, ...initialQuery.filters });
 const planDialogVisible = ref(false);
 const planOptions = ref([]);
 const targetPlanId = ref(null);
 const generationTaskOptions = ref([]);
-
-const EXECUTION_STATUS_TAG = {
-  pending: 'info',
-  running: 'warning',
-  success: 'success',
-  failed: 'danger',
-  cancelled: 'info',
-  not_run: '',
-};
-
-function executionStatusTagType(status) {
-  return EXECUTION_STATUS_TAG[status] || 'info';
-}
 
 function formatPassRate(value) {
   if (value == null || value === '') return '—';
@@ -320,9 +314,78 @@ async function exportCsv() {
   }
 }
 
+function syncSelectedRowsFromMap() {
+  selectedRows.value = [...selectedRowById.value.values()];
+}
+
+function onSelectionChange(rows) {
+  if (selectingProgrammatically.value) return;
+
+  const currentPageIds = new Set(list.value.map(r => r.item_id));
+  const selectedOnPageIds = new Set(rows.map(r => r.item_id));
+
+  for (const id of currentPageIds) {
+    if (selectedOnPageIds.has(id)) {
+      const row = list.value.find(r => r.item_id === id);
+      if (row) selectedRowById.value.set(id, row);
+    } else {
+      selectedRowById.value.delete(id);
+    }
+  }
+  for (const row of rows) {
+    if (!currentPageIds.has(row.item_id)) {
+      selectedRowById.value.set(row.item_id, row);
+    }
+  }
+  syncSelectedRowsFromMap();
+}
+
+function syncTableSelectionFromMap() {
+  const table = tableRef.value;
+  if (!table?.toggleRowSelection) return;
+  selectingProgrammatically.value = true;
+  table.clearSelection?.();
+  for (const row of list.value) {
+    if (selectedRowById.value.has(row.item_id)) {
+      table.toggleRowSelection(row, true);
+    }
+  }
+  selectingProgrammatically.value = false;
+}
+
+watch(list, () => {
+  nextTick(syncTableSelectionFromMap);
+});
+
 function clearTableSelection() {
+  selectedRowById.value = new Map();
   selectedRows.value = [];
   tableRef.value?.clearSelection?.();
+}
+
+async function handleSelectAllFiltered() {
+  if (!total.value) return;
+  selectingAll.value = true;
+  try {
+    const data = await fetchTestItems({
+      ...apiFilterParams(),
+      page: 1,
+      pageSize: total.value,
+    });
+    const allRows = data.list || [];
+    selectedRowById.value = new Map(allRows.map(r => [r.item_id, r]));
+    syncSelectedRowsFromMap();
+    syncTableSelectionFromMap();
+    if (allRows.length < total.value) {
+      ElMessage.warning(`已选中 ${allRows.length} 条（共 ${total.value} 条，部分未能加载）`);
+    } else {
+      ElMessage.success(`已选中 ${allRows.length} 条`);
+    }
+  } catch (err) {
+    ElMessage.error(err.message || '选中失败');
+  } finally {
+    selectingAll.value = false;
+  }
 }
 
 async function loadGenerationTasks() {

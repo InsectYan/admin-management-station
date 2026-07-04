@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Fitness 数据注入规则（对齐 fitness-agent-test-docs/数据库详细表/_scripts/generate-all-tables.mjs）
+ * Fitness 数据注入规则（对齐 docs/fitness-test-docs + database/tables 结构）
  * - sqlVal：布尔 / 数字 / JSONB 数组 / 字符串转义
  * - INSERT … ON CONFLICT (pk) DO NOTHING
  * - 注入顺序：tables-order.json（与 init_all.sql 一致，不含视图）
@@ -10,6 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 const { parseCreateTable } = require('./schema-column-sync');
+const { isDisplayOnlySeedField } = require('./display-field-rules');
 
 /** @param {string} initSql */
 function loadTableColumnNames(initSql) {
@@ -28,7 +29,9 @@ function filterRowsForSeed(rows, columnNames) {
   return rows.map(row => {
     const next = {};
     for (const [ key, val ] of Object.entries(row)) {
-      if (columnNames.has(key)) next[key] = val;
+      if (!columnNames.has(key)) continue;
+      if (isDisplayOnlySeedField(key)) continue;
+      next[key] = val;
     }
     return next;
   });

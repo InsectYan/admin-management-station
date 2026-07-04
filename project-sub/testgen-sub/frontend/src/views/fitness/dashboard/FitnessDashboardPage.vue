@@ -4,7 +4,7 @@
       <el-col :span="8">
         <el-card shadow="never">
           <template #header>发版信号</template>
-          <el-tag :type="signalType" size="large">{{ readiness?.release_signal || '-' }}</el-tag>
+          <FitnessStatusTag prop="release_signal" :row="readiness" :value="readiness?.release_signal" size="large" />
           <p class="stat-desc">P0 待建: {{ readiness?.p0_auto_todo ?? '-' }} / {{ readiness?.p0_total ?? '-' }}</p>
           <p class="stat-desc">风险缺口: {{ readiness?.risk_gap_count ?? '-' }}</p>
           <el-button link type="primary" @click="router.push('/fitness/insights/analysis/readiness')">查看分析</el-button>
@@ -38,9 +38,7 @@
             <el-table-column prop="goal_name" label="名称" />
             <el-table-column prop="coverage_note" label="状态" width="80">
               <template #default="{ row }">
-                <el-tag :type="row.coverage_note === 'OK' ? 'success' : row.coverage_note === 'LOW' ? 'warning' : 'danger'" size="small">
-                  {{ row.coverage_note }}
-                </el-tag>
+                <FitnessStatusTag prop="coverage_note" :row="row" />
               </template>
             </el-table-column>
           </el-table>
@@ -50,7 +48,11 @@
         <el-card shadow="never">
           <template #header>自动化分布</template>
           <el-table :data="automation" size="small">
-            <el-table-column prop="automation_status_id" label="状态" />
+            <el-table-column prop="automation_status_id" label="状态">
+              <template #default="{ row }">
+                <FitnessStatusTag prop="automation_status_id" :row="row" />
+              </template>
+            </el-table-column>
             <el-table-column prop="item_count" label="数量" width="80" />
             <el-table-column prop="pct" label="占比" width="80" />
           </el-table>
@@ -67,9 +69,10 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import PageShell from '@/components/PageShell.vue';
+import FitnessStatusTag from '@/components/fitness/FitnessStatusTag.vue';
 import { fetchDashboard } from '@/services/fitnessService.js';
 
 const router = useRouter();
@@ -77,13 +80,6 @@ const loading = ref(false);
 const readiness = ref(null);
 const automation = ref([]);
 const prdGoals = ref([]);
-
-const signalType = computed(() => {
-  const s = readiness.value?.release_signal;
-  if (s === 'GREEN') return 'success';
-  if (s === 'YELLOW') return 'warning';
-  return 'danger';
-});
 
 onMounted(async () => {
   loading.value = true;

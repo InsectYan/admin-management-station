@@ -19,7 +19,7 @@
         </el-table-column>
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">
-            <el-button link @click="goConsole(row.id)">控制台</el-button>
+            <el-button type="primary" link @click="goConsole(row.id)">控制台</el-button>
           </template>
         </el-table-column>
       </template>
@@ -44,7 +44,7 @@ const pageSize = ref(20);
 
 const runColumns = [
   { prop: 'id', label: 'Run ID', width: 80 },
-  { prop: 'scheme_id', label: '方案编码', width: 100 },
+  { prop: 'scheme_id', label: '方案编码', minWidth: 100 },
   { prop: 'status', label: '状态', width: 100 },
   { prop: 'verdict', label: '判定', width: 80 },
   { prop: 'created_at', label: '开始时间', minWidth: 160 },

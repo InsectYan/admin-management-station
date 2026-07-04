@@ -9,7 +9,7 @@
 | 文档版本 | 2026-07-03 |
 | 测试成熟度 | **84/100（A-）** → [测试成熟度评分.md](./测试成熟度评分.md) |
 | 权威命令说明 | [`fitness-agent/server/tests/README.md`](../../../../../fitness-agent/server/tests/README.md) |
-| 测试分类体系 | [`fitness-agent-test-docs`](../../../../../fitness-agent-test-docs/测试用例分类体系.md) |
+| 测试分类体系 | [`docs/fitness-test-docs`](../../docs/fitness-test-docs/测试用例分类体系.md)（上游 [`fitness-agent-test-docs`](../../../../../fitness-agent-test-docs/测试用例分类体系.md)） |
 
 ---
 

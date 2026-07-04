@@ -1,0 +1,8 @@
+import{_}from"./_plugin-vue_export-helper-DlAUqK2U.js";import{y as v,o as w,H as R,b as M,f as k,s as H,I as m,J as L}from"./index-CqgBCwDs.js";const b={__name:"RealtimeMetricsChart",props:{metrics:{type:Array,default:()=>[]},field:{type:String,default:"responseTime"},title:{type:String,default:"响应时间 (ms)"}},setup(e){const t=e,p=H(null);function n(){const a=p.value;if(!a)return;const o=t.metrics||[];if(!o.length){a.innerHTML='<div class="testgen-metrics-empty">暂无指标数据</div>';return}const r=o.map(c=>Number(c[t.field])||0),h=Math.max(...r,1),g=a.clientWidth||400,$=160,s=24,y=g-s*2,i=$-s*2,x=r.map((c,l)=>{const u=s+l/Math.max(r.length-1,1)*y,d=s+i-c/h*i;return`${u},${d}`});a.innerHTML=`
+    <svg width="${g}" height="${$}" class="testgen-metrics-svg">
+      <text x="${s}" y="14" class="testgen-metrics-title">${t.title}</text>
+      <polyline fill="none" stroke="#409eff" stroke-width="2" points="${x.join(" ")}" />
+      ${r.map((c,l)=>{const u=s+l/Math.max(r.length-1,1)*y,d=s+i-c/h*i;return`<circle cx="${u}" cy="${d}" r="3" fill="#409eff" />`}).join("")}
+    </svg>
+  `}return v(()=>t.metrics,n,{deep:!0}),v(()=>t.field,n),w(()=>{n(),window.addEventListener("resize",n)}),R(()=>{window.removeEventListener("resize",n)}),(a,o)=>(M(),k("div",{ref_key:"chartRef",ref:p,class:"testgen-metrics-chart"},null,512))}},T=_(b,[["__scopeId","data-v-442716d1"]]),f=()=>L();async function j(e){const{data:t}=await m.get(`${f()}/test-runs/${e}`);return t.data}async function z(e){const{data:t}=await m.post(`${f()}/test-runs/${e}/cancel`);return t.data}async function A(e){const{data:t}=await m.get(`${f()}/test-runs/${e}/results`);return t.data}export{T as R,j as a,z as c,A as g};
+//# sourceMappingURL=testRunService-CbNqm_s9.js.map

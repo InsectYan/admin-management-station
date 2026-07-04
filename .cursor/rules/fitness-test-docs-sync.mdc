@@ -1,0 +1,60 @@
+---
+description: Fitness 测试文档与 testgen-sub 数据库字段联动（方案映射、source_doc、TS/VS）
+globs: "{project-sub/testgen-sub/docs/fitness-test-docs/**,project-sub/testgen-sub/database/tables/test_item_detail/**,project-sub/testgen-sub/database/tables/test_item_prefix_scheme/**,project-sub/testgen-sub/database/scheme-map.json,project-sub/testgen-sub/backend/scripts/sync-scheme-mapping-from-docs.js,project-sub/testgen-sub/backend/scripts/resolve-item-schemes.js}"
+alwaysApply: false
+---
+
+# Fitness 测试文档 ↔ 数据库联动
+
+testgen-sub 内 Fitness 测试文档真源：**`project-sub/testgen-sub/docs/fitness-test-docs/`**（上游：`fitness-agent-test-docs`）。
+
+改文档或改 DB 种子时，**同一任务内**须保持下列对应关系一致。
+
+## 字段 ↔ 文档
+
+| DB 字段 | 文档 |
+|---------|------|
+| `test_item_detail.source_doc` | `docs/fitness-test-docs/测试项核心细节/{文件名}.md` |
+| `test_item_detail.scheme_mapping_source` | `*-方案映射.md` 或 `database/scheme-map.json` |
+| `test_item_prefix_scheme.mapping_source` | 同上 `*-方案映射.md` |
+| TS / VS 枚举 | `docs/fitness-test-docs/测试方案分类说明.md` |
+
+详见 [`文档与数据库字段对照.md`](../project-sub/testgen-sub/docs/fitness-test-docs/文档与数据库字段对照.md)。
+
+## 变更检查清单
+
+### 改测试项明细（核心细节表）
+
+- [ ] 更新 `docs/fitness-test-docs/测试项核心细节/*.md`
+- [ ] 同步 `database/tables/test_item_detail/data.json`（`source_doc`、`source_section`、明细字段）
+- [ ] 若有 init.sql INSERT，**同时改 init.sql**（seed 读 init.sql 时不读 data.json）
+- [ ] 新 item 需补 TS/VS：在对应 `*-方案映射.md` 增行，或确认 `scheme-map.json` 前缀覆盖
+
+### 改方案映射（`*-方案映射.md`）
+
+- [ ] 只改 `docs/fitness-test-docs/测试方案核心细节与方案关系/*-方案映射.md`
+- [ ] 运行同步（写 prefix 表 + 补全 item）：
+  ```bash
+  cd project-sub/testgen-sub
+  node backend/scripts/sync-scheme-mapping-from-docs.js --write
+  ```
+- [ ] 校验：`node backend/scripts/sync-scheme-mapping-from-docs.js --check` 退出码 0
+- [ ] 粗粒度前缀变更时，同步 `database/scheme-map.json`
+- [ ] 登记 `docs/待办-开发节点追踪.md` `[DOC]` 项
+
+### 改 DB 数据（data.json / seed）
+
+- [ ] 反查 `source_doc` / `scheme_mapping_source` 是否仍有对应 Markdown
+- [ ] 勿留孤儿引用（DB 指向不存在的映射文件名）
+- [ ] 优化/批量改 TS/VS 后跑 `--check`，不一致则回写文档或 `--write`
+
+## 解析优先级（resolve-item-schemes）
+
+1. `test_item_prefix_scheme`（来自 `*-方案映射.md`）
+2. `database/scheme-map.json`
+3. `test_category_minor_scheme` / 维度大类默认
+
+## 相关
+
+- [`fitness-agent-test-automation-sync.mdc`](./fitness-agent-test-automation-sync.mdc) · 自动化字段
+- [`subapp-development.mdc`](./subapp-development.mdc) · 变更登记

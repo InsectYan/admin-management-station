@@ -191,6 +191,12 @@ class GenerationQueueService extends Service {
 
     await job.update({ status: 'cancelled', finished_at: new Date() });
 
+    try {
+      await this.ctx.service.generationJob.finalizeJobProgress(jobId, { status: 'cancelled' });
+    } catch (finalizeErr) {
+      this.ctx.app.logger.warn('[generationQueue] finalize on cancel job=%s %s', jobId, finalizeErr.message);
+    }
+
     const row = await this.ctx.model.GenerationJobQueue.findOne({ where: { job_id: jobId } });
     const state = queueState(this.app);
 

@@ -1,0 +1,14 @@
+[
+  "v_metric_dimension_summary",
+  "v_metric_prd_goal_coverage",
+  "v_metric_automation_coverage",
+  "v_metric_risk_guard_coverage",
+  "v_metric_priority_distribution",
+  "v_metric_station_role_matrix",
+  "v_risk_link_bidirectional",
+  "v_analysis_scheme_validation_matrix",
+  "v_analysis_dimension_automation",
+  "v_analysis_p0_blockers_todo",
+  "v_analysis_risk_gap",
+  "v_analysis_release_readiness"
+]

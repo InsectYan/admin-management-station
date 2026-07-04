@@ -85,9 +85,14 @@ class FitnessAssetController extends Controller {
   }
 
   async queryView() {
-    const viewName = this.ctx.params.view;
-    const data = await this.service.fitnessAsset.queryView(viewName, this.ctx.query);
-    this.ctx.body = { code: 0, message: 'ok', data };
+    try {
+      const viewName = this.ctx.params.view;
+      const data = await this.service.fitnessAsset.queryView(viewName, this.ctx.query);
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
   }
 
   async listRisks() {

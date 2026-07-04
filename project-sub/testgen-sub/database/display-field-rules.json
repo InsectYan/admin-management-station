@@ -1,0 +1,23 @@
+{
+  "hideIdWhenNamePresent": true,
+  "explicitIdToName": {
+    "scheme_id": "scheme_name",
+    "validation_id": "validation_name",
+    "template_code": "template_name",
+    "prd_goal_id": "goal_name",
+    "risk_item_id": "risk_name",
+    "main_item_id": "main_item_name",
+    "source_item_id": "source_item_name",
+    "target_item_id": "target_item_name",
+    "automation_status_id": "status_name",
+    "item_id": "item_name"
+  },
+  "seedExcludePatterns": [
+    "_name$",
+    "_title$",
+    "^default_.+_name$",
+    "^project_name$",
+    "^major_name$",
+    "^template_name$"
+  ]
+}

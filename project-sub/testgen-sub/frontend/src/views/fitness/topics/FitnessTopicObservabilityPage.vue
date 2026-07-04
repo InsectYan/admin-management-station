@@ -28,7 +28,7 @@
         <el-card shadow="never">
           <template #header>发版就绪</template>
           <p v-if="readiness">
-            信号：<el-tag :type="signalTag">{{ readiness.release_signal || readiness.signal || '—' }}</el-tag>
+            信号：<FitnessStatusTag prop="release_signal" :row="readiness" :value="readiness.release_signal || readiness.signal" />
           </p>
           <p>P0 待建：{{ readiness?.p0_auto_todo ?? '—' }}</p>
           <el-button link type="primary" @click="router.push('/fitness/insights/analysis/readiness')">分析详情</el-button>
@@ -39,9 +39,10 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import PageShell from '@/components/PageShell.vue';
+import FitnessStatusTag from '@/components/fitness/FitnessStatusTag.vue';
 import { fetchView } from '@/services/fitnessService.js';
 import { fetchObservabilityHealth } from '@/services/observabilityService.js';
 
@@ -49,14 +50,6 @@ const router = useRouter();
 const dimRows = ref([]);
 const readiness = ref(null);
 const otelHealth = ref(null);
-
-const signalTag = computed(() => {
-  const s = (readiness.value?.release_signal || readiness.value?.signal || '').toUpperCase();
-  if (s === 'GREEN') return 'success';
-  if (s === 'YELLOW') return 'warning';
-  if (s === 'RED') return 'danger';
-  return 'info';
-});
 
 onMounted(async () => {
   const [ dim, ready, health ] = await Promise.all([

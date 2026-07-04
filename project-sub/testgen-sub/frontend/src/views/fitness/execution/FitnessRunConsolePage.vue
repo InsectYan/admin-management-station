@@ -123,9 +123,7 @@
           <el-table-column prop="output_summary" label="输出" min-width="160" />
           <el-table-column prop="sub_verdict" label="判定" width="80">
             <template #default="{ row }">
-              <el-tag :type="row.sub_verdict === 'pass' ? 'success' : 'danger'" size="small">
-                {{ row.sub_verdict }}
-              </el-tag>
+              <FitnessStatusTag prop="sub_verdict" :row="row" />
             </template>
           </el-table-column>
         </el-table>
@@ -137,9 +135,7 @@
           <el-table-column prop="output_summary" label="输出" min-width="160" />
           <el-table-column prop="sub_verdict" label="判定" width="80">
             <template #default="{ row }">
-              <el-tag :type="row.sub_verdict === 'pass' ? 'success' : 'danger'" size="small">
-                {{ row.sub_verdict }}
-              </el-tag>
+              <FitnessStatusTag prop="sub_verdict" :row="row" />
             </template>
           </el-table-column>
         </el-table>
@@ -223,6 +219,7 @@ import { ElMessage } from 'element-plus';
 import PageShell from '@/components/PageShell.vue';
 import PassFailChart from '@/components/fitness/PassFailChart.vue';
 import SchemePhaseTable from '@/components/fitness/SchemePhaseTable.vue';
+import FitnessStatusTag from '@/components/fitness/FitnessStatusTag.vue';
 import RunSubResultExpand from '@/components/fitness/RunSubResultExpand.vue';
 import ToolChainTracePanel from '@/components/observability/ToolChainTracePanel.vue';
 import RunStepGanttPanel from '@/components/observability/RunStepGanttPanel.vue';

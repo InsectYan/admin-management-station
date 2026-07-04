@@ -5,7 +5,10 @@
     "dimension_id": "B",
     "category_major_id": "B2",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "六站流水线",
+    "category_major_name": "② 门禁",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-CONF-001",
@@ -15,7 +18,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-03-ZERO",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "零违规",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-CONF-002",
@@ -25,7 +33,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-03-ZERO",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "零违规",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-CONF-003",
@@ -35,7 +48,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-03-ZERO",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "零违规",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-CONF-004",
@@ -45,7 +63,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-03-ZERO",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "零违规",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-DEL-001",
@@ -55,7 +78,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-DEL-002",
@@ -65,7 +93,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-DUP-001",
@@ -75,7 +108,12 @@
     "scheme_primary_id": "TS-03-REP",
     "validation_primary_id": "VS-08-PASSK",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "同用例重复抽样",
+    "validation_primary_name": "Pass^k稳定",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-DUP-002",
@@ -85,7 +123,12 @@
     "scheme_primary_id": "TS-03-REP",
     "validation_primary_id": "VS-08-PASSK",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "同用例重复抽样",
+    "validation_primary_name": "Pass^k稳定",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-ENTRY-005",
@@ -95,7 +138,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-07-RATE-M",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "达标率·中门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-ENTRY-006",
@@ -105,7 +153,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-ENTRY-007",
@@ -115,7 +168,12 @@
     "scheme_primary_id": "TS-02-BND",
     "validation_primary_id": "VS-01-EXACT",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "边界/等价类矩阵",
+    "validation_primary_name": "精确匹配",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-INTENT-001",
@@ -125,7 +183,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-07-RATE-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "达标率·高门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-INTENT-002",
@@ -135,7 +198,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-07-RATE-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "达标率·高门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-INTENT-003",
@@ -145,7 +213,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-07-RATE-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "达标率·高门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-INTENT-004",
@@ -155,7 +228,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-07-RATE-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "达标率·高门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-INTENT-005",
@@ -165,7 +243,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-03-ZERO",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "零违规",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-INTENT-006",
@@ -175,7 +258,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-07-RATE-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "达标率·高门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-INTENT-008",
@@ -185,7 +273,12 @@
     "scheme_primary_id": "TS-07-NEG",
     "validation_primary_id": "VS-09-BLOCK-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "异常/对抗专项",
+    "validation_primary_name": "安全阻断·高",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-MACRO-001",
@@ -195,7 +288,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-MACRO-002",
@@ -205,7 +303,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-MACRO-003",
@@ -215,7 +318,12 @@
     "scheme_primary_id": "TS-02-BND",
     "validation_primary_id": "VS-02-CONTRACT",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "边界/等价类矩阵",
+    "validation_primary_name": "契约通过",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-MACRO-004",
@@ -225,7 +333,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-MACRO-005",
@@ -235,7 +348,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-MACRO-006",
@@ -245,7 +363,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-MACRO-007",
@@ -255,7 +378,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-MACRO-008",
@@ -265,7 +393,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-MACRO-009",
@@ -275,7 +408,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-MACRO-011",
@@ -285,7 +423,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-SAFE-001",
@@ -295,7 +438,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-09-BLOCK-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "安全阻断·高",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-SAFE-002",
@@ -305,7 +453,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-09-BLOCK-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "安全阻断·高",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-SAFE-003",
@@ -315,7 +468,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-09-BLOCK-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "安全阻断·高",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-SAFE-005",
@@ -325,7 +483,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-09-BLOCK-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": true
+    "is_risk_flag": true,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "安全阻断·高",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-SAFE-006",
@@ -335,7 +498,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-09-BLOCK-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": true
+    "is_risk_flag": true,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "安全阻断·高",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-SESSION-001",
@@ -345,7 +513,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-SESSION-002",
@@ -355,7 +528,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-SESSION-003",
@@ -365,7 +543,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-SESSION-004",
@@ -375,7 +558,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-SESSION-005",
@@ -385,7 +573,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-SESSION-006",
@@ -395,7 +588,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-SESSION-007",
@@ -405,7 +603,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-STRAT-001",
@@ -415,7 +618,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-07-RATE-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "达标率·高门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-STRAT-002",
@@ -425,7 +633,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-07-RATE-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "达标率·高门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-STRAT-004",
@@ -435,7 +648,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-07-RATE-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "达标率·高门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-STRAT-006",
@@ -445,7 +663,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-07-RATE-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "达标率·高门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-SUM-001",
@@ -455,7 +678,12 @@
     "scheme_primary_id": "TS-02-BND",
     "validation_primary_id": "VS-02-CONTRACT",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "边界/等价类矩阵",
+    "validation_primary_name": "契约通过",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C1-SUM-002",
@@ -465,7 +693,12 @@
     "scheme_primary_id": "TS-02-BND",
     "validation_primary_id": "VS-02-CONTRACT",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "教练端业务",
+    "scheme_primary_name": "边界/等价类矩阵",
+    "validation_primary_name": "契约通过",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C2-BOUND-003",
@@ -475,7 +708,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-03-ZERO",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "会员端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "零违规",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C2-BOUND-006",
@@ -485,7 +723,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "会员端业务",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C2-BOUND-007",
@@ -495,7 +738,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-03-ZERO",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "会员端业务",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "零违规",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C3-BOUND-001",
@@ -505,7 +753,12 @@
     "scheme_primary_id": "TS-06-PAIR",
     "validation_primary_id": "VS-03-ZERO",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "管理端业务",
+    "scheme_primary_name": "对照/跨端对比",
+    "validation_primary_name": "零违规",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C3-BOUND-002",
@@ -515,7 +768,12 @@
     "scheme_primary_id": "TS-06-PAIR",
     "validation_primary_id": "VS-03-ZERO",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "管理端业务",
+    "scheme_primary_name": "对照/跨端对比",
+    "validation_primary_name": "零违规",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "C3-BOUND-003",
@@ -525,7 +783,12 @@
     "scheme_primary_id": "TS-06-PAIR",
     "validation_primary_id": "VS-03-ZERO",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "业务功能",
+    "category_major_name": "管理端业务",
+    "scheme_primary_name": "对照/跨端对比",
+    "validation_primary_name": "零违规",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "D2-SUB-001",
@@ -535,7 +798,12 @@
     "scheme_primary_id": "TS-01-DET",
     "validation_primary_id": "VS-01-EXACT",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "接口与套壳",
+    "category_major_name": "接口异常/错误码",
+    "scheme_primary_name": "确定性单次",
+    "validation_primary_name": "精确匹配",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "D2-SUB-002",
@@ -545,7 +813,12 @@
     "scheme_primary_id": "TS-01-DET",
     "validation_primary_id": "VS-01-EXACT",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "接口与套壳",
+    "category_major_name": "接口异常/错误码",
+    "scheme_primary_name": "确定性单次",
+    "validation_primary_name": "精确匹配",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "D2-SUB-005",
@@ -555,7 +828,12 @@
     "scheme_primary_id": "TS-01-DET",
     "validation_primary_id": "VS-01-EXACT",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "接口与套壳",
+    "category_major_name": "接口异常/错误码",
+    "scheme_primary_name": "确定性单次",
+    "validation_primary_name": "精确匹配",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "D2-SUB-006",
@@ -565,7 +843,12 @@
     "scheme_primary_id": "TS-01-DET",
     "validation_primary_id": "VS-01-EXACT",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "接口与套壳",
+    "category_major_name": "接口异常/错误码",
+    "scheme_primary_name": "确定性单次",
+    "validation_primary_name": "精确匹配",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "D3-JWT-001",
@@ -575,7 +858,12 @@
     "scheme_primary_id": "TS-06-PAIR",
     "validation_primary_id": "VS-01-EXACT",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "接口与套壳",
+    "category_major_name": "套壳联调",
+    "scheme_primary_name": "对照/跨端对比",
+    "validation_primary_name": "精确匹配",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "D3-KEY-001",
@@ -585,7 +873,12 @@
     "scheme_primary_id": "TS-01-DET",
     "validation_primary_id": "VS-01-EXACT",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "接口与套壳",
+    "category_major_name": "套壳联调",
+    "scheme_primary_name": "确定性单次",
+    "validation_primary_name": "精确匹配",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "D3-NET-001",
@@ -595,7 +888,12 @@
     "scheme_primary_id": "TS-01-DET",
     "validation_primary_id": "VS-01-EXACT",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "接口与套壳",
+    "category_major_name": "套壳联调",
+    "scheme_primary_name": "确定性单次",
+    "validation_primary_name": "精确匹配",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "E-SKILL-MED-001",
@@ -603,7 +901,10 @@
     "dimension_id": "E",
     "category_major_id": "E_SKILL",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "Agent智能质量",
+    "category_major_name": "Skill路由",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "E-SKILL-PAIN-001",
@@ -611,7 +912,10 @@
     "dimension_id": "E",
     "category_major_id": "E_SKILL",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "Agent智能质量",
+    "category_major_name": "Skill路由",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "E1-PATH-001",
@@ -621,7 +925,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-07-RATE-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "Agent智能质量",
+    "category_major_name": "决策与路径",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "达标率·高门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "E1-PATH-002",
@@ -631,7 +940,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "Agent智能质量",
+    "category_major_name": "决策与路径",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "E1-PATH-003",
@@ -641,7 +955,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "Agent智能质量",
+    "category_major_name": "决策与路径",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "E1-PATH-005",
@@ -651,7 +970,12 @@
     "scheme_primary_id": "TS-07-NEG",
     "validation_primary_id": "VS-09-BLOCK-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "Agent智能质量",
+    "category_major_name": "决策与路径",
+    "scheme_primary_name": "异常/对抗专项",
+    "validation_primary_name": "安全阻断·高",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "E2-TOOL-003",
@@ -661,7 +985,12 @@
     "scheme_primary_id": "TS-07-NEG",
     "validation_primary_id": "VS-03-ZERO",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "Agent智能质量",
+    "category_major_name": "工具调用",
+    "scheme_primary_name": "异常/对抗专项",
+    "validation_primary_name": "零违规",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "E3-MEM-001",
@@ -671,7 +1000,12 @@
     "scheme_primary_id": "TS-03-REP",
     "validation_primary_id": "VS-07-RATE-M",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "Agent智能质量",
+    "category_major_name": "记忆与上下文",
+    "scheme_primary_name": "同用例重复抽样",
+    "validation_primary_name": "达标率·中门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "E3-MEM-003",
@@ -681,7 +1015,12 @@
     "scheme_primary_id": "TS-06-PAIR",
     "validation_primary_id": "VS-03-ZERO",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "Agent智能质量",
+    "category_major_name": "记忆与上下文",
+    "scheme_primary_name": "对照/跨端对比",
+    "validation_primary_name": "零违规",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "E5-INJ-001",
@@ -691,7 +1030,12 @@
     "scheme_primary_id": "TS-07-NEG",
     "validation_primary_id": "VS-09-BLOCK-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": true
+    "is_risk_flag": true,
+    "dimension_name": "Agent智能质量",
+    "category_major_name": "安全与合规",
+    "scheme_primary_name": "异常/对抗专项",
+    "validation_primary_name": "安全阻断·高",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "E5-MED-001",
@@ -701,7 +1045,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-09-BLOCK-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": true
+    "is_risk_flag": true,
+    "dimension_name": "Agent智能质量",
+    "category_major_name": "安全与合规",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "安全阻断·高",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "E5-PII-001",
@@ -711,7 +1060,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-09-BLOCK-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": true
+    "is_risk_flag": true,
+    "dimension_name": "Agent智能质量",
+    "category_major_name": "安全与合规",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "安全阻断·高",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "E5-TOOL-001",
@@ -721,7 +1075,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-09-BLOCK-H",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": true
+    "is_risk_flag": true,
+    "dimension_name": "Agent智能质量",
+    "category_major_name": "安全与合规",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "安全阻断·高",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "F4-LOCAL-001",
@@ -731,7 +1090,12 @@
     "scheme_primary_id": "TS-01-DET",
     "validation_primary_id": "VS-01-EXACT",
     "automation_entry_id": "AUTO_LOCAL_STACK",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "非功能",
+    "category_major_name": "部署与环境",
+    "scheme_primary_name": "确定性单次",
+    "validation_primary_name": "精确匹配",
+    "automation_entry_name": "local 全栈"
   },
   {
     "item_id": "F4-MODE-001",
@@ -741,7 +1105,12 @@
     "scheme_primary_id": "TS-02-BND",
     "validation_primary_id": "VS-01-EXACT",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "非功能",
+    "category_major_name": "部署与环境",
+    "scheme_primary_name": "边界/等价类矩阵",
+    "validation_primary_name": "精确匹配",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "G1-PHASE-001",
@@ -751,7 +1120,12 @@
     "scheme_primary_id": "TS-03-REP",
     "validation_primary_id": "VS-07-RATE-M",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "用户体验",
+    "category_major_name": "等待与阶段反馈",
+    "scheme_primary_name": "同用例重复抽样",
+    "validation_primary_name": "达标率·中门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "G1-PHASE-003",
@@ -761,7 +1135,12 @@
     "scheme_primary_id": "TS-03-REP",
     "validation_primary_id": "VS-07-RATE-M",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "用户体验",
+    "category_major_name": "等待与阶段反馈",
+    "scheme_primary_name": "同用例重复抽样",
+    "validation_primary_name": "达标率·中门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "G1-PHASE-004",
@@ -771,7 +1150,12 @@
     "scheme_primary_id": "TS-03-REP",
     "validation_primary_id": "VS-07-RATE-M",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "用户体验",
+    "category_major_name": "等待与阶段反馈",
+    "scheme_primary_name": "同用例重复抽样",
+    "validation_primary_name": "达标率·中门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "G1-PHASE-006",
@@ -781,7 +1165,12 @@
     "scheme_primary_id": "TS-01-DET",
     "validation_primary_id": "VS-01-EXACT",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "用户体验",
+    "category_major_name": "等待与阶段反馈",
+    "scheme_primary_name": "确定性单次",
+    "validation_primary_name": "精确匹配",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "G2-QUEUE-002",
@@ -791,7 +1180,12 @@
     "scheme_primary_id": "TS-01-DET",
     "validation_primary_id": "VS-01-EXACT",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "用户体验",
+    "category_major_name": "排队感知",
+    "scheme_primary_name": "确定性单次",
+    "validation_primary_name": "精确匹配",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "G2-QUEUE-003",
@@ -801,7 +1195,12 @@
     "scheme_primary_id": "TS-01-DET",
     "validation_primary_id": "VS-01-EXACT",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "用户体验",
+    "category_major_name": "排队感知",
+    "scheme_primary_name": "确定性单次",
+    "validation_primary_name": "精确匹配",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "G3-ERR-001",
@@ -811,7 +1210,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-07-RATE-M",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "用户体验",
+    "category_major_name": "错误友好",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "达标率·中门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "G3-ERR-002",
@@ -821,7 +1225,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-07-RATE-M",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "用户体验",
+    "category_major_name": "错误友好",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "达标率·中门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "G3-ERR-003",
@@ -831,7 +1240,12 @@
     "scheme_primary_id": "TS-04-SET",
     "validation_primary_id": "VS-07-RATE-M",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "用户体验",
+    "category_major_name": "错误友好",
+    "scheme_primary_name": "固定样本集批量",
+    "validation_primary_name": "达标率·中门槛",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "G4-SESS-004",
@@ -841,7 +1255,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "用户体验",
+    "category_major_name": "会话与续传",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "G5-UI-001",
@@ -851,7 +1270,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "用户体验",
+    "category_major_name": "结构化 UI",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "G5-UI-002",
@@ -861,7 +1285,12 @@
     "scheme_primary_id": "TS-05-CHAIN",
     "validation_primary_id": "VS-04-CHAIN",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "用户体验",
+    "category_major_name": "结构化 UI",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过(别名)",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "G5-UI-004",
@@ -871,7 +1300,12 @@
     "scheme_primary_id": "TS-06-PAIR",
     "validation_primary_id": "VS-03-ZERO",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "用户体验",
+    "category_major_name": "结构化 UI",
+    "scheme_primary_name": "对照/跨端对比",
+    "validation_primary_name": "零违规",
+    "automation_entry_name": "待建脚本"
   },
   {
     "item_id": "G7-STREAM-001",
@@ -881,6 +1315,11 @@
     "scheme_primary_id": "TS-01-DET",
     "validation_primary_id": "VS-03-ZERO",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
-    "is_risk_flag": false
+    "is_risk_flag": false,
+    "dimension_name": "用户体验",
+    "category_major_name": "流式与半截内容",
+    "scheme_primary_name": "确定性单次",
+    "validation_primary_name": "零违规",
+    "automation_entry_name": "待建脚本"
   }
 ]

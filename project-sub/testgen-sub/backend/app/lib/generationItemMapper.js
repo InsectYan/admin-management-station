@@ -48,7 +48,8 @@ function normalizeSteps(steps) {
 function buildItemId(ctx, index) {
   const scheme = String(ctx.scheme_id || 'GEN').replace(/[^A-Za-z0-9-]/g, '');
   const validation = String(ctx.validation_id || 'VS').replace(/[^A-Za-z0-9-]/g, '');
-  const seq = String(index + 1).padStart(3, '0');
+  const offset = Math.max(0, Number(ctx.id_offset) || 0);
+  const seq = String(offset + index + 1).padStart(3, '0');
   const base = `${ctx.project_code}-${scheme}-${validation}-J${ctx.job_id}-${seq}`.slice(0, 64);
   return base;
 }

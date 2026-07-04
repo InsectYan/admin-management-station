@@ -1,8 +1,9 @@
 'use strict';
 
 /**
- * 按 fitness-agent-test-docs 规则为 test_item_detail 补全主/辅 TS/VS，
+ * 按 docs/fitness-test-docs 方案映射规则为 test_item_detail 补全主/辅 TS/VS，
  * 并生成 test_category_minor_scheme 子类默认方案表数据。
+ * 映射 Markdown 同步见 sync-scheme-mapping-from-docs.js
  * 用法: node backend/scripts/resolve-item-schemes.js
  */
 

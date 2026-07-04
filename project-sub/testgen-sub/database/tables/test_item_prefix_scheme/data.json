@@ -10,7 +10,8 @@
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
     "validation_primary_name": "精确匹配",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "多步链路串联"
   },
   {
     "mapping_id": "MAP0002",
@@ -75,7 +76,8 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "多步链路串联",
     "validation_primary_name": "链路全过(别名)",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "边界/等价类矩阵"
   },
   {
     "mapping_id": "MAP0007",
@@ -88,7 +90,8 @@
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
     "validation_primary_name": "零违规",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "固定样本集批量"
   },
   {
     "mapping_id": "MAP0008",
@@ -101,7 +104,8 @@
     "mapping_source": "C3-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
     "validation_primary_name": "零违规",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "固定样本集批量"
   },
   {
     "mapping_id": "MAP0009",
@@ -127,7 +131,8 @@
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
     "validation_primary_name": "精确匹配",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "多步链路串联"
   },
   {
     "mapping_id": "MAP0011",
@@ -140,7 +145,8 @@
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
     "validation_primary_name": "精确匹配",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "多步链路串联"
   },
   {
     "mapping_id": "MAP0012",
@@ -179,7 +185,8 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "达标率·高门槛",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "边界/等价类矩阵"
   },
   {
     "mapping_id": "MAP0015",
@@ -283,7 +290,8 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "达标率·高门槛",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "同用例重复抽样"
   },
   {
     "mapping_id": "MAP0023",
@@ -309,7 +317,8 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
     "validation_primary_name": "零违规",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "同用例重复抽样"
   },
   {
     "mapping_id": "MAP0025",
@@ -361,7 +370,9 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "多步链路串联",
     "validation_primary_name": "链路全过(别名)",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "可观测稽核",
+    "validation_secondary_name": "契约通过"
   },
   {
     "mapping_id": "MAP0029",
@@ -374,7 +385,8 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "边界/等价类矩阵",
     "validation_primary_name": "契约通过",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "人工评审"
   },
   {
     "mapping_id": "MAP0030",
@@ -387,7 +399,8 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "达标率·高门槛",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "人工评审"
   },
   {
     "mapping_id": "MAP0031",
@@ -400,7 +413,8 @@
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "零违规",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "异常/对抗专项"
   },
   {
     "mapping_id": "MAP0032",
@@ -426,7 +440,8 @@
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "多步链路串联",
     "validation_primary_name": "链路全过(别名)",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "可观测稽核"
   },
   {
     "mapping_id": "MAP0034",
@@ -452,7 +467,8 @@
     "mapping_source": "C3-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
     "validation_primary_name": "零违规",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "固定样本集批量"
   },
   {
     "mapping_id": "MAP0036",
@@ -478,7 +494,8 @@
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "人工多数",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "人工评审"
   },
   {
     "mapping_id": "MAP0038",
@@ -517,7 +534,8 @@
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "压测/容量",
     "validation_primary_name": "精确匹配",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "同用例重复抽样"
   },
   {
     "mapping_id": "MAP0041",
@@ -530,7 +548,8 @@
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "确定性单次",
     "validation_primary_name": "精确匹配",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "压测/容量"
   },
   {
     "mapping_id": "MAP0042",
@@ -582,7 +601,8 @@
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "同用例重复抽样",
     "validation_primary_name": "达标率·中门槛",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "人工评审"
   },
   {
     "mapping_id": "MAP0046",
@@ -621,7 +641,8 @@
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "确定性单次",
     "validation_primary_name": "精确匹配",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "边界/等价类矩阵"
   },
   {
     "mapping_id": "MAP0049",
@@ -634,7 +655,8 @@
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "确定性单次",
     "validation_primary_name": "精确匹配",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "边界/等价类矩阵"
   },
   {
     "mapping_id": "MAP0050",
@@ -660,7 +682,8 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "多步链路串联",
     "validation_primary_name": "链路全过(别名)",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "边界/等价类矩阵"
   },
   {
     "mapping_id": "MAP0052",
@@ -673,7 +696,8 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "安全阻断·高",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "人工评审"
   },
   {
     "mapping_id": "MAP0053",
@@ -686,7 +710,8 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "零违规",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "validation_secondary_name": "精确匹配"
   },
   {
     "mapping_id": "MAP0054",
@@ -699,7 +724,8 @@
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
     "validation_primary_name": "零违规",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "固定样本集批量"
   },
   {
     "mapping_id": "MAP0055",
@@ -712,7 +738,8 @@
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "零违规",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "可观测稽核"
   },
   {
     "mapping_id": "MAP0056",
@@ -725,7 +752,8 @@
     "mapping_source": "C3-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
     "validation_primary_name": "零违规",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "固定样本集批量"
   },
   {
     "mapping_id": "MAP0057",
@@ -751,7 +779,8 @@
     "mapping_source": "C3-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "零违规",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "可观测稽核"
   },
   {
     "mapping_id": "MAP0059",
@@ -842,7 +871,8 @@
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "达标率·高门槛",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "边界/等价类矩阵"
   },
   {
     "mapping_id": "MAP0066",
@@ -855,7 +885,8 @@
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "多步链路串联",
     "validation_primary_name": "链路全过(别名)",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "固定样本集批量"
   },
   {
     "mapping_id": "MAP0067",
@@ -907,7 +938,8 @@
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "多步链路串联",
     "validation_primary_name": "链路全过(别名)",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "固定样本集批量"
   },
   {
     "mapping_id": "MAP0071",
@@ -972,7 +1004,8 @@
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "安全阻断·高",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "人工评审"
   },
   {
     "mapping_id": "MAP0076",
@@ -1089,7 +1122,8 @@
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "多步链路串联",
     "validation_primary_name": "链路全过(别名)",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "对照/跨端对比"
   },
   {
     "mapping_id": "MAP0085",
@@ -1102,7 +1136,8 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "达标率·高门槛",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "边界/等价类矩阵"
   },
   {
     "mapping_id": "MAP0086",
@@ -1115,7 +1150,8 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "边界/等价类矩阵",
     "validation_primary_name": "契约通过",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "多步链路串联"
   },
   {
     "mapping_id": "MAP0087",
@@ -1154,7 +1190,8 @@
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "安全阻断·高",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "人工评审"
   },
   {
     "mapping_id": "MAP0090",
@@ -1167,7 +1204,8 @@
     "mapping_source": "C3-方案映射.md",
     "scheme_primary_name": "多步链路串联",
     "validation_primary_name": "链路全过(别名)",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "同用例重复抽样"
   },
   {
     "mapping_id": "MAP0091",
@@ -1180,7 +1218,8 @@
     "mapping_source": "C4-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
     "validation_primary_name": "零违规",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "固定样本集批量"
   },
   {
     "mapping_id": "MAP0092",
@@ -1193,7 +1232,8 @@
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
     "validation_primary_name": "精确匹配",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "边界/等价类矩阵"
   },
   {
     "mapping_id": "MAP0093",
@@ -1310,7 +1350,8 @@
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "同用例重复抽样",
     "validation_primary_name": "达标率·中门槛",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "多步链路串联"
   },
   {
     "mapping_id": "MAP0102",
@@ -1362,7 +1403,8 @@
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "异常/对抗专项",
     "validation_primary_name": "安全阻断·高",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "固定样本集批量"
   },
   {
     "mapping_id": "MAP0106",
@@ -1375,7 +1417,8 @@
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "安全阻断·高",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "人工评审"
   },
   {
     "mapping_id": "MAP0107",
@@ -1388,7 +1431,8 @@
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "安全阻断·高",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "人工评审"
   },
   {
     "mapping_id": "MAP0108",
@@ -1401,7 +1445,8 @@
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "达标率·高门槛",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "异常/对抗专项"
   },
   {
     "mapping_id": "MAP0109",
@@ -1453,7 +1498,9 @@
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "压测/容量",
     "validation_primary_name": "性能SLO·中",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "确定性单次",
+    "validation_secondary_name": "精确匹配"
   },
   {
     "mapping_id": "MAP0113",
@@ -1479,7 +1526,8 @@
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "达标率·中门槛",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "人工评审"
   },
   {
     "mapping_id": "MAP0115",
@@ -1492,7 +1540,8 @@
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
     "validation_primary_name": "达标率·低门槛",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "多步链路串联"
   },
   {
     "mapping_id": "MAP0116",
@@ -1505,7 +1554,8 @@
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
     "validation_primary_name": "达标率·低门槛",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "多步链路串联"
   },
   {
     "mapping_id": "MAP0117",
@@ -1531,7 +1581,8 @@
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
     "validation_primary_name": "完整性",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "多步链路串联"
   },
   {
     "mapping_id": "MAP0119",
@@ -1544,7 +1595,8 @@
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
     "validation_primary_name": "存在性",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "多步链路串联"
   },
   {
     "mapping_id": "MAP0120",
@@ -1557,7 +1609,8 @@
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
     "validation_primary_name": "存在性",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "多步链路串联"
   },
   {
     "mapping_id": "MAP0121",
@@ -1570,7 +1623,8 @@
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
     "validation_primary_name": "完整性",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "确定性单次"
   },
   {
     "mapping_id": "MAP0122",
@@ -1620,7 +1674,9 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "多步链路串联",
     "validation_primary_name": "链路全过(别名)",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "可观测稽核",
+    "validation_secondary_name": "契约通过"
   },
   {
     "mapping_id": "MAP0126",
@@ -1633,7 +1689,8 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "边界/等价类矩阵",
     "validation_primary_name": "契约通过",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "人工评审"
   },
   {
     "mapping_id": "MAP0127",
@@ -1646,7 +1703,8 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "达标率·高门槛",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "人工评审"
   },
   {
     "mapping_id": "MAP0128",
@@ -1659,7 +1717,8 @@
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "零违规",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "异常/对抗专项"
   },
   {
     "mapping_id": "MAP0129",
@@ -1685,7 +1744,8 @@
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "多步链路串联",
     "validation_primary_name": "链路全过(别名)",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "可观测稽核"
   },
   {
     "mapping_id": "MAP0131",
@@ -1711,7 +1771,8 @@
     "mapping_source": "C3-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
     "validation_primary_name": "零违规",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "固定样本集批量"
   },
   {
     "mapping_id": "MAP0133",
@@ -1737,7 +1798,8 @@
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "同用例重复抽样",
     "validation_primary_name": "达标率·中门槛",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "人工评审"
   },
   {
     "mapping_id": "MAP0135",
@@ -1776,7 +1838,8 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "安全阻断·高",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "人工评审"
   },
   {
     "mapping_id": "MAP0138",
@@ -1789,7 +1852,8 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "零违规",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "validation_secondary_name": "精确匹配"
   },
   {
     "mapping_id": "MAP0139",
@@ -1802,7 +1866,8 @@
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "零违规",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "可观测稽核"
   },
   {
     "mapping_id": "MAP0140",
@@ -1815,7 +1880,8 @@
     "mapping_source": "C3-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "零违规",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "可观测稽核"
   },
   {
     "mapping_id": "MAP0141",
@@ -1854,7 +1920,8 @@
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "多步链路串联",
     "validation_primary_name": "链路全过(别名)",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "固定样本集批量"
   },
   {
     "mapping_id": "MAP0144",
@@ -1867,7 +1934,8 @@
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "多步链路串联",
     "validation_primary_name": "链路全过(别名)",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "对照/跨端对比"
   },
   {
     "mapping_id": "MAP0145",
@@ -1893,7 +1961,8 @@
     "mapping_source": "C1-方案映射.md",
     "scheme_primary_name": "边界/等价类矩阵",
     "validation_primary_name": "契约通过",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "多步链路串联"
   },
   {
     "mapping_id": "MAP0147",
@@ -1932,7 +2001,8 @@
     "mapping_source": "C2-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "安全阻断·高",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "人工评审"
   },
   {
     "mapping_id": "MAP0150",
@@ -1945,7 +2015,8 @@
     "mapping_source": "C4-方案映射.md",
     "scheme_primary_name": "对照/跨端对比",
     "validation_primary_name": "零违规",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "固定样本集批量"
   },
   {
     "mapping_id": "MAP0151",
@@ -1958,7 +2029,8 @@
     "mapping_source": "D-方案映射.md",
     "scheme_primary_name": "确定性单次",
     "validation_primary_name": "精确匹配",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "边界/等价类矩阵"
   },
   {
     "mapping_id": "MAP0152",
@@ -1997,7 +2069,8 @@
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "异常/对抗专项",
     "validation_primary_name": "安全阻断·高",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "固定样本集批量"
   },
   {
     "mapping_id": "MAP0155",
@@ -2010,7 +2083,8 @@
     "mapping_source": "E-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "达标率·高门槛",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "异常/对抗专项"
   },
   {
     "mapping_id": "MAP0156",
@@ -2023,7 +2097,9 @@
     "mapping_source": "F-方案映射.md",
     "scheme_primary_name": "压测/容量",
     "validation_primary_name": "性能SLO·中",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "确定性单次",
+    "validation_secondary_name": "精确匹配"
   },
   {
     "mapping_id": "MAP0157",
@@ -2049,7 +2125,8 @@
     "mapping_source": "G-方案映射.md",
     "scheme_primary_name": "固定样本集批量",
     "validation_primary_name": "达标率·中门槛",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "人工评审"
   },
   {
     "mapping_id": "MAP0159",
@@ -2062,7 +2139,8 @@
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
     "validation_primary_name": "完整性",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "多步链路串联"
   },
   {
     "mapping_id": "MAP0160",
@@ -2075,7 +2153,8 @@
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
     "validation_primary_name": "存在性",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "多步链路串联"
   },
   {
     "mapping_id": "MAP0161",
@@ -2088,7 +2167,8 @@
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
     "validation_primary_name": "存在性",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "多步链路串联"
   },
   {
     "mapping_id": "MAP0162",
@@ -2101,7 +2181,8 @@
     "mapping_source": "H-方案映射.md",
     "scheme_primary_name": "可观测稽核",
     "validation_primary_name": "完整性",
-    "project_code": "fitness-agent"
+    "project_code": "fitness-agent",
+    "scheme_secondary_name": "确定性单次"
   },
   {
     "mapping_id": "MAP0163",

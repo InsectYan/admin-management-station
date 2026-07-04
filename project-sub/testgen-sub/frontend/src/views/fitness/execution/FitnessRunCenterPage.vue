@@ -4,9 +4,13 @@
       <el-tab-pane label="进行中" name="running">
         <el-table v-loading="activeLoading" :data="activeRuns" stripe border size="small">
           <el-table-column prop="id" label="Run ID" width="80" />
-          <el-table-column prop="item_id" label="用例编码" width="140" />
-          <el-table-column prop="scheme_id" label="方案" width="100" />
-          <el-table-column prop="status" label="状态" width="100" />
+          <el-table-column prop="item_id" label="用例编码" minWidth="140" />
+          <el-table-column prop="scheme_id" label="方案" minWidth="100" />
+          <el-table-column prop="status" label="状态" width="100">
+            <template #default="{ row }">
+              <FitnessStatusTag prop="status" :row="row" />
+            </template>
+          </el-table-column>
           <el-table-column label="进度" min-width="180">
             <template #default="{ row }">
               <el-progress
@@ -19,7 +23,7 @@
           </el-table-column>
           <el-table-column label="操作" width="160" fixed="right">
             <template #default="{ row }">
-              <el-button link @click="router.push(`/fitness/execution/runs/${row.id}`)">控制台</el-button>
+              <el-button primary link @click="router.push(`/fitness/execution/runs/${row.id}`)">控制台</el-button>
               <el-button link type="warning" @click="cancelRun(row.id)">取消</el-button>
             </template>
           </el-table-column>
@@ -45,7 +49,7 @@
             </el-table-column>
             <el-table-column label="操作" width="100" fixed="right">
               <template #default="{ row }">
-                <el-button link @click="router.push(`/fitness/execution/runs/${row.id}`)">控制台</el-button>
+                <el-button type="primary" link @click="router.push(`/fitness/execution/runs/${row.id}`)">控制台</el-button>
               </template>
             </el-table-column>
           </template>
@@ -61,6 +65,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '@/components/PageShell.vue';
 import FitnessLabeledTable from '@/components/fitness/FitnessLabeledTable.vue';
+import FitnessStatusTag from '@/components/fitness/FitnessStatusTag.vue';
 import { cancelFtRun, fetchFtRuns, streamFtRun } from '@/services/fitnessService.js';
 
 const route = useRoute();
@@ -82,8 +87,8 @@ let pollTimer = null;
 
 const runColumns = [
   { prop: 'id', label: 'Run ID', width: 80 },
-  { prop: 'item_id', label: '用例编码', width: 140 },
-  { prop: 'scheme_id', label: '方案编码', width: 100 },
+  { prop: 'item_id', label: '用例编码', minWidth: 140 },
+  { prop: 'scheme_id', label: '方案编码', minWidth: 100 },
   { prop: 'status', label: '状态', width: 100 },
   { prop: 'verdict', label: '判定', width: 80 },
 ];

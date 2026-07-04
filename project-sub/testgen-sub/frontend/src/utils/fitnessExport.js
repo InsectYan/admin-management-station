@@ -24,13 +24,4 @@ function triggerDownload(filename, blob) {
   URL.revokeObjectURL(url);
 }
 
-export const RISK_RELATION_TAG = {
-  GUARD: { label: '防护', type: 'success' },
-  DETECT: { label: '检测', type: 'warning' },
-  VERIFY: { label: '验证', type: 'info' },
-  SYMPTOM: { label: '症状', type: 'danger' },
-};
-
-export function riskRelationTag(typeId) {
-  return RISK_RELATION_TAG[typeId] || { label: typeId, type: 'info' };
-}
+export { RISK_RELATION_TAG, riskRelationTag } from './fitnessStatusTags.js';

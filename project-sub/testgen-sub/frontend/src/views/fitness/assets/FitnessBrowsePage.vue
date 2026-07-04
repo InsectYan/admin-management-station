@@ -12,7 +12,7 @@
         />
       </el-col>
       <el-col :span="16">
-        <p v-if="selectedLabel" class="browse-label">当前: {{ selectedLabel }} ({{ total }} 项)</p>
+        <p v-if="selectedLabel" class="browse-label">当前: {{ selectedLabel }}</p>
         <FitnessLabeledTable
           :data="items"
           :columns="itemColumns"
@@ -49,18 +49,18 @@ const page = ref(1);
 const pageSize = ref(20);
 
 const itemColumns = [
-  { prop: 'item_id', label: '用例编码', width: 230 },
-  { prop: 'project_name', label: '项目名称', width: 140 },
-  { prop: 'item_name', label: '名称', minWidth: 200 },
+  { prop: 'item_id', label: '用例编码', width: 140 },
+  { prop: 'detail_summary', label: '名称', minWidth: 200 },
   { prop: 'priority_name', label: '优先级', width: 90 },
   { prop: 'scheme_primary_name', label: '主方案', width: 120 },
+  { prop: 'project_name', label: '项目名称', minWidth: 180 },
 ];
 
 const treeData = computed(() => {
   if (!treeRaw.value) return [];
   return treeRaw.value.dimensions.map(d => ({
     id: `d-${d.dimension_id}`,
-    label: `${d.dimension_id} ${d.name}`,
+    label: `${d.name}`,
     type: 'dimension',
     value: d.dimension_id,
     children: treeRaw.value.majors

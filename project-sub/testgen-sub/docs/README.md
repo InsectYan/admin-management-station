@@ -14,6 +14,17 @@
 
 ---
 
+## Fitness 测试文档（DB 真源副本）
+
+| 文档 | 说明 |
+|------|------|
+| [fitness-test-docs/README.md](./fitness-test-docs/README.md) | 测试分类、核心细节、方案映射（自 `fitness-agent-test-docs` 引入） |
+| [fitness-test-docs/文档与数据库字段对照.md](./fitness-test-docs/文档与数据库字段对照.md) | `source_doc` / `scheme_mapping_source` ↔ Markdown 对照 |
+
+改映射或测试项时须联动 `database/` 并遵循 `.cursor/rules/fitness-test-docs-sync.mdc`。
+
+---
+
 ## 设计文档
 
 | 文档 | 说明 | 原文件名 |

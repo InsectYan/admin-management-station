@@ -1,5 +1,27 @@
 ﻿<template>
   <PageShell title="测试计划向导">
+    <template #extra>
+      <div class="plan-wizard-nav">
+        <el-button
+          v-if="step > 0"
+          link
+          :icon="ArrowLeft"
+          @click="prevStep"
+        >
+          上一步
+        </el-button>
+        <el-button
+          v-if="step < 5"
+          link
+          type="primary"
+          @click="nextStep"
+        >
+          下一步
+          <el-icon class="plan-wizard-nav__icon-right"><ArrowRight /></el-icon>
+        </el-button>
+      </div>
+    </template>
+
     <el-steps :active="step" finish-status="success" align-center style="margin-bottom:24px">
       <el-step title="基本信息" />
       <el-step title="目标范围" />
@@ -52,7 +74,7 @@
             <span class="goal-id">{{ g.prd_goal_id }}</span>
             <span class="goal-name">{{ g.goal_name }}</span>
             <el-tag size="small" :type="coverageTagType(g.coverage_note)" style="margin-left: 8px">
-              {{ g.coverage_note || '-' }}
+              {{ statusCellLabel('coverage_note', g, g.coverage_note) }}
             </el-tag>
             <span class="goal-meta">关联 {{ g.linked_item_count ?? 0 }} 条 · P0 {{ g.linked_p0_count ?? 0 }} 条</span>
           </el-checkbox>
@@ -135,7 +157,7 @@
         <ul class="preview-list">
           <li v-for="g in selectedGoalDetails" :key="g.prd_goal_id">
             {{ g.prd_goal_id }} · {{ g.goal_name }}
-            <el-tag size="small" :type="coverageTagType(g.coverage_note)">{{ g.coverage_note }}</el-tag>
+            <el-tag size="small" :type="coverageTagType(g.coverage_note)">{{ statusCellLabel('coverage_note', g, g.coverage_note) }}</el-tag>
           </li>
         </ul>
       </el-card>
@@ -179,16 +201,11 @@
         <li v-for="(line, i) in releaseCriteria" :key="i">{{ line }}</li>
       </ul>
       <p v-if="readinessSignal" class="readiness-hint">
-        当前发版信号：<el-tag :type="readinessTag">{{ readinessSignal }}</el-tag>
+        当前发版信号：<FitnessStatusTag prop="release_signal" :value="readinessSignal" />
       </p>
       <el-button type="primary" :loading="saving" :disabled="!form.name" @click="submit">创建计划</el-button>
       <el-button :loading="exporting" @click="exportDraft">导出计划 Markdown</el-button>
       <el-button :loading="exportingHtml" @click="exportDraftHtml">导出 HTML（可打印 PDF）</el-button>
-    </div>
-
-    <div style="margin-top:24px">
-      <el-button v-if="step > 0" @click="step -= 1">上一步</el-button>
-      <el-button v-if="step < 5" type="primary" @click="nextStep">下一步</el-button>
     </div>
   </PageShell>
 </template>
@@ -196,10 +213,16 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import PageShell from '@/components/PageShell.vue';
 import ItemFilterBar from '@/components/fitness/ItemFilterBar.vue';
 import FitnessLabeledTable from '@/components/fitness/FitnessLabeledTable.vue';
+import FitnessStatusTag from '@/components/fitness/FitnessStatusTag.vue';
+import {
+  coverageTagType,
+  statusCellLabel,
+} from '@/utils/fitnessStatusTags.js';
 import {
   RELEASE_CRITERIA,
   THRESHOLD_DEFAULTS,
@@ -247,14 +270,6 @@ const wizardItemColumns = [
   { prop: 'automation_status_name', label: '自动化', width: 96 },
 ];
 
-const readinessTag = computed(() => {
-  const s = (readinessSignal.value || '').toUpperCase();
-  if (s === 'GREEN') return 'success';
-  if (s === 'YELLOW') return 'warning';
-  if (s === 'RED') return 'danger';
-  return 'info';
-});
-
 const selectedGoalDetails = computed(() =>
   prdGoals.value.filter(g => selectedGoals.value.includes(g.prd_goal_id)),
 );
@@ -276,13 +291,6 @@ const configuredThresholds = computed(() =>
 );
 
 const previewItems = computed(() => selectedItemRows.value.slice(0, 20));
-
-function coverageTagType(note) {
-  if (note === 'OK') return 'success';
-  if (note === 'LOW') return 'warning';
-  if (note === 'GAP') return 'danger';
-  return 'info';
-}
 
 function onSelect(rows) {
   selectedItemRows.value = rows;
@@ -330,6 +338,10 @@ async function nextStep() {
     await searchItems();
   }
   step.value += 1;
+}
+
+function prevStep() {
+  if (step.value > 0) step.value -= 1;
 }
 
 function buildThresholdPayload() {
@@ -509,5 +521,13 @@ onMounted(async () => {
 .threshold-hint {
   font-size: 12px;
   color: var(--el-text-color-placeholder);
+}
+.plan-wizard-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.plan-wizard-nav__icon-right {
+  margin-left: 4px;
 }
 </style>

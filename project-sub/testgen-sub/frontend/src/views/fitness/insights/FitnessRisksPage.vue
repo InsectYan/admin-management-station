@@ -76,12 +76,12 @@ const links = ref([]);
 const graphRef = ref(null);
 let graphInstance = null;
 
-const riskColumns = [
+const riskColumns = ref([
   { prop: 'item_id', label: '风险编码', width: 140 },
   { prop: 'item_name', label: '风险名称', minWidth: 200 },
   { prop: 'coverage_status', label: '覆盖状态', width: 100 },
-  { prop: 'guard_count', label: '防护数', width: 80 },
-];
+  { prop: 'guard_link_count', label: '防护链接数', width: 100 },
+]);
 
 function onTabChange(tab) {
   if (tab === 'graph') loadLinks();
@@ -156,6 +156,14 @@ async function loadRisks() {
     });
     risks.value = data.list || [];
     total.value = data.total || 0;
+    if (data.columns?.length) {
+      riskColumns.value = data.columns.map(c => ({
+        prop: c.prop,
+        label: c.label,
+        minWidth: c.prop === 'item_id' ? undefined : 100,
+        width: c.prop === 'item_id' ? 140 : undefined,
+      }));
+    }
   } finally {
     loading.value = false;
   }

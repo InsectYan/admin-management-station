@@ -61,8 +61,9 @@ async function syncSchema() {
   );
   try {
     const dbDir = await bootstrapFitnessSchema(sequelize, { baseDir: path.join(__dirname, '..') });
+    await runViewsBootstrap(sequelize, dbDir, console);
     await runPostSeedMigrations(sequelize, dbDir, console);
-    console.log('[db] Schema 同步完成（DDL + Fitness 表 + 运行时表 + post-seed 迁移）');
+    console.log('[db] Schema 同步完成（DDL + Fitness 表 + 分析视图 + post-seed 迁移）');
   } finally {
     await sequelize.close();
   }

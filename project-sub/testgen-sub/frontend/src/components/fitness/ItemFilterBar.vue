@@ -53,10 +53,10 @@
       <el-option v-for="p in options.priorities" :key="p.priority_id" :label="p.name || p.priority_id" :value="p.priority_id" />
     </el-select>
     <el-select v-model="local.scheme_primary_id" placeholder="TS" clearable filterable style="width:130px" @change="emitChange">
-      <el-option v-for="s in options.schemes" :key="s.scheme_id" :label="`${s.scheme_id} ${s.name || ''}`.trim()" :value="s.scheme_id" />
+      <el-option v-for="s in options.schemes" :key="s.scheme_id" :label="s.name || s.scheme_id" :value="s.scheme_id" />
     </el-select>
     <el-select v-model="local.validation_primary_id" placeholder="VS" clearable filterable style="width:140px" @change="emitChange">
-      <el-option v-for="v in options.validations" :key="v.validation_id" :label="`${v.validation_id} ${v.name || ''}`.trim()" :value="v.validation_id" />
+      <el-option v-for="v in options.validations" :key="v.validation_id" :label="v.name || v.validation_id" :value="v.validation_id" />
     </el-select>
     <el-select v-model="local.automation_status_id" placeholder="自动化" clearable style="width:130px" @change="emitChange">
       <el-option v-for="a in options.automation" :key="a.automation_status_id" :label="a.name || a.automation_status_id" :value="a.automation_status_id" />

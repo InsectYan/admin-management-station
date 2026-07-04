@@ -2,21 +2,25 @@
   {
     "automation_status_id": "AUTO_EXISTING",
     "item_count": 31,
-    "pct_of_all": 8.09
+    "pct_of_all": 8.09,
+    "status_name": "已有自动化"
   },
   {
     "automation_status_id": "AUTO_PARTIAL",
     "item_count": 13,
-    "pct_of_all": 3.39
+    "pct_of_all": 3.39,
+    "status_name": "部分自动化"
   },
   {
     "automation_status_id": "AUTO_TODO",
     "item_count": 335,
-    "pct_of_all": 87.47
+    "pct_of_all": 87.47,
+    "status_name": "待建"
   },
   {
     "automation_status_id": "AUTO_MANUAL",
     "item_count": 4,
-    "pct_of_all": 1.04
+    "pct_of_all": 1.04,
+    "status_name": "人工"
   }
 ]
