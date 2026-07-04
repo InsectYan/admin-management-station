@@ -38,6 +38,7 @@
 
     <el-button type="primary" size="small" @click="addCase">添加用例</el-button>
 
+    <TableJsonImportButton array-key="cases" @import="importCases" />
     <el-table :data="cases" size="small" border style="margin-top:12px">
 
       <el-table-column label="Path" min-width="180">
@@ -120,6 +121,7 @@
 
 import { onMounted, ref, watch } from 'vue';
 
+import TableJsonImportButton from '@/components/config-templates/TableJsonImportButton.vue';
 
 
 const props = defineProps({
@@ -211,6 +213,24 @@ function addCase() {
 function removeCase(index) {
 
   cases.value.splice(index, 1);
+
+  sync();
+
+}
+
+
+
+function importCases(rows) {
+
+  cases.value = rows.map(r => ({
+
+    ...defaultCase(),
+
+    ...r,
+
+    block_statuses_text: (r.block_statuses || defaultCase().block_statuses).join(','),
+
+  }));
 
   sync();
 

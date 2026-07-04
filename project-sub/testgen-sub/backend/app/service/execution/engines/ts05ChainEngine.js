@@ -1,5 +1,6 @@
 'use strict';
 
+const { randomUUID } = require('crypto');
 const { emitProgress } = require('../../../lib/fitnessRunEvents');
 const BaseTsEngine = require('./baseTsEngine');
 const { executeMatrixRow } = require('../runners/matrixRowRunner');
@@ -22,7 +23,10 @@ class Ts05ChainEngine extends BaseTsEngine {
     }
 
     /** @type {Record<string, unknown>} */
-    const vars = { ...(runConfig?.config_json?.vars || {}) };
+    const vars = {
+      uuid: randomUUID(),
+      ...(runConfig?.config_json?.vars || {}),
+    };
     const results = [];
     let passCount = 0;
     const total = steps.length;

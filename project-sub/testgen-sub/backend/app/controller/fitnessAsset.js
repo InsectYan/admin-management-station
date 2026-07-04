@@ -50,6 +50,19 @@ class FitnessAssetController extends Controller {
     this.ctx.body = { code: 0, message: 'ok', data };
   }
 
+  async updateItemSchemes() {
+    try {
+      const data = await this.service.fitnessAsset.updateItemSchemes(
+        this.ctx.params.itemId,
+        this.ctx.request.body || {},
+      );
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      this.ctx.status = err.status || 400;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
   async browse() {
     const data = await this.service.fitnessAsset.browseTree();
     this.ctx.body = { code: 0, message: 'ok', data };

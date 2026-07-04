@@ -8,6 +8,7 @@
     </el-form-item>
     <el-divider content-position="left">边界矩阵 (config_json.matrix)</el-divider>
     <el-button type="primary" size="small" @click="addRow">添加行</el-button>
+    <TableJsonImportButton array-key="matrix" @import="importRows" />
     <el-table :data="matrix" size="small" border style="margin-top:12px">
       <el-table-column label="Runner" width="100">
         <template #default="{ row }">
@@ -63,6 +64,7 @@
 
 <script setup>
 import { onMounted, ref, watch } from 'vue';
+import TableJsonImportButton from '@/components/config-templates/TableJsonImportButton.vue';
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -93,6 +95,11 @@ function addRow() {
 
 function removeRow(index) {
   matrix.value.splice(index, 1);
+  sync();
+}
+
+function importRows(rows) {
+  matrix.value = rows.map(r => ({ ...defaultRow(), ...r }));
   sync();
 }
 

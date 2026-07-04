@@ -79,9 +79,12 @@ class FitnessPlanService extends require('egg').Service {
 
   async syncThresholds(planId, thresholds) {
     await this.ctx.model.TestPlanThreshold.destroy({ where: { plan_id: planId } });
-    if (!thresholds.length) return;
+    const valid = (thresholds || []).filter(
+      t => t.param_id && t.param_value !== undefined && t.param_value !== null && t.param_value !== '',
+    );
+    if (!valid.length) return;
     await this.ctx.model.TestPlanThreshold.bulkCreate(
-      thresholds.map(t => ({ plan_id: planId, param_id: t.param_id, param_value: t.param_value, notes: t.notes })),
+      valid.map(t => ({ plan_id: planId, param_id: t.param_id, param_value: t.param_value, notes: t.notes })),
     );
   }
 

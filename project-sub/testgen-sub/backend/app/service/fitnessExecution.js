@@ -1,5 +1,7 @@
 'use strict';
 
+const { buildSchemePhases } = require('../lib/schemePhaseHelper');
+
 const RunOrchestrator = require('./execution/runOrchestrator');
 const vsRegistry = require('./execution/vsRegistry');
 const { buildK6Script } = require('../lib/k6ScriptBuilder');
@@ -282,19 +284,49 @@ class FitnessExecutionService extends require('egg').Service {
   }
 
   async getRun(id) {
-    const run = await this.ctx.model.FtRun.findByPk(id);
+    let run = await this.ctx.model.FtRun.findByPk(id);
     if (!run) return null;
-    const [ results, steps ] = await Promise.all([
+
+    const rootRunId = run.parent_run_id || run.id;
+    if (run.parent_run_id) {
+      run = await this.ctx.model.FtRun.findByPk(rootRunId);
+      if (!run) return null;
+    }
+
+    const secondaryRun = await this.ctx.model.FtRun.findOne({
+      where: { parent_run_id: rootRunId, sequence_index: 1 },
+      order: [[ 'id', 'DESC' ]],
+    });
+
+    const item = await this.orchestrator().loadItem(run.item_id);
+    const scheme_phases = buildSchemePhases(item, run, secondaryRun);
+
+    const [ results, steps, secondaryResults ] = await Promise.all([
       this.ctx.model.FtRunResult.findAll({
-        where: { ft_run_id: id },
+        where: { ft_run_id: rootRunId },
         order: [[ 'sub_index', 'ASC' ]],
       }),
       this.ctx.model.FtRunStep.findAll({
-        where: { ft_run_id: id },
+        where: { ft_run_id: rootRunId },
         order: [[ 'step_index', 'ASC' ]],
       }),
+      secondaryRun
+        ? this.ctx.model.FtRunResult.findAll({
+          where: { ft_run_id: secondaryRun.id },
+          order: [[ 'sub_index', 'ASC' ]],
+        })
+        : Promise.resolve([]),
     ]);
-    return { ...run.toJSON(), results, steps };
+
+    return {
+      ...run.toJSON(),
+      results,
+      steps,
+      scheme_phases,
+      secondary_run: secondaryRun
+        ? { ...secondaryRun.toJSON(), results: secondaryResults }
+        : null,
+    };
   }
 
   async listRunSteps(runId) {

@@ -99,6 +99,7 @@ module.exports = app => {
   router.post('/api/fitness/items/batch-delete', controller.fitnessAsset.batchDeleteItems);
   router.delete('/api/fitness/items/:itemId', controller.fitnessAsset.deleteItem);
   router.get('/api/fitness/items/:itemId', controller.fitnessAsset.showItem);
+  router.put('/api/fitness/items/:itemId/schemes', controller.fitnessAsset.updateItemSchemes);
   router.get('/api/fitness/browse', controller.fitnessAsset.browse);
   router.get('/api/fitness/schemes', controller.fitnessAsset.schemes);
   router.get('/api/fitness/enums/:table', controller.fitnessAsset.listEnums);

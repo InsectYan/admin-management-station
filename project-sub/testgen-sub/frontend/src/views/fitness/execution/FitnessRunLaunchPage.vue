@@ -15,8 +15,10 @@
     <el-checkbox-group v-model="checkedPre">
       <el-checkbox v-for="(p,i) in item?.preconditions||[]" :key="i" :label="p">{{ p }}</el-checkbox>
     </el-checkbox-group>
+    <el-divider content-position="left">执行方案</el-divider>
+    <SchemePhaseTable :phases="launchPhases" />
+    <p v-if="hasSecondary" class="hint">主方案完成后自动串联执行辅方案</p>
     <el-divider />
-    <p>TS: {{ schemeId }} · VS: {{ validationId }}</p>
     <p v-if="isSetScheme">样本集 ID: {{ runConfig?.sample_set_id || '未绑定' }}</p>
     <p v-if="isBndScheme">矩阵行数: {{ matrixCount }}</p>
     <p v-if="isRepScheme">重复次数: {{ repeatCount }}</p>
@@ -24,6 +26,9 @@
     <p v-if="isPairScheme">对照臂: {{ pairArmCount }}</p>
     <p v-if="isNegScheme">对抗用例: {{ negCaseCount }}</p>
     <p v-if="isObsScheme">可观测检查: {{ obsCheckCount }}</p>
+    <p v-if="hasSecondary && isSecondarySetScheme">辅方案样本集: {{ secondaryRunConfig?.sample_set_id || '未绑定' }}</p>
+    <p v-if="hasSecondary && isSecondaryBndScheme">辅方案矩阵行数: {{ secondaryMatrixCount }}</p>
+    <p v-if="hasSecondary && isSecondaryChainScheme">辅方案链路步骤: {{ secondaryChainStepCount }}</p>
     <div class="launch-actions">
       <el-button
         type="primary"
@@ -77,6 +82,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import SchemePhaseTable from '@/components/fitness/SchemePhaseTable.vue';
 import {
   LAUNCHABLE_SCHEMES,
   dryRunLaunch,
@@ -96,6 +102,7 @@ const dryRunning = ref(false);
 const dryRunResult = ref(null);
 const item = ref(null);
 const runConfig = ref(null);
+const secondaryRunConfig = ref(null);
 const envs = ref([]);
 const envId = ref(null);
 const checkedPre = ref([]);
@@ -103,6 +110,37 @@ const engineMsg = ref('');
 
 const schemeId = computed(() => item.value?.scheme_primary_id || '');
 const validationId = computed(() => item.value?.validation_primary_id || '');
+const secondarySchemeId = computed(() => item.value?.scheme_secondary_id || '');
+const hasSecondary = computed(() => Boolean(secondarySchemeId.value));
+
+const launchPhases = computed(() => {
+  const phases = [
+    {
+      role: 'primary',
+      role_label: '主方案',
+      scheme_id: schemeId.value,
+      scheme_name: item.value?.scheme_primary_name,
+      validation_id: validationId.value,
+      validation_name: item.value?.validation_primary_name,
+      status: 'pending',
+      status_label: '等待中',
+    },
+  ];
+  if (hasSecondary.value) {
+    phases.push({
+      role: 'secondary',
+      role_label: '辅方案',
+      scheme_id: secondarySchemeId.value,
+      scheme_name: item.value?.scheme_secondary_name,
+      validation_id: item.value?.validation_secondary_id,
+      validation_name: item.value?.validation_secondary_name,
+      status: 'pending',
+      status_label: '等待中',
+    });
+  }
+  return phases;
+});
+
 const isSetScheme = computed(() => schemeId.value === 'TS-04-SET');
 const isBndScheme = computed(() => schemeId.value === 'TS-02-BND');
 const isRepScheme = computed(() => schemeId.value === 'TS-03-REP');
@@ -110,8 +148,15 @@ const isChainScheme = computed(() => schemeId.value === 'TS-05-CHAIN');
 const isPairScheme = computed(() => schemeId.value === 'TS-06-PAIR');
 const isNegScheme = computed(() => schemeId.value === 'TS-07-NEG');
 const isObsScheme = computed(() => schemeId.value === 'TS-08-OBS');
+
+const isSecondarySetScheme = computed(() => secondarySchemeId.value === 'TS-04-SET');
+const isSecondaryBndScheme = computed(() => secondarySchemeId.value === 'TS-02-BND');
+const isSecondaryChainScheme = computed(() => secondarySchemeId.value === 'TS-05-CHAIN');
+
 const matrixCount = computed(() => runConfig.value?.config_json?.matrix?.length ?? 0);
+const secondaryMatrixCount = computed(() => secondaryRunConfig.value?.config_json?.matrix?.length ?? 0);
 const chainStepCount = computed(() => runConfig.value?.config_json?.steps?.length ?? 0);
+const secondaryChainStepCount = computed(() => secondaryRunConfig.value?.config_json?.steps?.length ?? 0);
 const pairArmCount = computed(() => runConfig.value?.config_json?.pairs?.length ?? 0);
 const negCaseCount = computed(() => runConfig.value?.config_json?.cases?.length ?? 0);
 const obsCheckCount = computed(() => {
@@ -124,18 +169,30 @@ const repeatCount = computed(() =>
   ?? runConfig.value?.threshold_json?.passk_N
   ?? '-',
 );
-const canLaunch = computed(() => {
-  if (!envId.value || !LAUNCHABLE_SCHEMES.has(schemeId.value)) return false;
-  if (isSetScheme.value && !runConfig.value?.sample_set_id) return false;
-  if (isBndScheme.value && matrixCount.value === 0) return false;
-  if (isRepScheme.value) {
-    const n = Number(repeatCount.value);
-    if (!Number.isFinite(n) || n < 1) return false;
+
+function schemeConfigReady(id, config) {
+  if (!LAUNCHABLE_SCHEMES.has(id)) return false;
+  if (id === 'TS-04-SET') return Boolean(config?.sample_set_id);
+  if (id === 'TS-02-BND') return (config?.config_json?.matrix?.length ?? 0) > 0;
+  if (id === 'TS-03-REP') {
+    const n = Number(config?.config_json?.repeat_count ?? config?.threshold_json?.passk_N);
+    return Number.isFinite(n) && n >= 1;
   }
-  if (isChainScheme.value && chainStepCount.value === 0) return false;
-  if (isPairScheme.value && pairArmCount.value === 0) return false;
-  if (isNegScheme.value && negCaseCount.value === 0) return false;
-  if (isObsScheme.value && obsCheckCount.value === 0) return false;
+  if (id === 'TS-05-CHAIN') return (config?.config_json?.steps?.length ?? 0) > 0;
+  if (id === 'TS-06-PAIR') return (config?.config_json?.pairs?.length ?? 0) > 0;
+  if (id === 'TS-07-NEG') return (config?.config_json?.cases?.length ?? 0) > 0;
+  if (id === 'TS-08-OBS') {
+    const c = config?.config_json?.checks;
+    if (Array.isArray(c) && c.length) return true;
+    return Boolean(config?.config_json?.mode);
+  }
+  return true;
+}
+
+const canLaunch = computed(() => {
+  if (!envId.value) return false;
+  if (!schemeConfigReady(schemeId.value, runConfig.value)) return false;
+  if (hasSecondary.value && !schemeConfigReady(secondarySchemeId.value, secondaryRunConfig.value)) return false;
   return true;
 });
 const canDryRun = computed(() => envId.value && LAUNCHABLE_SCHEMES.has(schemeId.value));
@@ -152,9 +209,23 @@ async function loadLaunchData() {
     envs.value = envData.list || [];
     const def = envs.value.find(e => e.is_default) || envs.value[0];
     envId.value = def?.id ?? null;
+
+    const configTasks = [];
     if (itemData.scheme_primary_id) {
-      runConfig.value = await fetchRunConfig(itemId.value, itemData.scheme_primary_id);
+      configTasks.push(
+        fetchRunConfig(itemId.value, itemData.scheme_primary_id).then(cfg => { runConfig.value = cfg; }),
+      );
+    } else {
+      runConfig.value = null;
     }
+    if (itemData.scheme_secondary_id) {
+      configTasks.push(
+        fetchRunConfig(itemId.value, itemData.scheme_secondary_id).then(cfg => { secondaryRunConfig.value = cfg; }),
+      );
+    } else {
+      secondaryRunConfig.value = null;
+    }
+    await Promise.all(configTasks);
   } finally {
     loading.value = false;
   }
@@ -204,5 +275,10 @@ onMounted(loadLaunchData);
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+.hint {
+  margin-top: 8px;
+  color: #909399;
+  font-size: 13px;
 }
 </style>

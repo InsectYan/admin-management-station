@@ -256,7 +256,77 @@ class ConfigTemplateService extends require('egg').Service {
     return table;
   }
 
-  async getItemConfig(itemId) {
+  async _resolveConfigContext(itemId, schemeRole = 'primary') {
+    const item = await this.loadItem(itemId);
+    if (!item) {
+      const err = new Error('用例不存在');
+      err.status = 404;
+      throw err;
+    }
+
+    const isSecondary = schemeRole === 'secondary';
+    const schemeId = isSecondary ? item.scheme_secondary_id : item.scheme_primary_id;
+    if (isSecondary && !schemeId) {
+      const err = new Error('未配置辅方案，请先在详情页设置');
+      err.status = 400;
+      throw err;
+    }
+
+    let templateCode;
+    if (isSecondary) {
+      templateCode = SCHEME_TO_TEMPLATE[schemeId];
+    } else {
+      templateCode = await this.resolveTemplateCodeForItem(item);
+    }
+    if (!templateCode) {
+      const err = new Error(`方案 ${schemeId || '-'} 无对应配置模板`);
+      err.status = 400;
+      throw err;
+    }
+
+    const meta = await this.getTemplateMeta(templateCode);
+    return {
+      item,
+      schemeId,
+      templateCode,
+      meta,
+      isSecondary,
+      scheme_role: isSecondary ? 'secondary' : 'primary',
+    };
+  }
+
+  async getItemConfig(itemId, options = {}) {
+    const schemeRole = options.scheme_role || 'primary';
+    const ctx = await this._resolveConfigContext(itemId, schemeRole);
+
+    if (ctx.isSecondary) {
+      const runCfg = await this.ctx.service.fitnessExecution.getRunConfig(itemId, ctx.schemeId);
+      const defaultConfig = this._defaultConfigFromItem(ctx.item, ctx.templateCode);
+      const rc = runCfg?.toJSON ? runCfg.toJSON() : runCfg;
+      let configJson = rc?.config_json || defaultConfig.config_json;
+      if (rc) {
+        configJson = {
+          ...configJson,
+          use_api_template: rc.use_api_template ?? configJson.use_api_template,
+          api_template_id: rc.api_template_id ?? configJson.api_template_id,
+          inject_bindings: rc.inject_bindings || configJson.inject_bindings || {},
+        };
+      }
+      return {
+        item_id: itemId,
+        item: ctx.item,
+        scheme_role: 'secondary',
+        scheme_id: ctx.schemeId,
+        template_code: ctx.templateCode,
+        template: { ...ctx.meta, scheme_id: ctx.schemeId },
+        config_json: configJson,
+        threshold_json: rc?.threshold_json || defaultConfig.threshold_json,
+        sample_set_id: rc?.sample_set_id ?? defaultConfig.sample_set_id,
+        config_source: 'manual',
+        configured: Boolean(runCfg),
+      };
+    }
+
     const { item, templateCode, meta } = await this.ensureItemTemplateCode(itemId);
     const table = this._tableForCode(templateCode);
     let row = null;
@@ -288,6 +358,8 @@ class ConfigTemplateService extends require('egg').Service {
     return {
       item_id: itemId,
       item,
+      scheme_role: 'primary',
+      scheme_id: schemeId,
       template_code: templateCode,
       template: meta,
       config_json: configJson,
@@ -317,6 +389,29 @@ class ConfigTemplateService extends require('egg').Service {
   }
 
   async saveItemConfig(itemId, body = {}) {
+    const schemeRole = body.scheme_role || 'primary';
+    const ctx = await this._resolveConfigContext(itemId, schemeRole);
+
+    if (ctx.isSecondary) {
+      let configJson = body.config_json || {};
+      if (ctx.templateCode === 'TPL-DET') {
+        configJson = normalizeDetConfigJson(configJson);
+      }
+      const thresholdJson = body.threshold_json || {};
+      const sampleSetId = body.sample_set_id ?? configJson.sample_set_id ?? null;
+      await this.ctx.service.fitnessExecution.saveRunConfig(itemId, {
+        scheme_id: ctx.schemeId,
+        config_json: configJson,
+        threshold_json: thresholdJson,
+        sample_set_id: sampleSetId,
+        env_id: body.env_id,
+        api_template_id: configJson.api_template_id ?? null,
+        use_api_template: Boolean(configJson.use_api_template),
+        inject_bindings: configJson.inject_bindings || {},
+      });
+      return this.getItemConfig(itemId, { scheme_role: 'secondary' });
+    }
+
     const { templateCode, meta } = await this.ensureItemTemplateCode(itemId);
     const table = this._tableForCode(templateCode);
     let configJson = body.config_json || {};
@@ -424,7 +519,7 @@ class ConfigTemplateService extends require('egg').Service {
       );
     }
 
-    return this.getItemConfig(itemId);
+    return this.getItemConfig(itemId, { scheme_role: 'primary' });
   }
 
   async generateItemConfig(itemId, body = {}) {

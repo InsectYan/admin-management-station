@@ -53,7 +53,8 @@ class ConfigTemplateController extends Controller {
 
   async getItemConfig() {
     const { itemId } = this.ctx.params;
-    const data = await this.ctx.service.configTemplate.getItemConfig(itemId);
+    const scheme_role = this.ctx.query.scheme_role || 'primary';
+    const data = await this.ctx.service.configTemplate.getItemConfig(itemId, { scheme_role });
     this.ctx.body = { code: 0, message: 'ok', data };
   }
 

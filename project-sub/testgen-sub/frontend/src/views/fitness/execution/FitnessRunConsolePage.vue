@@ -60,12 +60,15 @@
         </el-button>
         <span v-else>—</span>
       </el-descriptions-item>
-      <el-descriptions-item label="TS">{{ run.scheme_id }}</el-descriptions-item>
-      <el-descriptions-item label="VS">{{ run.validation_id || '-' }}</el-descriptions-item>
       <el-descriptions-item label="状态">{{ run.status }}</el-descriptions-item>
       <el-descriptions-item label="判定">{{ run.verdict || '-' }}</el-descriptions-item>
       <el-descriptions-item label="进度" :span="2">{{ progressLabel }}</el-descriptions-item>
     </el-descriptions>
+
+    <el-card v-if="displayPhases.length" shadow="never" style="margin-top:16px">
+      <template #header>执行方案</template>
+      <SchemePhaseTable :phases="displayPhases" show-verdict />
+    </el-card>
 
     <el-row v-if="run" :gutter="16" style="margin:16px 0">
       <el-col :span="12">
@@ -105,7 +108,7 @@
     />
 
     <el-tabs v-model="resultTab" style="margin-top:16px">
-      <el-tab-pane label="子项结果" name="subs">
+      <el-tab-pane label="主方案子项" name="subs">
         <el-table :data="run?.results||[]" size="small" row-key="sub_index">
           <el-table-column type="expand">
             <template #default="{ row }">
@@ -115,6 +118,20 @@
               <span v-else class="expand-ok">已通过</span>
             </template>
           </el-table-column>
+          <el-table-column prop="sub_index" label="#" width="50" />
+          <el-table-column prop="input_summary" label="输入" min-width="160" />
+          <el-table-column prop="output_summary" label="输出" min-width="160" />
+          <el-table-column prop="sub_verdict" label="判定" width="80">
+            <template #default="{ row }">
+              <el-tag :type="row.sub_verdict === 'pass' ? 'success' : 'danger'" size="small">
+                {{ row.sub_verdict }}
+              </el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-tab-pane>
+      <el-tab-pane v-if="run?.secondary_run?.results?.length" label="辅方案链路" name="secondary">
+        <el-table :data="run.secondary_run.results" size="small" row-key="sub_index">
           <el-table-column prop="sub_index" label="#" width="50" />
           <el-table-column prop="input_summary" label="输入" min-width="160" />
           <el-table-column prop="output_summary" label="输出" min-width="160" />
@@ -205,6 +222,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '@/components/PageShell.vue';
 import PassFailChart from '@/components/fitness/PassFailChart.vue';
+import SchemePhaseTable from '@/components/fitness/SchemePhaseTable.vue';
 import RunSubResultExpand from '@/components/fitness/RunSubResultExpand.vue';
 import ToolChainTracePanel from '@/components/observability/ToolChainTracePanel.vue';
 import RunStepGanttPanel from '@/components/observability/RunStepGanttPanel.vue';
@@ -232,6 +250,7 @@ const router = useRouter();
 const loading = ref(false);
 const run = ref(null);
 const liveProgress = ref(null);
+const liveSchemePhases = ref(null);
 const resultTab = ref('subs');
 const liveSteps = ref([]);
 const focusTraceId = ref('');
@@ -250,6 +269,8 @@ const failureCollapseActive = ref('');
 let es = null;
 
 const isTerminal = computed(() => run.value && TERMINAL.has(run.value.status));
+
+const displayPhases = computed(() => liveSchemePhases.value || run.value?.scheme_phases || []);
 
 const progressPercent = computed(() => {
   const p = liveProgress.value?.percent ?? run.value?.progress?.percent;
@@ -354,6 +375,7 @@ const canRerunFailed = computed(() =>
 
 async function reloadRun() {
   run.value = await fetchFtRun(route.params.runId);
+  liveSchemePhases.value = run.value?.scheme_phases || null;
   if (isTerminal.value) liveSteps.value = run.value?.steps || [];
   if (failurePanels.value.length) {
     failureCollapseActive.value = failurePanels.value[0].sub_index;
@@ -510,6 +532,9 @@ function startStream() {
     if (payload.event_type === 'step') {
       upsertLiveStep(payload);
       return;
+    }
+    if (payload.scheme_phases) {
+      liveSchemePhases.value = payload.scheme_phases;
     }
     liveProgress.value = payload;
     if (payload.status && TERMINAL.has(payload.status)) {

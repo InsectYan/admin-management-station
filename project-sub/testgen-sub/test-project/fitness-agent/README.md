@@ -22,7 +22,8 @@
 | [单测缺口梳理.md](./单测缺口梳理.md) | P0/P1 已覆盖 vs 仍缺项 |
 | [运行命令与前置.md](./运行命令与前置.md) | 一起测 / 单一测命令速查 |
 | [数据库自动化同步.md](./数据库自动化同步.md) | `test_item_detail` 自动化字段维护 |
-| [scripts/sync-automation-status.mjs](./scripts/sync-automation-status.mjs) | 批量回写 `data.json` 的脚本 |
+| [测试配置JSON规则.md](./测试配置JSON规则.md) | **fitness-agent-test-json** 配置输出规则与重生成命令 |
+| [scripts/generate-test-json-configs.mjs](./scripts/generate-test-json-configs.mjs) | 从 `test_item_detail` 批量生成 `{item_id}/master.json` |
 
 ---
 

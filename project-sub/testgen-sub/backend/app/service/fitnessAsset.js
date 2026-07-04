@@ -58,6 +58,8 @@ const ITEM_LIST_JOINS = `
   LEFT JOIN test_category_major_template cmt ON cmt.category_major_id = t.category_major_id
   LEFT JOIN config_template_enum ct_map ON ct_map.template_code = cmt.template_code
   LEFT JOIN config_template_enum ct_scheme ON ct_scheme.scheme_id = t.scheme_primary_id
+  LEFT JOIN test_scheme_enum ts_sec ON ts_sec.scheme_id = t.scheme_secondary_id
+  LEFT JOIN test_validation_enum vs_sec ON vs_sec.validation_id = t.validation_secondary_id
   ${ITEM_SCHEME_FALLBACK_JOINS}
 `;
 
@@ -68,6 +70,8 @@ const ITEM_LIST_SELECT = `
   p.name AS priority_name,
   ts.name AS scheme_primary_name,
   vs.name AS validation_primary_name,
+  ts_sec.name AS scheme_secondary_name,
+  vs_sec.name AS validation_secondary_name,
   vs.rate_level AS validation_rate_level,
   ast.name AS automation_status_name,
   st.name AS station_name,
@@ -401,14 +405,10 @@ class FitnessAssetService extends require('egg').Service {
   async getTestItem(itemId) {
     const [ rows ] = await this.app.model.query(
       `SELECT ${ITEM_LIST_SELECT},
-        cn.name AS category_minor_name,
-        ts2.name AS scheme_secondary_name,
-        vs2.name AS validation_secondary_name
+        cn.name AS category_minor_name
        FROM test_item_detail t
        ${ITEM_LIST_JOINS}
        LEFT JOIN test_category_minor cn ON cn.category_minor_id = t.category_minor_id
-       LEFT JOIN test_scheme_enum ts2 ON ts2.scheme_id = t.scheme_secondary_id
-       LEFT JOIN test_validation_enum vs2 ON vs2.validation_id = t.validation_secondary_id
        WHERE t.item_id = :itemId`,
       { replacements: { itemId } },
     );
@@ -582,6 +582,66 @@ class FitnessAssetService extends require('egg').Service {
     const [, meta] = await this.app.model.query(updateSql, { replacements });
     await this.ctx.service.generationTask.syncFromItems();
     return { deleted: meta?.rowCount ?? total, total };
+  }
+
+  async updateItemSchemes(itemId, body = {}) {
+    const item = await this.getTestItem(itemId);
+    if (!item) {
+      const err = new Error('测试项不存在');
+      err.status = 404;
+      throw err;
+    }
+
+    const schemeSecondaryId = body.scheme_secondary_id ?? null;
+    let validationSecondaryId = body.validation_secondary_id ?? null;
+
+    if (schemeSecondaryId) {
+      const [ schemeRows ] = await this.app.model.query(
+        'SELECT scheme_id FROM test_scheme_enum WHERE scheme_id = :id LIMIT 1',
+        { replacements: { id: schemeSecondaryId } },
+      );
+      if (!schemeRows.length) {
+        const err = new Error(`辅方案不存在: ${schemeSecondaryId}`);
+        err.status = 400;
+        throw err;
+      }
+      if (schemeSecondaryId === item.scheme_primary_id) {
+        const err = new Error('辅方案不能与主方案相同');
+        err.status = 400;
+        throw err;
+      }
+      if (validationSecondaryId) {
+        const [ pairRows ] = await this.app.model.query(
+          `SELECT 1 FROM test_scheme_validation_pair
+           WHERE scheme_id = :schemeId AND validation_id = :validationId LIMIT 1`,
+          { replacements: { schemeId: schemeSecondaryId, validationId: validationSecondaryId } },
+        );
+        if (!pairRows.length) {
+          const err = new Error('辅验证与辅方案不匹配');
+          err.status = 400;
+          throw err;
+        }
+      }
+    } else {
+      validationSecondaryId = null;
+    }
+
+    await this.app.model.query(
+      `UPDATE test_item_detail SET
+         scheme_secondary_id = :schemeSecondaryId,
+         validation_secondary_id = :validationSecondaryId,
+         updated_at = NOW()
+       WHERE item_id = :itemId`,
+      {
+        replacements: {
+          itemId,
+          schemeSecondaryId,
+          validationSecondaryId,
+        },
+      },
+    );
+
+    return this.getTestItem(itemId);
   }
 }
 

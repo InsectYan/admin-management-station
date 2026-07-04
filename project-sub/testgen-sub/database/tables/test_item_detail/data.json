@@ -2599,20 +2599,29 @@
     "category_major_id": "B4",
     "category_minor_id": "B4_PIPELINE",
     "sub_class": "persist",
-    "item_name": "[B4-PERSIST-001] persist — 助手气泡",
-    "detail_summary": "助手气泡",
-    "expected_observation": "chat_messages 行",
+    "item_name": "[B4-PERSIST-001] persist — 九种载荷落库矩阵",
+    "detail_summary": "persistCoachOutbox 九种 message_type 落库：text / plan_form / training_plan / session_plan / require_form / session_summary / disambiguation / member_switch / intent_clarification",
+    "expected_observation": "chat_messages 行 message_type 与 form_data 字段正确",
     "test_input_example": null,
     "preconditions": [
-      "local 全栈或 AgentRun 环境可用"
+      "local 全栈或 AgentRun 环境可用",
+      "DATABASE_URL 可连，seed 会员 10002/10003 存在"
     ],
     "test_steps": [
-      "准备场景：助手气泡",
-      "执行对应自动化或人工步骤",
-      "观测：chat_messages 行"
+      "P1 text：助手纯文本气泡落库",
+      "P2 plan_form：plan_forms + form_data",
+      "P3 training_plan：PLAN_FORM_SUBMIT 后 macro_plans draft",
+      "P4 session_plan：class_sessions draft",
+      "P5 require_form：require_form_data 载荷",
+      "P6 session_summary：active 课时总结",
+      "P7 disambiguation：消歧候选列表",
+      "P8 member_switch：切换会员上下文",
+      "P9 intent_clarification：澄清选项 UI"
     ],
     "assertion_points": [
-      "chat_messages 行"
+      "chat_messages.message_type 与载荷一致",
+      "form_data 含对应 *_data 或 form_id/plan_id/class_session_id",
+      "矩阵九行 CLI exit 0"
     ],
     "priority_id": "P0",
     "prd_ref_id": null,
@@ -2624,7 +2633,7 @@
     "prd_goal_ids": [],
     "automation_status_id": "AUTO_EXISTING",
     "automation_entry_id": "AUTO_S04_BFF",
-    "automation_command": "cd server && npm run test:stations -- s04-bff",
+    "automation_command": "cd server && npm run test:stations -- s04-persist",
     "config_env": null,
     "config_env_id": null,
     "station_id": "S04",
@@ -2632,20 +2641,21 @@
     "endpoint_path": null,
     "http_method": null,
     "http_status_expected": null,
-    "scheme_secondary_id": null,
-    "validation_secondary_id": null,
+    "scheme_secondary_id": "TS-05-CHAIN",
+    "validation_secondary_id": "VS-04-CHAIN-OK",
     "sample_execution_note": "Pipeline 矩阵",
     "scheme_mapping_source": "scheme-map.json",
     "is_risk_flag": false,
     "is_observability_audit": false,
     "is_p0_blocker": true,
     "failure_symptom": null,
-    "code_reference": "server/src/stations/s04-pipeline/tests/suites/bff-pipeline.suite.ts",
+    "code_reference": "server/src/stations/s04-pipeline/tests/suites/persist-pipeline.suite.ts",
     "tags": [
       "B4",
+      "PERSIST",
       "STATE_MACHINE"
     ],
-    "notes": null,
+    "notes": "边界矩阵配置见 tpl_config_bnd；单场景可跑 s04-persist-{case}",
     "source_doc": "B-六站流水线.md",
     "source_section": "B4",
     "is_active": true,

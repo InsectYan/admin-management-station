@@ -44,6 +44,11 @@ export async function fetchTestItem(itemId) {
   return data.data;
 }
 
+export async function updateItemSchemes(itemId, payload) {
+  const { data } = await api.put(`/fitness/items/${encodeURIComponent(itemId)}/schemes`, payload);
+  return data.data;
+}
+
 export async function fetchBrowseTree() {
   const { data } = await api.get('/fitness/browse');
   return data.data;
@@ -412,8 +417,8 @@ export async function fetchMajorTemplateMapping(majorId) {
   return data.data;
 }
 
-export async function fetchItemTemplateConfig(itemId) {
-  const { data } = await api.get(`/fitness/template-config/items/${encodeURIComponent(itemId)}`);
+export async function fetchItemTemplateConfig(itemId, params = {}) {
+  const { data } = await api.get(`/fitness/template-config/items/${encodeURIComponent(itemId)}`, { params });
   return data.data;
 }
 

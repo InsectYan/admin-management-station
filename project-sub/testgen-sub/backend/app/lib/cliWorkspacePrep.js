@@ -30,8 +30,10 @@ function getEsbuildPlatformPackage() {
 function needsDependencyInstall(cwd) {
   const nodeModules = path.join(cwd, 'node_modules');
   if (!pathExists(nodeModules)) return true;
-  const markers = [ 'dotenv', 'pg', 'express' ];
+  const markers = [ 'dotenv', 'pg', 'express', 'tsx' ];
   if (markers.some(name => !pathExists(path.join(nodeModules, name)))) return true;
+  const tsxCli = path.join(nodeModules, 'tsx', 'dist', 'cli.mjs');
+  if (!pathExists(tsxCli)) return true;
   const esbuildPlatform = getEsbuildPlatformPackage();
   if (esbuildPlatform && !pathExists(path.join(nodeModules, esbuildPlatform))) return true;
   return false;
@@ -92,9 +94,16 @@ function spawnCommand(executable, args, opts) {
 
 async function runNpmInstall(cwd, timeoutMs) {
   const hasLock = pathExists(path.join(cwd, 'package-lock.json'));
-  const args = hasLock ? [ 'ci', '--no-audit', '--no-fund' ] : [ 'install', '--no-audit', '--no-fund' ];
+  const args = hasLock
+    ? [ 'ci', '--no-audit', '--no-fund', '--include=dev' ]
+    : [ 'install', '--no-audit', '--no-fund', '--include=dev' ];
   const isWin = process.platform === 'win32';
-  return spawnCommand(isWin ? 'npm.cmd' : 'npm', args, { cwd, timeoutMs });
+  // 容器内 NODE_ENV=production 会省略 devDependencies；站测必须装 tsx 等 dev 包
+  return spawnCommand(isWin ? 'npm.cmd' : 'npm', args, {
+    cwd,
+    timeoutMs,
+    env: { NODE_ENV: 'development', npm_config_production: 'false' },
+  });
 }
 
 /**

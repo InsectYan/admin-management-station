@@ -85,6 +85,18 @@
       <template #col-target_pass_rate="{ row }">
         {{ formatPassRate(row.target_pass_rate) }}
       </template>
+      <template #col-scheme_primary_name="{ row }">
+        <SchemeCodeNameCell :code="row.scheme_primary_id" :name="row.scheme_primary_name" />
+      </template>
+      <template #col-validation_primary_name="{ row }">
+        <SchemeCodeNameCell :code="row.validation_primary_id" :name="row.validation_primary_name" />
+      </template>
+      <template #col-scheme_secondary_name="{ row }">
+        <SchemeCodeNameCell :code="row.scheme_secondary_id" :name="row.scheme_secondary_name" />
+      </template>
+      <template #col-validation_secondary_name="{ row }">
+        <SchemeCodeNameCell :code="row.validation_secondary_id" :name="row.validation_secondary_name" />
+      </template>
       <template #suffix>
         <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
@@ -116,6 +128,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import PageShell from '@/components/PageShell.vue';
 import ItemFilterBar from '@/components/fitness/ItemFilterBar.vue';
 import FitnessLabeledTable from '@/components/fitness/FitnessLabeledTable.vue';
+import SchemeCodeNameCell from '@/components/fitness/SchemeCodeNameCell.vue';
 import {
   appendPlanItems,
   batchDeleteTestItems,
@@ -194,8 +207,10 @@ const itemColumns = [
   { prop: 'env_tier_name', label: '环境分层', width: 100 },
   { prop: 'sub_class', label: '子类标签', width: 110 },
   { prop: 'expected_observation', label: '期望观测', minWidth: 180 },
-  { prop: 'scheme_primary_name', label: '主方案', width: 110 },
-  { prop: 'validation_primary_name', label: '主验证', width: 110 },
+  { prop: 'scheme_primary_name', label: '主方案', width: 130 },
+  { prop: 'validation_primary_name', label: '主验证', width: 130 },
+  { prop: 'scheme_secondary_name', label: '辅方案', width: 130 },
+  { prop: 'validation_secondary_name', label: '辅验证', width: 130 },
   { prop: 'execution_status', label: '执行状态', width: 96 },
   { prop: 'current_pass_rate', label: '当前达标率', width: 100 },
   { prop: 'target_pass_rate', label: '目标达标率', width: 100 },

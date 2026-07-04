@@ -18,6 +18,7 @@
 
     <el-button type="primary" size="small" @click="addArm">添加臂</el-button>
 
+    <TableJsonImportButton array-key="pairs" @import="importArms" />
     <el-table :data="pairs" size="small" border style="margin-top:12px">
 
       <el-table-column label="Role" width="120">
@@ -118,6 +119,7 @@
 
 import { onMounted, ref, watch } from 'vue';
 
+import TableJsonImportButton from '@/components/config-templates/TableJsonImportButton.vue';
 
 
 const props = defineProps({
@@ -209,6 +211,24 @@ function addArm() {
 function removeArm(index) {
 
   pairs.value.splice(index, 1);
+
+  sync();
+
+}
+
+
+
+function importArms(rows) {
+
+  pairs.value = rows.map(r => ({
+
+    ...defaultArm(),
+
+    ...r,
+
+    forbidden_text: (r.forbidden_patterns || []).join(', '),
+
+  }));
 
   sync();
 

@@ -273,8 +273,13 @@ const PATCH = {
   "B4-PERSIST-001": {
     automation_status_id: "AUTO_EXISTING",
     automation_entry_id: "AUTO_S04_BFF",
-    automation_command: "cd server && npm run test:stations -- s04-bff",
-    code_reference: "server/src/stations/s04-pipeline/tests/suites/bff-pipeline.suite.ts",
+    automation_command: "cd server && npm run test:stations -- s04-persist",
+    code_reference: "server/src/stations/s04-pipeline/tests/suites/persist-pipeline.suite.ts",
+    test_steps: [
+      "P1 text · P2 plan_form · P3 training_plan · P4 session_plan",
+      "P5 require_form · P6 session_summary · P7 disambiguation",
+      "P8 member_switch · P9 intent_clarification",
+    ],
   },
   "B5-CONTRACT-001": {
     automation_status_id: "AUTO_EXISTING",

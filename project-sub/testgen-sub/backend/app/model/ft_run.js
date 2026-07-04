@@ -12,6 +12,8 @@ module.exports = app => {
     status: { type: STRING(32), defaultValue: 'pending' },
     progress: { type: JSONB, defaultValue: {} },
     verdict: { type: STRING(16) },
+    parent_run_id: { type: INTEGER },
+    sequence_index: { type: INTEGER, defaultValue: 0 },
     started_at: { type: DATE },
     finished_at: { type: DATE },
   }, { tableName: 'ft_run' });

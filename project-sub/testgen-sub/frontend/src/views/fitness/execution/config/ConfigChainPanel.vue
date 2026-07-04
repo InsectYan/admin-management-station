@@ -8,6 +8,7 @@
     </el-form-item>
     <el-divider content-position="left">链路步骤 (config_json.steps)</el-divider>
     <el-button type="primary" size="small" @click="addStep">添加步骤</el-button>
+    <TableJsonImportButton array-key="steps" @import="onImportSteps" />
     <el-table :data="steps" size="small" border style="margin-top:12px">
       <el-table-column label="#" width="40" type="index" />
       <el-table-column label="Runner" width="90">
@@ -71,6 +72,7 @@
 
 <script setup>
 import { onMounted, ref, watch } from 'vue';
+import TableJsonImportButton from '@/components/config-templates/TableJsonImportButton.vue';
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -79,6 +81,7 @@ const props = defineProps({
 const emit = defineEmits([ 'update:modelValue' ]);
 
 const steps = ref([]);
+const chainVars = ref({});
 
 function defaultStep() {
   return {
@@ -103,6 +106,7 @@ function syncExtract(row) {
 
 function sync() {
   emit('update:modelValue', {
+    vars: chainVars.value,
     steps: steps.value.map(({ extractKey, ...rest }) => ({
       ...rest,
       extract: rest.extract && Object.keys(rest.extract).length ? rest.extract : undefined,
@@ -120,7 +124,25 @@ function removeStep(i) {
   sync();
 }
 
+function onImportSteps(rows, meta = {}) {
+  importSteps(rows, meta);
+}
+
+function importSteps(rows, meta = {}) {
+  if (meta.vars && typeof meta.vars === 'object') {
+    chainVars.value = { ...meta.vars };
+  }
+  steps.value = rows.map(s => {
+    const row = { ...defaultStep(), ...s };
+    const ek = s.extract ? Object.entries(s.extract).map(([ k, v ]) => `${k}:${v}`).join(',') : '';
+    row.extractKey = ek;
+    return row;
+  });
+  sync();
+}
+
 function initFromProps() {
+  chainVars.value = { ...(props.modelValue?.vars || {}) };
   const raw = props.modelValue?.steps;
   if (Array.isArray(raw) && raw.length) {
     steps.value = raw.map(s => {

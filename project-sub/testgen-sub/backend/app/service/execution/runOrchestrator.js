@@ -1,6 +1,7 @@
 'use strict';
 
 const { emitProgress } = require('../../lib/fitnessRunEvents');
+const { buildSchemePhases } = require('../../lib/schemePhaseHelper');
 const { RunStepTracker } = require('../../lib/runStepTracker');
 const engineRegistry = require('./engineRegistry');
 const vsRegistry = require('./vsRegistry');
@@ -37,9 +38,17 @@ class RunOrchestrator {
     const [ rows ] = await this.app.model.query(
       `SELECT t.*,
         cms.scheme_primary_id AS _fallback_scheme_id,
-        cms.validation_primary_id AS _fallback_validation_id
+        cms.validation_primary_id AS _fallback_validation_id,
+        ts.name AS scheme_primary_name,
+        vs.name AS validation_primary_name,
+        ts2.name AS scheme_secondary_name,
+        vs2.name AS validation_secondary_name
        FROM test_item_detail t
        LEFT JOIN test_category_minor_scheme cms ON cms.category_minor_id = t.category_minor_id
+       LEFT JOIN test_scheme_enum ts ON ts.scheme_id = t.scheme_primary_id
+       LEFT JOIN test_validation_enum vs ON vs.validation_id = t.validation_primary_id
+       LEFT JOIN test_scheme_enum ts2 ON ts2.scheme_id = t.scheme_secondary_id
+       LEFT JOIN test_validation_enum vs2 ON vs2.validation_id = t.validation_secondary_id
        WHERE t.item_id = :itemId AND t.is_active = TRUE
        LIMIT 1`,
       { replacements: { itemId } },
@@ -67,34 +76,20 @@ class RunOrchestrator {
 
   /**
    * @param {string} itemId
-   * @param {object} body
+   * @param {string} schemeId
+   * @param {object} [item]
    */
-  async launch(itemId, body = {}) {
-    const item = await this.loadItem(itemId);
-    if (!item) {
-      const err = new Error('测试项不存在');
-      err.status = 404;
+  async _validateSchemeLaunch(itemId, schemeId, item = null) {
+    if (!schemeId) {
+      const err = new Error('未配置执行方案');
+      err.status = 400;
       throw err;
     }
-
-    const schemeId = body.scheme_id || item.scheme_primary_id;
-    const validationId = body.validation_id || item.validation_primary_id;
     engineRegistry.get(schemeId);
 
-    const env = await this.resolveEnv(body.env_id);
-    if (!env) {
-      const err = new Error('未配置执行环境，请先在执行环境页添加或运行 db 迁移');
-      err.status = 400;
-      err.code = 'ENV_NOT_CONFIGURED';
-      throw err;
-    }
-
-    let runConfig = null;
-    if (schemeId) {
-      runConfig = await this.ctx.model.FtRunConfig.findOne({
-        where: { item_id: itemId, scheme_id: schemeId },
-      });
-    }
+    const runConfig = await this.ctx.model.FtRunConfig.findOne({
+      where: { item_id: itemId, scheme_id: schemeId },
+    });
 
     if (schemeId === 'TS-04-SET') {
       if (!runConfig?.sample_set_id) {
@@ -180,13 +175,58 @@ class RunOrchestrator {
 
     if (schemeId === 'TS-09-LOAD') {
       const cfg = runConfig?.config_json || {};
-      const path = cfg.path || item.endpoint_path;
+      const path = cfg.path || item?.endpoint_path;
       if (!path) {
         const err = new Error('TS-09-LOAD 需要 config_json.path 或 item.endpoint_path');
         err.status = 400;
         err.code = 'LOAD_PATH_REQUIRED';
         throw err;
       }
+    }
+
+    return runConfig;
+  }
+
+  /** @param {number} rootRunId */
+  async _emitSchemePhases(rootRunId) {
+    const rootRun = await this.ctx.model.FtRun.findByPk(rootRunId);
+    if (!rootRun) return;
+    const secondaryRun = await this.ctx.model.FtRun.findOne({
+      where: { parent_run_id: rootRunId, sequence_index: 1 },
+      order: [[ 'id', 'DESC' ]],
+    });
+    const item = await this.loadItem(rootRun.item_id);
+    if (!item) return;
+    const scheme_phases = buildSchemePhases(item, rootRun, secondaryRun);
+    emitProgress(rootRunId, { run_id: rootRunId, scheme_phases });
+  }
+
+  /**
+   * @param {string} itemId
+   * @param {object} body
+   */
+  async launch(itemId, body = {}) {
+    const item = await this.loadItem(itemId);
+    if (!item) {
+      const err = new Error('测试项不存在');
+      err.status = 404;
+      throw err;
+    }
+
+    const schemeId = body.scheme_id || item.scheme_primary_id;
+    const validationId = body.validation_id || item.validation_primary_id;
+
+    const env = await this.resolveEnv(body.env_id);
+    if (!env) {
+      const err = new Error('未配置执行环境，请先在执行环境页添加或运行 db 迁移');
+      err.status = 400;
+      err.code = 'ENV_NOT_CONFIGURED';
+      throw err;
+    }
+
+    const runConfig = await this._validateSchemeLaunch(itemId, schemeId, item);
+    if (item.scheme_secondary_id) {
+      await this._validateSchemeLaunch(itemId, item.scheme_secondary_id, item);
     }
 
     if (body.dry_run) {
@@ -200,6 +240,7 @@ class RunOrchestrator {
       scheme_id: schemeId,
       validation_id: validationId,
       status: 'pending',
+      sequence_index: 0,
       progress: { phase: 'pending', percent: 0 },
     });
 
@@ -208,13 +249,97 @@ class RunOrchestrator {
     jobQueue.enqueue(app, async () => {
       const bgCtx = app.createAnonymousContext();
       try {
-        await new RunOrchestrator(bgCtx).executeRun(runId);
+        await new RunOrchestrator(bgCtx).executeCompositeRun(runId);
       } catch (err) {
-        app.logger.error('[fitnessRun] executeRun id=%s %s', runId, err.message);
+        app.logger.error('[fitnessRun] executeCompositeRun id=%s %s', runId, err.message);
       }
     });
 
     return run;
+  }
+
+  /** @param {number} rootRunId */
+  async executeCompositeRun(rootRunId) {
+    await this.executeRun(rootRunId);
+
+    const rootRun = await this.ctx.model.FtRun.findByPk(rootRunId);
+    if (!rootRun) return;
+
+    const item = await this.loadItem(rootRun.item_id);
+    if (!item?.scheme_secondary_id) {
+      await this._emitSchemePhases(rootRunId);
+      return;
+    }
+
+    await this._emitSchemePhases(rootRunId);
+
+    if (rootRun.status !== 'success') {
+      return;
+    }
+
+    const secRunConfig = await this.ctx.model.FtRunConfig.findOne({
+      where: { item_id: item.item_id, scheme_id: item.scheme_secondary_id },
+    });
+
+    const secondaryRun = await this.ctx.model.FtRun.create({
+      item_id: item.item_id,
+      run_config_id: secRunConfig?.id || null,
+      env_id: rootRun.env_id,
+      scheme_id: item.scheme_secondary_id,
+      validation_id: item.validation_secondary_id,
+      parent_run_id: rootRunId,
+      sequence_index: 1,
+      status: 'pending',
+      progress: { phase: 'pending', percent: 0 },
+    });
+
+    await this._emitSchemePhases(rootRunId);
+
+    try {
+      await this.executeRun(secondaryRun.id);
+    } catch (err) {
+      this.app.logger.error(
+        '[fitnessRun] secondary executeRun parent=%s secondary=%s %s',
+        rootRunId,
+        secondaryRun.id,
+        err.message,
+      );
+    }
+
+    const [ updatedRoot, updatedSecondary ] = await Promise.all([
+      this.ctx.model.FtRun.findByPk(rootRunId),
+      this.ctx.model.FtRun.findByPk(secondaryRun.id),
+    ]);
+
+    const primaryVerdict = updatedRoot?.verdict;
+    const compositePass = primaryVerdict === 'pass' && updatedSecondary?.verdict === 'pass';
+    const compositeVerdict = compositePass ? 'pass' : 'fail';
+    const compositeStatus = compositePass ? 'success' : 'failed';
+
+    await updatedRoot.update({
+      status: compositeStatus,
+      verdict: compositeVerdict,
+      finished_at: new Date(),
+      progress: {
+        ...(updatedRoot.progress || {}),
+        phase: 'done',
+        percent: 100,
+        composite: true,
+        secondary_run_id: secondaryRun.id,
+        primary_verdict: primaryVerdict,
+        secondary_verdict: updatedSecondary?.verdict || null,
+        verdict: compositeVerdict,
+      },
+    });
+
+    emitProgress(rootRunId, {
+      run_id: rootRunId,
+      status: compositeStatus,
+      verdict: compositeVerdict,
+      phase: 'done',
+      percent: 100,
+    });
+    await this._emitSchemePhases(rootRunId);
   }
 
   /** @param {number} runId */
@@ -323,6 +448,7 @@ class RunOrchestrator {
       });
 
       emitProgress(runId, { ...progress, run_id: runId, status: finalStatus });
+      await this._maybeEmitCompositeProgress(run);
     } catch (err) {
       await run.update({
         status: 'failed',
@@ -341,8 +467,17 @@ class RunOrchestrator {
         error: err.message,
         code: err.code,
       });
+      await this._maybeEmitCompositeProgress(run);
       throw err;
     }
+  }
+
+  /** @param {object} run */
+  async _maybeEmitCompositeProgress(run) {
+    const rootRunId = run.parent_run_id || run.id;
+    const item = await this.loadItem(run.item_id);
+    if (!item?.scheme_secondary_id && !run.parent_run_id) return;
+    await this._emitSchemePhases(rootRunId);
   }
 
   /** @param {string} schemeId @param {object} body */

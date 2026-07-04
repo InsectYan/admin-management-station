@@ -8,6 +8,7 @@
     </el-form-item>
     <el-divider content-position="left">可观测检查 (checks[])</el-divider>
     <el-button type="primary" size="small" @click="addCheck">添加检查</el-button>
+    <TableJsonImportButton array-key="checks" @import="importChecks" />
     <el-table :data="checks" size="small" border style="margin-top:12px">
       <el-table-column label="模式" width="120">
         <template #default="{ row }">
@@ -62,6 +63,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
+import TableJsonImportButton from '@/components/config-templates/TableJsonImportButton.vue';
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -116,6 +118,15 @@ function addCheck() {
 
 function removeCheck(i) {
   checks.value.splice(i, 1);
+  sync();
+}
+
+function importChecks(rows) {
+  checks.value = rows.map(c => ({
+    ...defaultCheck(),
+    ...c,
+    fieldsText: (c.required_fields || defaultCheck().required_fields).join(','),
+  }));
   sync();
 }
 
