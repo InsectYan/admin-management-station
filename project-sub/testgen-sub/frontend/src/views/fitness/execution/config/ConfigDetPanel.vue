@@ -26,7 +26,7 @@
       <ApiInjectBindingsForm
         v-if="injectFields.length"
         :fields="injectFields"
-        :api-template-id="local.api_template_id"
+        :item-id="item.item_id"
         v-model="local.inject_bindings"
         :readonly="readonly"
         @update:model-value="sync"

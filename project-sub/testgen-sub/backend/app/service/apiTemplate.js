@@ -50,6 +50,9 @@ class ApiTemplateService extends require('egg').Service {
        JOIN test_item_detail t ON t.item_id = rc.item_id
        WHERE rc.api_template_id = :id OR (
          rc.use_api_template = TRUE AND (rc.config_json->>'api_template_id')::int = :id
+       ) OR (
+         rc.config_json->>'execution_mode' = 'api_ctx'
+         AND (rc.config_json->>'api_template_id')::int = :id
        )
        ORDER BY rc.updated_at DESC
        LIMIT 200`,
@@ -72,6 +75,11 @@ class ApiTemplateService extends require('egg').Service {
       query_json: body.query_json || {},
       body_template: body.body_template || {},
       inject_schema: Array.isArray(body.inject_schema) ? body.inject_schema : [],
+      input_params_schema: Array.isArray(body.input_params_schema) ? body.input_params_schema : [],
+      preflight_steps: Array.isArray(body.preflight_steps) ? body.preflight_steps : [],
+      expect_status: Number(body.expect_status) || 202,
+      poll_json: body.poll_json && typeof body.poll_json === 'object' ? body.poll_json : {},
+      forbidden_patterns: Array.isArray(body.forbidden_patterns) ? body.forbidden_patterns : [],
     };
   }
 
@@ -98,6 +106,11 @@ class ApiTemplateService extends require('egg').Service {
       query_json: patch.query_json,
       body_template: patch.body_template,
       inject_schema: patch.inject_schema,
+      input_params_schema: patch.input_params_schema,
+      preflight_steps: patch.preflight_steps,
+      expect_status: patch.expect_status,
+      poll_json: patch.poll_json,
+      forbidden_patterns: patch.forbidden_patterns,
     });
     return row;
   }

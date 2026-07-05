@@ -1,17 +1,33 @@
 'use strict';
 
+const { interpolateValue } = require('../service/execution/runners/varPool');
+const { applyInputParamBindings, setJsonPath } = require('./apiTemplateParamBind');
+
 /**
- * 将 ft_api_template + 注入值渲染为可执行 HTTP 请求
+ * 将 ft_api_template + 上下文变量 + 注入值渲染为可执行 HTTP 请求
  * @param {object} template
- * @param {Record<string, unknown>} injectValues
+ * @param {Record<string, unknown>} injectValues inject_bindings 解析值
+ * @param {Record<string, unknown>} [contextVars] 前置链路 extract + 外部入参
  */
-function renderApiRequest(template, injectValues = {}) {
-  const headers = { ...(template.headers_json || {}) };
-  const query = { ...(template.query_json || {}) };
-  let path = template.url_path || '/';
+function renderApiRequest(template, injectValues = {}, contextVars = {}) {
+  const headers = interpolateValue({ ...(template.headers_json || {}) }, contextVars);
+  const query = interpolateValue({ ...(template.query_json || {}) }, contextVars);
+  let path = interpolateValue(String(template.url_path || '/'), contextVars);
   let body = template.body_template != null
-    ? JSON.parse(JSON.stringify(template.body_template))
+    ? interpolateValue(JSON.parse(JSON.stringify(template.body_template)), contextVars)
     : {};
+
+  const parts = { headers, query, path, body };
+  applyInputParamBindings(
+    parts,
+    template.input_params_schema || [],
+    contextVars,
+    template.http_method,
+    template.url_path,
+    setJsonPath,
+  );
+  path = parts.path;
+  body = parts.body;
 
   for (const field of template.inject_schema || []) {
     const val = injectValues[field.key];
@@ -44,19 +60,6 @@ function renderApiRequest(template, injectValues = {}) {
   };
 }
 
-/** @param {object} obj @param {string} path @param {unknown} value */
-function setJsonPath(obj, path, value) {
-  if (!path || path === '.') return;
-  const parts = path.split('.');
-  let cur = obj;
-  for (let i = 0; i < parts.length - 1; i += 1) {
-    const p = parts[i];
-    if (cur[p] == null || typeof cur[p] !== 'object') cur[p] = {};
-    cur = cur[p];
-  }
-  cur[parts[parts.length - 1]] = value;
-}
-
 /**
  * 解析 inject_bindings + 样本行 → 注入值 map
  * @param {object} bindings
@@ -68,7 +71,7 @@ function resolveInjectValues(bindings = {}, sampleRow = {}) {
     if (!spec || typeof spec !== 'object') continue;
     if (spec.mode === 'sample_set') {
       const fk = spec.field_key || key;
-      out[key] = sampleRow[fk] ?? sampleRow[key];
+      out[key] = sampleRow[fk] ?? sampleRow[key] ?? sampleRow.message ?? sampleRow.text;
     } else {
       out[key] = spec.value;
     }
@@ -81,32 +84,47 @@ function resolveInjectValues(bindings = {}, sampleRow = {}) {
  * @param {object} template
  * @param {object} bindings
  * @param {object[]} sampleRows
- * @param {object} [manualOverrides]
+ * @param {object} [contextVars]
  */
-function expandApiTemplateRuns(template, bindings, sampleRows = [], manualOverrides = {}) {
+function expandApiTemplateRuns(template, bindings, sampleRows = [], contextVars = {}) {
   const bindingKeys = Object.keys(bindings || {});
   const needsSampleMatrix = bindingKeys.some(k => bindings[k]?.mode === 'sample_set');
 
   if (!needsSampleMatrix) {
-    const injectValues = { ...resolveInjectValues(bindings, {}), ...manualOverrides };
-    return [ renderApiRequest(template, injectValues) ];
+    const injectValues = resolveInjectValues(bindings, {});
+    return [ renderApiRequest(template, injectValues, contextVars) ];
   }
 
-  const sampleBinding = bindingKeys.find(k => bindings[k]?.mode === 'sample_set');
   const setRows = sampleRows.length ? sampleRows : [ {} ];
   return setRows.map(row => {
     const rowData = row.input_data || row;
-    const injectValues = {
-      ...resolveInjectValues(bindings, rowData),
-      ...manualOverrides,
-    };
-    return renderApiRequest(template, injectValues);
+    const injectValues = resolveInjectValues(bindings, rowData);
+    return renderApiRequest(template, injectValues, contextVars);
   });
+}
+
+/**
+ * 从 input_params_schema 解析默认值
+ * @param {object[]} schema
+ * @param {Record<string, unknown>} overrides
+ */
+function resolveInputParams(schema = [], overrides = {}) {
+  const out = {};
+  for (const row of schema) {
+    if (!row?.key) continue;
+    if (overrides[row.key] !== undefined && overrides[row.key] !== null && overrides[row.key] !== '') {
+      out[row.key] = overrides[row.key];
+    } else if (row.default !== undefined) {
+      out[row.key] = row.default;
+    }
+  }
+  return { ...out, ...overrides };
 }
 
 module.exports = {
   renderApiRequest,
   resolveInjectValues,
   expandApiTemplateRuns,
+  resolveInputParams,
   setJsonPath,
 };

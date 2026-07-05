@@ -97,6 +97,7 @@ module.exports = app => {
   router.get('/api/fitness/items', controller.fitnessAsset.listItems);
   router.delete('/api/fitness/items', controller.fitnessAsset.deleteItemsByFilter);
   router.post('/api/fitness/items/batch-delete', controller.fitnessAsset.batchDeleteItems);
+  router.post('/api/fitness/items/manual', controller.fitnessAsset.createManualItem);
   router.delete('/api/fitness/items/:itemId', controller.fitnessAsset.deleteItem);
   router.get('/api/fitness/items/:itemId', controller.fitnessAsset.showItem);
   router.put('/api/fitness/items/:itemId/schemes', controller.fitnessAsset.updateItemSchemes);
@@ -160,6 +161,7 @@ module.exports = app => {
   router.get('/api/fitness/template-config/schemes/:schemeId/validations', controller.configTemplate.getSchemeValidations);
   router.get('/api/fitness/template-config/major/:majorId', controller.configTemplate.getByMajor);
   router.get('/api/fitness/template-config/items/:itemId', controller.configTemplate.getItemConfig);
+  router.put('/api/fitness/template-config/items/:itemId/template', controller.configTemplate.setItemConfigTemplate);
   router.post('/api/fitness/template-config/items/:itemId', controller.configTemplate.saveItemConfig);
   router.post('/api/fitness/template-config/items/:itemId/generate', controller.configTemplate.generateItemConfig);
 

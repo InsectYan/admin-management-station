@@ -14,13 +14,13 @@ export const navMenus = [
     children: [
       {
         path: '/testgen/scope',
-        title: '自动生成用例',
+        title: '生成用例',
         activePrefix: '/testgen/scope',
         activeAliases: [ '/scope', '/jobs' ],
       },
       {
         path: '/testgen/generation-queue',
-        title: '生成任务列表',
+        title: '任务列表',
         activePrefix: '/testgen/generation-queue',
       },
       {

@@ -44,6 +44,11 @@ export async function fetchTestItem(itemId) {
   return data.data;
 }
 
+export async function createManualTestItem(payload) {
+  const { data } = await api.post('/fitness/items/manual', payload);
+  return data.data;
+}
+
 export async function updateItemSchemes(itemId, payload) {
   const { data } = await api.put(`/fitness/items/${encodeURIComponent(itemId)}/schemes`, payload);
   return data.data;
@@ -424,6 +429,14 @@ export async function fetchItemTemplateConfig(itemId, params = {}) {
 
 export async function saveItemTemplateConfig(itemId, payload) {
   const { data } = await api.post(`/fitness/template-config/items/${encodeURIComponent(itemId)}`, payload);
+  return data.data;
+}
+
+export async function setItemConfigTemplate(itemId, payload) {
+  const { data } = await api.put(
+    `/fitness/template-config/items/${encodeURIComponent(itemId)}/template`,
+    payload,
+  );
   return data.data;
 }
 

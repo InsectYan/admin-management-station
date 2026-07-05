@@ -1,7 +1,8 @@
 <template>
-  <PageShell title="自动生成用例">
+  <PageShell title="生成用例">
     <template #extra>
       <el-button
+        v-if="activeMode === 'auto'"
         type="primary"
         :loading="submitting"
         :disabled="!canSubmit"
@@ -10,6 +11,9 @@
         开始生成
       </el-button>
     </template>
+
+    <el-tabs v-model="activeMode" class="testgen-mode-tabs">
+      <el-tab-pane label="自动生成测试用例" name="auto">
     <el-form
       ref="formRef"
       :model="form"
@@ -289,6 +293,12 @@
         <el-checkbox v-model="form.fitness_dry_run">完成后对首条用例 dry-run</el-checkbox>
       </el-form-item>
     </el-form>
+      </el-tab-pane>
+
+      <el-tab-pane label="手动生成测试用例" name="manual">
+        <ManualTestItemForm />
+      </el-tab-pane>
+    </el-tabs>
   </PageShell>
 </template>
 
@@ -298,6 +308,7 @@ import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { UploadFilled } from '@element-plus/icons-vue';
 import PageShell from '../components/PageShell.vue';
+import ManualTestItemForm from './ManualTestItemForm.vue';
 import { listDocuments, previewDocument, getDocumentPreview } from '../services/documentService';
 import { startGeneration, estimateGeneration } from '../services/generationService';
 import { fetchEnums, fetchMajorTemplateMapping } from '../services/fitnessService.js';
@@ -308,6 +319,7 @@ const DEFAULT_TARGET_COUNT = 5;
 const PREVIEW_SNIPPET_LEN = 500;
 
 const router = useRouter();
+const activeMode = ref('auto');
 const formRef = ref(null);
 const submitting = ref(false);
 const estimating = ref(false);
@@ -815,5 +827,8 @@ onMounted(() => {
 .testgen-estimate-hint {
   font-size: 12px;
   color: #909399;
+}
+.testgen-mode-tabs {
+  margin-top: -8px;
 }
 </style>

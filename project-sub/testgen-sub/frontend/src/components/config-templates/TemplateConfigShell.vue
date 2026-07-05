@@ -16,6 +16,15 @@
       <el-radio-button value="secondary">辅方案配置</el-radio-button>
     </el-radio-group>
 
+    <MixedTsTemplateSwitcher
+      v-if="editable && schemeRole === 'primary' && switchMeta?.can_switch_api_ctx"
+      :item-id="itemId"
+      :item="item"
+      :switch-meta="switchMeta"
+      :readonly="editMode === 'agent'"
+      @switched="onTemplateSwitched"
+    />
+
     <el-tabs v-if="editable && supportsAgent && schemeRole === 'primary'" v-model="editMode" style="margin-bottom:12px">
       <el-tab-pane label="手动填写" name="manual" />
       <el-tab-pane label="Agent 自动生成" name="agent" />
@@ -34,6 +43,7 @@
       v-model="localConfig"
       v-model:threshold="localThreshold"
       :readonly="!editable || editMode === 'agent'"
+      @update:validations="validationOverrides = $event"
     />
 
     <div v-if="editable && editMode === 'manual'" style="margin-top:16px">
@@ -49,6 +59,7 @@
 import { computed, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { resolveTemplateComponent } from './registry.js';
+import MixedTsTemplateSwitcher from './MixedTsTemplateSwitcher.vue';
 import {
   fetchItemTemplateConfig,
   generateItemTemplateConfig,
@@ -72,6 +83,8 @@ const schemeRole = ref('primary');
 const templateMeta = ref(null);
 const localConfig = ref({});
 const localThreshold = ref({});
+const validationOverrides = ref({});
+const switchMeta = ref({});
 const configSource = ref('manual');
 const loadedItem = ref(null);
 
@@ -101,6 +114,14 @@ async function load() {
     const data = await fetchItemTemplateConfig(props.itemId, { scheme_role: schemeRole.value });
     templateMeta.value = data.template;
     loadedItem.value = { ...(props.item || {}), item_id: props.itemId, ...data.item };
+    switchMeta.value = {
+      is_mixed_ts: data.is_mixed_ts,
+      template_alternatives: data.template_alternatives,
+      can_switch_api_ctx: data.can_switch_api_ctx,
+      needs_scheme_upgrade_for_api_ctx: data.needs_scheme_upgrade_for_api_ctx,
+      effective_template_code: data.effective_template_code || data.template_code,
+      default_template_code: data.default_template_code,
+    };
     localConfig.value = data.config_json || {};
     localThreshold.value = data.threshold_json || {};
     configSource.value = data.config_source || 'manual';
@@ -108,6 +129,23 @@ async function load() {
   } finally {
     loading.value = false;
   }
+}
+
+async function onTemplateSwitched(data) {
+  templateMeta.value = data.template;
+  loadedItem.value = { ...(props.item || {}), item_id: props.itemId, ...data.item };
+  switchMeta.value = {
+    is_mixed_ts: data.is_mixed_ts,
+    template_alternatives: data.template_alternatives,
+    can_switch_api_ctx: data.can_switch_api_ctx,
+    needs_scheme_upgrade_for_api_ctx: data.needs_scheme_upgrade_for_api_ctx,
+    effective_template_code: data.effective_template_code || data.template_code,
+    default_template_code: data.default_template_code,
+  };
+  localConfig.value = data.config_json || {};
+  localThreshold.value = data.threshold_json || {};
+  configSource.value = data.config_source || 'manual';
+  emit('loaded', data);
 }
 
 async function onSchemeRoleChange() {
@@ -124,6 +162,7 @@ async function save() {
       threshold_json: localThreshold.value,
       sample_set_id: localConfig.value.sample_set_id,
       config_source: 'manual',
+      ...validationOverrides.value,
     });
     configSource.value = data.config_source || 'manual';
     ElMessage.success(schemeRole.value === 'secondary' ? '辅方案配置已保存' : '主方案配置已保存');

@@ -331,7 +331,21 @@ function buildManConfig(item) {
   };
 }
 
+function buildApiCtxConfig(item) {
+  return {
+    execution_mode: 'api_ctx',
+    api_template_id: null,
+    use_api_template: true,
+    input_params: { coach_id: 1, user_id: 10003 },
+    inject_bindings: {},
+    _note: '请在配置页选择接口模板并配置 inject_bindings；模板详情维护 preflight/body/poll',
+  };
+}
+
 function buildConfigForScheme(schemeId, item, tplBndMap) {
+  if (item.template_code === 'TPL-API-CTX') {
+    return buildApiCtxConfig(item);
+  }
   switch (schemeId) {
     case 'TS-01-DET': return buildDetConfig(item);
     case 'TS-02-BND': return buildBndConfig(item, tplBndMap);

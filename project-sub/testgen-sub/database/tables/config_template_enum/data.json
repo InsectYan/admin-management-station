@@ -128,5 +128,18 @@
     "sort_order": 10,
     "project_code": "fitness-agent",
     "scheme_name": "人工评审"
+  },
+  {
+    "template_code": "TPL-API-CTX",
+    "name": "前置链路+接口模板",
+    "description": "前置链路 extract 取参，多条文案接口分别断言合规",
+    "scheme_id": "TS-05-CHAIN",
+    "panel_key": "api-ctx",
+    "table_name": "tpl_config_api_ctx",
+    "agent_skill": "fitness-config-skill",
+    "agent_action": "generate_api_ctx",
+    "sort_order": 11,
+    "project_code": "fitness-agent",
+    "scheme_name": "多步链路串联"
   }
 ]

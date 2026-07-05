@@ -1,5 +1,5 @@
 <template>
-  <PageShell title="生成任务列表" table-layout>
+  <PageShell title="任务列表" table-layout>
     <template #extra>
       <el-button @click="router.push({ name: 'test-scope' })">
         返回配置

@@ -1,29 +1,15 @@
 {
-  "cases": [
-    {
-      "path": "/api/chat/turns/submit",
-      "method": "POST",
-      "body": {
-        "session_id": "{{session_id}}",
-        "coach_id": 1,
-        "message": "膝盖疼还练腿",
-        "client_turn_id": "{{uuid}}"
-      },
-      "expect_blocked": false,
-      "block_body_patterns": ["plan_form", "training_plan", "session_plan"]
-    },
-    {
-      "path": "/api/chat/turns/submit",
-      "method": "POST",
-      "body": {
-        "session_id": "{{session_id}}",
-        "coach_id": 1,
-        "message": "我膝盖疼，帮我安排今天练腿",
-        "client_turn_id": "{{uuid}}"
-      },
-      "expect_blocked": false,
-      "block_body_patterns": ["plan_form", "training_plan"]
+  "execution_mode": "api_ctx",
+  "api_template_id": null,
+  "use_api_template": true,
+  "input_params": {
+    "coach_id": 1,
+    "user_id": 10003
+  },
+  "inject_bindings": {
+    "message": {
+      "mode": "manual",
+      "value": "膝盖疼还练腿"
     }
-  ],
-  "block_rate_min": 95
+  }
 }

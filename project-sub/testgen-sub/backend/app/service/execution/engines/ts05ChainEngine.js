@@ -5,6 +5,7 @@ const { emitProgress } = require('../../../lib/fitnessRunEvents');
 const BaseTsEngine = require('./baseTsEngine');
 const { executeMatrixRow } = require('../runners/matrixRowRunner');
 const { applyExtract, applyVarsToRow } = require('../runners/varPool');
+const { executeApiTemplateContext } = require('../runners/apiTemplateContextRunner');
 
 class Ts05ChainEngine extends BaseTsEngine {
   constructor() {
@@ -13,6 +14,73 @@ class Ts05ChainEngine extends BaseTsEngine {
 
   /** @param {import('../runOrchestrator').ExecutionContext} ctx */
   async execute(ctx) {
+    const { runConfig } = ctx;
+    const mode = runConfig?.config_json?.execution_mode || 'chain';
+    if (mode === 'api_ctx') {
+      return this.executeApiCtx(ctx);
+    }
+    return this.executeChain(ctx);
+  }
+
+  /** @param {import('../runOrchestrator').ExecutionContext} ctx */
+  async executeApiCtx(ctx) {
+    const { runConfig, run, ctx: eggCtx } = ctx;
+    const configJson = runConfig?.config_json || {};
+    const apiTemplateId = runConfig?.api_template_id || configJson.api_template_id;
+
+    if (!apiTemplateId) {
+      const err = new Error('TPL-API-CTX 需要选择接口模板 api_template_id');
+      err.status = 400;
+      err.code = 'API_TEMPLATE_REQUIRED';
+      throw err;
+    }
+
+    const template = await eggCtx.model.FtApiTemplate.findByPk(apiTemplateId);
+    if (!template || !template.is_active) {
+      const err = new Error(`接口模板 #${apiTemplateId} 不存在或已停用`);
+      err.status = 400;
+      err.code = 'API_TEMPLATE_NOT_FOUND';
+      throw err;
+    }
+
+    const bindings = runConfig?.inject_bindings || configJson.inject_bindings || {};
+    const inputParams = configJson.input_params || {};
+    let sampleRows = [];
+
+    const sampleBinding = Object.values(bindings).find(b => b?.mode === 'sample_set' && b.sample_set_id);
+    if (sampleBinding?.sample_set_id) {
+      sampleRows = await eggCtx.model.FtSampleItem.findAll({
+        where: { sample_set_id: sampleBinding.sample_set_id },
+        order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
+      });
+    }
+
+    const runId = run.id;
+    const results = await executeApiTemplateContext(ctx, template, {
+      inputParams,
+      injectBindings: bindings,
+      sampleRows: sampleRows.map(r => r.toJSON()),
+    });
+
+    if (runId) {
+      const passCount = results.filter(r => r.sub_verdict === 'pass').length;
+      emitProgress(runId, {
+        phase: 'running',
+        percent: 69,
+        pass_rate: results.length
+          ? Math.round((passCount / results.length) * 1000) / 10
+          : 0,
+        completed: results.length,
+        total: results.length,
+        run_id: runId,
+      });
+    }
+
+    return results;
+  }
+
+  /** @param {import('../runOrchestrator').ExecutionContext} ctx */
+  async executeChain(ctx) {
     const { runConfig, run, ctx: eggCtx, item } = ctx;
     const steps = runConfig?.config_json?.steps;
     if (!Array.isArray(steps) || !steps.length) {

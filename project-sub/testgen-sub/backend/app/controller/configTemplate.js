@@ -64,6 +64,15 @@ class ConfigTemplateController extends Controller {
     this.ctx.body = { code: 0, message: 'ok', data };
   }
 
+  async setItemConfigTemplate() {
+    const { itemId } = this.ctx.params;
+    const data = await this.ctx.service.configTemplate.setItemConfigTemplate(
+      itemId,
+      this.ctx.request.body || {},
+    );
+    this.ctx.body = { code: 0, message: 'ok', data };
+  }
+
   async generateItemConfig() {
     const { itemId } = this.ctx.params;
     const data = await this.ctx.service.configTemplate.generateItemConfig(itemId, this.ctx.request.body || {});

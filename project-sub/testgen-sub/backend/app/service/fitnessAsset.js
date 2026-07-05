@@ -659,6 +659,147 @@ class FitnessAssetService extends require('egg').Service {
 
     return this.getTestItem(itemId);
   }
+
+  async createManualTestItem(body = {}) {
+    const {
+      project_code: projectCode,
+      project_name: projectName,
+      category_major_id: categoryMajorId,
+      category_minor_id: categoryMinorId,
+      scheme_primary_id: schemeId,
+      validation_primary_id: validationId,
+      template_code: templateCodeOverride,
+      item_id: requestedItemId,
+    } = body;
+
+    if (!projectCode?.trim()) {
+      const err = new Error('project_code 必填');
+      err.status = 400;
+      throw err;
+    }
+    if (!categoryMajorId?.trim()) {
+      const err = new Error('category_major_id 必填');
+      err.status = 400;
+      throw err;
+    }
+    if (!schemeId?.trim() || !validationId?.trim()) {
+      const err = new Error('scheme_primary_id 与 validation_primary_id 必填');
+      err.status = 400;
+      throw err;
+    }
+
+    const audit = require('../lib/itemDetailFieldSchema').auditItemDetailFields(body);
+    if (!audit.valid) {
+      const err = new Error(audit.errors.join('；'));
+      err.status = 400;
+      throw err;
+    }
+
+    const [ pairRows ] = await this.app.model.query(
+      `SELECT 1 FROM test_scheme_validation_pair
+       WHERE scheme_id = :schemeId AND validation_id = :validationId LIMIT 1`,
+      { replacements: { schemeId, validationId } },
+    );
+    if (!pairRows.length) {
+      const err = new Error('主验证与主方案不匹配');
+      err.status = 400;
+      throw err;
+    }
+
+    const majorMeta = await require('../lib/generationTemplateHelper').loadMajorContext(
+      this.app,
+      categoryMajorId,
+    );
+    if (!majorMeta) {
+      const err = new Error(`测试大类不存在: ${categoryMajorId}`);
+      err.status = 400;
+      throw err;
+    }
+
+    let minorId = categoryMinorId || majorMeta.category_minor_id;
+    if (minorId) {
+      const [ minorRows ] = await this.app.model.query(
+        `SELECT 1 FROM test_category_minor
+         WHERE category_minor_id = :minorId AND category_major_id = :majorId LIMIT 1`,
+        { replacements: { minorId, majorId: categoryMajorId } },
+      );
+      if (!minorRows.length) {
+        const err = new Error('测试小类与大类不匹配');
+        err.status = 400;
+        throw err;
+      }
+    }
+
+    const templateCode = templateCodeOverride
+      || await require('../lib/generationTemplateHelper').resolveTemplateCodeForGeneration(
+        this.app,
+        categoryMajorId,
+        schemeId,
+      );
+
+    let itemId = requestedItemId?.trim();
+    if (itemId) {
+      const dup = await this.getTestItem(itemId);
+      if (dup) {
+        const err = new Error(`用例 ID 已存在: ${itemId}`);
+        err.status = 409;
+        throw err;
+      }
+    } else {
+      itemId = `${categoryMajorId}-MANUAL-${Date.now().toString(36).toUpperCase()}`.slice(0, 64);
+    }
+
+    const resolvedProjectName = projectName?.trim() || projectCode;
+
+    const casePayload = {
+      ...audit.normalized,
+      item_id: itemId,
+      item_name: audit.normalized.item_name,
+      detail_summary: audit.normalized.detail_summary,
+      expected_observation: audit.normalized.expected_observation,
+      test_steps: audit.normalized.test_steps,
+      preconditions: audit.normalized.preconditions || [],
+      assertion_points: audit.normalized.assertion_points || [],
+      priority_id: body.priority_id || audit.normalized.priority_id || 'P2',
+      test_input_example: body.test_input_example || audit.normalized.test_input_example,
+      endpoint_path: body.endpoint_path,
+      http_method: body.http_method,
+      http_status_expected: body.http_status_expected,
+      station_id: body.station_id,
+      role_scope_id: body.role_scope_id,
+      sub_class: body.sub_class || 'manual',
+      notes: body.notes,
+      tags: body.tags,
+      source_doc: 'manual-entry',
+      source_section: 'manual',
+      scheme_mapping_source: 'manual-entry',
+    };
+
+    const insertedIds = await this.ctx.service.generationItemWriter.bulkInsertItems(
+      [ casePayload ],
+      {
+        project_code: projectCode,
+        project_name: resolvedProjectName,
+        category_major_id: categoryMajorId,
+        category_minor_id: minorId,
+        dimension_id: majorMeta.dimension_id,
+        scheme_id: schemeId,
+        validation_id: validationId,
+        template_code: templateCode,
+        job_id: null,
+        manual: true,
+      },
+    );
+
+    if (!insertedIds.length) {
+      const err = new Error('用例入库失败，请检查 item_id 是否重复');
+      err.status = 409;
+      throw err;
+    }
+
+    await this.ctx.service.generationTask.syncFromItems();
+    return this.getTestItem(insertedIds[0]);
+  }
 }
 
 module.exports = FitnessAssetService;

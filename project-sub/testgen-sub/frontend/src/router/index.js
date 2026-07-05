@@ -73,7 +73,7 @@ export function createAppRouter(basename) {
             path: 'testgen/scope',
             name: 'test-scope',
             component: () => import('../views/TestScopePage.vue'),
-            meta: { title: '自动生成用例', group: 'testgen' },
+            meta: { title: '生成用例', group: 'testgen' },
           },
           { path: 'scope', redirect: '/testgen/scope' },
           {
@@ -93,7 +93,7 @@ export function createAppRouter(basename) {
             path: 'testgen/generation-queue',
             name: 'generation-queue',
             component: () => import('../views/GenerationQueueListPage.vue'),
-            meta: { title: '生成任务列表', group: 'testgen' },
+            meta: { title: '任务列表', group: 'testgen' },
           },
 
           // ── 配置管理 ──

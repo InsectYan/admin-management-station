@@ -135,6 +135,10 @@
     "pk": "item_id",
     "type": "table"
   },
+  "tpl_config_api_ctx": {
+    "pk": "item_id",
+    "type": "table"
+  },
   "tpl_config_pair": {
     "pk": "item_id",
     "type": "table"

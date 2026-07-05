@@ -4,9 +4,14 @@ const { QueryTypes } = require('sequelize');
 const {
   MIXED_TS_MAJORS,
   SCHEME_TO_TEMPLATE,
+  SCHEME_TEMPLATE_ALTERNATIVES,
   TEMPLATE_TABLES,
+  API_CTX_TEMPLATE,
+  API_CTX_SCHEME,
   assertTemplateTable,
   resolveTemplateCodeFromItem,
+  normalizeStoredTemplateCode,
+  buildItemTemplateSwitchMeta,
 } = require('../lib/configTemplateRegistry');
 const { normalizeDetConfigJson } = require('../lib/httpRequestBody');
 
@@ -207,6 +212,10 @@ class ConfigTemplateService extends require('egg').Service {
   async resolveTemplateCodeForItem(item) {
     if (!item) return null;
 
+    if (item.template_code && TEMPLATE_TABLES[item.template_code]) {
+      return item.template_code;
+    }
+
     if (MIXED_TS_MAJORS.has(item.category_major_id)) {
       const schemeId = item.scheme_primary_id || item.scheme_primary;
       return SCHEME_TO_TEMPLATE[schemeId] || item.template_code || 'TPL-DET';
@@ -312,19 +321,20 @@ class ConfigTemplateService extends require('egg').Service {
           inject_bindings: rc.inject_bindings || configJson.inject_bindings || {},
         };
       }
-      return {
-        item_id: itemId,
-        item: ctx.item,
-        scheme_role: 'secondary',
-        scheme_id: ctx.schemeId,
-        template_code: ctx.templateCode,
-        template: { ...ctx.meta, scheme_id: ctx.schemeId },
-        config_json: configJson,
-        threshold_json: rc?.threshold_json || defaultConfig.threshold_json,
-        sample_set_id: rc?.sample_set_id ?? defaultConfig.sample_set_id,
-        config_source: 'manual',
-        configured: Boolean(runCfg),
-      };
+    return {
+      item_id: itemId,
+      item: ctx.item,
+      scheme_role: 'secondary',
+      scheme_id: ctx.schemeId,
+      template_code: ctx.templateCode,
+      template: { ...ctx.meta, scheme_id: ctx.schemeId },
+      config_json: configJson,
+      threshold_json: rc?.threshold_json || defaultConfig.threshold_json,
+      sample_set_id: rc?.sample_set_id ?? defaultConfig.sample_set_id,
+      config_source: 'manual',
+      configured: Boolean(runCfg),
+      ...buildItemTemplateSwitchMeta(ctx.item, ctx.templateCode),
+    };
     }
 
     const { item, templateCode, meta } = await this.ensureItemTemplateCode(itemId);
@@ -367,6 +377,7 @@ class ConfigTemplateService extends require('egg').Service {
       sample_set_id: row?.sample_set_id ?? defaultConfig.sample_set_id,
       config_source: row?.config_source || 'manual',
       configured: Boolean(row),
+      ...buildItemTemplateSwitchMeta(item, templateCode),
     };
   }
 
@@ -386,6 +397,76 @@ class ConfigTemplateService extends require('egg').Service {
       return { config_json: { ...base }, threshold_json: {} };
     }
     return { config_json: {}, threshold_json: {} };
+  }
+
+  async setItemConfigTemplate(itemId, body = {}) {
+    const item = await this.loadItem(itemId);
+    if (!item) {
+      const err = new Error('用例不存在');
+      err.status = 404;
+      throw err;
+    }
+    if (!MIXED_TS_MAJORS.has(item.category_major_id)) {
+      const err = new Error('仅混合 TS 大类（教练/会员/管理/横切）支持切换配置模板');
+      err.status = 400;
+      throw err;
+    }
+
+    const upgradeScheme = body.upgrade_scheme !== false;
+    let schemeId = item.scheme_primary_id;
+    let validationId = item.validation_primary_id;
+    const requested = body.template_code;
+    if (requested == null || requested === '') {
+      const err = new Error('template_code 必填');
+      err.status = 400;
+      throw err;
+    }
+
+    let storedTemplateCode = normalizeStoredTemplateCode(requested, schemeId);
+
+    if (requested === API_CTX_TEMPLATE || storedTemplateCode === API_CTX_TEMPLATE) {
+      storedTemplateCode = API_CTX_TEMPLATE;
+      if (schemeId !== API_CTX_SCHEME) {
+        if (!upgradeScheme) {
+          const err = new Error('TPL-API-CTX 需要主方案 TS-05-CHAIN，请确认 upgrade_scheme');
+          err.status = 400;
+          throw err;
+        }
+        schemeId = API_CTX_SCHEME;
+        const pairs = await this.getValidationsForScheme(schemeId);
+        const stillValid = pairs.some(p => p.validation_id === validationId);
+        if (!stillValid) {
+          validationId = pairs.find(p => p.is_primary)?.validation_id || 'VS-04-CHAIN-OK';
+        }
+      }
+    } else {
+      const alts = SCHEME_TEMPLATE_ALTERNATIVES[schemeId] || [];
+      const effective = storedTemplateCode || SCHEME_TO_TEMPLATE[schemeId];
+      if (!alts.includes(effective)) {
+        const err = new Error(`主方案 ${schemeId} 不支持配置模板 ${requested}`);
+        err.status = 400;
+        throw err;
+      }
+    }
+
+    await this.app.model.query(
+      `UPDATE test_item_detail SET
+         template_code = :templateCode,
+         scheme_primary_id = :schemeId,
+         validation_primary_id = :validationId,
+         updated_at = NOW()
+       WHERE item_id = :itemId`,
+      {
+        replacements: {
+          itemId,
+          templateCode: storedTemplateCode,
+          schemeId,
+          validationId,
+        },
+      },
+    );
+
+    return this.getItemConfig(itemId, { scheme_role: 'primary' });
   }
 
   async saveItemConfig(itemId, body = {}) {
@@ -412,7 +493,7 @@ class ConfigTemplateService extends require('egg').Service {
       return this.getItemConfig(itemId, { scheme_role: 'secondary' });
     }
 
-    const { templateCode, meta } = await this.ensureItemTemplateCode(itemId);
+    const { item, templateCode, meta } = await this.ensureItemTemplateCode(itemId);
     const table = this._tableForCode(templateCode);
     let configJson = body.config_json || {};
     if (templateCode === 'TPL-DET') {
@@ -494,9 +575,49 @@ class ConfigTemplateService extends require('egg').Service {
       sample_set_id: sampleSetId,
       env_id: body.env_id,
       api_template_id: configJson.api_template_id ?? null,
-      use_api_template: Boolean(configJson.use_api_template),
+      use_api_template: Boolean(
+        configJson.use_api_template
+        || templateCode === 'TPL-API-CTX'
+        || configJson.execution_mode === 'api_ctx',
+      ),
       inject_bindings: configJson.inject_bindings || {},
     });
+
+    if (body.validation_primary_id || body.validation_secondary_id != null) {
+      const primaryId = body.validation_primary_id;
+      const secondaryId = body.validation_secondary_id ?? null;
+      if (primaryId) {
+        const [ pairRows ] = await this.app.model.query(
+          `SELECT 1 FROM test_scheme_validation_pair
+           WHERE scheme_id = :schemeId AND validation_id = :validationId LIMIT 1`,
+          {
+            replacements: {
+              schemeId: meta?.scheme_id || item.scheme_primary_id,
+              validationId: primaryId,
+            },
+          },
+        );
+        if (!pairRows.length) {
+          const err = new Error('主验证与方案不匹配');
+          err.status = 400;
+          throw err;
+        }
+      }
+      await this.app.model.query(
+        `UPDATE test_item_detail SET
+           validation_primary_id = COALESCE(:primaryId, validation_primary_id),
+           validation_secondary_id = :secondaryId,
+           updated_at = NOW()
+         WHERE item_id = :itemId`,
+        {
+          replacements: {
+            itemId,
+            primaryId: primaryId || null,
+            secondaryId,
+          },
+        },
+      );
+    }
 
     if (templateCode === 'TPL-DET') {
       const httpMethod = configJson.http_method || configJson.method;

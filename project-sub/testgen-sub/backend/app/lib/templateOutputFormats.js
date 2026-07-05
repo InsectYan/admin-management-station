@@ -39,10 +39,21 @@ const TEMPLATE_OUTPUT_FORMATS = {
   },
   'TPL-CHAIN': {
     config_json: {
+      execution_mode: 'chain|api_ctx 可选，默认 chain',
       steps: '[{ runner, path, method, expect_status, body?, headers?, extract? }]',
       vars: 'object 可选变量池',
     },
     threshold_json: {},
+  },
+  'TPL-API-CTX': {
+    config_json: {
+      execution_mode: 'api_ctx',
+      api_template_id: 'number 必选，引用 ft_api_template',
+      input_params: 'object 外部入参，按 input_params_schema.bind_to 写入 query/body/path/header；context 进变量池',
+      inject_bindings: 'object 注入字段配置，映射 body_template json_path',
+    },
+    threshold_json: {},
+    note: '前置链路/poll/forbidden 在接口模板详情维护；验证方案在配置页选择 TS-05 全部可关联 VS',
   },
   'TPL-PAIR': {
     config_json: {

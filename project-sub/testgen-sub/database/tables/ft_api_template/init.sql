@@ -10,6 +10,11 @@ CREATE TABLE IF NOT EXISTS ft_api_template (
   query_json      JSONB NOT NULL DEFAULT '{}',
   body_template   JSONB NOT NULL DEFAULT '{}',
   inject_schema   JSONB NOT NULL DEFAULT '[]',
+  input_params_schema JSONB NOT NULL DEFAULT '[]',
+  preflight_steps JSONB NOT NULL DEFAULT '[]',
+  expect_status   INT NOT NULL DEFAULT 202,
+  poll_json       JSONB NOT NULL DEFAULT '{}',
+  forbidden_patterns JSONB NOT NULL DEFAULT '[]',
   is_active       BOOLEAN NOT NULL DEFAULT TRUE,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()

@@ -12,6 +12,7 @@ export const TEMPLATE_COMPONENTS = {
   'TPL-OBS': defineAsyncComponent(() => import('@/components/config-templates/TplObsPanel.vue')),
   'TPL-LOAD': defineAsyncComponent(() => import('@/components/config-templates/TplLoadPanel.vue')),
   'TPL-MAN': defineAsyncComponent(() => import('@/components/config-templates/TplManPanel.vue')),
+  'TPL-API-CTX': defineAsyncComponent(() => import('@/components/config-templates/TplApiCtxPanel.vue')),
 };
 
 export const PANEL_KEY_TO_TEMPLATE = {
@@ -25,9 +26,19 @@ export const PANEL_KEY_TO_TEMPLATE = {
   obs: 'TPL-OBS',
   load: 'TPL-LOAD',
   man: 'TPL-MAN',
+  'api-ctx': 'TPL-API-CTX',
 };
 
 export const MIXED_TS_MAJORS = new Set([ 'C1', 'C2', 'C3', 'C4' ]);
+
+export const TEMPLATE_DISPLAY_NAMES = {
+  'TPL-CHAIN': '多步链路',
+  'TPL-API-CTX': '前置链路+接口模板',
+};
+
+export const SCHEME_TEMPLATE_ALTERNATIVES = {
+  'TS-05-CHAIN': [ 'TPL-CHAIN', 'TPL-API-CTX' ],
+};
 
 export function resolveTemplateComponent(templateCode) {
   return TEMPLATE_COMPONENTS[templateCode] || TEMPLATE_COMPONENTS['TPL-DET'];

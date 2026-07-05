@@ -16,12 +16,26 @@ const SCHEME_TO_TEMPLATE = {
   'TS-10-MAN': 'TPL-MAN',
 };
 
+/** 独立模板 code → 执行方案（与 TS-05-CHAIN 共用引擎） */
+const TEMPLATE_SCHEME_OVERRIDE = {
+  'TPL-API-CTX': 'TS-05-CHAIN',
+};
+
+/** 同一 TS 下可选的配置模板变体（混合 TS 用例级切换） */
+const SCHEME_TEMPLATE_ALTERNATIVES = {
+  'TS-05-CHAIN': [ 'TPL-CHAIN', 'TPL-API-CTX' ],
+};
+
+const API_CTX_TEMPLATE = 'TPL-API-CTX';
+const API_CTX_SCHEME = 'TS-05-CHAIN';
+
 const TEMPLATE_TABLES = {
   'TPL-DET': 'tpl_config_det',
   'TPL-BND': 'tpl_config_bnd',
   'TPL-REP': 'tpl_config_rep',
   'TPL-SET': 'tpl_config_set',
   'TPL-CHAIN': 'tpl_config_chain',
+  'TPL-API-CTX': 'tpl_config_api_ctx',
   'TPL-PAIR': 'tpl_config_pair',
   'TPL-NEG': 'tpl_config_neg',
   'TPL-OBS': 'tpl_config_obs',
@@ -35,6 +49,7 @@ const TEMPLATE_NAMES = {
   'TPL-REP': '重复抽样',
   'TPL-SET': '固定样本集',
   'TPL-CHAIN': '多步链路',
+  'TPL-API-CTX': '前置链路+接口模板',
   'TPL-PAIR': '对照对比',
   'TPL-NEG': '对抗专项',
   'TPL-OBS': '可观测稽核',
@@ -58,6 +73,9 @@ function assertTemplateTable(tableName) {
  */
 function resolveTemplateCodeFromItem(item) {
   if (!item) return 'TPL-DET';
+  if (item.template_code && TEMPLATE_TABLES[item.template_code]) {
+    return item.template_code;
+  }
   if (MIXED_TS_MAJORS.has(item.category_major_id)) {
     return item.scheme_template_code
       || SCHEME_TO_TEMPLATE[item.scheme_primary_id]
@@ -83,19 +101,66 @@ function applyResolvedTemplate(row) {
   } else {
     template_name = row.mapped_template_name || template_name;
   }
-  if (!template_name) {
+  if (row.template_code && TEMPLATE_NAMES[row.template_code]) {
+    template_name = TEMPLATE_NAMES[row.template_code];
+  } else if (!template_name) {
     template_name = TEMPLATE_NAMES[template_code] || template_name;
   }
   return { ...row, template_code, template_name };
 }
 
+function resolveDefaultTemplateForScheme(schemeId) {
+  return SCHEME_TO_TEMPLATE[schemeId] || 'TPL-DET';
+}
+
+/** 混合 TS 用例可选的配置模板（含升级至 TPL-API-CTX） */
+function getTemplateAlternativesForItem(item) {
+  if (!item || !MIXED_TS_MAJORS.has(item.category_major_id)) return [];
+  if (item.scheme_primary_id === API_CTX_SCHEME) {
+    return SCHEME_TEMPLATE_ALTERNATIVES[API_CTX_SCHEME] || [];
+  }
+  return [ API_CTX_TEMPLATE ];
+}
+
+/** 持久化：默认模板存 null，仅变体存 explicit code */
+function normalizeStoredTemplateCode(templateCode, schemeId) {
+  const def = resolveDefaultTemplateForScheme(schemeId);
+  if (!templateCode || templateCode === def) return null;
+  return templateCode;
+}
+
+function buildItemTemplateSwitchMeta(item, effectiveTemplateCode) {
+  const isMixed = MIXED_TS_MAJORS.has(item?.category_major_id);
+  const alternatives = getTemplateAlternativesForItem(item);
+  const canSwitchApiCtx = isMixed && alternatives.length > 0;
+  const needsSchemeUpgrade = canSwitchApiCtx
+    && item.scheme_primary_id !== API_CTX_SCHEME
+    && (effectiveTemplateCode === API_CTX_TEMPLATE || alternatives.includes(API_CTX_TEMPLATE));
+  return {
+    is_mixed_ts: isMixed,
+    template_alternatives: alternatives,
+    can_switch_api_ctx: canSwitchApiCtx,
+    needs_scheme_upgrade_for_api_ctx: needsSchemeUpgrade,
+    effective_template_code: effectiveTemplateCode,
+    default_template_code: resolveDefaultTemplateForScheme(item?.scheme_primary_id),
+  };
+}
+
 module.exports = {
   MIXED_TS_MAJORS,
   SCHEME_TO_TEMPLATE,
+  SCHEME_TEMPLATE_ALTERNATIVES,
+  TEMPLATE_SCHEME_OVERRIDE,
   TEMPLATE_TABLES,
   TEMPLATE_NAMES,
+  API_CTX_TEMPLATE,
+  API_CTX_SCHEME,
   ALLOWED_TABLE_NAMES,
   assertTemplateTable,
   resolveTemplateCodeFromItem,
+  resolveDefaultTemplateForScheme,
+  getTemplateAlternativesForItem,
+  normalizeStoredTemplateCode,
+  buildItemTemplateSwitchMeta,
   applyResolvedTemplate,
 };

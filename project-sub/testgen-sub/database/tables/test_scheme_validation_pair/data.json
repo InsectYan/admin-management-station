@@ -81,6 +81,42 @@
     "project_code": "fitness-agent"
   },
   {
+    "pair_id": "P09B",
+    "scheme_id": "TS-05-CHAIN",
+    "validation_id": "VS-07-RATE-H",
+    "is_primary": false,
+    "scheme_name": "多步链路串联",
+    "validation_name": "达标率·高门槛",
+    "project_code": "fitness-agent"
+  },
+  {
+    "pair_id": "P09C",
+    "scheme_id": "TS-05-CHAIN",
+    "validation_id": "VS-03-ZERO",
+    "is_primary": false,
+    "scheme_name": "多步链路串联",
+    "validation_name": "零违规",
+    "project_code": "fitness-agent"
+  },
+  {
+    "pair_id": "P09D",
+    "scheme_id": "TS-05-CHAIN",
+    "validation_id": "VS-01-EXACT",
+    "is_primary": false,
+    "scheme_name": "多步链路串联",
+    "validation_name": "精确匹配",
+    "project_code": "fitness-agent"
+  },
+  {
+    "pair_id": "P09E",
+    "scheme_id": "TS-05-CHAIN",
+    "validation_id": "VS-02-CONTRACT",
+    "is_primary": false,
+    "scheme_name": "多步链路串联",
+    "validation_name": "契约通过",
+    "project_code": "fitness-agent"
+  },
+  {
     "pair_id": "P10",
     "scheme_id": "TS-06-PAIR",
     "validation_id": "VS-03-ZERO",

@@ -46,6 +46,11 @@ function normalizeSteps(steps) {
 }
 
 function buildItemId(ctx, index) {
+  if (ctx.manual) {
+    const major = String(ctx.category_major_id || 'GEN').replace(/[^A-Za-z0-9-]/g, '');
+    const ts = Date.now().toString(36).toUpperCase();
+    return `${major}-MANUAL-${ts}`.slice(0, 64);
+  }
   const scheme = String(ctx.scheme_id || 'GEN').replace(/[^A-Za-z0-9-]/g, '');
   const validation = String(ctx.validation_id || 'VS').replace(/[^A-Za-z0-9-]/g, '');
   const offset = Math.max(0, Number(ctx.id_offset) || 0);
@@ -96,11 +101,11 @@ function mapAgentCaseToItemDetail(tc, ctx, index) {
     endpoint_path: truncate(tc.endpoint_path || tc.path || '') || null,
     http_method: truncate(tc.http_method || tc.method || '', 8) || null,
     http_status_expected: tc.http_status_expected || tc.expect_status || null,
-    source_doc: truncate(`ai-gen:job-${ctx.job_id}`, 128),
-    source_section: truncate(ctx.validation_id || ctx.scheme_id || 'generated', 32),
-    tags: Array.isArray(tc.tags) ? tc.tags : [ 'ai-generated', `job-${ctx.job_id}` ],
+    source_doc: truncate(ctx.manual ? 'manual-entry' : `ai-gen:job-${ctx.job_id}`, 128),
+    source_section: truncate(ctx.manual ? 'manual' : (ctx.validation_id || ctx.scheme_id || 'generated'), 32),
+    tags: Array.isArray(tc.tags) ? tc.tags : (ctx.manual ? [ 'manual' ] : [ 'ai-generated', `job-${ctx.job_id}` ]),
     notes: truncate(tc.notes || '') || null,
-    scheme_mapping_source: 'ai-generation',
+    scheme_mapping_source: ctx.manual ? 'manual-entry' : 'ai-generation',
     is_active: true,
     config_json: tc.config_json && typeof tc.config_json === 'object' ? tc.config_json : undefined,
     threshold_json: tc.threshold_json && typeof tc.threshold_json === 'object' ? tc.threshold_json : undefined,

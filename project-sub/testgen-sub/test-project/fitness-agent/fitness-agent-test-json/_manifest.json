@@ -1173,9 +1173,9 @@
     {
       "item_id": "C1-INTENT-008",
       "item_name": "[C1-INTENT-008] 风险优先 — 「膝盖疼还练腿」",
-      "scheme_primary_id": "TS-07-NEG",
+      "scheme_primary_id": "TS-05-CHAIN",
       "scheme_secondary_id": null,
-      "template": "TPL-NEG",
+      "template": "TPL-API-CTX",
       "sub_template": null,
       "automation_command": null,
       "endpoint_path": null,

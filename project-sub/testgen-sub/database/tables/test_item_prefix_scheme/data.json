@@ -204,14 +204,14 @@
   {
     "mapping_id": "MAP0016",
     "item_prefix": "C1-INTENT-008",
-    "scheme_primary_id": "TS-07-NEG",
+    "scheme_primary_id": "TS-05-CHAIN",
     "scheme_secondary_id": null,
-    "validation_primary_id": "VS-09-BLOCK-H",
+    "validation_primary_id": "VS-04-CHAIN-OK",
     "validation_secondary_id": null,
-    "sample_execution_note": "疼痛+生成：阻断率 H",
+    "sample_execution_note": "前置链路+文案批量：先安全策略非直接生成",
     "mapping_source": "C1-方案映射.md",
-    "scheme_primary_name": "异常/对抗专项",
-    "validation_primary_name": "安全阻断·高",
+    "scheme_primary_name": "多步链路串联",
+    "validation_primary_name": "链路全过",
     "project_code": "fitness-agent"
   },
   {

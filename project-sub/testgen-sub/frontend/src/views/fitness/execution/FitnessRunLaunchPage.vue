@@ -169,7 +169,7 @@ const repeatCount = computed(() =>
   ?? '-',
 );
 
-function schemeConfigReady(id, config) {
+function schemeConfigReady(id, config, itemRef) {
   if (!LAUNCHABLE_SCHEMES.has(id)) return false;
   if (id === 'TS-04-SET') return Boolean(config?.sample_set_id);
   if (id === 'TS-02-BND') return (config?.config_json?.matrix?.length ?? 0) > 0;
@@ -177,7 +177,14 @@ function schemeConfigReady(id, config) {
     const n = Number(config?.config_json?.repeat_count ?? config?.threshold_json?.passk_N);
     return Number.isFinite(n) && n >= 1;
   }
-  if (id === 'TS-05-CHAIN') return (config?.config_json?.steps?.length ?? 0) > 0;
+  if (id === 'TS-05-CHAIN') {
+    const mode = config?.config_json?.execution_mode
+      || (itemRef?.template_code === 'TPL-API-CTX' ? 'api_ctx' : 'chain');
+    if (mode === 'api_ctx') {
+      return Boolean(config?.api_template_id || config?.config_json?.api_template_id);
+    }
+    return (config?.config_json?.steps?.length ?? 0) > 0;
+  }
   if (id === 'TS-06-PAIR') return (config?.config_json?.pairs?.length ?? 0) > 0;
   if (id === 'TS-07-NEG') return (config?.config_json?.cases?.length ?? 0) > 0;
   if (id === 'TS-08-OBS') {
@@ -190,8 +197,8 @@ function schemeConfigReady(id, config) {
 
 const canLaunch = computed(() => {
   if (!envId.value) return false;
-  if (!schemeConfigReady(schemeId.value, runConfig.value)) return false;
-  if (hasSecondary.value && !schemeConfigReady(secondarySchemeId.value, secondaryRunConfig.value)) return false;
+  if (!schemeConfigReady(schemeId.value, runConfig.value, item.value)) return false;
+  if (hasSecondary.value && !schemeConfigReady(secondarySchemeId.value, secondaryRunConfig.value, item.value)) return false;
   return true;
 });
 const canDryRun = computed(() => envId.value && LAUNCHABLE_SCHEMES.has(schemeId.value));

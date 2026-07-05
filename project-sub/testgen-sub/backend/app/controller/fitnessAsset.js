@@ -50,6 +50,16 @@ class FitnessAssetController extends Controller {
     this.ctx.body = { code: 0, message: 'ok', data };
   }
 
+  async createManualItem() {
+    try {
+      const data = await this.service.fitnessAsset.createManualTestItem(this.ctx.request.body || {});
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      this.ctx.status = err.status || 400;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
   async updateItemSchemes() {
     try {
       const data = await this.service.fitnessAsset.updateItemSchemes(

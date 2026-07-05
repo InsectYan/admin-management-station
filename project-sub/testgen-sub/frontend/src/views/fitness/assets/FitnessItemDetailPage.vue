@@ -17,6 +17,15 @@
       <el-descriptions-item label="配置模板">{{ item.template_name || item.template_code || '—' }}</el-descriptions-item>
     </el-descriptions>
 
+    <el-divider v-if="isMixedTs" content-position="left">配置模板（混合 TS）</el-divider>
+    <MixedTsTemplateSwitcher
+      v-if="isMixedTs && item"
+      :item-id="item.item_id"
+      :item="item"
+      :switch-meta="switchMeta"
+      @switched="onTemplateSwitched"
+    />
+
     <el-divider content-position="left">辅方案配置</el-divider>
     <el-form v-if="item" label-width="100px" class="secondary-form">
       <el-form-item label="辅方案">
@@ -110,10 +119,12 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, watch } from 'vue';
+import { onMounted, reactive, ref, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import SchemeCodeNameCell from '@/components/fitness/SchemeCodeNameCell.vue';
+import MixedTsTemplateSwitcher from '@/components/config-templates/MixedTsTemplateSwitcher.vue';
+import { MIXED_TS_MAJORS, SCHEME_TEMPLATE_ALTERNATIVES } from '@/components/config-templates/registry.js';
 import {
   fetchSchemes,
   fetchSchemeValidations,
@@ -134,6 +145,31 @@ const secondaryForm = reactive({
   scheme_secondary_id: '',
   validation_secondary_id: '',
 });
+
+const isMixedTs = computed(() => MIXED_TS_MAJORS.has(item.value?.category_major_id));
+
+const switchMeta = computed(() => {
+  const row = item.value;
+  if (!row || !isMixedTs.value) {
+    return { can_switch_api_ctx: false };
+  }
+  const alternatives = row.scheme_primary_id === 'TS-05-CHAIN'
+    ? (SCHEME_TEMPLATE_ALTERNATIVES['TS-05-CHAIN'] || [])
+    : [ 'TPL-API-CTX' ];
+  const effective = row.template_code
+    || (row.scheme_primary_id === 'TS-05-CHAIN' ? 'TPL-CHAIN' : null);
+  return {
+    can_switch_api_ctx: alternatives.length > 0,
+    template_alternatives: alternatives,
+    needs_scheme_upgrade_for_api_ctx: row.scheme_primary_id !== 'TS-05-CHAIN',
+    effective_template_code: effective,
+  };
+});
+
+async function onTemplateSwitched(data) {
+  item.value = { ...item.value, ...data.item, template_code: data.template_code };
+  await loadItem();
+}
 
 function relationTag(typeId) {
   return riskRelationTag(typeId);

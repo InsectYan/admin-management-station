@@ -37,7 +37,14 @@ function interpolateValue(value, vars) {
 
 /** @param {object} row @param {Record<string, unknown>} vars */
 function applyVarsToRow(row, vars) {
-  return interpolateValue(row, vars);
+  const out = interpolateValue(row, vars);
+  if (out.path && typeof out.path === 'string') {
+    out.path = String(out.path).replace(/\{(\w+)\}/g, (m, key) => {
+      const v = vars[key];
+      return v == null ? m : encodeURIComponent(String(v));
+    });
+  }
+  return out;
 }
 
 /** @param {Record<string, unknown>} vars @param {unknown} body @param {Record<string, string>} extract */

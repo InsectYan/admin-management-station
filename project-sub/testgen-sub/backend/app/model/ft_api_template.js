@@ -14,6 +14,11 @@ module.exports = app => {
     query_json: { type: JSONB, defaultValue: {} },
     body_template: { type: JSONB, defaultValue: {} },
     inject_schema: { type: JSONB, defaultValue: [] },
+    input_params_schema: { type: JSONB, defaultValue: [] },
+    preflight_steps: { type: JSONB, defaultValue: [] },
+    expect_status: { type: INTEGER, defaultValue: 202 },
+    poll_json: { type: JSONB, defaultValue: {} },
+    forbidden_patterns: { type: JSONB, defaultValue: [] },
     is_active: { type: BOOLEAN, defaultValue: true },
   }, { tableName: 'ft_api_template' });
 };

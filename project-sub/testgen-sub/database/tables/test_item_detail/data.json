@@ -2608,15 +2608,9 @@
       "DATABASE_URL 可连，seed 会员 10002/10003 存在"
     ],
     "test_steps": [
-      "P1 text：助手纯文本气泡落库",
-      "P2 plan_form：plan_forms + form_data",
-      "P3 training_plan：PLAN_FORM_SUBMIT 后 macro_plans draft",
-      "P4 session_plan：class_sessions draft",
-      "P5 require_form：require_form_data 载荷",
-      "P6 session_summary：active 课时总结",
-      "P7 disambiguation：消歧候选列表",
-      "P8 member_switch：切换会员上下文",
-      "P9 intent_clarification：澄清选项 UI"
+      "P1 text · P2 plan_form · P3 training_plan · P4 session_plan",
+      "P5 require_form · P6 session_summary · P7 disambiguation",
+      "P8 member_switch · P9 intent_clarification"
     ],
     "assertion_points": [
       "chat_messages.message_type 与载荷一致",
@@ -5340,11 +5334,12 @@
     "endpoint_path": null,
     "http_method": null,
     "http_status_expected": null,
-    "scheme_primary_id": "TS-07-NEG",
+    "scheme_primary_id": "TS-05-CHAIN",
     "scheme_secondary_id": null,
-    "validation_primary_id": "VS-09-BLOCK-H",
+    "validation_primary_id": "VS-04-CHAIN-OK",
     "validation_secondary_id": null,
-    "sample_execution_note": "疼痛+生成：阻断率 H",
+    "template_code": "TPL-API-CTX",
+    "sample_execution_note": "前置链路+文案批量：先安全策略非直接生成",
     "scheme_mapping_source": "C1-方案映射.md",
     "is_risk_flag": false,
     "is_observability_audit": false,
@@ -5353,7 +5348,8 @@
     "code_reference": null,
     "tags": [
       "C1",
-      "TS-07-NEG"
+      "TS-05-CHAIN",
+      "TPL-API-CTX"
     ],
     "notes": null,
     "source_doc": "C1-教练端业务.md",
@@ -20532,10 +20528,8 @@
       "local 全栈或 AgentRun 环境可用"
     ],
     "test_steps": [
-      "F1 pickSummary 长 Markdown 优先",
-      "F2 pickSummary 短 caption 跳过",
-      "F3 require_form HAS_PLAN 挂载 macro",
-      "F4 require_form NO_PLAN 推断"
+      "normalizeRequireFormData plan_form",
+      "断言：模板字段规范化"
     ],
     "assertion_points": [
       "提交后进 pipeline"

@@ -132,12 +132,24 @@ class RunOrchestrator {
     }
 
     if (schemeId === 'TS-05-CHAIN') {
-      const steps = runConfig?.config_json?.steps;
-      if (!Array.isArray(steps) || !steps.length) {
-        const err = new Error('TS-05-CHAIN 需要 config_json.steps 非空');
-        err.status = 400;
-        err.code = 'CHAIN_STEPS_REQUIRED';
-        throw err;
+      const cfg = runConfig?.config_json || {};
+      const mode = cfg.execution_mode || 'chain';
+      if (mode === 'api_ctx') {
+        const apiTemplateId = runConfig?.api_template_id || cfg.api_template_id;
+        if (!apiTemplateId) {
+          const err = new Error('TPL-API-CTX 需要选择接口模板 api_template_id');
+          err.status = 400;
+          err.code = 'API_TEMPLATE_REQUIRED';
+          throw err;
+        }
+      } else {
+        const steps = cfg.steps;
+        if (!Array.isArray(steps) || !steps.length) {
+          const err = new Error('TS-05-CHAIN 需要 config_json.steps 非空');
+          err.status = 400;
+          err.code = 'CHAIN_STEPS_REQUIRED';
+          throw err;
+        }
       }
     }
 
