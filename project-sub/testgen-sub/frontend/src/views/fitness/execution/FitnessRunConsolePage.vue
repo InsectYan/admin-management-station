@@ -109,7 +109,8 @@
 
     <el-tabs v-model="resultTab" style="margin-top:16px">
       <el-tab-pane label="主方案子项" name="subs">
-        <el-table :data="run?.results||[]" size="small" row-key="sub_index">
+        <p v-if="isApiCtxRun" class="tab-hint">内容验证子项（不含前置校验）；达标率仅统计本表。</p>
+        <el-table :data="contentResults" size="small" row-key="sub_index">
           <el-table-column type="expand">
             <template #default="{ row }">
               <div v-if="row.sub_verdict === 'fail'" class="expand-failure">
@@ -121,6 +122,26 @@
           <el-table-column prop="sub_index" label="#" width="50" />
           <el-table-column prop="input_summary" label="输入" min-width="160" />
           <el-table-column prop="output_summary" label="输出" min-width="160" />
+          <el-table-column prop="sub_verdict" label="判定" width="80">
+            <template #default="{ row }">
+              <FitnessStatusTag prop="sub_verdict" :row="row" />
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-tab-pane>
+      <el-tab-pane v-if="isApiCtxRun" label="前置校验" name="preflight">
+        <el-alert
+          v-if="preflightChecks.length"
+          :type="preflightOk ? 'success' : 'error'"
+          :closable="false"
+          style="margin-bottom:12px"
+          :title="preflightOk ? '前置链路全部通过' : '前置链路存在失败，内容验证已跳过'"
+        />
+        <el-empty v-if="!preflightChecks.length" description="无 preflight 步骤" />
+        <el-table v-else :data="preflightChecks" size="small" row-key="sub_index">
+          <el-table-column prop="sub_index" label="#" width="50" />
+          <el-table-column prop="input_summary" label="输入" min-width="140" />
+          <el-table-column prop="output_summary" label="输出" min-width="180" />
           <el-table-column prop="sub_verdict" label="判定" width="80">
             <template #default="{ row }">
               <FitnessStatusTag prop="sub_verdict" :row="row" />
@@ -242,6 +263,22 @@ import { buildRunFailurePanels, truncateLogText } from '@/utils/runResultDetail.
 
 const TERMINAL = new Set([ 'success', 'failed', 'cancelled' ]);
 
+function resultPhase(row) {
+  const detail = row?.assertion_detail;
+  if (detail && typeof detail === 'object' && !Array.isArray(detail) && detail.phase) {
+    return detail.phase;
+  }
+  return null;
+}
+
+function isContentResult(row) {
+  const phase = resultPhase(row);
+  if (phase === 'preflight') return false;
+  if (phase === 'api_case') return true;
+  if (row?.sub_verdict === 'skip') return false;
+  return phase == null;
+}
+
 const route = useRoute();
 const router = useRouter();
 const loading = ref(false);
@@ -296,11 +333,33 @@ const passkLabel = computed(() => {
   return '';
 });
 
+const isApiCtxRun = computed(() =>
+  run.value?.progress?.execution_mode === 'api_ctx'
+  || (run.value?.results || []).some(r => resultPhase(r) != null),
+);
+
+const preflightChecks = computed(() => {
+  const fromProgress = run.value?.progress?.preflight_checks;
+  if (Array.isArray(fromProgress) && fromProgress.length) {
+    return fromProgress;
+  }
+  return (run.value?.results || []).filter(r => resultPhase(r) === 'preflight');
+});
+
+const preflightOk = computed(() =>
+  run.value?.progress?.preflight_ok ?? preflightChecks.value.every(r => r.sub_verdict === 'pass'),
+);
+
+const contentResults = computed(() => {
+  if (!isApiCtxRun.value) return run.value?.results || [];
+  return (run.value?.results || []).filter(isContentResult);
+});
+
 const passCount = computed(() =>
-  (run.value?.results || []).filter(r => r.sub_verdict === 'pass').length,
+  contentResults.value.filter(r => r.sub_verdict === 'pass').length,
 );
 const failCount = computed(() =>
-  (run.value?.results || []).filter(r => r.sub_verdict === 'fail').length,
+  contentResults.value.filter(r => r.sub_verdict === 'fail').length,
 );
 
 const failurePanels = computed(() => buildRunFailurePanels(run.value?.results || []));
@@ -587,5 +646,10 @@ onBeforeUnmount(closeStream);
 .explain-hint {
   color: var(--el-text-color-secondary);
   font-size: 13px;
+}
+.tab-hint {
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  margin: 0 0 8px;
 }
 </style>

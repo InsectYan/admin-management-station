@@ -66,33 +66,6 @@
       :item-id="item.item_id"
       @update:model-value="sync"
     />
-
-    <el-divider content-position="left">验证方案（TS-05-CHAIN 全部可关联）</el-divider>
-    <el-form-item label="主验证">
-      <el-select v-model="validationPrimaryId" style="width:100%" @change="emitValidations">
-        <el-option
-          v-for="v in validationOptions"
-          :key="v.validation_id"
-          :label="`${v.validation_id} · ${v.name}${v.is_primary ? ' (默认)' : ''}`"
-          :value="v.validation_id"
-        />
-      </el-select>
-    </el-form-item>
-    <el-form-item label="辅验证">
-      <el-select
-        v-model="validationSecondaryId"
-        clearable
-        style="width:100%"
-        @change="emitValidations"
-      >
-        <el-option
-          v-for="v in validationOptions"
-          :key="'s-' + v.validation_id"
-          :label="`${v.validation_id} · ${v.name}`"
-          :value="v.validation_id"
-        />
-      </el-select>
-    </el-form-item>
   </el-form>
 </template>
 
@@ -103,7 +76,6 @@ import ApiInjectBindingsForm from '@/components/config-templates/ApiInjectBindin
 import {
   fetchApiTemplate,
   fetchApiTemplates,
-  fetchSchemeValidations,
 } from '@/services/fitnessService.js';
 import { bindToLabel, parseInputParamsImportJson } from '@/utils/apiTemplateParamBind.js';
 
@@ -111,16 +83,13 @@ const props = defineProps({
   item: { type: Object, required: true },
   modelValue: { type: Object, default: () => ({}) },
 });
-const emit = defineEmits([ 'update:modelValue', 'update:validations' ]);
+const emit = defineEmits([ 'update:modelValue' ]);
 
 const apiTemplates = ref([]);
 const apiTemplateId = ref(null);
 const selectedTemplate = ref(null);
 const injectBindings = ref({});
 const inputParams = ref({});
-const validationOptions = ref([]);
-const validationPrimaryId = ref('');
-const validationSecondaryId = ref('');
 const paramImportRef = ref(null);
 
 const injectFields = computed(() => selectedTemplate.value?.inject_schema || []);
@@ -158,23 +127,13 @@ function sync() {
     execution_mode: 'api_ctx',
     api_template_id: apiTemplateId.value,
     use_api_template: true,
+    use_agent_judge: true,
     input_params: { ...inputParams.value },
     inject_bindings: { ...injectBindings.value },
   });
   queueMicrotask(() => {
     syncingFromInternal = false;
   });
-}
-
-function emitValidations() {
-  emit('update:validations', {
-    validation_primary_id: validationPrimaryId.value || null,
-    validation_secondary_id: validationSecondaryId.value || null,
-  });
-}
-
-async function loadValidations() {
-  validationOptions.value = await fetchSchemeValidations(props.item.scheme_primary_id || 'TS-05-CHAIN');
 }
 
 async function loadTemplateDetail(id) {
@@ -217,23 +176,15 @@ function initFromProps() {
   apiTemplateId.value = nextId;
   injectBindings.value = { ...(cfg.inject_bindings || {}) };
   inputParams.value = { ...(cfg.input_params || {}) };
-  validationPrimaryId.value = props.item.validation_primary_id || '';
-  validationSecondaryId.value = props.item.validation_secondary_id || '';
-  emitValidations();
   if (nextId !== loadedTemplateId) {
     loadTemplateDetail(nextId);
   }
 }
 
 watch(() => props.modelValue, initFromProps, { deep: true });
-watch(() => props.item?.validation_primary_id, () => {
-  validationPrimaryId.value = props.item?.validation_primary_id || validationPrimaryId.value;
-  validationSecondaryId.value = props.item?.validation_secondary_id || '';
-  emitValidations();
-});
 
 onMounted(async () => {
-  await Promise.all([ loadTemplates(), loadValidations() ]);
+  await loadTemplates();
   initFromProps();
 });
 </script>

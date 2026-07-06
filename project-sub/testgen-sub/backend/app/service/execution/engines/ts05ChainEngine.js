@@ -6,6 +6,7 @@ const BaseTsEngine = require('./baseTsEngine');
 const { executeMatrixRow } = require('../runners/matrixRowRunner');
 const { applyExtract, applyVarsToRow } = require('../runners/varPool');
 const { executeApiTemplateContext } = require('../runners/apiTemplateContextRunner');
+const { splitApiCtxResults } = require('../../../lib/apiCtxContent');
 
 class Ts05ChainEngine extends BaseTsEngine {
   constructor() {
@@ -62,16 +63,24 @@ class Ts05ChainEngine extends BaseTsEngine {
       sampleRows: sampleRows.map(r => r.toJSON()),
     });
 
+    const { preflight, content, preflightOk } = splitApiCtxResults(results);
     if (runId) {
-      const passCount = results.filter(r => r.sub_verdict === 'pass').length;
+      const passCount = content.filter(r => r.sub_verdict === 'pass').length;
       emitProgress(runId, {
         phase: 'running',
         percent: 69,
-        pass_rate: results.length
-          ? Math.round((passCount / results.length) * 1000) / 10
+        pass_rate: content.length
+          ? Math.round((passCount / content.length) * 1000) / 10
           : 0,
-        completed: results.length,
-        total: results.length,
+        completed: content.length,
+        total: content.length,
+        preflight_ok: preflightOk,
+        preflight_checks: preflight.map(r => ({
+          sub_index: r.sub_index,
+          step_name: r.step_name || r.output_summary,
+          sub_verdict: r.sub_verdict,
+          output_summary: r.output_summary,
+        })),
         run_id: runId,
       });
     }

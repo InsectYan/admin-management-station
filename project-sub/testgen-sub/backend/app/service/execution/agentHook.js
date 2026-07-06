@@ -1,5 +1,7 @@
 'use strict';
 
+const { extractResponseText } = require('../../lib/apiCtxContent');
+
 const FIELD_MAX = 2048;
 
 /** @param {unknown} value @param {number} [max] */
@@ -63,9 +65,15 @@ class AgentHookRunner {
 
   shouldApplyAgentJudge(runConfig) {
     const cfg = runConfig?.config_json || {};
+    if (cfg.execution_mode === 'api_ctx') return false;
     if (cfg.use_agent_judge === true) return true;
     const hook = parseAgentHook(cfg);
     return Boolean(hook.post_sub_run || hook.vs_agent);
+  }
+
+  shouldApplyApiCtxContentJudge(runConfig) {
+    const cfg = runConfig?.config_json || {};
+    return cfg.execution_mode === 'api_ctx' && cfg.use_agent_judge !== false;
   }
 
   /**
@@ -132,6 +140,94 @@ class AgentHookRunner {
     }
 
     return subResults;
+  }
+
+  /**
+   * TPL-API-CTX：功能性通过后，用 Agent 比对响应文案与用例 expected_observation
+   * @param {import('./runOrchestrator').ExecutionContext} execCtx
+   * @param {import('./runOrchestrator').SubRunResult[]} contentSubs
+   * @param {object} [apiTemplate]
+   */
+  async applyApiCtxContentJudge(execCtx, contentSubs, apiTemplate = {}) {
+    const { runConfig, item, run } = execCtx;
+    const expected = item?.expected_observation
+      || (Array.isArray(item?.assertion_points) ? item.assertion_points[0] : '')
+      || '';
+    const extractPaths = apiTemplate?.content_extract_paths;
+    const trace = { run_id: run?.id, item_id: item?.item_id };
+
+    for (const sub of contentSubs) {
+      if (sub.functional_verdict !== 'pass') {
+        const detail = Array.isArray(sub.assertion_detail) ? sub.assertion_detail : [];
+        sub.assertion_detail = [
+          ...detail,
+          {
+            type: 'content_skipped',
+            ok: false,
+            message: '接口功能性未通过，跳过内容观测比对',
+          },
+        ];
+        continue;
+      }
+
+      const body = sub.artifacts?.http?.body;
+      const actualText = extractResponseText(body, extractPaths);
+      sub.artifacts = {
+        ...(sub.artifacts || {}),
+        content_text: actualText,
+      };
+
+      try {
+        const agentRes = await this.ctx.service.agentProxy.invokeObservationMatch({
+          action: 'match',
+          expected_observation: expected,
+          actual_text: actualText,
+          input_summary: sub.input_summary || '',
+          threshold_json: runConfig?.threshold_json || {},
+          trace,
+        });
+        const match = agentRes.output?.match || agentRes.output || {};
+        const pass = match.pass === true;
+        sub.sub_verdict = pass ? 'pass' : 'fail';
+        const detail = Array.isArray(sub.assertion_detail) ? sub.assertion_detail : [];
+        sub.assertion_detail = [
+          ...detail,
+          {
+            type: 'observation_match',
+            ok: pass,
+            pass,
+            score: match.score,
+            reasons: match.reasons || [],
+            expected_observation: expected,
+            actual_excerpt: truncate(actualText, 500),
+            fallback: match.fallback === true,
+          },
+        ];
+      } catch (err) {
+        sub.sub_verdict = 'fail';
+        const detail = Array.isArray(sub.assertion_detail) ? sub.assertion_detail : [];
+        sub.assertion_detail = [
+          ...detail,
+          {
+            type: 'observation_match',
+            ok: false,
+            pass: false,
+            pending_judge: true,
+            error: err.message,
+            expected_observation: expected,
+            actual_excerpt: truncate(actualText, 500),
+          },
+        ];
+        this.ctx.app.logger.warn(
+          '[agentHook] observation match failed run=%s sub=%s %s',
+          run?.id,
+          sub.sub_index,
+          err.message,
+        );
+      }
+    }
+
+    return contentSubs;
   }
 
   /**

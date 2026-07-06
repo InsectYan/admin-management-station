@@ -129,6 +129,16 @@ class AgentProxyService extends Service {
     return this.invokeSkill(invokePath, { ...payload, _skill: 'testgen-skill' }, ms);
   }
 
+  async invokeObservationMatch(payload, timeoutMs) {
+    const { observationMatchInvokePath, judgeTimeoutMs, generateTimeoutMs, timeout } = this._skillConfig();
+    const path = observationMatchInvokePath || '/api/skills/fitness-observation-match-skill/invoke';
+    let ms = timeoutMs ?? judgeTimeoutMs ?? generateTimeoutMs ?? timeout ?? 120000;
+    if (this._isLocalOllamaProfile(payload?.llm_profile)) {
+      ms = 0;
+    }
+    return this.invokeSkill(path, { ...payload, _skill: 'fitness-observation-match-skill' }, ms);
+  }
+
   async invokeFitnessJudge(payload, timeoutMs) {
     const { judgeInvokePath, judgeTimeoutMs, generateTimeoutMs, timeout } = this._skillConfig();
     const path = judgeInvokePath || '/api/skills/fitness-judge-skill/invoke';

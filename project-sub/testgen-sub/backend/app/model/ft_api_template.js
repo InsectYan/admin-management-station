@@ -19,6 +19,7 @@ module.exports = app => {
     expect_status: { type: INTEGER, defaultValue: 202 },
     poll_json: { type: JSONB, defaultValue: {} },
     forbidden_patterns: { type: JSONB, defaultValue: [] },
+    content_extract_paths: { type: JSONB, defaultValue: [] },
     is_active: { type: BOOLEAN, defaultValue: true },
   }, { tableName: 'ft_api_template' });
 };

@@ -36,6 +36,16 @@
       <el-button type="success" :loading="generating" @click="runGenerate(true)">生成并保存</el-button>
     </div>
 
+    <ConfigValidationPicker
+      v-if="item && schemeRole === 'primary' && editMode === 'manual'"
+      :item="item"
+      :scheme-id="activeSchemeId"
+      :options="validationOptions"
+      :default-validation-id="defaultValidationId"
+      :readonly="!editable"
+      @update:validations="validationOverrides = $event"
+    />
+
     <component
       :is="panelComponent"
       v-if="item"
@@ -43,7 +53,6 @@
       v-model="localConfig"
       v-model:threshold="localThreshold"
       :readonly="!editable || editMode === 'agent'"
-      @update:validations="validationOverrides = $event"
     />
 
     <div v-if="editable && editMode === 'manual'" style="margin-top:16px">
@@ -60,6 +69,7 @@ import { computed, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { resolveTemplateComponent } from './registry.js';
 import MixedTsTemplateSwitcher from './MixedTsTemplateSwitcher.vue';
+import ConfigValidationPicker from './ConfigValidationPicker.vue';
 import {
   fetchItemTemplateConfig,
   generateItemTemplateConfig,
@@ -84,6 +94,8 @@ const templateMeta = ref(null);
 const localConfig = ref({});
 const localThreshold = ref({});
 const validationOverrides = ref({});
+const validationOptions = ref([]);
+const defaultValidationId = ref('');
 const switchMeta = ref({});
 const configSource = ref('manual');
 const loadedItem = ref(null);
@@ -124,6 +136,11 @@ async function load() {
     };
     localConfig.value = data.config_json || {};
     localThreshold.value = data.threshold_json || {};
+    validationOptions.value = data.validation_options || [];
+    defaultValidationId.value = data.default_validation_id || '';
+    if (data.item) {
+      loadedItem.value = { ...loadedItem.value, ...data.item };
+    }
     configSource.value = data.config_source || 'manual';
     emit('loaded', data);
   } finally {
@@ -144,6 +161,8 @@ async function onTemplateSwitched(data) {
   };
   localConfig.value = data.config_json || {};
   localThreshold.value = data.threshold_json || {};
+  validationOptions.value = data.validation_options || [];
+  defaultValidationId.value = data.default_validation_id || '';
   configSource.value = data.config_source || 'manual';
   emit('loaded', data);
 }
@@ -162,8 +181,17 @@ async function save() {
       threshold_json: localThreshold.value,
       sample_set_id: localConfig.value.sample_set_id,
       config_source: 'manual',
-      ...validationOverrides.value,
+      validation_primary_id: validationOverrides.value.validation_primary_id
+        ?? item.value?.validation_primary_id
+        ?? defaultValidationId.value
+        ?? null,
+      validation_secondary_id: validationOverrides.value.validation_secondary_id
+        ?? item.value?.validation_secondary_id
+        ?? null,
     });
+    if (data.item) {
+      loadedItem.value = { ...loadedItem.value, ...data.item };
+    }
     configSource.value = data.config_source || 'manual';
     ElMessage.success(schemeRole.value === 'secondary' ? '辅方案配置已保存' : '主方案配置已保存');
     emit('saved', data);

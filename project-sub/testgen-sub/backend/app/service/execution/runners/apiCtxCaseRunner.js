@@ -153,9 +153,11 @@ async function executeApiCtxCase(ctx, rawCase, caseVars, meta) {
   return {
     sub_index: meta.case_index,
     phase: 'api_case',
+    counts_metric: true,
     input_summary: submitSub.input_summary,
     output_summary: outputParts.join(' → '),
     assertion_detail: details,
+    functional_verdict: caseVerdict,
     sub_verdict: caseVerdict,
     artifacts: {
       http: pollSub?.artifacts?.http || submitSub.artifacts?.http,

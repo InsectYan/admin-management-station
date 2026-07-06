@@ -47,7 +47,11 @@ async function executeApiTemplateContext(ctx, template, options = {}) {
       sub.artifacts.vars = { ...vars };
     }
 
-    results.push({ ...sub, phase: 'preflight' });
+    results.push({
+      ...sub,
+      phase: 'preflight',
+      counts_metric: false,
+    });
     if (sub.sub_verdict !== 'pass' && rawStep.stop_on_fail !== false) {
       return results;
     }

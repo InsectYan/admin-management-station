@@ -14,6 +14,10 @@ const {
   buildItemTemplateSwitchMeta,
 } = require('../lib/configTemplateRegistry');
 const { normalizeDetConfigJson } = require('../lib/httpRequestBody');
+const {
+  resolveDefaultValidationId,
+  isValidationCompatibleWithScheme,
+} = require('../lib/validationDefaults');
 
 class ConfigTemplateService extends require('egg').Service {
   async listTemplates() {
@@ -147,6 +151,13 @@ class ConfigTemplateService extends require('egg').Service {
        WHERE category_major_id = :majorId`,
       { replacements: { majorId: categoryMajorId, validationId } },
     );
+    if (schemeId) {
+      await this.app.model.query(
+        `UPDATE test_item_detail SET validation_primary_id = :validationId, updated_at = NOW()
+         WHERE category_major_id = :majorId AND scheme_primary_id = :schemeId`,
+        { replacements: { majorId: categoryMajorId, schemeId, validationId } },
+      );
+    }
     const rows = await this.app.model.query(
       `SELECT m.*, v.name AS validation_name
        FROM test_category_major m
@@ -180,6 +191,11 @@ class ConfigTemplateService extends require('egg').Service {
        WHERE mt.category_major_id = m.category_major_id
          AND mt.template_code = :templateCode`,
       { replacements: { templateCode, validationId } },
+    );
+    await this.app.model.query(
+      `UPDATE test_item_detail SET validation_primary_id = :validationId, updated_at = NOW()
+       WHERE template_code = :templateCode AND scheme_primary_id = :schemeId`,
+      { replacements: { templateCode, validationId, schemeId: meta.scheme_id } },
     );
     return {
       template_code: templateCode,
@@ -353,6 +369,13 @@ class ConfigTemplateService extends require('egg').Service {
     const defaultConfig = this._defaultConfigFromItem(item, templateCode);
     let configJson = row?.config_json || defaultConfig.config_json;
     const schemeId = meta?.scheme_id || item.scheme_primary_id;
+    const validationOptions = await this.getValidationsForScheme(schemeId);
+    const defaultValidationId = await resolveDefaultValidationId(
+      this.app,
+      item,
+      schemeId,
+      templateCode,
+    );
     if (schemeId) {
       const runCfg = await this.ctx.service.fitnessExecution.getRunConfig(itemId, schemeId);
       if (runCfg) {
@@ -377,6 +400,8 @@ class ConfigTemplateService extends require('egg').Service {
       sample_set_id: row?.sample_set_id ?? defaultConfig.sample_set_id,
       config_source: row?.config_source || 'manual',
       configured: Boolean(row),
+      validation_options: validationOptions,
+      default_validation_id: defaultValidationId,
       ...buildItemTemplateSwitchMeta(item, templateCode),
     };
   }
@@ -438,6 +463,15 @@ class ConfigTemplateService extends require('egg').Service {
         if (!stillValid) {
           validationId = pairs.find(p => p.is_primary)?.validation_id || 'VS-04-CHAIN-OK';
         }
+        const tplDefault = await resolveDefaultValidationId(
+          this.app,
+          item,
+          schemeId,
+          API_CTX_TEMPLATE,
+        );
+        if (tplDefault && await isValidationCompatibleWithScheme(this.app, schemeId, tplDefault)) {
+          validationId = tplDefault;
+        }
       }
     } else {
       const alts = SCHEME_TEMPLATE_ALTERNATIVES[schemeId] || [];
@@ -498,6 +532,13 @@ class ConfigTemplateService extends require('egg').Service {
     let configJson = body.config_json || {};
     if (templateCode === 'TPL-DET') {
       configJson = normalizeDetConfigJson(configJson);
+    }
+    if (templateCode === 'TPL-API-CTX') {
+      configJson = {
+        ...configJson,
+        execution_mode: 'api_ctx',
+        use_agent_judge: configJson.use_agent_judge !== false,
+      };
     }
     const thresholdJson = body.threshold_json || {};
     const configSource = body.config_source || 'manual';
@@ -583,21 +624,13 @@ class ConfigTemplateService extends require('egg').Service {
       inject_bindings: configJson.inject_bindings || {},
     });
 
-    if (body.validation_primary_id || body.validation_secondary_id != null) {
-      const primaryId = body.validation_primary_id;
+    if ('validation_primary_id' in body || body.validation_secondary_id != null) {
+      const primaryId = body.validation_primary_id ?? null;
       const secondaryId = body.validation_secondary_id ?? null;
+      const schemeId = meta?.scheme_id || item.scheme_primary_id;
       if (primaryId) {
-        const [ pairRows ] = await this.app.model.query(
-          `SELECT 1 FROM test_scheme_validation_pair
-           WHERE scheme_id = :schemeId AND validation_id = :validationId LIMIT 1`,
-          {
-            replacements: {
-              schemeId: meta?.scheme_id || item.scheme_primary_id,
-              validationId: primaryId,
-            },
-          },
-        );
-        if (!pairRows.length) {
+        const compatible = await isValidationCompatibleWithScheme(this.app, schemeId, primaryId);
+        if (!compatible) {
           const err = new Error('主验证与方案不匹配');
           err.status = 400;
           throw err;
@@ -605,14 +638,14 @@ class ConfigTemplateService extends require('egg').Service {
       }
       await this.app.model.query(
         `UPDATE test_item_detail SET
-           validation_primary_id = COALESCE(:primaryId, validation_primary_id),
+           validation_primary_id = :primaryId,
            validation_secondary_id = :secondaryId,
            updated_at = NOW()
          WHERE item_id = :itemId`,
         {
           replacements: {
             itemId,
-            primaryId: primaryId || null,
+            primaryId,
             secondaryId,
           },
         },

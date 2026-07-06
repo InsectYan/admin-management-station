@@ -7,6 +7,7 @@ const engineRegistry = require('./engineRegistry');
 const vsRegistry = require('./vsRegistry');
 const jobQueue = require('./jobQueue');
 const { AgentHookRunner } = require('./agentHook');
+const { splitApiCtxResults } = require('../../lib/apiCtxContent');
 
 /**
  * @typedef {object} ExecutionContext
@@ -404,7 +405,38 @@ class RunOrchestrator {
 
       let subResults = await engine.execute(execCtx);
 
-      if (hookRunner.shouldApplyAgentJudge(runConfig)) {
+      const isApiCtx = runConfig?.config_json?.execution_mode === 'api_ctx';
+      let apiTemplate = null;
+      if (isApiCtx) {
+        const apiTemplateId = runConfig?.api_template_id || runConfig?.config_json?.api_template_id;
+        if (apiTemplateId) {
+          apiTemplate = await this.ctx.model.FtApiTemplate.findByPk(apiTemplateId);
+        }
+      }
+
+      if (isApiCtx && hookRunner.shouldApplyApiCtxContentJudge(runConfig)) {
+        const { content, preflight, preflightOk } = splitApiCtxResults(subResults);
+        if (preflightOk && content.length) {
+          await hookRunner.applyApiCtxContentJudge(
+            execCtx,
+            content,
+            apiTemplate?.toJSON ? apiTemplate.toJSON() : apiTemplate,
+          );
+        } else if (!preflightOk) {
+          for (const sub of content) {
+            sub.sub_verdict = 'skip';
+            sub.assertion_detail = [
+              ...(Array.isArray(sub.assertion_detail) ? sub.assertion_detail : []),
+              {
+                type: 'content_skipped',
+                ok: false,
+                message: '前置校验未通过，跳过内容观测比对',
+              },
+            ];
+          }
+        }
+        void preflight;
+      } else if (hookRunner.shouldApplyAgentJudge(runConfig)) {
         subResults = await hookRunner.applyPostSubRunJudge(execCtx, subResults);
       }
 
@@ -415,8 +447,13 @@ class RunOrchestrator {
           sub_index: sub.sub_index,
           input_summary: sub.input_summary,
           output_summary: sub.output_summary,
-          assertion_detail: sub.artifacts
-            ? { assertions: sub.assertion_detail || [], artifacts: sub.artifacts }
+          assertion_detail: sub.artifacts || sub.phase
+            ? {
+              phase: sub.phase,
+              functional_verdict: sub.functional_verdict,
+              assertions: sub.assertion_detail || [],
+              artifacts: sub.artifacts,
+            }
             : (sub.assertion_detail || []),
           sub_verdict: sub.sub_verdict,
         });
@@ -429,14 +466,36 @@ class RunOrchestrator {
         sub_count: subResults.length,
       });
 
+      const metricSubs = isApiCtx
+        ? subResults.filter(s => s.phase === 'api_case' && s.sub_verdict !== 'skip')
+        : subResults;
+
+      const { preflight: preflightSubs, preflightOk } = isApiCtx
+        ? splitApiCtxResults(subResults)
+        : { preflight: [], preflightOk: true };
+
       const vsEngine = vsRegistry.get(run.validation_id, runConfig);
-      const verdictResult = await vsEngine.judge(
-        subResults,
+      let verdictResult = await vsEngine.judge(
+        metricSubs,
         runConfig?.threshold_json || {},
         item,
         run.validation_id,
         execCtx,
       );
+
+      if (isApiCtx && !preflightOk && metricSubs.length === 0) {
+        verdictResult = {
+          pass: false,
+          verdict: 'fail',
+          current_rate: 0,
+          target_rate: verdictResult.target_rate ?? 100,
+          details: [{
+            type: 'preflight_blocked',
+            ok: false,
+            message: '前置校验未通过，内容验证已跳过',
+          }],
+        };
+      }
 
       const finalStatus = verdictResult.pass ? 'success' : 'failed';
       const progress = {
@@ -450,6 +509,16 @@ class RunOrchestrator {
         pass_count: verdictResult.pass_count,
         verdict: verdictResult.verdict,
         log_tail: [ `Verdict: ${verdictResult.verdict}` ],
+        ...(isApiCtx ? {
+          preflight_ok: preflightOk,
+          preflight_checks: preflightSubs.map(r => ({
+            sub_index: r.sub_index,
+            sub_verdict: r.sub_verdict,
+            output_summary: r.output_summary,
+            input_summary: r.input_summary,
+          })),
+          execution_mode: 'api_ctx',
+        } : {}),
       };
 
       await run.update({

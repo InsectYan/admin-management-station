@@ -58,6 +58,8 @@ module.exports = appInfo => {
     baseUrl: process.env.AGENT_PLATFORM_URL || 'http://127.0.0.1:4001',
     invokePath: '/api/skills/testgen-skill/invoke',
     judgeInvokePath: process.env.FITNESS_JUDGE_INVOKE_PATH || '/api/skills/fitness-judge-skill/invoke',
+    observationMatchInvokePath: process.env.FITNESS_OBSERVATION_MATCH_INVOKE_PATH
+      || '/api/skills/fitness-observation-match-skill/invoke',
     sampleInvokePath: process.env.FITNESS_SAMPLE_INVOKE_PATH || '/api/skills/fitness-sample-skill/invoke',
     configInvokePath: process.env.FITNESS_CONFIG_INVOKE_PATH || '/api/skills/fitness-config-skill/invoke',
     exploreInvokePath: process.env.FITNESS_EXPLORE_INVOKE_PATH || '/api/skills/fitness-explore-skill/invoke',
