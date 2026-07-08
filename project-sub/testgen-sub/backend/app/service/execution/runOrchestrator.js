@@ -442,19 +442,21 @@ class RunOrchestrator {
 
       await this.ctx.model.FtRunResult.destroy({ where: { ft_run_id: runId } });
       for (const sub of subResults) {
+        const wrappedDetail = sub.artifacts || sub.phase
+          ? {
+            phase: sub.phase,
+            functional_verdict: sub.functional_verdict,
+            assertions: sub.assertion_detail || [],
+            artifacts: sub.artifacts,
+            semantic: sub.semantic || sub.artifacts?.semantic || null,
+          }
+          : (sub.assertion_detail || []);
         await this.ctx.model.FtRunResult.create({
           ft_run_id: runId,
           sub_index: sub.sub_index,
           input_summary: sub.input_summary,
           output_summary: sub.output_summary,
-          assertion_detail: sub.artifacts || sub.phase
-            ? {
-              phase: sub.phase,
-              functional_verdict: sub.functional_verdict,
-              assertions: sub.assertion_detail || [],
-              artifacts: sub.artifacts,
-            }
-            : (sub.assertion_detail || []),
+          assertion_detail: wrappedDetail,
           sub_verdict: sub.sub_verdict,
         });
       }

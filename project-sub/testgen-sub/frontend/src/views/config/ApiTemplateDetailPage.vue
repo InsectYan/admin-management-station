@@ -6,7 +6,13 @@
 
       <el-button @click="$router.push('/config/api-templates')">返回列表</el-button>
 
+      <el-button @click="triggerConfigImport">导入配置</el-button>
+
+      <el-button @click="exportConfig">导出配置</el-button>
+
       <el-button type="primary" :loading="saving" @click="save">保存</el-button>
+
+      <input ref="configImportRef" type="file" accept=".json,application/json" style="display:none" @change="onConfigImport" />
 
     </template>
 
@@ -270,7 +276,7 @@
 
                 />
 
-                <p class="hint">submit 后 poll；until status=done；forbidden 在 poll 响应校验</p>
+                <p class="hint">submit 后 poll；until 默认匹配 async_job_success（completed/done/success…）；可在 poll_json 配置 until_values 或 strict_until</p>
 
               </template>
 
@@ -404,7 +410,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 
 import { useRoute } from 'vue-router';
 
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 
 import PageShell from '@/components/PageShell.vue';
 
@@ -418,11 +424,17 @@ import {
 
   PARAM_BIND_OPTIONS,
 
+  buildApiTemplateConfigJson,
+
   inferParamBindTo,
+
+  normalizeImportedInputParamsSchema,
 
   parseApiTemplateImportJson,
 
 } from '@/utils/apiTemplateParamBind.js';
+
+import { downloadJson } from '@/utils/fitnessExport.js';
 
 
 
@@ -435,6 +447,8 @@ const saving = ref(false);
 const linkedItems = ref([]);
 
 const paramImportRef = ref(null);
+
+const configImportRef = ref(null);
 
 const methods = [ 'GET', 'POST', 'PUT', 'PATCH', 'DELETE' ];
 
@@ -514,7 +528,11 @@ const previewJson = computed(() => JSON.stringify({
 
   forbidden_patterns: forbiddenText.value.split(',').map(s => s.trim()).filter(Boolean),
 
-  poll_json: pollEnabled.value ? { path: pollPath.value, until_json_path: '$.status', until_value: 'done' } : {},
+  poll_json: pollEnabled.value ? {
+    path: pollPath.value,
+    until_json_path: '$.status',
+    until_alias_group: 'async_job_success',
+  } : {},
 
 }, null, 2));
 
@@ -628,6 +646,190 @@ function triggerParamImport() {
 
 
 
+function applyImportedConfig(imported, { includeMeta = false } = {}) {
+
+  if (includeMeta) {
+
+    if (imported.name) form.name = imported.name;
+
+    if (imported.description != null) form.description = imported.description;
+
+    if (imported.project_code != null) form.project_code = imported.project_code;
+
+  }
+
+  if (imported.http_method) form.http_method = imported.http_method;
+
+  if (imported.url_path) form.url_path = imported.url_path;
+
+  if (imported.expect_status != null) form.expect_status = imported.expect_status;
+
+  if (imported.headers_json) form.headers_json = imported.headers_json;
+
+  if (imported.query_json) form.query_json = imported.query_json;
+
+  if (imported.body_template) form.body_template = imported.body_template;
+
+  if (imported.inject_schema) form.inject_schema = [ ...imported.inject_schema ];
+
+  if (imported.preflight_steps) preflightSteps.value = [ ...imported.preflight_steps ];
+
+  if (imported.input_params_schema?.length) {
+
+    form.input_params_schema = normalizeImportedInputParamsSchema(
+
+      imported,
+
+      form.http_method,
+
+      form.url_path,
+
+    );
+
+  }
+
+  if (imported.forbidden_patterns) {
+
+    forbiddenText.value = imported.forbidden_patterns.join(',');
+
+  }
+
+  if (imported.poll_json) {
+
+    const poll = imported.poll_json;
+
+    pollEnabled.value = Boolean(poll.path || poll.enabled);
+
+    pollPath.value = poll.path || '/api/chat/turns/{{turn_id}}';
+
+  }
+
+  syncJsonTexts();
+
+}
+
+
+
+function triggerConfigImport() {
+
+  configImportRef.value?.click();
+
+}
+
+
+
+async function onConfigImport(ev) {
+
+  const file = ev.target.files?.[0];
+
+  ev.target.value = '';
+
+  if (!file) return;
+
+  try {
+
+    const imported = parseApiTemplateImportJson(await file.text());
+
+    await ElMessageBox.confirm(
+
+      '导入将覆盖当前页面中的模板配置（不含模板编码），是否继续？',
+
+      '导入配置',
+
+      { type: 'warning' },
+
+    );
+
+    applyImportedConfig(imported, { includeMeta: true });
+
+    ElMessage.success('配置已导入，请检查后保存');
+
+  } catch (e) {
+
+    if (e === 'cancel' || e?.message === 'cancel') return;
+
+    ElMessage.error(e.message || '导入失败');
+
+  }
+
+}
+
+
+
+function exportConfig() {
+
+  parseHeaders();
+
+  parseQuery();
+
+  if (needsBody.value) parseBody();
+
+  const payload = buildApiTemplateConfigJson({
+
+    template_code: form.template_code,
+
+    name: form.name,
+
+    description: form.description,
+
+    project_code: form.project_code,
+
+    http_method: form.http_method,
+
+    url_path: form.url_path,
+
+    expect_status: form.expect_status,
+
+    headers_json: form.headers_json,
+
+    query_json: form.query_json,
+
+    body_template: needsBody.value ? form.body_template : {},
+
+    inject_schema: form.inject_schema.filter(f => f.key),
+
+    input_params_schema: form.input_params_schema.filter(p => p.key),
+
+    preflight_steps: preflightSteps.value,
+
+    forbidden_patterns: forbiddenText.value.split(/[,，]/).map(s => s.trim()).filter(Boolean),
+
+    poll_json: pollEnabled.value ? {
+
+      enabled: true,
+
+      path: pollPath.value,
+
+      method: 'GET',
+
+      expect_status: 200,
+
+      max_attempts: 30,
+
+      interval_ms: 2000,
+
+      until_json_path: '$.status',
+
+      until_alias_group: 'async_job_success',
+
+      terminal_fail_alias_group: 'async_job_fail',
+
+      forbidden_on: 'poll',
+
+    } : {},
+
+  });
+
+  const code = form.template_code || `template-${form.id || 'draft'}`;
+
+  downloadJson(`api-template-${code}.json`, payload);
+
+  ElMessage.success('配置已导出');
+
+}
+
+
+
 async function onParamImport(ev) {
 
   const file = ev.target.files?.[0];
@@ -640,35 +842,7 @@ async function onParamImport(ev) {
 
     const imported = parseApiTemplateImportJson(await file.text());
 
-    if (imported.http_method) form.http_method = imported.http_method;
-
-    if (imported.url_path) form.url_path = imported.url_path;
-
-    if (imported.headers_json) form.headers_json = imported.headers_json;
-
-    if (imported.query_json) form.query_json = imported.query_json;
-
-    if (imported.body_template) form.body_template = imported.body_template;
-
-    if (imported.inject_schema?.length) form.inject_schema = imported.inject_schema;
-
-    if (imported.preflight_steps?.length) preflightSteps.value = imported.preflight_steps;
-
-    if (imported.input_params_schema?.length) {
-
-      form.input_params_schema = imported.input_params_schema.map(p => ({
-
-        ...p,
-
-        bind_to: p.bind_to || inferParamBindTo(form.http_method, p.key, form.url_path),
-
-        json_path: p.json_path || p.key || '',
-
-      }));
-
-    }
-
-    syncJsonTexts();
+    applyImportedConfig(imported);
 
     ElMessage.success('已导入模板参数');
 
@@ -828,7 +1002,9 @@ async function save() {
 
         until_json_path: '$.status',
 
-        until_value: 'done',
+        until_alias_group: 'async_job_success',
+
+        terminal_fail_alias_group: 'async_job_fail',
 
         forbidden_on: 'poll',
 

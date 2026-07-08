@@ -1,6 +1,12 @@
 'use strict';
 
 const { extractResponseText } = require('../../lib/apiCtxContent');
+const {
+  resolveSemanticThreshold,
+  formatConfidencePercent,
+  applyApiCtxSemanticPresentation,
+  excerptText,
+} = require('../../lib/apiCtxSemantic');
 
 const FIELD_MAX = 2048;
 
@@ -154,9 +160,12 @@ class AgentHookRunner {
       || (Array.isArray(item?.assertion_points) ? item.assertion_points[0] : '')
       || '';
     const extractPaths = apiTemplate?.content_extract_paths;
+    const threshold = resolveSemanticThreshold(runConfig?.threshold_json || {});
     const trace = { run_id: run?.id, item_id: item?.item_id };
 
     for (const sub of contentSubs) {
+      const injectValues = sub.artifacts?.inject_values || {};
+
       if (sub.functional_verdict !== 'pass') {
         const detail = Array.isArray(sub.assertion_detail) ? sub.assertion_detail : [];
         sub.assertion_detail = [
@@ -167,6 +176,13 @@ class AgentHookRunner {
             message: '接口功能性未通过，跳过内容观测比对',
           },
         ];
+        applyApiCtxSemanticPresentation(sub, {
+          expected,
+          extractPaths,
+          injectValues,
+          threshold,
+          functionalOk: false,
+        });
         continue;
       }
 
@@ -183,12 +199,16 @@ class AgentHookRunner {
           expected_observation: expected,
           actual_text: actualText,
           input_summary: sub.input_summary || '',
-          threshold_json: runConfig?.threshold_json || {},
+          threshold_json: {
+            ...(runConfig?.threshold_json || {}),
+            pass_threshold: threshold,
+          },
           trace,
         });
         const match = agentRes.output?.match || agentRes.output || {};
-        const pass = match.pass === true;
-        sub.sub_verdict = pass ? 'pass' : 'fail';
+        const pass = match.pass === true
+          || (match.score != null && Number(match.score) >= threshold);
+        const confidencePercent = formatConfidencePercent(match.score);
         const detail = Array.isArray(sub.assertion_detail) ? sub.assertion_detail : [];
         sub.assertion_detail = [
           ...detail,
@@ -197,14 +217,25 @@ class AgentHookRunner {
             ok: pass,
             pass,
             score: match.score,
+            confidence: match.score,
+            confidence_percent: confidencePercent,
+            semantic_threshold: threshold,
+            semantic_threshold_percent: formatConfidencePercent(threshold),
             reasons: match.reasons || [],
             expected_observation: expected,
-            actual_excerpt: truncate(actualText, 500),
+            actual_excerpt: excerptText(actualText, 500),
             fallback: match.fallback === true,
           },
         ];
+        applyApiCtxSemanticPresentation(sub, {
+          expected,
+          match: { ...match, pass },
+          extractPaths,
+          injectValues,
+          threshold,
+          functionalOk: true,
+        });
       } catch (err) {
-        sub.sub_verdict = 'fail';
         const detail = Array.isArray(sub.assertion_detail) ? sub.assertion_detail : [];
         sub.assertion_detail = [
           ...detail,
@@ -215,9 +246,17 @@ class AgentHookRunner {
             pending_judge: true,
             error: err.message,
             expected_observation: expected,
-            actual_excerpt: truncate(actualText, 500),
+            actual_excerpt: excerptText(actualText, 500),
           },
         ];
+        applyApiCtxSemanticPresentation(sub, {
+          expected,
+          extractPaths,
+          injectValues,
+          threshold,
+          functionalOk: true,
+          error: err.message,
+        });
         this.ctx.app.logger.warn(
           '[agentHook] observation match failed run=%s sub=%s %s',
           run?.id,

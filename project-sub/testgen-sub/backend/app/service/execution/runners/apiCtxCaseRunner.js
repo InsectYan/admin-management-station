@@ -1,11 +1,28 @@
 'use strict';
 
 const { executeMatrixRow } = require('./matrixRowRunner');
-const { applyExtract, applyVarsToRow, getByPath } = require('./varPool');
+const { applyExtract, applyVarsToRow } = require('./varPool');
 const { scanForbidden } = require('./forbiddenScan');
+const { extractResponseText } = require('../../../lib/apiCtxContent');
+const {
+  normalizePollConfig,
+  pollStatusMatchesUntil,
+  resolvePollUntilMatchers,
+  resolveTerminalFailStatuses,
+} = require('../../../lib/apiCtxPoll');
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/** @param {unknown} status */
+function normPollStatus(status) {
+  return String(status ?? '').trim().toLowerCase();
+}
+
+/** @param {string} path */
+function isTurnSubmitPath(path) {
+  return /\/turns\/submit/i.test(String(path || ''));
 }
 
 /** @param {object} rawCase */
@@ -13,7 +30,7 @@ function resolvePollConfig(rawCase) {
   const poll = rawCase.poll;
   if (poll === false || poll?.enabled === false) return null;
   if (poll === true || poll?.enabled === true || rawCase.poll_after_submit) {
-    return {
+    return normalizePollConfig({
       path: '/api/chat/turns/{{turn_id}}',
       method: 'GET',
       expect_status: 200,
@@ -21,12 +38,15 @@ function resolvePollConfig(rawCase) {
       interval_ms: 2000,
       extract: { turn_id: '$.turn_id' },
       forbidden_on: 'poll',
+      until_json_path: '$.status',
+      until_alias_group: 'async_job_success',
+      terminal_fail_alias_group: 'async_job_fail',
       ...(typeof poll === 'object' ? poll : {}),
       enabled: true,
-    };
+    });
   }
   if (poll && typeof poll === 'object' && poll.enabled !== false) {
-    return {
+    return normalizePollConfig({
       path: '/api/chat/turns/{{turn_id}}',
       method: 'GET',
       expect_status: 200,
@@ -34,17 +54,73 @@ function resolvePollConfig(rawCase) {
       interval_ms: 2000,
       extract: { turn_id: '$.turn_id' },
       forbidden_on: 'poll',
+      until_json_path: '$.status',
+      until_alias_group: 'async_job_success',
+      terminal_fail_alias_group: 'async_job_fail',
       ...poll,
-    };
+    });
   }
   return null;
 }
 
-/** @param {unknown} body @param {string} [path] @param {unknown} [expected] */
-function jsonPathEquals(body, path, expected) {
-  if (!path) return true;
-  const val = getByPath(body, path);
-  return String(val) === String(expected);
+/**
+ * @param {object} submitSub
+ * @param {object} rawCase
+ * @param {object[]} details
+ */
+function applySubmitAssertions(submitSub, rawCase, details) {
+  const http = submitSub.artifacts?.http;
+  if (!http) return submitSub.sub_verdict === 'pass';
+
+  const accepts = Array.isArray(rawCase.accept_statuses) && rawCase.accept_statuses.length
+    ? rawCase.accept_statuses.map(Number)
+    : [ Number(rawCase.expect_status ?? 200) ];
+  const statusOk = accepts.includes(Number(http.statusCode));
+
+  const statusDetail = details.find(d => d.type === 'status') || {
+    type: 'status',
+    expect: accepts[0],
+    actual: http.statusCode,
+    ok: statusOk,
+    message: statusOk ? 'status match' : `expected one of ${accepts.join('/')}, got ${http.statusCode}`,
+  };
+  statusDetail.expect = accepts;
+  statusDetail.actual = http.statusCode;
+  statusDetail.ok = statusOk;
+  statusDetail.message = statusOk
+    ? 'status match'
+    : `expected one of ${accepts.join('/')}, got ${http.statusCode}`;
+
+  const idx = details.findIndex(d => d.type === 'status');
+  if (idx >= 0) details[idx] = statusDetail;
+  else details.unshift(statusDetail);
+
+  let businessOk = true;
+  const body = http.body;
+  if (body && typeof body === 'object' && 'turn_id' in body) {
+    if (body.created === false) {
+      businessOk = false;
+      details.push({
+        type: 'submit_business',
+        ok: false,
+        message: 'submit 幂等重放（created=false），未创建新 turn；请检查 client_turn_id 是否每条样本唯一',
+        turn_id: body.turn_id,
+        status: body.status,
+      });
+    } else if (body.status === 'failed') {
+      businessOk = false;
+      details.push({
+        type: 'submit_business',
+        ok: false,
+        message: 'submit 立即返回 status=failed',
+        turn_id: body.turn_id,
+      });
+    }
+  }
+
+  const pass = statusOk && businessOk;
+  submitSub.sub_verdict = pass ? 'pass' : 'fail';
+  return pass;
 }
 
 /**
@@ -69,6 +145,10 @@ async function executeApiCtxCase(ctx, rawCase, caseVars, meta) {
     ? [ ...submitSub.assertion_detail ]
     : submitSub.assertion_detail ? [ submitSub.assertion_detail ] : [];
 
+  if (isTurnSubmitPath(submitRow.path) || Array.isArray(rawCase.accept_statuses)) {
+    applySubmitAssertions(submitSub, rawCase, details);
+  }
+
   let pollSub = null;
   let assertBody = submitSub.artifacts?.http?.body;
   let caseVerdict = submitSub.sub_verdict;
@@ -92,6 +172,8 @@ async function executeApiCtxCase(ctx, rawCase, caseVars, meta) {
       headers: pollCfg.headers,
     }, caseVars);
 
+    const terminalFails = resolveTerminalFailStatuses(pollCfg);
+    const untilMatchers = resolvePollUntilMatchers(pollCfg);
     let untilOk = true;
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
       if (attempt > 0) await sleep(intervalMs);
@@ -100,21 +182,38 @@ async function executeApiCtxCase(ctx, rawCase, caseVars, meta) {
         source: 'api_case_poll',
         step_name: `${meta.case_name} · poll #${attempt + 1}`,
       });
+      const pollBody = pollSub.artifacts?.http?.body;
+      const pollStatus = pollBody && typeof pollBody === 'object'
+        ? normPollStatus(pollBody.status)
+        : '';
+      if (pollStatus && terminalFails.includes(pollStatus)) {
+        untilOk = true;
+        caseVerdict = 'fail';
+        details.push({
+          type: 'turn_status',
+          ok: false,
+          message: `turn 终态 ${pollStatus}${pollBody?.error ? `: ${pollBody.error}` : ''}`,
+          status: pollStatus,
+        });
+        break;
+      }
+
       const statusOk = pollSub.sub_verdict === 'pass';
-      untilOk = !pollCfg.until_json_path
-        || jsonPathEquals(pollSub.artifacts?.http?.body, pollCfg.until_json_path, pollCfg.until_value ?? 'done');
+      untilOk = pollStatusMatchesUntil(pollBody, pollCfg);
       if (statusOk && untilOk) break;
     }
 
     assertBody = pollSub?.artifacts?.http?.body;
-    caseVerdict = pollSub?.sub_verdict === 'pass' && untilOk ? 'pass' : 'fail';
-    if (pollSub && caseVerdict === 'fail') {
+    if (caseVerdict !== 'fail') {
+      caseVerdict = pollSub?.sub_verdict === 'pass' && untilOk ? 'pass' : 'fail';
+    }
+    if (pollSub && caseVerdict === 'fail' && !details.some(d => d.type === 'turn_status')) {
       details.push({
         type: 'poll',
         ok: false,
         message: untilOk
           ? `poll 未在 ${maxAttempts} 次内达到 expect_status`
-          : `poll 未在 ${maxAttempts} 次内达到 until 条件 (${pollCfg.until_json_path}=${pollCfg.until_value ?? 'done'})`,
+          : `poll 未在 ${maxAttempts} 次内达到 until 条件 (${pollCfg.until_json_path}∈{${untilMatchers.describe}})`,
       });
     }
   }
@@ -150,12 +249,18 @@ async function executeApiCtxCase(ctx, rawCase, caseVars, meta) {
   const outputParts = [ submitSub.output_summary ];
   if (pollSub) outputParts.push(pollSub.output_summary);
 
+  const injectMessage = typeof submitRow.body?.message === 'string'
+    ? submitRow.body.message.trim()
+    : String(meta.inject_values?.message ?? meta.inject_values?.text ?? '').trim();
+  const responseText = extractResponseText(assertBody, rawCase.content_extract_paths);
+  const httpSummary = outputParts.join(' → ');
+
   return {
     sub_index: meta.case_index,
     phase: 'api_case',
     counts_metric: true,
-    input_summary: submitSub.input_summary,
-    output_summary: outputParts.join(' → '),
+    input_summary: injectMessage || submitSub.input_summary,
+    output_summary: responseText || httpSummary,
     assertion_detail: details,
     functional_verdict: caseVerdict,
     sub_verdict: caseVerdict,
@@ -164,6 +269,10 @@ async function executeApiCtxCase(ctx, rawCase, caseVars, meta) {
       submit: submitSub.artifacts,
       poll: pollSub?.artifacts,
       vars: { ...caseVars },
+      inject_message: injectMessage,
+      inject_values: meta.inject_values || {},
+      response_text: responseText,
+      http_summary: httpSummary,
     },
     steps: pollSub ? [ submitSub, pollSub ] : [ submitSub ],
   };
@@ -172,4 +281,5 @@ async function executeApiCtxCase(ctx, rawCase, caseVars, meta) {
 module.exports = {
   executeApiCtxCase,
   resolvePollConfig,
+  isTurnSubmitPath,
 };

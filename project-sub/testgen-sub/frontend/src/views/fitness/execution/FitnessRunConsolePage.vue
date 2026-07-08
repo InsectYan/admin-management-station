@@ -109,24 +109,97 @@
 
     <el-tabs v-model="resultTab" style="margin-top:16px">
       <el-tab-pane label="主方案子项" name="subs">
-        <p v-if="isApiCtxRun" class="tab-hint">内容验证子项（不含前置校验）；达标率仅统计本表。</p>
-        <el-table :data="contentResults" size="small" row-key="sub_index">
+        <p v-if="isApiCtxRun" class="tab-hint">
+          内容验证子项（不含前置校验）：输入为样本 message，输出为 Agent response，判定为语义置信度；达标率仅统计本表。
+        </p>
+        <el-table
+          :data="isApiCtxRun ? apiCtxContentRows : contentResults"
+          size="small"
+          row-key="sub_index"
+        >
           <el-table-column type="expand">
             <template #default="{ row }">
-              <div v-if="row.sub_verdict === 'fail'" class="expand-failure">
+              <div v-if="isApiCtxRun" class="expand-semantic">
+                <el-descriptions :column="1" size="small" border>
+                  <el-descriptions-item v-if="row.semanticView?.expectedObservation" label="期望观测">
+                    {{ row.semanticView.expectedObservation }}
+                  </el-descriptions-item>
+                  <el-descriptions-item v-if="row.semanticView?.reasons?.length" label="判定说明">
+                    {{ row.semanticView.reasons.join('；') }}
+                  </el-descriptions-item>
+                  <el-descriptions-item v-if="row.semanticView?.httpSummary" label="HTTP 链路">
+                    {{ row.semanticView.httpSummary }}
+                  </el-descriptions-item>
+                  <el-descriptions-item
+                    v-if="row.semanticView?.functionalVerdict"
+                    label="功能性"
+                  >
+                    {{ row.semanticView.functionalVerdict }}
+                  </el-descriptions-item>
+                </el-descriptions>
+              </div>
+              <div v-else-if="row.sub_verdict === 'fail'" class="expand-failure">
                 <RunSubResultExpand :row="row" />
               </div>
               <span v-else class="expand-ok">已通过</span>
             </template>
           </el-table-column>
           <el-table-column prop="sub_index" label="#" width="50" />
-          <el-table-column prop="input_summary" label="输入" min-width="160" />
-          <el-table-column prop="output_summary" label="输出" min-width="160" />
-          <el-table-column prop="sub_verdict" label="判定" width="80">
-            <template #default="{ row }">
-              <FitnessStatusTag prop="sub_verdict" :row="row" />
-            </template>
-          </el-table-column>
+          <template v-if="isApiCtxRun">
+            <el-table-column label="输入 (message)" min-width="180">
+              <template #default="{ row }">
+                <span class="message-cell">{{ row.semanticView?.inputMessage || '—' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="输出 (response)" min-width="220">
+              <template #default="{ row }">
+                <el-tooltip
+                  v-if="row.semanticView?.responseFull"
+                  :content="row.semanticView.responseFull"
+                  placement="top-start"
+                  :show-after="300"
+                  popper-class="response-tooltip"
+                >
+                  <span class="response-cell">{{ row.semanticView.responseExcerpt }}</span>
+                </el-tooltip>
+                <span v-else class="response-cell muted">{{ row.semanticView?.responseExcerpt || '—' }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="置信度" width="120">
+              <template #default="{ row }">
+                <el-tooltip
+                  v-if="row.semanticView?.confidencePercent != null"
+                  :content="semanticTooltip(row.semanticView)"
+                  placement="top"
+                >
+                  <el-tag
+                    :type="row.semanticView.verdictType"
+                    size="small"
+                    effect="plain"
+                  >
+                    {{ row.semanticView.verdictLabel }}
+                  </el-tag>
+                </el-tooltip>
+                <el-tag
+                  v-else
+                  :type="row.semanticView?.verdictType || 'info'"
+                  size="small"
+                  effect="plain"
+                >
+                  {{ row.semanticView?.verdictLabel || '—' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+          </template>
+          <template v-else>
+            <el-table-column prop="input_summary" label="输入" min-width="160" />
+            <el-table-column prop="output_summary" label="输出" min-width="160" />
+            <el-table-column prop="sub_verdict" label="判定" width="80">
+              <template #default="{ row }">
+                <FitnessStatusTag prop="sub_verdict" :row="row" />
+              </template>
+            </el-table-column>
+          </template>
         </el-table>
       </el-tab-pane>
       <el-tab-pane v-if="isApiCtxRun" label="前置校验" name="preflight">
@@ -167,9 +240,29 @@
           <el-collapse-item
             v-for="(art, i) in journeyArtifacts"
             :key="i"
-            :title="`#${art.sub_index} ${art.mode || 'obs'}`"
+            :title="art.summary || `#${art.sub_index} ${art.mode || 'obs'}`"
           >
-            <pre class="json-block">{{ art.json }}</pre>
+            <el-descriptions v-if="art.status || art.intent" :column="2" size="small" border style="margin-bottom:8px">
+              <el-descriptions-item v-if="art.status" label="status">{{ art.status }}</el-descriptions-item>
+              <el-descriptions-item v-if="art.intent" label="intent">{{ art.intent }}</el-descriptions-item>
+            </el-descriptions>
+            <div v-if="art.response" class="journey-response">
+              <div class="journey-section-title">response</div>
+              <pre class="json-block journey-response-body">{{ art.response }}</pre>
+            </div>
+            <el-collapse v-if="art.streamEvents?.length || art.debugLog" style="margin-top:8px">
+              <el-collapse-item v-if="art.streamEvents?.length" :title="`stream_events (${art.streamEvents.length})`">
+                <pre class="json-block">{{ JSON.stringify(art.streamEvents, null, 2) }}</pre>
+              </el-collapse-item>
+              <el-collapse-item v-if="art.debugLog" title="debug_log">
+                <pre class="json-block">{{ JSON.stringify(art.debugLog, null, 2) }}</pre>
+              </el-collapse-item>
+            </el-collapse>
+            <el-collapse style="margin-top:8px">
+              <el-collapse-item title="完整 JSON">
+                <pre class="json-block">{{ art.json }}</pre>
+              </el-collapse-item>
+            </el-collapse>
           </el-collapse-item>
         </el-collapse>
       </el-tab-pane>
@@ -260,6 +353,10 @@ import { downloadJson } from '@/utils/fitnessExport.js';
 import { getLlmProfileId } from '@/utils/llmProfileSession.js';
 import { buildItemDetailRoute, buildRunConsoleRoute } from '@/utils/itemListQuery.js';
 import { buildRunFailurePanels, truncateLogText } from '@/utils/runResultDetail.js';
+import {
+  mapApiCtxSemanticRows,
+  formatSemanticTooltip,
+} from '@/utils/apiCtxSemanticRow.js';
 
 const TERMINAL = new Set([ 'success', 'failed', 'cancelled' ]);
 
@@ -355,6 +452,14 @@ const contentResults = computed(() => {
   return (run.value?.results || []).filter(isContentResult);
 });
 
+const apiCtxContentRows = computed(() =>
+  mapApiCtxSemanticRows(contentResults.value),
+);
+
+function semanticTooltip(view) {
+  return formatSemanticTooltip(view || {});
+}
+
 const passCount = computed(() =>
   contentResults.value.filter(r => r.sub_verdict === 'pass').length,
 );
@@ -378,15 +483,32 @@ const journeyArtifacts = computed(() => {
   const out = [];
   for (const row of run.value?.results || []) {
     const detail = row.assertion_detail;
-    const artifacts = detail?.artifacts;
+    const artifacts = detail?.artifacts || (typeof detail === 'object' && !Array.isArray(detail) ? detail.artifacts : null);
     const payload = artifacts?.journey || artifacts?.obs || artifacts?.http?.body;
-    if (payload) {
-      out.push({
-        sub_index: row.sub_index,
-        mode: artifacts?.mode,
-        json: JSON.stringify(payload, null, 2),
-      });
-    }
+    if (!payload) continue;
+
+    const body = typeof payload === 'object' ? payload : {};
+    const response = body.response || artifacts?.response_text || '';
+    const intent = body.intent || body.debug_log?.response?.intent || '';
+    const status = body.status || '';
+    const summary = [
+      `#${row.sub_index}`,
+      status ? `status=${status}` : '',
+      intent ? `intent=${intent}` : '',
+      response ? `response=${String(response).slice(0, 40)}…` : '',
+    ].filter(Boolean).join(' · ');
+
+    out.push({
+      sub_index: row.sub_index,
+      mode: artifacts?.mode,
+      summary,
+      response: typeof response === 'string' ? response : '',
+      intent,
+      status,
+      streamEvents: body.stream_events || [],
+      debugLog: body.debug_log || null,
+      json: JSON.stringify(payload, null, 2),
+    });
   }
   return out;
 });
@@ -651,5 +773,42 @@ onBeforeUnmount(closeStream);
   color: var(--el-text-color-secondary);
   font-size: 12px;
   margin: 0 0 8px;
+}
+.message-cell,
+.response-cell {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.response-cell {
+  cursor: help;
+  color: var(--el-text-color-primary);
+}
+.response-cell.muted {
+  color: var(--el-text-color-secondary);
+  cursor: default;
+}
+.expand-semantic {
+  padding: 8px 12px 12px;
+}
+.journey-section-title {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  margin-bottom: 4px;
+}
+.journey-response-body {
+  max-height: 240px;
+  white-space: pre-wrap;
+}
+</style>
+
+<style>
+.response-tooltip {
+  max-width: 480px;
+  white-space: pre-wrap;
+  line-height: 1.5;
 }
 </style>

@@ -2,7 +2,7 @@
 
 const BaseTsEngine = require('./baseTsEngine');
 const { resolveHttpBody, methodNeedsBody } = require('../../../lib/httpRequestBody');
-const { expandApiTemplateRuns } = require('../../../lib/apiTemplateRender');
+const { renderApiTemplateCases } = require('../../../lib/apiTemplateRender');
 const { runCli } = require('../runners/cliRunner');
 const { runHttp } = require('../runners/httpRunner');
 
@@ -118,12 +118,12 @@ class Ts01DetEngine extends BaseTsEngine {
     }
 
     const tplJson = template.toJSON();
-    const requests = expandApiTemplateRuns(tplJson, bindings, sampleRows);
+    const casePlans = renderApiTemplateCases(tplJson, bindings, sampleRows, configJson.vars || {});
     const expectStatus = configJson.http_status_expected ?? item.http_status_expected ?? 200;
     const results = [];
 
-    for (let i = 0; i < requests.length; i += 1) {
-      const req = requests[i];
+    for (let i = 0; i < casePlans.length; i += 1) {
+      const req = casePlans[i].request;
       const headers = {
         'X-Test-Run-Id': String(run.id),
         'X-Test-Item-Id': item.item_id,

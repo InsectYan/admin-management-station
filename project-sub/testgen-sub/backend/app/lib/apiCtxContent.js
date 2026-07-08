@@ -3,6 +3,9 @@
 const { getByPath } = require('../service/execution/runners/varPool');
 
 const DEFAULT_CONTENT_PATHS = [
+  '$.response',
+  '$.data.response',
+  '$.result_json.response',
   '$.data.message',
   '$.data.content',
   '$.data.text',

@@ -21,3 +21,6 @@ INSERT INTO threshold_param_enum (param_id, validation_id, name, unit, placehold
 INSERT INTO threshold_param_enum (param_id, validation_id, name, unit, placeholder) VALUES ('error_rate_H', 'VS-10-SLO-H', '错误率·高', 'percent', 'error_rate_H') ON CONFLICT (param_id) DO NOTHING;
 INSERT INTO threshold_param_enum (param_id, validation_id, name, unit, placeholder) VALUES ('reviewer_count', 'VS-11-MAJORITY', '评审人数', 'count', 'reviewer_count') ON CONFLICT (param_id) DO NOTHING;
 INSERT INTO threshold_param_enum (param_id, validation_id, name, unit, placeholder) VALUES ('majority_rule', 'VS-11-MAJORITY', '多数规则', 'text', '>50% 合格') ON CONFLICT (param_id) DO NOTHING;
+INSERT INTO threshold_param_enum (param_id, validation_id, name, unit, placeholder) VALUES ('semantic_threshold', 'VS-07-RATE-H', '语义置信度阈值', 'ratio', 'semantic_threshold = 0.75') ON CONFLICT (param_id) DO NOTHING;
+INSERT INTO threshold_param_enum (param_id, validation_id, name, unit, placeholder) VALUES ('semantic_threshold_M', 'VS-07-RATE-M', '语义置信度阈值', 'ratio', 'semantic_threshold = 0.75') ON CONFLICT (param_id) DO NOTHING;
+INSERT INTO threshold_param_enum (param_id, validation_id, name, unit, placeholder) VALUES ('semantic_threshold_L', 'VS-07-RATE-L', '语义置信度阈值', 'ratio', 'semantic_threshold = 0.75') ON CONFLICT (param_id) DO NOTHING;

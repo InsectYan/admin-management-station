@@ -1,7 +1,13 @@
 'use strict';
 
+const { randomUUID } = require('crypto');
 const { interpolateValue } = require('../service/execution/runners/varPool');
 const { applyInputParamBindings, setJsonPath } = require('./apiTemplateParamBind');
+
+/** @param {string} path */
+function normalizeInjectJsonPath(path) {
+  return String(path || '').replace(/^\$\.?/, '');
+}
 
 /**
  * 将 ft_api_template + 上下文变量 + 注入值渲染为可执行 HTTP 请求
@@ -41,7 +47,7 @@ function renderApiRequest(template, injectValues = {}, contextVars = {}) {
       path = path.replace(`:${field.key}`, encodeURIComponent(String(val)));
       path = path.replace(`{${field.key}}`, encodeURIComponent(String(val)));
     } else {
-      setJsonPath(body, field.json_path || field.key, val);
+      setJsonPath(body, normalizeInjectJsonPath(field.json_path || field.key), val);
     }
   }
 
@@ -80,6 +86,50 @@ function resolveInjectValues(bindings = {}, sampleRow = {}) {
 }
 
 /**
+ * 展开样本注入矩阵（不含 HTTP 渲染，便于每条 case 独立 uuid）
+ * @param {object} bindings
+ * @param {object[]} sampleRows
+ * @returns {Array<{ injectValues: object, sampleIndex: number }>}
+ */
+function expandApiTemplateMatrix(bindings = {}, sampleRows = []) {
+  const bindingKeys = Object.keys(bindings || {});
+  const needsSampleMatrix = bindingKeys.some(k => bindings[k]?.mode === 'sample_set');
+
+  if (!needsSampleMatrix) {
+    return [{ injectValues: resolveInjectValues(bindings, {}), sampleIndex: 0 }];
+  }
+
+  const setRows = sampleRows.length ? sampleRows : [ {} ];
+  return setRows.map((row, sampleIndex) => {
+    const rowData = row.input_data || row;
+    return {
+      injectValues: resolveInjectValues(bindings, rowData),
+      sampleIndex,
+    };
+  });
+}
+
+/**
+ * 每条 case 独立渲染（case 级 uuid，避免多样本共用 client_turn_id）
+ * @param {object} template
+ * @param {object} bindings
+ * @param {object[]} sampleRows
+ * @param {Record<string, unknown>} [baseContextVars] preflight extract，不含 case 级 uuid
+ */
+function renderApiTemplateCases(template, bindings, sampleRows = [], baseContextVars = {}) {
+  const matrix = expandApiTemplateMatrix(bindings, sampleRows);
+  return matrix.map(entry => {
+    const caseVars = { ...baseContextVars, uuid: randomUUID() };
+    return {
+      request: renderApiRequest(template, entry.injectValues, caseVars),
+      caseVars,
+      injectValues: entry.injectValues,
+      sampleIndex: entry.sampleIndex,
+    };
+  });
+}
+
+/**
  * 展开执行矩阵：api_template + 样本集 → 多条 HTTP 请求
  * @param {object} template
  * @param {object} bindings
@@ -87,20 +137,8 @@ function resolveInjectValues(bindings = {}, sampleRow = {}) {
  * @param {object} [contextVars]
  */
 function expandApiTemplateRuns(template, bindings, sampleRows = [], contextVars = {}) {
-  const bindingKeys = Object.keys(bindings || {});
-  const needsSampleMatrix = bindingKeys.some(k => bindings[k]?.mode === 'sample_set');
-
-  if (!needsSampleMatrix) {
-    const injectValues = resolveInjectValues(bindings, {});
-    return [ renderApiRequest(template, injectValues, contextVars) ];
-  }
-
-  const setRows = sampleRows.length ? sampleRows : [ {} ];
-  return setRows.map(row => {
-    const rowData = row.input_data || row;
-    const injectValues = resolveInjectValues(bindings, rowData);
-    return renderApiRequest(template, injectValues, contextVars);
-  });
+  return renderApiTemplateCases(template, bindings, sampleRows, contextVars)
+    .map(row => row.request);
 }
 
 /**
@@ -124,7 +162,10 @@ function resolveInputParams(schema = [], overrides = {}) {
 module.exports = {
   renderApiRequest,
   resolveInjectValues,
+  expandApiTemplateMatrix,
+  renderApiTemplateCases,
   expandApiTemplateRuns,
   resolveInputParams,
+  normalizeInjectJsonPath,
   setJsonPath,
 };

@@ -124,5 +124,32 @@
     "placeholder": ">50% 合格",
     "validation_name": "人工多数",
     "project_code": "fitness-agent"
+  },
+  {
+    "param_id": "semantic_threshold",
+    "validation_id": "VS-07-RATE-H",
+    "name": "语义置信度阈值",
+    "unit": "ratio",
+    "placeholder": "semantic_threshold = 0.75",
+    "validation_name": "达标率·高门槛",
+    "project_code": "fitness-agent"
+  },
+  {
+    "param_id": "semantic_threshold_M",
+    "validation_id": "VS-07-RATE-M",
+    "name": "语义置信度阈值",
+    "unit": "ratio",
+    "placeholder": "semantic_threshold = 0.75",
+    "validation_name": "达标率·中门槛",
+    "project_code": "fitness-agent"
+  },
+  {
+    "param_id": "semantic_threshold_L",
+    "validation_id": "VS-07-RATE-L",
+    "name": "语义置信度阈值",
+    "unit": "ratio",
+    "placeholder": "semantic_threshold = 0.75",
+    "validation_name": "达标率·低门槛",
+    "project_code": "fitness-agent"
   }
 ]
