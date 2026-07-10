@@ -110,7 +110,8 @@ async function syncTableColumnsFromInitSql(sequelize, dbDir, opts = {}) {
     tables += 1;
     for (const col of parsed.columns) {
       if (existing.has(col.name)) continue;
-      const addType = col.typeDef.replace(/\s+NOT NULL(?:\s+DEFAULT[^,]*)?/i, '').trim();
+      // 保留 DEFAULT，避免补列后 INSERT 省略时间戳列触发 NOT NULL 约束
+      const addType = col.typeDef.replace(/\s+NOT NULL/i, '').trim();
       const alterSql = `ALTER TABLE "${name}" ADD COLUMN IF NOT EXISTS "${col.name}" ${addType}`;
       try {
         await sequelize.query(alterSql);

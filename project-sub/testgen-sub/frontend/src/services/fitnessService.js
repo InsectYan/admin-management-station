@@ -287,7 +287,7 @@ export async function exportRunLog(runId) {
 }
 
 export async function importSampleItems(setId, items) {
-  const { data } = await api.post(`/fitness/samples/${setId}/items/bulk`, { items });
+  const { data } = await api.post(`/fitness/samples/${setId}/import`, { items });
   return data.data;
 }
 
@@ -346,6 +346,7 @@ export const SCHEME_CONFIG_ROUTES = {
   'TS-03-REP': 'rep',
   'TS-04-SET': 'set',
   'TS-05-CHAIN': 'chain',
+  'TS-05-API': 'api-ctx',
   'TS-06-PAIR': 'pair',
   'TS-07-NEG': 'neg',
   'TS-08-OBS': 'obs',
@@ -364,6 +365,7 @@ export const LAUNCHABLE_SCHEMES = new Set([
   'TS-03-REP',
   'TS-04-SET',
   'TS-05-CHAIN',
+  'TS-05-API',
   'TS-06-PAIR',
   'TS-07-NEG',
   'TS-08-OBS',

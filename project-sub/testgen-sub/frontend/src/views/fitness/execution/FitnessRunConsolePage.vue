@@ -583,6 +583,8 @@ async function loadExplain() {
     explainMarkdown.value = data.markdown || '';
     if (!explainMarkdown.value) {
       ElMessage.warning('未返回解读内容');
+    } else if (data.meta?.fallback) {
+      ElMessage.info('LLM 未返回有效解读，已使用规则降级分析');
     }
   } catch (e) {
     const msg = e?.response?.data?.message || e.message || '解读失败';

@@ -23,6 +23,7 @@
     <p v-if="isBndScheme">矩阵行数: {{ matrixCount }}</p>
     <p v-if="isRepScheme">重复次数: {{ repeatCount }}</p>
     <p v-if="isChainScheme">链路步骤: {{ chainStepCount }}</p>
+    <p v-if="isApiCtxScheme">接口模板: {{ runConfig?.api_template_id || runConfig?.config_json?.api_template_id || '未配置' }}</p>
     <p v-if="isPairScheme">对照臂: {{ pairArmCount }}</p>
     <p v-if="isNegScheme">对抗用例: {{ negCaseCount }}</p>
     <p v-if="isObsScheme">可观测检查: {{ obsCheckCount }}</p>
@@ -144,6 +145,8 @@ const isSetScheme = computed(() => schemeId.value === 'TS-04-SET');
 const isBndScheme = computed(() => schemeId.value === 'TS-02-BND');
 const isRepScheme = computed(() => schemeId.value === 'TS-03-REP');
 const isChainScheme = computed(() => schemeId.value === 'TS-05-CHAIN');
+const isApiCtxScheme = computed(() => schemeId.value === 'TS-05-API');
+const isChainFamilyScheme = computed(() => isChainScheme.value || isApiCtxScheme.value);
 const isPairScheme = computed(() => schemeId.value === 'TS-06-PAIR');
 const isNegScheme = computed(() => schemeId.value === 'TS-07-NEG');
 const isObsScheme = computed(() => schemeId.value === 'TS-08-OBS');
@@ -151,6 +154,7 @@ const isObsScheme = computed(() => schemeId.value === 'TS-08-OBS');
 const isSecondarySetScheme = computed(() => secondarySchemeId.value === 'TS-04-SET');
 const isSecondaryBndScheme = computed(() => secondarySchemeId.value === 'TS-02-BND');
 const isSecondaryChainScheme = computed(() => secondarySchemeId.value === 'TS-05-CHAIN');
+const isSecondaryApiCtxScheme = computed(() => secondarySchemeId.value === 'TS-05-API');
 
 const matrixCount = computed(() => runConfig.value?.config_json?.matrix?.length ?? 0);
 const secondaryMatrixCount = computed(() => secondaryRunConfig.value?.config_json?.matrix?.length ?? 0);
@@ -177,8 +181,9 @@ function schemeConfigReady(id, config, itemRef) {
     const n = Number(config?.config_json?.repeat_count ?? config?.threshold_json?.passk_N);
     return Number.isFinite(n) && n >= 1;
   }
-  if (id === 'TS-05-CHAIN') {
+  if (id === 'TS-05-CHAIN' || id === 'TS-05-API') {
     const mode = config?.config_json?.execution_mode
+      || (id === 'TS-05-API' ? 'api_ctx' : 'chain')
       || (itemRef?.template_code === 'TPL-API-CTX' ? 'api_ctx' : 'chain');
     if (mode === 'api_ctx') {
       return Boolean(config?.api_template_id || config?.config_json?.api_template_id);

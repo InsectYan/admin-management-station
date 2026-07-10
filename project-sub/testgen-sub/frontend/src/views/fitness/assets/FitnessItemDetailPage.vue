@@ -124,7 +124,13 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import SchemeCodeNameCell from '@/components/fitness/SchemeCodeNameCell.vue';
 import MixedTsTemplateSwitcher from '@/components/config-templates/MixedTsTemplateSwitcher.vue';
-import { MIXED_TS_MAJORS, SCHEME_TEMPLATE_ALTERNATIVES } from '@/components/config-templates/registry.js';
+import {
+  MIXED_TS_MAJORS,
+  SCHEME_TEMPLATE_ALTERNATIVES,
+  API_CTX_SCHEME,
+  CHAIN_SCHEME,
+  resolveMixedEffectiveTemplate,
+} from '@/components/config-templates/registry.js';
 import {
   fetchSchemes,
   fetchSchemeValidations,
@@ -153,15 +159,15 @@ const switchMeta = computed(() => {
   if (!row || !isMixedTs.value) {
     return { can_switch_api_ctx: false };
   }
-  const alternatives = row.scheme_primary_id === 'TS-05-CHAIN'
-    ? (SCHEME_TEMPLATE_ALTERNATIVES['TS-05-CHAIN'] || [])
+  const alternatives = [ CHAIN_SCHEME, API_CTX_SCHEME ].includes(row.scheme_primary_id)
+    ? (SCHEME_TEMPLATE_ALTERNATIVES[row.scheme_primary_id] || SCHEME_TEMPLATE_ALTERNATIVES[API_CTX_SCHEME])
     : [ 'TPL-API-CTX' ];
-  const effective = row.template_code
-    || (row.scheme_primary_id === 'TS-05-CHAIN' ? 'TPL-CHAIN' : null);
+  const effective = resolveMixedEffectiveTemplate(row);
   return {
     can_switch_api_ctx: alternatives.length > 0,
     template_alternatives: alternatives,
-    needs_scheme_upgrade_for_api_ctx: row.scheme_primary_id !== 'TS-05-CHAIN',
+    needs_scheme_upgrade_for_api_ctx: row.scheme_primary_id !== API_CTX_SCHEME
+      && row.scheme_primary_id !== CHAIN_SCHEME,
     effective_template_code: effective,
   };
 });

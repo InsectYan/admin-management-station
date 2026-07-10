@@ -117,6 +117,51 @@
     "project_code": "fitness-agent"
   },
   {
+    "pair_id": "P19",
+    "scheme_id": "TS-05-API",
+    "validation_id": "VS-04-CHAIN-OK",
+    "is_primary": true,
+    "scheme_name": "前置链路+接口模板",
+    "validation_name": "链路全过",
+    "project_code": "fitness-agent"
+  },
+  {
+    "pair_id": "P19B",
+    "scheme_id": "TS-05-API",
+    "validation_id": "VS-07-RATE-H",
+    "is_primary": false,
+    "scheme_name": "前置链路+接口模板",
+    "validation_name": "达标率·高门槛",
+    "project_code": "fitness-agent"
+  },
+  {
+    "pair_id": "P19C",
+    "scheme_id": "TS-05-API",
+    "validation_id": "VS-03-ZERO",
+    "is_primary": false,
+    "scheme_name": "前置链路+接口模板",
+    "validation_name": "零违规",
+    "project_code": "fitness-agent"
+  },
+  {
+    "pair_id": "P19D",
+    "scheme_id": "TS-05-API",
+    "validation_id": "VS-01-EXACT",
+    "is_primary": false,
+    "scheme_name": "前置链路+接口模板",
+    "validation_name": "精确匹配",
+    "project_code": "fitness-agent"
+  },
+  {
+    "pair_id": "P19E",
+    "scheme_id": "TS-05-API",
+    "validation_id": "VS-02-CONTRACT",
+    "is_primary": false,
+    "scheme_name": "前置链路+接口模板",
+    "validation_name": "契约通过",
+    "project_code": "fitness-agent"
+  },
+  {
     "pair_id": "P10",
     "scheme_id": "TS-06-PAIR",
     "validation_id": "VS-03-ZERO",

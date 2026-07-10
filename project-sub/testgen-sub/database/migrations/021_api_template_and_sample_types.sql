@@ -49,7 +49,8 @@ COMMENT ON COLUMN ft_run_config.inject_bindings IS '{fieldKey:{mode:manual|sampl
 -- 演示种子：教练 submit 接口模板
 INSERT INTO ft_api_template (
   template_code, name, description, project_code,
-  http_method, url_path, headers_json, body_template, inject_schema
+  http_method, url_path, headers_json, body_template, inject_schema,
+  created_at, updated_at
 )
 SELECT
   'coach-turn-submit',
@@ -64,5 +65,7 @@ SELECT
     {"key":"coach_id","label":"教练 ID","location":"body","json_path":"coach_id"},
     {"key":"message","label":"消息内容","location":"body","json_path":"message"},
     {"key":"session_id","label":"Session ID","location":"body","json_path":"session_id"}
-  ]'::jsonb
+  ]'::jsonb,
+  NOW(),
+  NOW()
 WHERE NOT EXISTS (SELECT 1 FROM ft_api_template WHERE template_code = 'coach-turn-submit');

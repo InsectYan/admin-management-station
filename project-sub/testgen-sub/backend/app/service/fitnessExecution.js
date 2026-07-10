@@ -1,6 +1,10 @@
 'use strict';
 
 const { buildSchemePhases } = require('../lib/schemePhaseHelper');
+const {
+  buildExplainObservationFromResult,
+  buildRunExplainContext,
+} = require('../lib/runExplainBuilder');
 
 const RunOrchestrator = require('./execution/runOrchestrator');
 const vsRegistry = require('./execution/vsRegistry');
@@ -12,100 +16,6 @@ function assertionEntries(detail) {
     return detail.assertions;
   }
   return [];
-}
-
-function truncateExplainText(value, max = 2048) {
-  const s = typeof value === 'string' ? value : JSON.stringify(value ?? '');
-  return s.length > max ? `${s.slice(0, max)}…` : s;
-}
-
-/**
- * 将 ft_run_result 转为 fitness-judge-skill explain 所需的 observation
- * @param {object} row
- * @param {object|null} item
- */
-function buildExplainObservationFromResult(row, item) {
-  const detail = row.assertion_detail;
-  const isWrapped = detail && typeof detail === 'object' && !Array.isArray(detail);
-  const artifacts = isWrapped ? detail.artifacts : undefined;
-  const assertions = assertionEntries(detail);
-  const http = artifacts?.http;
-  const cli = artifacts?.cli;
-
-  let httpStatus = http?.statusCode ?? null;
-  if (httpStatus == null && cli?.exitCode != null) {
-    httpStatus = cli.exitCode === 0 ? 200 : 500;
-  }
-  if (httpStatus == null) {
-    for (const a of assertions) {
-      if (a.actual_status != null) httpStatus = a.actual_status;
-      else if (a.status_code != null) httpStatus = a.status_code;
-      else if (a.actual != null && typeof a.actual === 'number') httpStatus = a.actual;
-    }
-    const m = String(row.output_summary || '').match(/HTTP\s+(\d{3})/i);
-    if (httpStatus == null && m) httpStatus = Number(m[1]);
-  }
-
-  let responseExcerpt = '';
-  if (http?.body != null) {
-    responseExcerpt = truncateExplainText(http.body);
-  } else if (cli?.stderr) {
-    responseExcerpt = truncateExplainText(cli.stderr);
-  } else if (cli?.stdout || artifacts?.output_tail) {
-    responseExcerpt = truncateExplainText(cli?.stdout || artifacts.output_tail);
-  } else if (row.output_summary) {
-    responseExcerpt = truncateExplainText(row.output_summary);
-  }
-
-  const failedAssertions = assertions.filter(a =>
-    a.pass === false || a.ok === false || a.status === 'fail' || a.status === 'failed',
-  );
-  const assertionFailures = failedAssertions.length
-    ? failedAssertions.map(a =>
-      `${a.type || 'assert'}: ${a.message || a.detail || truncateExplainText(a, 160)}`,
-    ).join('; ')
-    : null;
-
-  return {
-    sub_run_index: row.sub_index,
-    sub_verdict: row.sub_verdict,
-    pass: row.sub_verdict === 'pass',
-    verdict: row.sub_verdict,
-    http_status: httpStatus,
-    input_summary: row.input_summary || '',
-    output_summary: row.output_summary || '',
-    response_excerpt: responseExcerpt,
-    expected_hint: item?.expected_observation || item?.expected_result || '',
-    journey_summary: artifacts?.journey || artifacts?.obs || null,
-    assertion_failures: assertionFailures,
-    error_message: cli?.stderr
-      ? truncateExplainText(String(cli.stderr).split('\n').find(l => /Error:|FAIL|ENOENT|MODULE_NOT_FOUND/i.test(l)) || cli.stderr, 500)
-      : (artifacts?.error || row.error_message || null),
-    cli_command: cli?.command || null,
-    cli_exit_code: cli?.exitCode ?? null,
-    cli_cwd: cli?.cwd || null,
-  };
-}
-
-function buildRunExplainContext(runData, item, runConfig, results) {
-  const passCount = results.filter(r => r.sub_verdict === 'pass').length;
-  const failCount = results.filter(r => r.sub_verdict === 'fail').length;
-  return {
-    status: runData.status,
-    verdict: runData.verdict,
-    scheme_id: runData.scheme_id,
-    validation_id: runData.validation_id,
-    item_id: runData.item_id,
-    item_name: item?.item_name || '',
-    detail_summary: item?.detail_summary || '',
-    expected_observation: item?.expected_observation || '',
-    pass_count: passCount,
-    fail_count: failCount,
-    total_count: results.length,
-    error_message: runData.error_message || null,
-    progress: runData.progress || {},
-    threshold_json: runConfig?.threshold_json || {},
-  };
 }
 
 function dbResultToSubResult(row) {
@@ -428,12 +338,16 @@ class FitnessExecutionService extends require('egg').Service {
     const item = await this.orchestrator().loadItem(runData.item_id);
     const runConfig = await this.getRunConfig(runData.item_id, runData.scheme_id);
     const runContext = buildRunExplainContext(runData, item, runConfig, results);
+    const obsCtx = {
+      template_code: runContext.template_code,
+      scheme_id: runContext.scheme_id,
+    };
 
     const failedRows = results.filter(r => r.sub_verdict === 'fail');
     const focusFailed = options.focus !== 'all';
     const sourceRows = focusFailed && failedRows.length ? failedRows : results;
 
-    const observations = sourceRows.map(r => buildExplainObservationFromResult(r, item));
+    const observations = sourceRows.map(r => buildExplainObservationFromResult(r, item, obsCtx));
 
     const agentRes = await this.ctx.service.agentProxy.invokeFitnessJudge({
       action: 'explain',
@@ -460,7 +374,7 @@ class FitnessExecutionService extends require('egg').Service {
       focus: focusFailed && failedRows.length ? 'failed' : 'all',
       observation_count: observations.length,
       run_context: runContext,
-      meta: agentRes.meta || {},
+      meta: { ...(agentRes.meta || {}), fallback: !!agentRes.meta?.fallback },
     };
   }
 

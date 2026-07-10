@@ -21,6 +21,11 @@ INSERT INTO test_scheme_validation_pair (pair_id, scheme_id, validation_id, is_p
 INSERT INTO test_scheme_validation_pair (pair_id, scheme_id, validation_id, is_primary) VALUES ('P09C', 'TS-05-CHAIN', 'VS-03-ZERO', FALSE) ON CONFLICT (pair_id) DO NOTHING;
 INSERT INTO test_scheme_validation_pair (pair_id, scheme_id, validation_id, is_primary) VALUES ('P09D', 'TS-05-CHAIN', 'VS-01-EXACT', FALSE) ON CONFLICT (pair_id) DO NOTHING;
 INSERT INTO test_scheme_validation_pair (pair_id, scheme_id, validation_id, is_primary) VALUES ('P09E', 'TS-05-CHAIN', 'VS-02-CONTRACT', FALSE) ON CONFLICT (pair_id) DO NOTHING;
+INSERT INTO test_scheme_validation_pair (pair_id, scheme_id, validation_id, is_primary) VALUES ('P19', 'TS-05-API', 'VS-04-CHAIN-OK', TRUE) ON CONFLICT (pair_id) DO NOTHING;
+INSERT INTO test_scheme_validation_pair (pair_id, scheme_id, validation_id, is_primary) VALUES ('P19B', 'TS-05-API', 'VS-07-RATE-H', FALSE) ON CONFLICT (pair_id) DO NOTHING;
+INSERT INTO test_scheme_validation_pair (pair_id, scheme_id, validation_id, is_primary) VALUES ('P19C', 'TS-05-API', 'VS-03-ZERO', FALSE) ON CONFLICT (pair_id) DO NOTHING;
+INSERT INTO test_scheme_validation_pair (pair_id, scheme_id, validation_id, is_primary) VALUES ('P19D', 'TS-05-API', 'VS-01-EXACT', FALSE) ON CONFLICT (pair_id) DO NOTHING;
+INSERT INTO test_scheme_validation_pair (pair_id, scheme_id, validation_id, is_primary) VALUES ('P19E', 'TS-05-API', 'VS-02-CONTRACT', FALSE) ON CONFLICT (pair_id) DO NOTHING;
 INSERT INTO test_scheme_validation_pair (pair_id, scheme_id, validation_id, is_primary) VALUES ('P10', 'TS-06-PAIR', 'VS-03-ZERO', TRUE) ON CONFLICT (pair_id) DO NOTHING;
 INSERT INTO test_scheme_validation_pair (pair_id, scheme_id, validation_id, is_primary) VALUES ('P11', 'TS-06-PAIR', 'VS-01-EXACT', FALSE) ON CONFLICT (pair_id) DO NOTHING;
 INSERT INTO test_scheme_validation_pair (pair_id, scheme_id, validation_id, is_primary) VALUES ('P12', 'TS-07-NEG', 'VS-09-BLOCK-H', TRUE) ON CONFLICT (pair_id) DO NOTHING;

@@ -8,6 +8,10 @@ const vsRegistry = require('./vsRegistry');
 const jobQueue = require('./jobQueue');
 const { AgentHookRunner } = require('./agentHook');
 const { splitApiCtxResults } = require('../../lib/apiCtxContent');
+const {
+  resolveExecutionScheme,
+  API_CTX_SCHEME,
+} = require('../../lib/configTemplateRegistry');
 
 /**
  * @typedef {object} ExecutionContext
@@ -132,9 +136,9 @@ class RunOrchestrator {
       }
     }
 
-    if (schemeId === 'TS-05-CHAIN') {
+    if (schemeId === 'TS-05-CHAIN' || schemeId === 'TS-05-API') {
       const cfg = runConfig?.config_json || {};
-      const mode = cfg.execution_mode || 'chain';
+      const mode = cfg.execution_mode || (schemeId === 'TS-05-API' ? 'api_ctx' : 'chain');
       if (mode === 'api_ctx') {
         const apiTemplateId = runConfig?.api_template_id || cfg.api_template_id;
         if (!apiTemplateId) {
@@ -226,7 +230,8 @@ class RunOrchestrator {
       throw err;
     }
 
-    const schemeId = body.scheme_id || item.scheme_primary_id;
+    const templateCode = await this.ctx.service.configTemplate.resolveTemplateCodeForItem(item);
+    const schemeId = body.scheme_id || resolveExecutionScheme(item, templateCode);
     const validationId = body.validation_id || item.validation_primary_id;
 
     const env = await this.resolveEnv(body.env_id);
@@ -618,7 +623,8 @@ class RunOrchestrator {
       err.status = 404;
       throw err;
     }
-    const schemeId = body.scheme_id || item.scheme_primary_id;
+    const templateCode = await this.ctx.service.configTemplate.resolveTemplateCodeForItem(item);
+    const schemeId = body.scheme_id || resolveExecutionScheme(item, templateCode);
     const validationId = body.validation_id || item.validation_primary_id;
     engineRegistry.get(schemeId);
 

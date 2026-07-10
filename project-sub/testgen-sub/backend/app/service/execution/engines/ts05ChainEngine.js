@@ -15,8 +15,10 @@ class Ts05ChainEngine extends BaseTsEngine {
 
   /** @param {import('../runOrchestrator').ExecutionContext} ctx */
   async execute(ctx) {
-    const { runConfig } = ctx;
-    const mode = runConfig?.config_json?.execution_mode || 'chain';
+    const { runConfig, run } = ctx;
+    const schemeId = run?.scheme_id || ctx.item?.scheme_primary_id;
+    const cfgMode = runConfig?.config_json?.execution_mode;
+    const mode = cfgMode || (schemeId === 'TS-05-API' ? 'api_ctx' : 'chain');
     if (mode === 'api_ctx') {
       return this.executeApiCtx(ctx);
     }

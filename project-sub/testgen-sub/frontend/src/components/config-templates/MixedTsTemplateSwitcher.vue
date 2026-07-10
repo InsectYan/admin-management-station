@@ -8,8 +8,8 @@
       style="margin-bottom: 12px"
     >
       切换为「前置链路+接口模板」将把主方案调整为
-      <strong>TS-05-CHAIN</strong>（当前 {{ item?.scheme_primary_id }}），
-      不兼容的主验证将自动替换为 TS-05 默认验证。
+      <strong>TS-05-API</strong>（当前 {{ item?.scheme_primary_id }}），
+      不兼容的主验证将自动替换为 TS-05-API 默认验证。
     </el-alert>
 
     <el-form-item label="配置模板" label-width="120px">
@@ -43,8 +43,8 @@
       </div>
 
       <p class="hint">
-        混合 TS 大类（教练/会员/管理/横切）可在用例级选择
-        <strong>TPL-CHAIN</strong> 或 <strong>TPL-API-CTX</strong>。
+        混合 TS 大类默认使用 <strong>TPL-API-CTX</strong>；可切换为
+        <strong>TPL-CHAIN</strong> 或其它 TS/模板组合。
       </p>
     </el-form-item>
   </div>
@@ -54,7 +54,11 @@
 import { computed, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { setItemConfigTemplate } from '@/services/fitnessService.js';
-import { TEMPLATE_DISPLAY_NAMES } from './registry.js';
+import {
+  API_CTX_TEMPLATE,
+  TEMPLATE_DISPLAY_NAMES,
+  resolveMixedEffectiveTemplate,
+} from './registry.js';
 
 const props = defineProps({
   itemId: { type: String, required: true },
@@ -66,16 +70,16 @@ const props = defineProps({
 const emit = defineEmits([ 'switched' ]);
 
 const loading = ref(false);
-const selected = ref('TPL-CHAIN');
+const selected = ref(API_CTX_TEMPLATE);
 
 const visible = computed(() => Boolean(props.switchMeta?.can_switch_api_ctx));
 const needsSchemeUpgrade = computed(() => Boolean(props.switchMeta?.needs_scheme_upgrade_for_api_ctx));
 const effectiveCode = computed(() =>
-  props.switchMeta?.effective_template_code || props.item?.template_code || 'TPL-CHAIN',
+  resolveMixedEffectiveTemplate(props.item, props.switchMeta),
 );
 const pairOptions = computed(() => props.switchMeta?.template_alternatives || []);
 const hasPairChoice = computed(() =>
-  pairOptions.value.includes('TPL-CHAIN') && pairOptions.value.includes('TPL-API-CTX'),
+  pairOptions.value.includes('TPL-CHAIN') && pairOptions.value.includes(API_CTX_TEMPLATE),
 );
 
 function templateLabel(code) {
@@ -85,7 +89,7 @@ function templateLabel(code) {
 watch(
   () => effectiveCode.value,
   code => {
-    selected.value = code === 'TPL-API-CTX' ? 'TPL-API-CTX' : 'TPL-CHAIN';
+    selected.value = code === API_CTX_TEMPLATE ? API_CTX_TEMPLATE : 'TPL-CHAIN';
   },
   { immediate: true },
 );
@@ -94,9 +98,9 @@ async function applyTemplate(templateCode) {
   if (templateCode === effectiveCode.value) return;
   loading.value = true;
   try {
-    if (templateCode === 'TPL-API-CTX' && needsSchemeUpgrade.value) {
+    if (templateCode === API_CTX_TEMPLATE && needsSchemeUpgrade.value) {
       await ElMessageBox.confirm(
-        '将主方案调整为 TS-05-CHAIN 并使用 TPL-API-CTX 配置面板，是否继续？',
+        '将主方案调整为 TS-05-API 并使用 TPL-API-CTX 配置面板，是否继续？',
         '切换配置模板',
         { type: 'warning', confirmButtonText: '继续', cancelButtonText: '取消' },
       );
@@ -111,7 +115,7 @@ async function applyTemplate(templateCode) {
     if (e !== 'cancel') {
       ElMessage.error(e.response?.data?.message || e.message || '切换失败');
     }
-    selected.value = effectiveCode.value === 'TPL-API-CTX' ? 'TPL-API-CTX' : 'TPL-CHAIN';
+    selected.value = effectiveCode.value === API_CTX_TEMPLATE ? API_CTX_TEMPLATE : 'TPL-CHAIN';
   } finally {
     loading.value = false;
   }
@@ -122,7 +126,7 @@ function onSelect(code) {
 }
 
 function switchToApiCtx() {
-  applyTemplate('TPL-API-CTX');
+  applyTemplate(API_CTX_TEMPLATE);
 }
 </script>
 

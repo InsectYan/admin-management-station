@@ -50,3 +50,5 @@ INSERT INTO prd_reference (prd_ref_id, section, title, project_code) VALUES ('PR
 INSERT INTO prd_reference (prd_ref_id, section, title, project_code) VALUES ('PRD_INV_12', '§12', '邀请异常场景', 'fitness-agent') ON CONFLICT (prd_ref_id) DO NOTHING;
 INSERT INTO prd_reference (prd_ref_id, section, title, project_code) VALUES ('PRD_INV_14', '§14', '邀请留痕规则', 'fitness-agent') ON CONFLICT (prd_ref_id) DO NOTHING;
 INSERT INTO prd_reference (prd_ref_id, section, title, project_code) VALUES ('PRD_INV_15', '§15', '邀请验收标准', 'fitness-agent') ON CONFLICT (prd_ref_id) DO NOTHING;
+INSERT INTO prd_reference (prd_ref_id, section, title, project_code) VALUES ('PRD_5_3', '§5.3', '会员状态', 'fitness-agent') ON CONFLICT (prd_ref_id) DO NOTHING;
+INSERT INTO prd_reference (prd_ref_id, section, title, project_code) VALUES ('PRD_5_5', '§5.5', '会员端训练计划确认', 'fitness-agent') ON CONFLICT (prd_ref_id) DO NOTHING;

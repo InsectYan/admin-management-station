@@ -31,6 +31,10 @@ export const PANEL_KEY_TO_TEMPLATE = {
 
 export const MIXED_TS_MAJORS = new Set([ 'C1', 'C2', 'C3', 'C4' ]);
 
+export const API_CTX_SCHEME = 'TS-05-API';
+export const CHAIN_SCHEME = 'TS-05-CHAIN';
+export const API_CTX_TEMPLATE = 'TPL-API-CTX';
+
 export const TEMPLATE_DISPLAY_NAMES = {
   'TPL-CHAIN': '多步链路',
   'TPL-API-CTX': '前置链路+接口模板',
@@ -38,8 +42,20 @@ export const TEMPLATE_DISPLAY_NAMES = {
 
 export const SCHEME_TEMPLATE_ALTERNATIVES = {
   'TS-05-CHAIN': [ 'TPL-CHAIN', 'TPL-API-CTX' ],
+  'TS-05-API': [ 'TPL-API-CTX', 'TPL-CHAIN' ],
 };
 
 export function resolveTemplateComponent(templateCode) {
   return TEMPLATE_COMPONENTS[templateCode] || TEMPLATE_COMPONENTS['TPL-DET'];
+}
+
+/** 混合 TS 未显式指定 template_code 且 scheme=TS-05-CHAIN 时默认 api_ctx 模板 */
+export function resolveMixedEffectiveTemplate(item, switchMeta = {}) {
+  if (switchMeta.effective_template_code) return switchMeta.effective_template_code;
+  if (item?.template_code) return item.template_code;
+  if (MIXED_TS_MAJORS.has(item?.category_major_id) && item?.scheme_primary_id === CHAIN_SCHEME) {
+    return API_CTX_TEMPLATE;
+  }
+  if (item?.scheme_primary_id === API_CTX_SCHEME) return API_CTX_TEMPLATE;
+  return item?.template_code || 'TPL-CHAIN';
 }

@@ -137,6 +137,7 @@ module.exports = app => {
   router.delete('/api/fitness/samples/:setId', controller.fitnessExecution.deleteSampleSet);
   router.get('/api/fitness/samples/:setId/items', controller.fitnessExecution.listSampleItems);
   router.post('/api/fitness/samples/:setId/items', controller.fitnessExecution.createSampleItem);
+  router.post('/api/fitness/samples/:setId/items/bulk', controller.fitnessExecution.importSampleItems);
   router.post('/api/fitness/samples/:setId/import', controller.fitnessExecution.importSampleItems);
   router.put('/api/fitness/samples/:setId/items/:itemId', controller.fitnessExecution.updateSampleItem);
   router.delete('/api/fitness/samples/:setId/items/:itemId', controller.fitnessExecution.deleteSampleItem);

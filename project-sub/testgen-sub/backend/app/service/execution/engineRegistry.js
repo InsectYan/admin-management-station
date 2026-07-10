@@ -18,6 +18,7 @@ const engines = new Map([
   [ 'TS-03-REP', new Ts03RepEngine() ],
   [ 'TS-04-SET', new Ts04SetEngine() ],
   [ 'TS-05-CHAIN', new Ts05ChainEngine() ],
+  [ 'TS-05-API', new Ts05ChainEngine() ],
   [ 'TS-06-PAIR', new Ts06PairEngine() ],
   [ 'TS-07-NEG', new Ts07NegEngine() ],
   [ 'TS-08-OBS', new Ts08ObsEngine() ],

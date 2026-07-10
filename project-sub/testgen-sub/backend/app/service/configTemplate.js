@@ -8,8 +8,10 @@ const {
   TEMPLATE_TABLES,
   API_CTX_TEMPLATE,
   API_CTX_SCHEME,
+  CHAIN_SCHEME,
   assertTemplateTable,
   resolveTemplateCodeFromItem,
+  resolveSchemeForTemplate,
   normalizeStoredTemplateCode,
   buildItemTemplateSwitchMeta,
 } = require('../lib/configTemplateRegistry');
@@ -233,8 +235,7 @@ class ConfigTemplateService extends require('egg').Service {
     }
 
     if (MIXED_TS_MAJORS.has(item.category_major_id)) {
-      const schemeId = item.scheme_primary_id || item.scheme_primary;
-      return SCHEME_TO_TEMPLATE[schemeId] || item.template_code || 'TPL-DET';
+      return resolveTemplateCodeFromItem(item);
     }
 
     const mapped = await this.getMajorTemplateMap(item.category_major_id);
@@ -421,6 +422,12 @@ class ConfigTemplateService extends require('egg').Service {
     if (templateCode === 'TPL-DET') {
       return { config_json: { ...base }, threshold_json: {} };
     }
+    if (templateCode === 'TPL-API-CTX') {
+      return {
+        config_json: { execution_mode: 'api_ctx', use_agent_judge: true },
+        threshold_json: {},
+      };
+    }
     return { config_json: {}, threshold_json: {} };
   }
 
@@ -450,10 +457,9 @@ class ConfigTemplateService extends require('egg').Service {
     let storedTemplateCode = normalizeStoredTemplateCode(requested, schemeId);
 
     if (requested === API_CTX_TEMPLATE || storedTemplateCode === API_CTX_TEMPLATE) {
-      storedTemplateCode = API_CTX_TEMPLATE;
       if (schemeId !== API_CTX_SCHEME) {
         if (!upgradeScheme) {
-          const err = new Error('TPL-API-CTX 需要主方案 TS-05-CHAIN，请确认 upgrade_scheme');
+          const err = new Error('TPL-API-CTX 需要主方案 TS-05-API，请确认 upgrade_scheme');
           err.status = 400;
           throw err;
         }
@@ -473,6 +479,17 @@ class ConfigTemplateService extends require('egg').Service {
           validationId = tplDefault;
         }
       }
+      storedTemplateCode = normalizeStoredTemplateCode(API_CTX_TEMPLATE, schemeId);
+    } else if (requested === 'TPL-CHAIN') {
+      if (upgradeScheme && schemeId !== CHAIN_SCHEME) {
+        schemeId = CHAIN_SCHEME;
+        const pairs = await this.getValidationsForScheme(schemeId);
+        const stillValid = pairs.some(p => p.validation_id === validationId);
+        if (!stillValid) {
+          validationId = pairs.find(p => p.is_primary)?.validation_id || 'VS-04-CHAIN-OK';
+        }
+      }
+      storedTemplateCode = normalizeStoredTemplateCode('TPL-CHAIN', schemeId);
     } else {
       const alts = SCHEME_TEMPLATE_ALTERNATIVES[schemeId] || [];
       const effective = storedTemplateCode || SCHEME_TO_TEMPLATE[schemeId];

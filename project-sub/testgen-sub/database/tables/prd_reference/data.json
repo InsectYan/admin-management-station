@@ -268,5 +268,17 @@
     "section": "§15",
     "title": "邀请验收标准",
     "project_code": "fitness-agent"
+  },
+  {
+    "prd_ref_id": "PRD_5_3",
+    "section": "§5.3",
+    "title": "会员状态",
+    "project_code": "fitness-agent"
+  },
+  {
+    "prd_ref_id": "PRD_5_5",
+    "section": "§5.5",
+    "title": "会员端训练计划确认",
+    "project_code": "fitness-agent"
   }
 ]

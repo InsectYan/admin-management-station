@@ -9,6 +9,7 @@ const SCHEME_TO_TEMPLATE = {
   'TS-03-REP': 'TPL-REP',
   'TS-04-SET': 'TPL-SET',
   'TS-05-CHAIN': 'TPL-CHAIN',
+  'TS-05-API': 'TPL-API-CTX',
   'TS-06-PAIR': 'TPL-PAIR',
   'TS-07-NEG': 'TPL-NEG',
   'TS-08-OBS': 'TPL-OBS',
@@ -16,18 +17,23 @@ const SCHEME_TO_TEMPLATE = {
   'TS-10-MAN': 'TPL-MAN',
 };
 
-/** 独立模板 code → 执行方案（与 TS-05-CHAIN 共用引擎） */
-const TEMPLATE_SCHEME_OVERRIDE = {
-  'TPL-API-CTX': 'TS-05-CHAIN',
+const TEMPLATE_TO_SCHEME = {
+  'TPL-API-CTX': 'TS-05-API',
+  'TPL-CHAIN': 'TS-05-CHAIN',
 };
 
-/** 同一 TS 下可选的配置模板变体（混合 TS 用例级切换） */
+/** 链路类方案共用 ts05ChainEngine */
+const CHAIN_ENGINE_SCHEMES = new Set([ 'TS-05-CHAIN', 'TS-05-API' ]);
+
+/** 同一链路方案族下可选的配置模板变体（混合 TS 用例级切换） */
 const SCHEME_TEMPLATE_ALTERNATIVES = {
   'TS-05-CHAIN': [ 'TPL-CHAIN', 'TPL-API-CTX' ],
+  'TS-05-API': [ 'TPL-API-CTX', 'TPL-CHAIN' ],
 };
 
 const API_CTX_TEMPLATE = 'TPL-API-CTX';
-const API_CTX_SCHEME = 'TS-05-CHAIN';
+const API_CTX_SCHEME = 'TS-05-API';
+const CHAIN_SCHEME = 'TS-05-CHAIN';
 
 const TEMPLATE_TABLES = {
   'TPL-DET': 'tpl_config_det',
@@ -68,6 +74,16 @@ function assertTemplateTable(tableName) {
 }
 
 /**
+ * 混合 TS + TS-05-CHAIN 未显式指定模板时，默认前置链路+接口模板
+ * @param {{ category_major_id?: string, scheme_primary_id?: string, template_code?: string }} item
+ */
+function isMixedChainDefaultApiCtx(item) {
+  return MIXED_TS_MAJORS.has(item?.category_major_id)
+    && item?.scheme_primary_id === CHAIN_SCHEME
+    && !item?.template_code;
+}
+
+/**
  * 从用例行解析模板 code（大类挂载优先，混合 TS 走 scheme）
  * @param {{ category_major_id?: string, scheme_primary_id?: string, template_code?: string, mapped_template_code?: string }} item
  */
@@ -77,6 +93,9 @@ function resolveTemplateCodeFromItem(item) {
     return item.template_code;
   }
   if (MIXED_TS_MAJORS.has(item.category_major_id)) {
+    if (isMixedChainDefaultApiCtx(item)) {
+      return API_CTX_TEMPLATE;
+    }
     return item.scheme_template_code
       || SCHEME_TO_TEMPLATE[item.scheme_primary_id]
       || item.template_code
@@ -87,6 +106,20 @@ function resolveTemplateCodeFromItem(item) {
     || item.template_code
     || SCHEME_TO_TEMPLATE[item.scheme_primary_id]
     || 'TPL-DET';
+}
+
+/**
+ * 执行层 scheme：模板优先于 item 上遗留的 TS-05-CHAIN
+ * @param {{ scheme_primary_id?: string }} item
+ * @param {string} templateCode
+ */
+function resolveExecutionScheme(item, templateCode) {
+  if (templateCode === API_CTX_TEMPLATE) return API_CTX_SCHEME;
+  if (templateCode === 'TPL-CHAIN') return CHAIN_SCHEME;
+  if (item?.scheme_primary_id && CHAIN_ENGINE_SCHEMES.has(item.scheme_primary_id)) {
+    return item.scheme_primary_id;
+  }
+  return item?.scheme_primary_id || 'TS-01-DET';
 }
 
 /**
@@ -113,17 +146,26 @@ function resolveDefaultTemplateForScheme(schemeId) {
   return SCHEME_TO_TEMPLATE[schemeId] || 'TPL-DET';
 }
 
-/** 混合 TS 用例可选的配置模板（含升级至 TPL-API-CTX） */
+function resolveSchemeForTemplate(templateCode) {
+  return TEMPLATE_TO_SCHEME[templateCode] || null;
+}
+
+/** 混合 TS 用例可选的配置模板（含 TS-05 双模板切换） */
 function getTemplateAlternativesForItem(item) {
   if (!item || !MIXED_TS_MAJORS.has(item.category_major_id)) return [];
-  if (item.scheme_primary_id === API_CTX_SCHEME) {
-    return SCHEME_TEMPLATE_ALTERNATIVES[API_CTX_SCHEME] || [];
+  if (CHAIN_ENGINE_SCHEMES.has(item.scheme_primary_id)) {
+    return SCHEME_TEMPLATE_ALTERNATIVES[item.scheme_primary_id]
+      || SCHEME_TEMPLATE_ALTERNATIVES[API_CTX_SCHEME];
   }
   return [ API_CTX_TEMPLATE ];
 }
 
 /** 持久化：默认模板存 null，仅变体存 explicit code */
 function normalizeStoredTemplateCode(templateCode, schemeId) {
+  if (schemeId === API_CTX_SCHEME) {
+    if (!templateCode || templateCode === API_CTX_TEMPLATE) return null;
+    return templateCode;
+  }
   const def = resolveDefaultTemplateForScheme(schemeId);
   if (!templateCode || templateCode === def) return null;
   return templateCode;
@@ -133,9 +175,11 @@ function buildItemTemplateSwitchMeta(item, effectiveTemplateCode) {
   const isMixed = MIXED_TS_MAJORS.has(item?.category_major_id);
   const alternatives = getTemplateAlternativesForItem(item);
   const canSwitchApiCtx = isMixed && alternatives.length > 0;
+  const targetApiScheme = effectiveTemplateCode === API_CTX_TEMPLATE;
   const needsSchemeUpgrade = canSwitchApiCtx
+    && targetApiScheme
     && item.scheme_primary_id !== API_CTX_SCHEME
-    && (effectiveTemplateCode === API_CTX_TEMPLATE || alternatives.includes(API_CTX_TEMPLATE));
+    && !CHAIN_ENGINE_SCHEMES.has(item.scheme_primary_id);
   return {
     is_mixed_ts: isMixed,
     template_alternatives: alternatives,
@@ -143,6 +187,7 @@ function buildItemTemplateSwitchMeta(item, effectiveTemplateCode) {
     needs_scheme_upgrade_for_api_ctx: needsSchemeUpgrade,
     effective_template_code: effectiveTemplateCode,
     default_template_code: resolveDefaultTemplateForScheme(item?.scheme_primary_id),
+    execution_scheme_id: resolveExecutionScheme(item, effectiveTemplateCode),
   };
 }
 
@@ -150,17 +195,22 @@ module.exports = {
   MIXED_TS_MAJORS,
   SCHEME_TO_TEMPLATE,
   SCHEME_TEMPLATE_ALTERNATIVES,
-  TEMPLATE_SCHEME_OVERRIDE,
+  TEMPLATE_TO_SCHEME,
+  CHAIN_ENGINE_SCHEMES,
   TEMPLATE_TABLES,
   TEMPLATE_NAMES,
   API_CTX_TEMPLATE,
   API_CTX_SCHEME,
+  CHAIN_SCHEME,
   ALLOWED_TABLE_NAMES,
   assertTemplateTable,
   resolveTemplateCodeFromItem,
+  resolveExecutionScheme,
+  resolveSchemeForTemplate,
   resolveDefaultTemplateForScheme,
   getTemplateAlternativesForItem,
   normalizeStoredTemplateCode,
   buildItemTemplateSwitchMeta,
   applyResolvedTemplate,
+  isMixedChainDefaultApiCtx,
 };

@@ -171,6 +171,8 @@ import {
   MIXED_TS_MAJORS,
   SCHEME_TEMPLATE_ALTERNATIVES,
   TEMPLATE_DISPLAY_NAMES,
+  API_CTX_SCHEME,
+  CHAIN_SCHEME,
 } from '@/components/config-templates/registry.js';
 import {
   createManualTestItem,
@@ -237,12 +239,15 @@ const filteredMinors = computed(() =>
 
 const showTemplatePicker = computed(() =>
   Boolean(form.value.scheme_primary_id)
-  && (majorProfile.value?.is_mixed || form.value.scheme_primary_id === 'TS-05-CHAIN'),
+  && (majorProfile.value?.is_mixed
+    || form.value.scheme_primary_id === CHAIN_SCHEME
+    || form.value.scheme_primary_id === API_CTX_SCHEME),
 );
 
 const templateOptions = computed(() => {
-  if (form.value.scheme_primary_id === 'TS-05-CHAIN') {
-    return SCHEME_TEMPLATE_ALTERNATIVES['TS-05-CHAIN'] || [];
+  if (form.value.scheme_primary_id === CHAIN_SCHEME || form.value.scheme_primary_id === API_CTX_SCHEME) {
+    return SCHEME_TEMPLATE_ALTERNATIVES[form.value.scheme_primary_id]
+      || SCHEME_TEMPLATE_ALTERNATIVES[API_CTX_SCHEME];
   }
   if (majorProfile.value?.is_mixed) {
     return [ 'TPL-API-CTX' ];

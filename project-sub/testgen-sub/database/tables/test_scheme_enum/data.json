@@ -35,6 +35,13 @@
     "project_code": "fitness-agent"
   },
   {
+    "scheme_id": "TS-05-API",
+    "name": "前置链路+接口模板",
+    "description": "preflight + ft_api_template + poll/语义比对（api_ctx）",
+    "sort_order": 11,
+    "project_code": "fitness-agent"
+  },
+  {
     "scheme_id": "TS-06-PAIR",
     "name": "对照/跨端对比",
     "description": "三端载荷边界、会员 vs 教练同句",
