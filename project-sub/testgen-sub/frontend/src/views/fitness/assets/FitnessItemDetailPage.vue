@@ -6,6 +6,15 @@
       <el-descriptions-item label="优先级">{{ item.priority_name || item.priority_id }}</el-descriptions-item>
       <el-descriptions-item label="分类">{{ item.dimension_name }} / {{ item.category_major_name }}</el-descriptions-item>
       <el-descriptions-item label="来源">{{ item.source_doc }} {{ item.source_section }}</el-descriptions-item>
+      <el-descriptions-item label="生成任务">
+        <template v-if="item.generation_job_id">
+          <router-link :to="{ name: 'generation-progress', params: { id: item.generation_job_id } }">
+            #{{ item.generation_job_id }}
+          </router-link>
+          <span v-if="item.generation_task_name"> · {{ item.generation_task_name }}</span>
+        </template>
+        <span v-else>—</span>
+      </el-descriptions-item>
       <el-descriptions-item label="主方案">
         <SchemeCodeNameCell :code="item.scheme_primary_id" :name="item.scheme_primary_name" />
       </el-descriptions-item>

@@ -1,6 +1,7 @@
 'use strict';
 
 const { isApprovedCase, auditItemDetailFields, normalizeCaseFields } = require('./itemDetailFieldSchema');
+const { inferHttpFields } = require('./inferHttpFields');
 
 const FIELD_MAX = 300;
 const DEFAULTS = {
@@ -65,8 +66,10 @@ function buildItemId(ctx, index) {
  * @param {number} index
  */
 function mapAgentCaseToItemDetail(tc, ctx, index) {
-  const normalized = normalizeCaseFields(tc);
-  const itemId = truncate(normalized.item_id || tc.item_id || tc.case_id || tc.caseId || buildItemId(ctx, index), 64);
+  const normalized = inferHttpFields(normalizeCaseFields(tc));
+  const itemId = ctx.manual
+    ? truncate(normalized.item_id || tc.item_id || tc.case_id || tc.caseId || buildItemId(ctx, index), 64)
+    : buildItemId(ctx, index);
   const title = truncate(normalized.item_name || tc.item_name || tc.title || tc.name || '未命名用例', 512);
   const expected = truncate(normalized.expected_observation || tc.expected_observation || tc.expected || tc.expected_result || '');
   const steps = normalizeSteps(normalized.test_steps || tc.test_steps || tc.steps);

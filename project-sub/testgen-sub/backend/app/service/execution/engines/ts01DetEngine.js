@@ -2,6 +2,7 @@
 
 const BaseTsEngine = require('./baseTsEngine');
 const { resolveHttpBody, methodNeedsBody } = require('../../../lib/httpRequestBody');
+const { resolveDetHttpTarget, inferHttpFields } = require('../../../lib/inferHttpFields');
 const { renderApiTemplateCases } = require('../../../lib/apiTemplateRender');
 const { runCli } = require('../runners/cliRunner');
 const { runHttp } = require('../runners/httpRunner');
@@ -48,26 +49,26 @@ class Ts01DetEngine extends BaseTsEngine {
       });
     }
 
-    if (item.endpoint_path && env?.bff_coach_url) {
+    const enrichedItem = inferHttpFields(item);
+    const { path, method, statusExpected } = resolveDetHttpTarget(enrichedItem, configJson);
+    if (path && env?.bff_coach_url) {
       const headers = {
         'X-Test-Run-Id': String(run.id),
         'X-Test-Item-Id': item.item_id,
         ...(configJson.headers || {}),
       };
-      const method = (
-        item.http_method || configJson.method || configJson.http_method || 'GET'
-      ).toUpperCase();
       const body = methodNeedsBody(method) ? resolveHttpBody(method, configJson) : undefined;
       const httpResult = await runHttp(ctx.ctx, {
         baseUrl: env.bff_coach_url,
-        path: item.endpoint_path,
+        path,
         method,
         headers,
         body,
       });
       const assertions = configJson.assertions || [];
-      if (!assertions.length && item.http_status_expected != null) {
-        assertions.push({ type: 'status', expect: item.http_status_expected });
+      const expectStatus = statusExpected ?? 200;
+      if (!assertions.length) {
+        assertions.push({ type: 'status', expect: expectStatus });
       }
       const { passed, details } = await ctx.ctx.service.executionEngine.runAssertions(assertions, {
         statusCode: httpResult.statusCode,
@@ -84,7 +85,11 @@ class Ts01DetEngine extends BaseTsEngine {
       }];
     }
 
-    const err = new Error('用例既无 automation_command 也无 endpoint_path，无法执行 TS-01-DET');
+    const err = new Error(
+      '用例既无 automation_command 也无 endpoint_path，无法执行 TS-01-DET。'
+      + '请在用例详情或方案配置页填写 endpoint_path / automation_command，'
+      + '或确保 test_steps 中含 HTTP 方法与路径（如 POST /api/...）',
+    );
     err.status = 400;
     err.code = 'RUNNER_NOT_AVAILABLE';
     throw err;

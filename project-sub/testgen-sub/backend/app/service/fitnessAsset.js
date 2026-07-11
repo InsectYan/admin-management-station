@@ -55,6 +55,7 @@ const ITEM_LIST_JOINS = `
   LEFT JOIN test_role_enum rl ON rl.role_scope_id = t.role_scope_id
   LEFT JOIN test_exec_env_enum ee ON ee.exec_env_id = t.exec_env_id
   LEFT JOIN test_env_tier_enum et ON et.env_tier_id = t.env_tier_id
+  LEFT JOIN generation_task_registry gtr ON gtr.job_id = t.generation_job_id
   LEFT JOIN test_category_major_template cmt ON cmt.category_major_id = t.category_major_id
   LEFT JOIN config_template_enum ct_map ON ct_map.template_code = cmt.template_code
   LEFT JOIN config_template_enum ct_scheme ON ct_scheme.scheme_id = t.scheme_primary_id
@@ -78,6 +79,7 @@ const ITEM_LIST_SELECT = `
   rl.name AS role_scope_name,
   ee.name AS exec_env_name,
   et.name AS env_tier_name,
+  gtr.task_name AS generation_task_name,
   cmt.template_code AS mapped_template_code,
   ct_map.name AS mapped_template_name,
   ct_scheme.template_code AS scheme_template_code,

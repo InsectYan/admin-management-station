@@ -5993,9 +5993,9 @@
       "scheme_secondary_id": null,
       "template": "TPL-DET",
       "sub_template": null,
-      "automation_command": null,
-      "endpoint_path": null,
-      "status": "template-default",
+      "automation_command": "cd server && npm run test:stations -- turns-poll",
+      "endpoint_path": "/api/chat/turns/:id",
+      "status": "automation",
       "files": [
         "master.json"
       ]

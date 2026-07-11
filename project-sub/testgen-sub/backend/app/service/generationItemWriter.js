@@ -82,7 +82,24 @@ class GenerationItemWriterService extends require('egg').Service {
     const sql = `
       INSERT INTO test_item_detail (${INSERT_COLS.map(c => `"${c}"`).join(', ')})
       VALUES ${placeholders.join(', ')}
-      ON CONFLICT (item_id) DO NOTHING
+      ON CONFLICT (item_id) DO UPDATE SET
+        generation_job_id = COALESCE(EXCLUDED.generation_job_id, test_item_detail.generation_job_id),
+        project_code = COALESCE(EXCLUDED.project_code, test_item_detail.project_code),
+        project_name = COALESCE(EXCLUDED.project_name, test_item_detail.project_name),
+        source_doc = CASE
+          WHEN EXCLUDED.generation_job_id IS NOT NULL THEN EXCLUDED.source_doc
+          ELSE test_item_detail.source_doc
+        END,
+        source_section = CASE
+          WHEN EXCLUDED.generation_job_id IS NOT NULL THEN EXCLUDED.source_section
+          ELSE test_item_detail.source_section
+        END,
+        scheme_mapping_source = CASE
+          WHEN EXCLUDED.generation_job_id IS NOT NULL THEN EXCLUDED.scheme_mapping_source
+          ELSE test_item_detail.scheme_mapping_source
+        END,
+        updated_at = NOW()
+      WHERE EXCLUDED.generation_job_id IS NOT NULL
       RETURNING item_id
     `;
 

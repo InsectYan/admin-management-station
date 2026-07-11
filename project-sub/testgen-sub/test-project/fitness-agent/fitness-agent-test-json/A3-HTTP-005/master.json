@@ -1,5 +1,7 @@
 {
-  "endpoint_path": "/health",
+  "endpoint_path": "/api/chat/turns/:id",
   "http_method": "GET",
-  "http_status_expected": 200
+  "http_status_expected": 200,
+  "runner": "cli",
+  "command": "cd server && npm run test:stations -- turns-poll"
 }

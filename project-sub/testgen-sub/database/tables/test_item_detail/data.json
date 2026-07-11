@@ -26423,8 +26423,8 @@
       "turn 已 submit"
     ],
     "test_steps": [
-      "SSE 断开后 poll",
-      "断言终态"
+      "SSE 断开后 GET /api/chat/turns/:id 轮询",
+      "断言终态 status + message"
     ],
     "assertion_points": [
       "poll 返回终态"
@@ -26437,11 +26437,14 @@
       "ARCH_B6"
     ],
     "prd_goal_ids": [],
-    "automation_status_id": "AUTO_TODO",
-    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_status_id": "AUTO_EXISTING",
+    "automation_entry_id": "AUTO_S06",
+    "automation_command": "cd server && npm run test:stations -- turns-poll",
     "station_id": "S06",
     "role_scope_id": "ALL",
+    "endpoint_path": "/api/chat/turns/:id",
     "http_method": "GET",
+    "http_status_expected": 200,
     "scheme_primary_id": "TS-01-DET",
     "validation_primary_id": "VS-01-EXACT",
     "sample_execution_note": "poll 兜底路径",
@@ -26460,19 +26463,16 @@
     "test_input_example": null,
     "prd_ref_id": null,
     "arch_ref_id": null,
-    "endpoint_path": null,
     "config_env": null,
     "config_env_id": null,
-    "http_status_expected": null,
     "scheme_secondary_id": null,
     "validation_secondary_id": null,
     "is_risk_flag": false,
     "is_observability_audit": false,
     "is_p0_blocker": false,
     "failure_symptom": null,
-    "code_reference": null,
+    "code_reference": "server/src/stations/s03-queue/tests/turns-router-poll.test.ts",
     "notes": null,
-    "automation_command": null,
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
   },

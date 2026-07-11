@@ -72,7 +72,7 @@
           />
         </el-select>
         <div class="testgen-major-hint">
-          大类仅决定模板与方案结构，<strong>不包含默认条数</strong>。历史上「每大类 5 条」仅为系统占位，并非推荐值；实际生成条数须由下方 Agent 分析根据文档内容确定。
+          大类仅决定模板与方案结构，<strong>不包含默认条数</strong>。历史上「每大类 5 条」仅为系统占位，并非推荐值；推荐条数由 Agent 分析给出，可在生成目标表中手动调整。
         </div>
         <div v-if="selectedMajorSummaries.length" class="testgen-major-summary-list">
           <div
@@ -242,15 +242,24 @@
           </el-table-column>
           <el-table-column prop="scheme_name" label="主方案" min-width="100" />
           <el-table-column prop="validation_name" label="主验证" min-width="100" />
-          <el-table-column label="生成条数" width="88">
+          <el-table-column label="生成条数" width="120">
             <template #default="{ row }">
-              <span v-if="row.count != null">{{ row.count }}</span>
+              <el-input-number
+                v-if="estimateResult"
+                :model-value="row.count ?? 1"
+                :min="1"
+                :max="200"
+                size="small"
+                controls-position="right"
+                class="testgen-count-input"
+                @update:model-value="v => setTargetCount(row.category_major_id, row.validation_id, v)"
+              />
               <span v-else class="testgen-target-muted">待分析</span>
             </template>
           </el-table-column>
         </el-table>
         <div class="testgen-target-hint">
-          每个大类×验证为一个生成目标；<strong>生成条数由 Agent 分析确定</strong>，分析完成后填入上表并作为实际生成数量
+          每个大类×验证为一个生成目标；Agent 分析完成后填入<strong>推荐条数</strong>，可在上表手动修改，生成时将使用表中当前数值
         </div>
       </el-form-item>
 
@@ -266,7 +275,10 @@
             Agent 分析
           </el-button>
           <span v-if="estimateResult" class="testgen-estimate-result">
-            分析合计 <strong>{{ estimateResult.estimated_count }}</strong> 条（将作为实际生成数量）
+            推荐合计 <strong>{{ estimateResult.estimated_count }}</strong> 条
+            <template v-if="currentTotalCount !== estimateResult.estimated_count">
+              · 当前合计 <strong>{{ currentTotalCount }}</strong> 条
+            </template>
             <el-tag size="small" type="info">{{ estimateSourceLabel }}</el-tag>
           </span>
           <el-alert
@@ -281,7 +293,7 @@
             {{ estimateResult.reasoning }}
           </div>
           <div class="testgen-estimate-hint">
-            分析仅依据文档内容与所选大类/验证结构，<strong>不使用表单中的任何条数或数字配置</strong>。请先完成分析，再点击「开始生成」。
+            分析仅依据文档内容与所选大类/验证结构，<strong>不使用表单中的任何条数配置</strong>。分析结果为推荐值，可在「生成目标」表中调整后生成。
           </div>
         </div>
       </el-form-item>
@@ -442,6 +454,12 @@ function buildSchemeTargets(includeCounts = true) {
   return targets;
 }
 
+function setTargetCount(majorId, validationId, count) {
+  const key = targetKey(majorId, validationId);
+  const n = Math.max(1, Math.min(200, Math.round(Number(count) || 1)));
+  targetCountByKey.value = { ...targetCountByKey.value, [key]: n };
+}
+
 function applyEstimateResult(result) {
   if (!result) return;
   const next = { ...targetCountByKey.value };
@@ -460,6 +478,10 @@ function applyEstimateResult(result) {
 }
 
 const schemeTargetPreview = computed(() => buildSchemeTargets());
+
+const currentTotalCount = computed(() =>
+  schemeTargetPreview.value.reduce((sum, row) => sum + (Number(row.count) || 0), 0),
+);
 
 const rules = {
   task_name: [{ required: true, message: '请输入任务名称', trigger: 'blur' }],
@@ -487,7 +509,7 @@ const canSubmit = computed(() =>
   && contentConfirmed.value
   && hasPreview.value
   && estimateResult.value?.estimated_count > 0
-  && schemeTargetPreview.value.every(row => row.count != null),
+  && schemeTargetPreview.value.every(row => row.count != null && row.count >= 1),
 );
 
 const docTypeLabel = computed(() => {
@@ -617,7 +639,7 @@ function confirmContent() {
     return;
   }
   contentConfirmed.value = true;
-  ElMessage.success('文档已确认，请完成 Agent 分析后再开始生成');
+  ElMessage.success('文档已确认，请完成 Agent 分析并根据推荐条数调整后再生成');
 }
 
 function onDocModeChange() {
@@ -752,7 +774,7 @@ async function handleAgentEstimate() {
     const payload = await buildGenerationPayload(true);
     estimateResult.value = await estimateGeneration(payload);
     applyEstimateResult(estimateResult.value);
-    ElMessage.success('分析完成，已写入各目标生成条数');
+    ElMessage.success('分析完成，已填入推荐条数，可按需在上表调整');
   } catch (err) {
     ElMessage.error(err.message || 'Agent 分析失败');
   } finally {
@@ -823,6 +845,13 @@ onMounted(() => {
 .testgen-target-muted {
   color: #909399;
   font-size: 12px;
+}
+.testgen-count-input {
+  width: 100%;
+}
+.testgen-count-input :deep(.el-input__wrapper) {
+  padding-left: 8px;
+  padding-right: 28px;
 }
 .testgen-major-summary-list {
   margin-top: 8px;

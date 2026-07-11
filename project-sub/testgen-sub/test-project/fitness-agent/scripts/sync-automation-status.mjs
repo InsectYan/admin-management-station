@@ -234,6 +234,16 @@ const PATCH = {
     code_reference: "server/src/stations/s03-queue/tests/turns-router-poll.test.ts",
     test_steps: ["GET /turns/:id 轮询", "断言：stream_events + result_json"],
   },
+  "A3-HTTP-005": {
+    automation_status_id: "AUTO_EXISTING",
+    automation_entry_id: "AUTO_S06",
+    automation_command: "cd server && npm run test:stations -- turns-poll",
+    endpoint_path: "/api/chat/turns/:id",
+    http_method: "GET",
+    http_status_expected: 200,
+    code_reference: "server/src/stations/s03-queue/tests/turns-router-poll.test.ts",
+    test_steps: ["SSE 断开后 GET /api/chat/turns/:id 轮询", "断言终态 status + message"],
+  },
   "D4-FLD-003": {
     automation_status_id: "AUTO_EXISTING",
     automation_entry_id: "AUTO_S03",

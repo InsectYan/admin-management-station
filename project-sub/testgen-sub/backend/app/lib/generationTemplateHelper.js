@@ -6,6 +6,7 @@ const {
   SCHEME_TO_TEMPLATE,
   TEMPLATE_TABLES,
 } = require('./configTemplateRegistry');
+const { inferHttpFields } = require('./inferHttpFields');
 
 /**
  * @param {import('egg').Application} app
@@ -52,22 +53,23 @@ async function resolveTemplateCodeForGeneration(app, categoryMajorId, schemeId) 
  * @param {Record<string, unknown>} item
  */
 function buildTemplateDefaults(templateCode, item) {
-  if (item.config_json && typeof item.config_json === 'object' && Object.keys(item.config_json).length) {
+  const enriched = inferHttpFields(item);
+  if (enriched.config_json && typeof enriched.config_json === 'object' && Object.keys(enriched.config_json).length) {
     return {
-      config_json: item.config_json,
-      threshold_json: item.threshold_json && typeof item.threshold_json === 'object'
-        ? item.threshold_json
+      config_json: enriched.config_json,
+      threshold_json: enriched.threshold_json && typeof enriched.threshold_json === 'object'
+        ? enriched.threshold_json
         : {},
     };
   }
   const base = {
-    endpoint_path: item.endpoint_path,
-    http_method: item.http_method,
-    method: item.http_method,
-    test_input_example: item.test_input_example,
-    test_steps: item.test_steps,
-    assertion_points: item.assertion_points,
-    http_status_expected: item.http_status_expected,
+    endpoint_path: enriched.endpoint_path,
+    http_method: enriched.http_method,
+    method: enriched.http_method,
+    test_input_example: enriched.test_input_example,
+    test_steps: enriched.test_steps,
+    assertion_points: enriched.assertion_points,
+    http_status_expected: enriched.http_status_expected,
   };
   if (templateCode === 'TPL-SET') {
     return { config_json: {}, threshold_json: {} };

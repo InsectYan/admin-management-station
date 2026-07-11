@@ -68,6 +68,15 @@
           {{ itemTagLabel(row, 'major') }}
         </el-tag>
       </template>
+      <template #col-generation_task_name="{ row }">
+        <router-link
+          v-if="row.generation_job_id"
+          :to="{ name: 'generation-progress', params: { id: row.generation_job_id } }"
+        >
+          {{ row.generation_task_name || `#${row.generation_job_id}` }}
+        </router-link>
+        <span v-else class="text-muted">—</span>
+      </template>
       <template #col-priority_name="{ row }">
         <el-tag v-bind="priorityTagProps(row)" size="small">
           {{ itemTagLabel(row, 'priority') }}
@@ -192,6 +201,7 @@ function formatPassRate(value) {
 const itemColumns = [
   { prop: 'item_id', label: '用例编码', width: 180 },
   { prop: 'project_name', label: '项目名称', width: 220 },
+  { prop: 'generation_task_name', label: '生成任务', width: 160 },
   { prop: 'detail_summary', label: '测试用例名称', minWidth: 220 },
   { prop: 'dimension_name', label: '维度', width: 140 },
   { prop: 'category_major_name', label: '大类', width: 100 },
