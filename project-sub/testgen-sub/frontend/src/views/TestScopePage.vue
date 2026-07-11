@@ -71,6 +71,9 @@
             :value="m.category_major_id"
           />
         </el-select>
+        <div class="testgen-major-hint">
+          大类仅决定模板与方案结构，<strong>不包含默认条数</strong>。历史上「每大类 5 条」仅为系统占位，并非推荐值；实际生成条数须由下方 Agent 分析根据文档内容确定。
+        </div>
         <div v-if="selectedMajorSummaries.length" class="testgen-major-summary-list">
           <div
             v-for="item in selectedMajorSummaries"
@@ -86,25 +89,6 @@
         </div>
       </el-form-item>
 
-      <el-form-item v-if="form.category_major_ids.length" label="大类条数">
-        <div class="testgen-type-counts">
-          <div
-            v-for="mid in form.category_major_ids"
-            :key="mid"
-            class="testgen-type-count-row"
-          >
-            <span class="testgen-type-count-label">{{ majorLabel(mid) }}</span>
-            <el-input-number
-              v-model="form.major_counts[mid]"
-              :min="1"
-              :max="50"
-              size="small"
-            />
-            <span class="testgen-type-count-hint">条</span>
-          </div>
-        </div>
-      </el-form-item>
-
       <el-form-item label="主验证 (VS)" prop="validation_ids">
         <el-checkbox-group v-model="form.validation_ids">
           <el-checkbox
@@ -116,24 +100,6 @@
             {{ item.validation_id }} {{ item.name || '' }}
           </el-checkbox>
         </el-checkbox-group>
-      </el-form-item>
-
-      <el-form-item v-if="schemeTargetPreview.length" label="生成目标">
-        <el-table :data="schemeTargetPreview" size="small" border max-height="280">
-          <el-table-column prop="category_major_name" label="测试大类" min-width="100" />
-          <el-table-column label="配置模板" min-width="120">
-            <template #default="{ row }">
-              <span v-if="row.template_code">{{ row.template_code }}</span>
-              <span v-else class="testgen-target-muted">按方案解析</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="scheme_name" label="主方案" min-width="100" />
-          <el-table-column prop="validation_name" label="主验证" min-width="100" />
-          <el-table-column prop="count" label="条数" width="72" />
-        </el-table>
-        <div class="testgen-target-hint">
-          每个大类自动关联配置模板与主方案；按上表顺序依次执行：需求分析 → 生成用例 → 合规审查后落库
-        </div>
       </el-form-item>
 
       <el-form-item label="关联文档" prop="document_source">
@@ -261,8 +227,31 @@
           v-model="form.hint"
           type="textarea"
           :rows="2"
-          placeholder="可选，传给生成任务的补充说明"
+          placeholder="可选，传给 Agent 分析与生成任务的补充说明"
         />
+      </el-form-item>
+
+      <el-form-item v-if="schemeTargetPreview.length" label="生成目标">
+        <el-table :data="schemeTargetPreview" size="small" border max-height="280">
+          <el-table-column prop="category_major_name" label="测试大类" min-width="100" />
+          <el-table-column label="配置模板" min-width="120">
+            <template #default="{ row }">
+              <span v-if="row.template_code">{{ row.template_code }}</span>
+              <span v-else class="testgen-target-muted">按方案解析</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="scheme_name" label="主方案" min-width="100" />
+          <el-table-column prop="validation_name" label="主验证" min-width="100" />
+          <el-table-column label="生成条数" width="88">
+            <template #default="{ row }">
+              <span v-if="row.count != null">{{ row.count }}</span>
+              <span v-else class="testgen-target-muted">待分析</span>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div class="testgen-target-hint">
+          每个大类×验证为一个生成目标；<strong>生成条数由 Agent 分析确定</strong>，分析完成后填入上表并作为实际生成数量
+        </div>
       </el-form-item>
 
       <el-form-item label="Agent 分析">
@@ -277,13 +266,23 @@
             Agent 分析
           </el-button>
           <span v-if="estimateResult" class="testgen-estimate-result">
-            建议生成约 <strong>{{ estimateResult.estimated_count }}</strong> 条
+            分析合计 <strong>{{ estimateResult.estimated_count }}</strong> 条（将作为实际生成数量）
             <el-tag size="small" type="info">{{ estimateSourceLabel }}</el-tag>
           </span>
+          <el-alert
+            v-if="estimateResult?.agent_warning"
+            type="warning"
+            :closable="false"
+            show-icon
+            class="testgen-estimate-warning"
+            :title="estimateResult.agent_warning"
+          />
           <div v-if="estimateResult?.reasoning" class="testgen-estimate-reason">
             {{ estimateResult.reasoning }}
           </div>
-          <div class="testgen-estimate-hint">基于文档与所选大类/方案分析，仅供参考，不参与实际生成</div>
+          <div class="testgen-estimate-hint">
+            分析仅依据文档内容与所选大类/验证结构，<strong>不使用表单中的任何条数或数字配置</strong>。请先完成分析，再点击「开始生成」。
+          </div>
         </div>
       </el-form-item>
 
@@ -314,7 +313,7 @@ import { startGeneration, estimateGeneration } from '../services/generationServi
 import { fetchEnums, fetchMajorTemplateMapping } from '../services/fitnessService.js';
 import { fetchProjects } from '../services/projectService.js';
 
-const DEFAULT_TARGET_COUNT = 5;
+const targetCountByKey = ref({});
 
 const PREVIEW_SNIPPET_LEN = 500;
 
@@ -358,7 +357,6 @@ const form = ref({
   task_name: '',
   project_code: '',
   category_major_ids: [],
-  major_counts: {},
   validation_ids: [],
   document_id: '',
   hint: '',
@@ -366,18 +364,18 @@ const form = ref({
   fitness_dry_run: false,
 });
 
+function targetKey(majorId, validationId) {
+  return `${majorId}::${validationId}`;
+}
+
+function clearEstimate() {
+  estimateResult.value = null;
+  targetCountByKey.value = {};
+}
+
 watch(
-  () => form.value.category_major_ids.slice(),
-  (ids) => {
-    const next = { ...form.value.major_counts };
-    for (const id of ids) {
-      if (next[id] == null) next[id] = DEFAULT_TARGET_COUNT;
-    }
-    for (const key of Object.keys(next)) {
-      if (!ids.includes(key)) delete next[key];
-    }
-    form.value.major_counts = next;
-  },
+  () => [ form.value.category_major_ids.slice(), form.value.validation_ids.slice() ],
+  () => clearEstimate(),
 );
 
 const selectedProject = computed(() =>
@@ -413,7 +411,7 @@ const selectedMajorSummaries = computed(() =>
   form.value.category_major_ids.map(id => resolveMajorProfile(id)),
 );
 
-function buildSchemeTargets() {
+function buildSchemeTargets(includeCounts = true) {
   const targets = [];
   for (const mid of form.value.category_major_ids) {
     const profile = resolveMajorProfile(mid);
@@ -423,7 +421,8 @@ function buildSchemeTargets() {
       : [ major?.default_validation_id ].filter(Boolean);
 
     for (const vid of validations) {
-      targets.push({
+      const key = targetKey(mid, vid);
+      const row = {
         category_major_id: mid,
         category_major_name: profile.category_major_name,
         template_code: profile.template_code,
@@ -432,12 +431,32 @@ function buildSchemeTargets() {
         scheme_name: profile.scheme_name,
         validation_id: vid,
         validation_name: validationLabel(vid) || major?.default_validation_name || vid,
-        count: form.value.major_counts[mid] ?? DEFAULT_TARGET_COUNT,
         is_mixed: profile.is_mixed,
-      });
+      };
+      if (includeCounts) {
+        row.count = targetCountByKey.value[key] ?? null;
+      }
+      targets.push(row);
     }
   }
   return targets;
+}
+
+function applyEstimateResult(result) {
+  if (!result) return;
+  const next = { ...targetCountByKey.value };
+  if (result.scheme_targets?.length) {
+    for (const t of result.scheme_targets) {
+      next[targetKey(t.category_major_id, t.validation_id)] = t.count;
+    }
+  } else if (result.target_breakdown?.length) {
+    const structure = buildSchemeTargets(false);
+    result.target_breakdown.forEach((count, i) => {
+      const t = structure[i];
+      if (t) next[targetKey(t.category_major_id, t.validation_id)] = count;
+    });
+  }
+  targetCountByKey.value = next;
 }
 
 const schemeTargetPreview = computed(() => buildSchemeTargets());
@@ -466,7 +485,9 @@ const canSubmit = computed(() =>
   && form.value.category_major_ids.length > 0
   && form.value.validation_ids.length > 0
   && contentConfirmed.value
-  && hasPreview.value,
+  && hasPreview.value
+  && estimateResult.value?.estimated_count > 0
+  && schemeTargetPreview.value.every(row => row.count != null),
 );
 
 const docTypeLabel = computed(() => {
@@ -587,6 +608,7 @@ function clearPreview() {
   pasteFullContent.value = '';
   contentConfirmed.value = false;
   form.value.document_id = '';
+  clearEstimate();
 }
 
 function confirmContent() {
@@ -595,7 +617,7 @@ function confirmContent() {
     return;
   }
   contentConfirmed.value = true;
-  ElMessage.success('文档已确认，可补充表单并提交生成（生成时将使用服务端全量内容）');
+  ElMessage.success('文档已确认，请完成 Agent 分析后再开始生成');
 }
 
 function onDocModeChange() {
@@ -633,6 +655,7 @@ async function onFileChange(uploadFile) {
   uploading.value = true;
   contentConfirmed.value = false;
   pasteFullContent.value = '';
+  clearEstimate();
   try {
     const result = await previewDocument(uploadFile.raw);
     previewData.value = { ...emptyPreview(), ...result };
@@ -659,6 +682,7 @@ function handlePreviewPaste() {
   pasteFullContent.value = pasteContent.value;
   previewData.value = buildPastePreview(pasteContent.value);
   form.value.document_id = '';
+  clearEstimate();
   ElMessage.info('请预览并确认文档内容');
 }
 
@@ -669,6 +693,7 @@ async function onExistingDocSelect(id) {
   }
   contentConfirmed.value = false;
   pasteFullContent.value = '';
+  clearEstimate();
   try {
     const result = await getDocumentPreview(id);
     previewData.value = { ...emptyPreview(), ...result, document_id: id };
@@ -680,12 +705,13 @@ async function onExistingDocSelect(id) {
   }
 }
 
-async function buildGenerationPayload() {
-  const scheme_targets = buildSchemeTargets();
+async function buildGenerationPayload(forEstimate = false) {
+  const scheme_targets = forEstimate
+    ? buildSchemeTargets(false)
+    : buildSchemeTargets(true).map(t => ({ ...t, count: t.count ?? 1 }));
   const options = {
     category_major_ids: form.value.category_major_ids,
     validation_ids: form.value.validation_ids,
-    major_counts: form.value.major_counts,
     scheme_targets,
     fitness_context: {
       auto_sample: form.value.fitness_auto_sample,
@@ -721,11 +747,12 @@ async function handleAgentEstimate() {
     return;
   }
   estimating.value = true;
-  estimateResult.value = null;
+  clearEstimate();
   try {
-    const payload = await buildGenerationPayload();
+    const payload = await buildGenerationPayload(true);
     estimateResult.value = await estimateGeneration(payload);
-    ElMessage.success('分析完成（仅供参考）');
+    applyEstimateResult(estimateResult.value);
+    ElMessage.success('分析完成，已写入各目标生成条数');
   } catch (err) {
     ElMessage.error(err.message || 'Agent 分析失败');
   } finally {
@@ -741,10 +768,14 @@ async function handleStartGeneration() {
     ElMessage.warning('请先确认文档内容');
     return;
   }
+  if (!estimateResult.value?.estimated_count) {
+    ElMessage.warning('请先完成 Agent 分析以确定生成条数');
+    return;
+  }
 
   submitting.value = true;
   try {
-    const payload = await buildGenerationPayload();
+    const payload = await buildGenerationPayload(false);
     const result = await startGeneration(payload);
     const jobId = result.job_id ?? result.id;
     router.push({ name: 'generation-progress', params: { id: jobId } });
@@ -783,6 +814,12 @@ onMounted(() => {
   color: #909399;
   font-size: 12px;
 }
+.testgen-major-hint {
+  margin-top: 8px;
+  color: #909399;
+  font-size: 12px;
+  line-height: 1.5;
+}
 .testgen-target-muted {
   color: #909399;
   font-size: 12px;
@@ -818,6 +855,14 @@ onMounted(() => {
 .testgen-estimate-result {
   font-size: 14px;
   color: #303133;
+}
+.testgen-estimate-config {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #909399;
+}
+.testgen-estimate-warning {
+  margin-top: 4px;
 }
 .testgen-estimate-reason {
   font-size: 12px;

@@ -11,7 +11,48 @@ class FitnessPlanService extends require('egg').Service {
       limit: Number(pageSize),
       offset,
     });
-    return { list: rows, total: count, page: Number(page), pageSize: Number(pageSize) };
+
+    const planIds = rows.map(r => r.id);
+    let summaryByPlan = {};
+    if (planIds.length) {
+      const [ statsRows ] = await this.app.model.query(`
+        SELECT p.id AS plan_id,
+          COUNT(pi.id) AS total,
+          SUM(CASE WHEN pir.result_status = 'passed' THEN 1 ELSE 0 END) AS passed,
+          SUM(CASE WHEN pir.result_status IN ('passed', 'failed', 'skipped') THEN 1 ELSE 0 END) AS executed
+        FROM test_plan p
+        LEFT JOIN test_plan_item pi ON pi.plan_id = p.id
+        LEFT JOIN test_plan_item_result pir
+          ON pir.plan_id = p.id AND pir.plan_item_id = pi.id
+        WHERE p.id IN (:planIds)
+        GROUP BY p.id
+      `, { replacements: { planIds } });
+      summaryByPlan = Object.fromEntries(statsRows.map(r => {
+        const total = Number(r.total) || 0;
+        const passed = Number(r.passed) || 0;
+        const executed = Number(r.executed) || 0;
+        return [ r.plan_id, {
+          item_count: total,
+          passed_count: passed,
+          executed_count: executed,
+          pass_rate: total ? Math.round(100 * passed / total) : null,
+          compliance_rate: executed ? Math.round(100 * passed / executed) : null,
+        } ];
+      }));
+    }
+
+    const list = rows.map(row => {
+      const summary = summaryByPlan[row.id] || {};
+      return {
+        ...row.toJSON(),
+        item_count: summary.item_count ?? 0,
+        passed_count: summary.passed_count ?? 0,
+        pass_rate: summary.pass_rate ?? null,
+        compliance_rate: summary.compliance_rate ?? summary.pass_rate ?? null,
+      };
+    });
+
+    return { list, total: count, page: Number(page), pageSize: Number(pageSize) };
   }
 
   async findById(id) {
@@ -179,6 +220,22 @@ class FitnessPlanService extends require('egg').Service {
     return { format: 'markdown', content, plan, stats };
   }
 
+  resolveThresholdActual(paramId, stats) {
+    if (!paramId || !stats) return null;
+    if (paramId.startsWith('rate_')) return stats.pass_rate;
+    if (paramId.startsWith('block_')) {
+      const total = stats.totals?.items || 0;
+      const failed = stats.totals?.failed || 0;
+      return total ? Math.round(100 * failed / total) : null;
+    }
+    if (paramId.startsWith('error_rate_')) {
+      const total = stats.totals?.items || 0;
+      const failed = stats.totals?.failed || 0;
+      return total ? Math.round(100 * failed / total) : null;
+    }
+    return null;
+  }
+
   async buildReportStats(plan) {
     const itemIds = (plan.items || []).map(i => i.item_id);
     let itemMeta = {};
@@ -227,11 +284,33 @@ class FitnessPlanService extends require('egg').Service {
       if (status === 'passed') byValidation[vs].passed += 1;
     }
 
-    const thresholdCompare = (plan.thresholds || []).map(t => ({
-      param_id: t.param_id,
-      configured: t.param_value,
-      notes: t.notes,
-    }));
+    const passRate = plan.items?.length ? Math.round(100 * passed / plan.items.length) : 0;
+    const thresholdCompare = (plan.thresholds || []).map(t => {
+      const actual = this.resolveThresholdActual(t.param_id, {
+        pass_rate: passRate,
+        by_dimension: byDimension,
+        by_scheme: byScheme,
+        by_validation: byValidation,
+        totals: { passed, failed, pending, items: plan.items?.length || 0 },
+      });
+      const configured = Number(t.param_value);
+      let met = null;
+      if (actual != null && Number.isFinite(configured)) {
+        if (t.param_id.startsWith('block_')) met = actual <= configured;
+        else if (t.param_id.startsWith('rate_')) met = actual >= configured;
+        else if (t.param_id.startsWith('error_rate_')) met = actual <= configured;
+        else if (t.param_id.startsWith('submit_p99_ms_') || t.param_id.startsWith('ttft_ms_')) {
+          met = actual <= configured;
+        }
+      }
+      return {
+        param_id: t.param_id,
+        configured: t.param_value,
+        notes: t.notes,
+        actual,
+        met,
+      };
+    });
 
     const prdGoals = (plan.scope || [])
       .filter(s => s.scope_type === 'prd_goal')
@@ -318,9 +397,11 @@ class FitnessPlanService extends require('egg').Service {
       lines.push(`- ${vs}: ${rate}% (${row.passed}/${row.total})`);
     }
     if (stats.thresholds.length) {
-      lines.push('', '## 阈值配置', '');
+      lines.push('', '## 阈值对比', '');
       for (const t of stats.thresholds) {
-        lines.push(`- ${t.param_id}: ${t.configured}`);
+        const actualStr = t.actual != null ? `，实际 ${t.actual}` : '';
+        const metStr = t.met === true ? ' ✓' : t.met === false ? ' ✗' : '';
+        lines.push(`- ${t.param_id}: 配置 ${t.configured}${actualStr}${metStr}`);
       }
     }
     lines.push('', '## 执行明细', '');

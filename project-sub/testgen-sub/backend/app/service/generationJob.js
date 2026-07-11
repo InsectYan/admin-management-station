@@ -14,7 +14,8 @@ const PHASES = [ 'analyze', 'generate', 'review' ];
 const MAX_BATCH_ATTEMPTS = 9999;
 const ROUND_SIZE_LOCAL = 5;
 const ROUND_SIZE_CLOUD = 10;
-const ESTIMATE_AGENT_TIMEOUT_MS = 5000;
+const ESTIMATE_MAX_TOTAL = 120;
+const DEFAULT_ESTIMATE_TIMEOUT_MS = 60000;
 
 function isLocalOllamaProfile(profileId) {
   const id = String(profileId || 'ollama-qwen').trim().toLowerCase();
@@ -88,36 +89,119 @@ function batchCountForTarget(count, roundSize = ROUND_SIZE_CLOUD) {
   return Math.max(1, Math.ceil(Number(count || 0) / roundSize));
 }
 
+function countUniqueMatches(text, pattern, normalize) {
+  const matches = text.match(pattern) || [];
+  const seen = new Set();
+  for (const raw of matches) {
+    const value = (normalize ? normalize(raw) : raw).toLowerCase();
+    if (value) seen.add(value);
+  }
+  return seen.size;
+}
+
+function normalizeEndpointPath(path) {
+  return String(path || '')
+    .replace(/\?.*$/, '')
+    .replace(/\/+$/, '')
+    .trim();
+}
+
+function isLlmUnavailableError(err) {
+  const msg = String(err?.message || err || '');
+  return /402|Insufficient Balance|余额不足|LLM 错误|llm_error/i.test(msg);
+}
+
+function formatAgentEstimateWarning(err) {
+  const brief = String(err?.message || '超时').split('\n')[0].slice(0, 160);
+  if (/402|Insufficient Balance|余额不足/i.test(brief)) {
+    return '云端模型余额不足，已改用文档分析估算；可在顶部切换为本地 Ollama 后重试 Agent';
+  }
+  if (/timeout|超时|5000ms/i.test(brief)) {
+    return 'Agent 响应超时，已改用文档分析估算；可增大 AGENT_ESTIMATE_TIMEOUT_MS 或切换本地 Ollama';
+  }
+  return `Agent 暂不可用（${brief}），已改用文档分析估算`;
+}
+
+function applyEstimateBounds(estimated, targetCount) {
+  const targets = Math.max(Number(targetCount) || 1, 1);
+  return Math.max(targets, Math.min(Math.round(estimated), ESTIMATE_MAX_TOTAL));
+}
+
+/** 将合计条数均分到各生成目标（余数从前向后 +1） */
+function distributeEstimateEvenly(total, targetCount) {
+  const n = Math.max(1, Math.round(Number(targetCount) || 1));
+  const safeTotal = Math.max(n, Math.round(Number(total) || 0));
+  const base = Math.floor(safeTotal / n);
+  let remainder = safeTotal - base * n;
+  return Array.from({ length: n }, () => {
+    if (remainder > 0) {
+      remainder -= 1;
+      return base + 1;
+    }
+    return base;
+  });
+}
+
+function stripTargetCounts(schemeTargets) {
+  return (schemeTargets || []).map(({ count, ...rest }) => ({ ...rest }));
+}
+
 function analyzeDocumentHeuristic(content, schemeTargets, categoryMajorIds, validationIds) {
   const text = content || '';
   const len = text.length;
   const sectionCount = (text.match(/^#{1,3}\s+/gm) || []).length;
-  const apiMethodCount = (text.match(/\b(GET|POST|PUT|PATCH|DELETE)\b/gi) || []).length;
-  const endpointCount = Math.min((text.match(/\/[a-zA-Z0-9_\-/{:?=.&]+/g) || []).length, 30);
+  const rawApiMethodCount = (text.match(/\b(GET|POST|PUT|PATCH|DELETE)\b/gi) || []).length;
+  const rawEndpointCount = (text.match(/\/[a-zA-Z0-9_\-/{:?=.&]+/g) || []).length;
+  const uniqueEndpoints = countUniqueMatches(
+    text,
+    /\/[a-zA-Z0-9_\-/{:?=.&]+/g,
+    normalizeEndpointPath,
+  );
+  const uniqueApiOps = countUniqueMatches(
+    text,
+    /\b(GET|POST|PUT|PATCH|DELETE)\s+\/[^\s"'`，,;]+/gi,
+    s => s.replace(/\s+/g, ' ').trim(),
+  );
   const listItemCount = (text.match(/^\s*[-*]\s+/gm) || []).length;
+  const tableRowCount = (text.match(/^\|.+\|$/gm) || []).length;
+  const codeBlockCount = Math.floor((text.match(/```/g) || []).length / 2);
 
-  const complexity = sectionCount + apiMethodCount + Math.ceil(endpointCount / 2) + Math.ceil(listItemCount / 5);
-  const basePerTarget = Math.max(3, Math.min(30, Math.ceil(len / 1200) + Math.ceil(complexity / 2)));
+  const endpointSignal = Math.round(Math.sqrt(Math.max(uniqueEndpoints, 1)) * 2.2 + Math.min(uniqueApiOps, 24) * 0.6);
+  const structureSignal = Math.round(sectionCount * 1.2 + Math.sqrt(Math.max(listItemCount, 1)) * 0.5 + tableRowCount * 0.08);
+  const lengthSignal = Math.round(Math.sqrt(Math.max(len, 1) / 600));
+  const contentBase = Math.max(1, Math.min(
+    ESTIMATE_MAX_TOTAL,
+    endpointSignal + structureSignal + lengthSignal + codeBlockCount * 0.5,
+  ));
 
-  let estimated;
-  if (schemeTargets.length) {
-    estimated = schemeTargets.reduce((sum) => sum + basePerTarget, 0);
-  } else {
-    const majorN = Math.max(categoryMajorIds.length, 1);
-    const valN = Math.max(validationIds.length, 1);
-    estimated = majorN * valN * basePerTarget;
+  const targetN = schemeTargets.length
+    || Math.max(categoryMajorIds.length, 1) * Math.max(validationIds.length, 1);
+
+  let estimated = applyEstimateBounds(contentBase, targetN);
+  if (len < 300) {
+    estimated = Math.min(estimated, targetN);
   }
+  const targetBreakdown = distributeEstimateEvenly(estimated, targetN);
 
   const parts = [
     `文档约 ${len} 字`,
     sectionCount ? `${sectionCount} 个章节` : null,
-    apiMethodCount ? `${apiMethodCount} 处 HTTP 方法` : null,
-    endpointCount ? `${endpointCount} 处路径/接口` : null,
+    rawApiMethodCount ? `${rawApiMethodCount} 处 HTTP 方法（去重接口 ${uniqueApiOps || uniqueEndpoints} 个）` : null,
+    rawEndpointCount ? `${rawEndpointCount} 处路径/接口（去重 ${uniqueEndpoints} 个）` : null,
+    listItemCount ? `${listItemCount} 条列表项` : null,
   ].filter(Boolean);
+
+  const targetDesc = schemeTargets.length
+    ? `${schemeTargets.length} 个生成目标`
+    : `${categoryMajorIds.length} 个大类 × ${validationIds.length || 1} 种验证`;
+  const breakdownStr = targetBreakdown.length
+    ? `（各目标约 ${targetBreakdown.join('/')} 条）`
+    : '';
 
   return {
     estimated_count: estimated,
-    reasoning: `${parts.join('、')}；结合 ${schemeTargets.length || categoryMajorIds.length} 个大类与 ${schemeTargets.length || '默认'} 个生成目标，建议约 ${estimated} 条`,
+    target_breakdown: targetBreakdown,
+    reasoning: `${parts.join('、')}；${targetDesc}，建议生成约 ${estimated} 条${breakdownStr}`,
   };
 }
 
@@ -306,26 +390,24 @@ class GenerationJobService extends Service {
 
     const category_major_ids = options.category_major_ids || [];
     const validation_ids = options.validation_ids || [];
-    const major_counts = options.major_counts || {};
-    const scheme_targets = options.scheme_targets?.length
-      ? options.scheme_targets
+    let scheme_targets = options.scheme_targets?.length
+      ? stripTargetCounts(options.scheme_targets)
       : await buildSchemeTargetsFromMajors(this.app, {
         category_major_ids,
         validation_ids,
-        major_counts,
-        default_count: options.default_count || 5,
+        major_counts: {},
+        default_count: 1,
       });
 
-    const configuredTotal = scheme_targets.reduce((sum, t) => sum + (t.count || 0), 0);
-
     if (!resolvedContent) {
+      const fallbackTotal = Math.max(scheme_targets.length || 1, 1);
       return {
-        estimated_count: configuredTotal,
-        configured_count: configuredTotal,
+        estimated_count: fallbackTotal,
+        target_breakdown: distributeEstimateEvenly(fallbackTotal, scheme_targets.length || 1),
         source: 'configured',
         reasoning: contentWarning
-          ? `${contentWarning}，按当前配置合计 ${configuredTotal} 条`
-          : `基于当前配置：${scheme_targets.length} 个生成目标，合计 ${configuredTotal} 条`,
+          ? `${contentWarning}，无法读取文档，按 ${scheme_targets.length || 1} 个生成目标各 1 条估算`
+          : `未提供文档内容，按 ${scheme_targets.length || 1} 个生成目标各 1 条估算`,
         scheme_target_count: scheme_targets.length,
       };
     }
@@ -337,45 +419,78 @@ class GenerationJobService extends Service {
       validation_ids,
     );
     let estimatedCount = heuristic.estimated_count;
+    let targetBreakdown = heuristic.target_breakdown || [];
     let source = 'heuristic';
     let reasoning = heuristic.reasoning;
+    let agentWarning = null;
+
+    const estimateTimeoutMs = Number(this.config.agentPlatform?.estimateTimeoutMs) || DEFAULT_ESTIMATE_TIMEOUT_MS;
+
+    const tryAgentEstimate = async (profileId) => this.ctx.service.agentProxy.invokeTestgen({
+      action: 'estimate_case_count',
+      document_content: resolvedContent,
+      document_title: resolvedTitle || '文档',
+      document_type: document_type || 'markdown',
+      project_code,
+      project_name,
+      options: {
+        category_major_ids,
+        validation_ids,
+        scheme_targets,
+        hint: options.hint,
+      },
+      llm_profile: profileId,
+      trace: { action: 'estimate' },
+    }, estimateTimeoutMs);
 
     try {
-      const agentRes = await this.ctx.service.agentProxy.invokeTestgen({
-        action: 'estimate_case_count',
-        document_content: resolvedContent,
-        document_title: resolvedTitle || '文档',
-        document_type: document_type || 'markdown',
-        project_code,
-        project_name,
-        options: {
-          category_major_ids,
-          validation_ids,
-          scheme_targets,
-          major_counts,
-          hint: options.hint,
-        },
-        llm_profile,
-        trace: { action: 'estimate' },
-      }, ESTIMATE_AGENT_TIMEOUT_MS);
+      const agentRes = await tryAgentEstimate(llm_profile);
       const output = agentRes.output || agentRes;
       const agentEstimate = Number(output.estimated_count ?? output.estimate ?? output.count);
       if (Number.isFinite(agentEstimate) && agentEstimate > 0) {
-        estimatedCount = Math.round(agentEstimate);
-        source = 'agent';
+        estimatedCount = applyEstimateBounds(agentEstimate, scheme_targets.length || 1);
+        targetBreakdown = Array.isArray(output.target_breakdown) && output.target_breakdown.length
+          ? output.target_breakdown.map(n => Math.max(1, Math.round(Number(n) || 1)))
+          : distributeEstimateEvenly(estimatedCount, scheme_targets.length || 1);
+        source = output.source || 'agent';
         reasoning = output.reasoning || output.summary || reasoning;
       }
     } catch (err) {
-      const brief = String(err.message || '超时').split('\n')[0].slice(0, 120);
       this.ctx.app.logger.warn('[generationJob] estimate agent failed: %s', err.message);
-      reasoning = `Agent 暂不可用（${brief}），${reasoning}`;
+      agentWarning = formatAgentEstimateWarning(err);
+
+      if (isLlmUnavailableError(err) && !isLocalOllamaProfile(llm_profile)) {
+        try {
+          const agentRes = await tryAgentEstimate('ollama-qwen');
+          const output = agentRes.output || agentRes;
+          const agentEstimate = Number(output.estimated_count ?? output.estimate ?? output.count);
+          if (Number.isFinite(agentEstimate) && agentEstimate > 0) {
+            estimatedCount = applyEstimateBounds(agentEstimate, scheme_targets.length || 1);
+            targetBreakdown = Array.isArray(output.target_breakdown) && output.target_breakdown.length
+              ? output.target_breakdown.map(n => Math.max(1, Math.round(Number(n) || 1)))
+              : distributeEstimateEvenly(estimatedCount, scheme_targets.length || 1);
+            source = output.source || 'agent';
+            agentWarning = null;
+            reasoning = output.reasoning || output.summary || reasoning;
+          }
+        } catch (retryErr) {
+          this.ctx.app.logger.warn('[generationJob] estimate ollama fallback failed: %s', retryErr.message);
+        }
+      }
     }
+
+    const scheme_targets_with_counts = scheme_targets.map((t, i) => ({
+      ...t,
+      count: targetBreakdown[i] ?? distributeEstimateEvenly(estimatedCount, scheme_targets.length)[i],
+    }));
 
     return {
       estimated_count: estimatedCount,
-      configured_count: configuredTotal,
+      target_breakdown: targetBreakdown,
+      scheme_targets: scheme_targets_with_counts,
       source,
       reasoning,
+      agent_warning: agentWarning,
       scheme_target_count: scheme_targets.length,
     };
   }

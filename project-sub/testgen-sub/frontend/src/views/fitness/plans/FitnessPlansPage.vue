@@ -14,6 +14,10 @@
       @update:page-size="pageSize = $event"
       @change="load"
     >
+      <template #col-compliance_rate="{ row }">
+        <span v-if="row.compliance_rate != null">{{ row.compliance_rate }}%</span>
+        <span v-else class="muted">-</span>
+      </template>
       <template #suffix>
         <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
@@ -46,6 +50,7 @@ const planColumns = [
   { prop: 'name', label: '计划名称', minWidth: 180 },
   { prop: 'version_tag', label: '版本', width: 120 },
   { prop: 'status', label: '状态', width: 100 },
+  { prop: 'compliance_rate', label: '执行达标率', width: 110 },
   { prop: 'created_at', label: '创建时间', width: 180 },
 ];
 
@@ -73,3 +78,9 @@ async function handleDelete(row) {
 
 onMounted(load);
 </script>
+
+<style scoped>
+.muted {
+  color: var(--el-text-color-placeholder);
+}
+</style>

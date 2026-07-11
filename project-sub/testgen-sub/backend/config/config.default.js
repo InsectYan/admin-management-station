@@ -67,7 +67,7 @@ module.exports = appInfo => {
     apiTemplateTimeoutMs: Number(process.env.API_TEMPLATE_TIMEOUT_MS || 300000),
     perfInvokePath: process.env.PERF_SKILL_INVOKE_PATH || '/api/skills/perf-bottleneck-skill/invoke',
     timeout: Number(process.env.AGENT_PLATFORM_TIMEOUT || 300000),
-    estimateTimeoutMs: Number(process.env.AGENT_ESTIMATE_TIMEOUT_MS || 5000),
+    estimateTimeoutMs: Number(process.env.AGENT_ESTIMATE_TIMEOUT_MS || 60000),
     generateTimeoutMs: Number(process.env.AGENT_GENERATE_TIMEOUT_MS || 900000),
     judgeTimeoutMs: Number(process.env.FITNESS_JUDGE_TIMEOUT_MS || 120000),
     sampleTimeoutMs: Number(process.env.FITNESS_SAMPLE_TIMEOUT_MS || 120000),

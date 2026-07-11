@@ -40,7 +40,20 @@
       <template #header>阈值对比</template>
       <el-table :data="thresholdRows" size="small">
         <el-table-column prop="param_id" label="参数" width="160" />
-        <el-table-column prop="configured" label="计划配置" />
+        <el-table-column prop="configured" label="计划配置" width="120" />
+        <el-table-column label="实际值" width="100">
+          <template #default="{ row }">
+            <span v-if="row.actual != null">{{ row.actual }}{{ row.param_id?.startsWith('rate_') ? '%' : '' }}</span>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="达标" width="80">
+          <template #default="{ row }">
+            <el-tag v-if="row.met === true" type="success" size="small">是</el-tag>
+            <el-tag v-else-if="row.met === false" type="danger" size="small">否</el-tag>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="notes" label="说明" />
       </el-table>
     </el-card>

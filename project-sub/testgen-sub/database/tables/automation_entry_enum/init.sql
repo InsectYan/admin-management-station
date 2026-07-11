@@ -23,7 +23,7 @@ INSERT INTO automation_entry_enum (automation_entry_id, name, command, suite) VA
 INSERT INTO automation_entry_enum (automation_entry_id, name, command, suite) VALUES ('AUTO_E2E_GENERIC', 'E2E 通用', 'cd server && npm run test:e2e', 'e2e') ON CONFLICT (automation_entry_id) DO NOTHING;
 INSERT INTO automation_entry_enum (automation_entry_id, name, command, suite) VALUES ('AUTO_LOCAL_STACK', 'local 全栈', 'fitness local', 'deploy') ON CONFLICT (automation_entry_id) DO NOTHING;
 INSERT INTO automation_entry_enum (automation_entry_id, name, command, suite) VALUES ('AUTO_AGENTRUN', 'AgentRun smoke', './scripts/smoke.sh', 'deploy') ON CONFLICT (automation_entry_id) DO NOTHING;
-INSERT INTO automation_entry_enum (automation_entry_id, name, command, suite) VALUES ('AUTO_CODE_REVIEW', '类型检查+审查', 'npm run typecheck', 'ci') ON CONFLICT (automation_entry_id) DO NOTHING;
+INSERT INTO automation_entry_enum (automation_entry_id, name, command, suite) VALUES ('AUTO_CODE_REVIEW', '类型检查+审查', 'cd server && npm run typecheck', 'ci') ON CONFLICT (automation_entry_id) DO NOTHING;
 INSERT INTO automation_entry_enum (automation_entry_id, name, command, suite) VALUES ('AUTO_ARCH_REVIEW', '架构审查', '架构审查清单', 'manual') ON CONFLICT (automation_entry_id) DO NOTHING;
 INSERT INTO automation_entry_enum (automation_entry_id, name, command, suite) VALUES ('AUTO_MANUAL_UAT', '专家 UAT', '人工 rubric 评审', 'manual') ON CONFLICT (automation_entry_id) DO NOTHING;
 INSERT INTO automation_entry_enum (automation_entry_id, name, command, suite) VALUES ('AUTO_MANUAL', '人工测试', NULL, 'manual') ON CONFLICT (automation_entry_id) DO NOTHING;
