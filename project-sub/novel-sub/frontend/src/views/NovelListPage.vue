@@ -1,5 +1,5 @@
 <template>
-  <PageShell title="小说列表">
+  <PageShell title="小说列表" table-layout>
     <template #extra>
       <el-button type="primary" :icon="Plus" @click="router.push({ name: 'novel-create' })">
         新建小说
@@ -12,12 +12,15 @@
         placeholder="输入小说名称"
         clearable
         style="width: 220px"
+        @keyup.enter="applyFilters"
+        @clear="applyFilters"
       />
       <el-select
         v-model="filters.status"
         placeholder="选择状态"
         clearable
         style="width: 140px"
+        @change="applyFilters"
       >
         <el-option
           v-for="opt in statusOptions"
@@ -26,41 +29,57 @@
           :value="opt.value"
         />
       </el-select>
-      <el-button type="primary" @click="loadNovels">筛选</el-button>
+      <el-button type="primary" @click="applyFilters">筛选</el-button>
     </div>
 
-    <el-table
-      v-loading="loading"
-      :data="novels"
-      row-key="id"
-      empty-text="暂无小说，点击右上角新建"
+    <DataTablePanel
+      :page="page"
+      :page-size="pageSize"
+      :total="total"
+      :loading="loading"
+      @update:page="page = $event"
+      @update:page-size="pageSize = $event"
+      @change="loadNovels"
     >
-      <el-table-column prop="id" label="ID" width="72" />
-      <el-table-column prop="title" label="小说名称" show-overflow-tooltip />
-      <el-table-column prop="author_name" label="作者" width="120" show-overflow-tooltip />
-      <el-table-column label="状态" width="100">
-        <template #default="{ row }">
-          <el-tag :class="statusMeta[row.status]?.className">
-            {{ statusMeta[row.status]?.label || row.status || '-' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="进度" width="160">
-        <template #default="{ row }">
-          <el-progress :percentage="row.progress || 0" :stroke-width="8" />
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="160">
-        <template #default="{ row }">
-          <el-button link type="primary" @click="router.push({ name: 'novel-detail', params: { id: row.id } })">
-            查看
-          </el-button>
-          <el-button link type="danger" @click="handleDelete(row.id)">
-            删除
-          </el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+      <template #default="{ bodyHeight }">
+        <el-table
+          v-loading="loading"
+          :data="novels"
+          :height="bodyHeight ?? undefined"
+          row-key="id"
+          stripe
+          border
+          style="width: 100%"
+          empty-text="暂无小说，点击右上角新建"
+        >
+          <el-table-column prop="id" label="ID" width="72" />
+          <el-table-column prop="title" label="小说名称" min-width="160" show-overflow-tooltip />
+          <el-table-column prop="author_name" label="作者" width="120" show-overflow-tooltip />
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :class="statusMeta[row.status]?.className">
+                {{ statusMeta[row.status]?.label || row.status || '-' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="进度" width="160">
+            <template #default="{ row }">
+              <el-progress :percentage="row.progress || 0" :stroke-width="8" />
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="160" fixed="right">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="router.push({ name: 'novel-detail', params: { id: row.id } })">
+                查看
+              </el-button>
+              <el-button link type="danger" @click="handleDelete(row.id)">
+                删除
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </template>
+    </DataTablePanel>
   </PageShell>
 </template>
 
@@ -70,11 +89,15 @@ import { useRouter } from 'vue-router';
 import { Plus } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
+import DataTablePanel from '../components/DataTablePanel.vue';
 import { deleteNovel, fetchNovels } from '../services/novelService.js';
 
 const router = useRouter();
 const loading = ref(false);
 const novels = ref([]);
+const total = ref(0);
+const page = ref(1);
+const pageSize = ref(20);
 const filters = ref({ title: '', status: '' });
 
 const statusOptions = [
@@ -92,13 +115,23 @@ const statusMeta = {
 async function loadNovels() {
   loading.value = true;
   try {
-    const data = await fetchNovels(filters.value);
+    const data = await fetchNovels({
+      ...filters.value,
+      page: page.value,
+      pageSize: pageSize.value,
+    });
     novels.value = data.list || [];
+    total.value = data.total || 0;
   } catch (e) {
     ElMessage.error(e.message || '加载失败');
   } finally {
     loading.value = false;
   }
+}
+
+function applyFilters() {
+  page.value = 1;
+  loadNovels();
 }
 
 async function handleDelete(id) {

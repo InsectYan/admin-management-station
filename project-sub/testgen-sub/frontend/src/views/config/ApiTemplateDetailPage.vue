@@ -366,6 +366,76 @@
 
         </el-card>
 
+
+
+        <el-card shadow="never" style="margin-top:16px">
+
+          <template #header>
+
+            <span>可抛出字段 (export_schema)</span>
+
+            <el-button type="primary" link style="float:right" @click="addExportField">添加字段</el-button>
+
+          </template>
+
+          <p class="hint">声明前置链路成功后可供用例主请求使用的变量；TS-01-DET 配置页会展示用法说明</p>
+
+          <el-table :data="form.export_schema" size="small" border>
+
+            <el-table-column label="key" width="110">
+
+              <template #default="{ row }">
+
+                <el-input v-model="row.key" size="small" placeholder="session_id" />
+
+              </template>
+
+            </el-table-column>
+
+            <el-table-column label="显示名" min-width="90">
+
+              <template #default="{ row }">
+
+                <el-input v-model="row.label" size="small" />
+
+              </template>
+
+            </el-table-column>
+
+            <el-table-column label="JSONPath" min-width="120">
+
+              <template #default="{ row }">
+
+                <el-input v-model="row.json_path" size="small" placeholder="$.session_id" />
+
+              </template>
+
+            </el-table-column>
+
+            <el-table-column label="用法说明" min-width="160">
+
+              <template #default="{ row }">
+
+                <el-input v-model="row.usage_hint" size="small" placeholder="写入主请求 Body.session_id" />
+
+              </template>
+
+            </el-table-column>
+
+            <el-table-column label="操作" width="60">
+
+              <template #default="{ $index }">
+
+                <el-button link type="danger" @click="form.export_schema.splice($index, 1)">删</el-button>
+
+              </template>
+
+            </el-table-column>
+
+          </el-table>
+
+        </el-card>
+
       </el-col>
 
 
@@ -492,6 +562,8 @@ const form = reactive({
 
   input_params_schema: [],
 
+  export_schema: [],
+
 });
 
 
@@ -577,6 +649,14 @@ function parseBody() { parseJsonField(bodyText.value, 'body_template'); }
 function defaultBindTo() {
 
   return inferParamBindTo(form.http_method, '', form.url_path);
+
+}
+
+
+
+function addExportField() {
+
+  form.export_schema.push({ key: '', label: '', source: 'preflight', json_path: '', usage_hint: '' });
 
 }
 
@@ -671,6 +751,8 @@ function applyImportedConfig(imported, { includeMeta = false } = {}) {
   if (imported.body_template) form.body_template = imported.body_template;
 
   if (imported.inject_schema) form.inject_schema = [ ...imported.inject_schema ];
+
+  if (imported.export_schema) form.export_schema = [ ...imported.export_schema ];
 
   if (imported.preflight_steps) preflightSteps.value = [ ...imported.preflight_steps ];
 
@@ -788,6 +870,8 @@ function exportConfig() {
 
     inject_schema: form.inject_schema.filter(f => f.key),
 
+    export_schema: form.export_schema.filter(f => f.key),
+
     input_params_schema: form.input_params_schema.filter(p => p.key),
 
     preflight_steps: preflightSteps.value,
@@ -894,6 +978,8 @@ async function load() {
 
       inject_schema: Array.isArray(data.inject_schema) ? [ ...data.inject_schema ] : [],
 
+      export_schema: Array.isArray(data.export_schema) ? [ ...data.export_schema ] : [],
+
       input_params_schema: Array.isArray(data.input_params_schema)
 
         ? data.input_params_schema.map(p => ({
@@ -967,6 +1053,8 @@ async function save() {
       body_template: needsBody.value ? form.body_template : {},
 
       inject_schema: form.inject_schema.filter(f => f.key),
+
+      export_schema: form.export_schema.filter(f => f.key),
 
       input_params_schema: form.input_params_schema.filter(p => p.key).map(p => ({
 

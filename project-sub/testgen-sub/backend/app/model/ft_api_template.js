@@ -20,6 +20,7 @@ module.exports = app => {
     poll_json: { type: JSONB, defaultValue: {} },
     forbidden_patterns: { type: JSONB, defaultValue: [] },
     content_extract_paths: { type: JSONB, defaultValue: [] },
+    export_schema: { type: JSONB, defaultValue: [] },
     is_active: { type: BOOLEAN, defaultValue: true },
   }, { tableName: 'ft_api_template' });
 };

@@ -74,6 +74,7 @@ export function buildApiTemplateConfigJson(data = {}) {
     preflight_steps: Array.isArray(data.preflight_steps) ? data.preflight_steps : [],
     forbidden_patterns: Array.isArray(data.forbidden_patterns) ? data.forbidden_patterns : [],
     poll_json: data.poll_json && typeof data.poll_json === 'object' ? data.poll_json : {},
+    export_schema: Array.isArray(data.export_schema) ? data.export_schema : [],
   };
 }
 
@@ -111,6 +112,7 @@ export function parseApiTemplateImportJson(text) {
   if (parsed.body) out.body_template = parsed.body;
   if (Array.isArray(parsed.inject_schema)) out.inject_schema = parsed.inject_schema;
   if (Array.isArray(parsed.preflight_steps)) out.preflight_steps = parsed.preflight_steps;
+  if (Array.isArray(parsed.export_schema)) out.export_schema = parsed.export_schema;
   if (Array.isArray(parsed.forbidden_patterns)) {
     out.forbidden_patterns = parsed.forbidden_patterns.map(s => String(s).trim()).filter(Boolean);
   }
@@ -189,6 +191,7 @@ export function toApiTemplatePayload(imported, overrides = {}) {
     inject_schema: (imported.inject_schema || []).filter(f => f?.key),
     input_params_schema: inputParamsSchema,
     preflight_steps: imported.preflight_steps || [],
+    export_schema: (imported.export_schema || []).filter(f => f?.key),
     forbidden_patterns: imported.forbidden_patterns || [],
     poll_json: imported.poll_json || {},
   };

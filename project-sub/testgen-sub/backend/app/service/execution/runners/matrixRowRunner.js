@@ -1,5 +1,6 @@
 'use strict';
 
+const { mergeRequestHeaders } = require('../../../lib/globalRequestContext');
 const { resolveHttpBody, methodNeedsBody } = require('../../../lib/httpRequestBody');
 const { extractTraceIdFromHeaders } = require('../../../lib/traceIdExtract');
 const { RunStepTracker } = require('../../../lib/runStepTracker');
@@ -81,12 +82,13 @@ async function executeMatrixRow(execCtx, row, subIndex, stepOpts = {}) {
 
     const method = (row.method || row.http_method || item.http_method || configJson.method || 'GET').toUpperCase();
     const expectStatus = row.expect_status ?? row.http_status_expected ?? item.http_status_expected ?? 200;
-    const headers = {
+    const globalHeaders = execCtx.globalRequestContext?.headers || {};
+    const headers = mergeRequestHeaders(globalHeaders, {
       'X-Test-Run-Id': String(run.id),
       'X-Test-Item-Id': item.item_id,
       ...(configJson.headers || {}),
       ...(row.headers || {}),
-    };
+    });
 
     const body = methodNeedsBody(method) ? resolveHttpBody(method, row) : undefined;
     const httpResult = await runHttp(eggCtx, {

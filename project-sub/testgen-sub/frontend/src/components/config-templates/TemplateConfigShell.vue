@@ -43,6 +43,7 @@
       :options="validationOptions"
       :default-validation-id="defaultValidationId"
       :readonly="!editable"
+      :hide-secondary="hideSecondaryValidation"
       @update:validations="validationOverrides = $event"
     />
 
@@ -54,6 +55,8 @@
       v-model:threshold="localThreshold"
       :readonly="!editable || editMode === 'agent'"
     />
+
+    <AgentConfigExplanationCard :explanation="agentExplanation" />
 
     <div v-if="editable && editMode === 'manual'" style="margin-top:16px">
       <el-button type="primary" :loading="saving" @click="save">
@@ -67,9 +70,10 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
-import { resolveTemplateComponent } from './registry.js';
+import { resolveTemplateComponent, TEMPLATES_WITHOUT_SECONDARY_VALIDATION } from './registry.js';
 import MixedTsTemplateSwitcher from './MixedTsTemplateSwitcher.vue';
 import ConfigValidationPicker from './ConfigValidationPicker.vue';
+import AgentConfigExplanationCard from './AgentConfigExplanationCard.vue';
 import {
   fetchItemTemplateConfig,
   generateItemTemplateConfig,
@@ -99,8 +103,15 @@ const defaultValidationId = ref('');
 const switchMeta = ref({});
 const configSource = ref('manual');
 const loadedItem = ref(null);
+const agentExplanation = ref(null);
 
 const item = computed(() => props.item || loadedItem.value);
+
+const hideSecondaryValidation = computed(() =>
+  TEMPLATES_WITHOUT_SECONDARY_VALIDATION.includes(
+    templateMeta.value?.template_code || props.templateCode || '',
+  ),
+);
 
 const hasSecondaryScheme = computed(() => Boolean(item.value?.scheme_secondary_id));
 
@@ -142,6 +153,7 @@ async function load() {
       loadedItem.value = { ...loadedItem.value, ...data.item };
     }
     configSource.value = data.config_source || 'manual';
+    agentExplanation.value = data.agent_explanation || null;
     emit('loaded', data);
   } finally {
     loading.value = false;
@@ -164,6 +176,7 @@ async function onTemplateSwitched(data) {
   validationOptions.value = data.validation_options || [];
   defaultValidationId.value = data.default_validation_id || '';
   configSource.value = data.config_source || 'manual';
+  agentExplanation.value = data.agent_explanation || null;
   emit('loaded', data);
 }
 
@@ -209,6 +222,7 @@ async function runGenerate(autoSave) {
     localConfig.value = data.config_json || {};
     localThreshold.value = data.threshold_json || {};
     configSource.value = data.config_source || 'agent';
+    agentExplanation.value = data.agent_explanation || null;
     if (autoSave) {
       ElMessage.success('Agent 配置已生成并保存');
       emit('saved', data);

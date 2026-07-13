@@ -610,56 +610,111 @@ class FitnessAssetService extends require('egg').Service {
       throw err;
     }
 
-    const schemeSecondaryId = body.scheme_secondary_id ?? null;
-    let validationSecondaryId = body.validation_secondary_id ?? null;
+    let migration = null;
 
-    if (schemeSecondaryId) {
-      const [ schemeRows ] = await this.app.model.query(
-        'SELECT scheme_id FROM test_scheme_enum WHERE scheme_id = :id LIMIT 1',
-        { replacements: { id: schemeSecondaryId } },
+    if (body.scheme_primary_id && body.scheme_primary_id !== item.scheme_primary_id) {
+      migration = await require('../lib/itemSchemeMigrate').migrateItemPrimaryScheme(
+        this.ctx,
+        item,
+        {
+          scheme_primary_id: body.scheme_primary_id,
+          validation_primary_id: body.validation_primary_id,
+          template_code: body.template_code,
+          migrate_config: body.migrate_config !== false,
+        },
       );
-      if (!schemeRows.length) {
-        const err = new Error(`辅方案不存在: ${schemeSecondaryId}`);
+    } else if (body.validation_primary_id && body.validation_primary_id !== item.validation_primary_id) {
+      const compatible = await require('../lib/validationDefaults').isValidationCompatibleWithScheme(
+        this.app,
+        item.scheme_primary_id,
+        body.validation_primary_id,
+      );
+      if (!compatible) {
+        const err = new Error('主验证与主方案不匹配');
         err.status = 400;
         throw err;
       }
-      if (schemeSecondaryId === item.scheme_primary_id) {
-        const err = new Error('辅方案不能与主方案相同');
-        err.status = 400;
-        throw err;
-      }
-      if (validationSecondaryId) {
-        const [ pairRows ] = await this.app.model.query(
-          `SELECT 1 FROM test_scheme_validation_pair
-           WHERE scheme_id = :schemeId AND validation_id = :validationId LIMIT 1`,
-          { replacements: { schemeId: schemeSecondaryId, validationId: validationSecondaryId } },
+      await this.app.model.query(
+        `UPDATE test_item_detail SET validation_primary_id = :validationId, updated_at = NOW()
+         WHERE item_id = :itemId`,
+        {
+          replacements: { itemId, validationId: body.validation_primary_id },
+        },
+      );
+      migration = {
+        scheme_changed: false,
+        validation_primary_id: body.validation_primary_id,
+        validation_auto_adjusted: true,
+        hint: '主验证已更新，请到「配置」页确认阈值与断言是否需要调整。',
+      };
+    } else if (body.template_code != null && body.template_code !== item.template_code) {
+      const { migrateItemPrimaryScheme } = require('../lib/itemSchemeMigrate');
+      migration = await migrateItemPrimaryScheme(this.ctx, item, {
+        scheme_primary_id: item.scheme_primary_id,
+        validation_primary_id: body.validation_primary_id || item.validation_primary_id,
+        template_code: body.template_code,
+        migrate_config: body.migrate_config !== false,
+      });
+    }
+
+    const schemeSecondaryId = 'scheme_secondary_id' in body
+      ? (body.scheme_secondary_id ?? null)
+      : item.scheme_secondary_id;
+    let validationSecondaryId = 'validation_secondary_id' in body
+      ? (body.validation_secondary_id ?? null)
+      : item.validation_secondary_id;
+
+    if ('scheme_secondary_id' in body || 'validation_secondary_id' in body) {
+      if (schemeSecondaryId) {
+        const [ schemeRows ] = await this.app.model.query(
+          'SELECT scheme_id FROM test_scheme_enum WHERE scheme_id = :id LIMIT 1',
+          { replacements: { id: schemeSecondaryId } },
         );
-        if (!pairRows.length) {
-          const err = new Error('辅验证与辅方案不匹配');
+        if (!schemeRows.length) {
+          const err = new Error(`辅方案不存在: ${schemeSecondaryId}`);
           err.status = 400;
           throw err;
         }
+        const primaryScheme = body.scheme_primary_id || item.scheme_primary_id;
+        if (schemeSecondaryId === primaryScheme) {
+          const err = new Error('辅方案不能与主方案相同');
+          err.status = 400;
+          throw err;
+        }
+        if (validationSecondaryId) {
+          const [ pairRows ] = await this.app.model.query(
+            `SELECT 1 FROM test_scheme_validation_pair
+             WHERE scheme_id = :schemeId AND validation_id = :validationId LIMIT 1`,
+            { replacements: { schemeId: schemeSecondaryId, validationId: validationSecondaryId } },
+          );
+          if (!pairRows.length) {
+            const err = new Error('辅验证与辅方案不匹配');
+            err.status = 400;
+            throw err;
+          }
+        }
+      } else {
+        validationSecondaryId = null;
       }
-    } else {
-      validationSecondaryId = null;
+
+      await this.app.model.query(
+        `UPDATE test_item_detail SET
+           scheme_secondary_id = :schemeSecondaryId,
+           validation_secondary_id = :validationSecondaryId,
+           updated_at = NOW()
+         WHERE item_id = :itemId`,
+        {
+          replacements: {
+            itemId,
+            schemeSecondaryId,
+            validationSecondaryId,
+          },
+        },
+      );
     }
 
-    await this.app.model.query(
-      `UPDATE test_item_detail SET
-         scheme_secondary_id = :schemeSecondaryId,
-         validation_secondary_id = :validationSecondaryId,
-         updated_at = NOW()
-       WHERE item_id = :itemId`,
-      {
-        replacements: {
-          itemId,
-          schemeSecondaryId,
-          validationSecondaryId,
-        },
-      },
-    );
-
-    return this.getTestItem(itemId);
+    const updated = await this.getTestItem(itemId);
+    return migration ? { ...updated, scheme_migration: migration } : updated;
   }
 
   async createManualTestItem(body = {}) {

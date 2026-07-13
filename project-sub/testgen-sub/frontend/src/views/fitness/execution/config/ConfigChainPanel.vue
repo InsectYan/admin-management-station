@@ -7,7 +7,7 @@
       <el-input :model-value="item.validation_primary_id" disabled />
     </el-form-item>
     <el-divider content-position="left">链路步骤 (config_json.steps)</el-divider>
-    <ChainStepTable v-model="steps" />
+    <ChainStepTable :model-value="steps" @update:model-value="onStepsUpdate" />
     <p class="hint">支持 {{key}} 插值；extract 多组格式 var:$.path，换行分隔。</p>
   </el-form>
 </template>
@@ -25,18 +25,27 @@ const emit = defineEmits([ 'update:modelValue' ]);
 
 const steps = ref([]);
 const chainVars = ref({});
+let syncingFromInternal = false;
 
 function sync() {
+  syncingFromInternal = true;
   emit('update:modelValue', {
     execution_mode: 'chain',
     vars: chainVars.value,
     steps: steps.value.map(serializeChainStep),
   });
+  queueMicrotask(() => {
+    syncingFromInternal = false;
+  });
 }
 
-watch(steps, sync, { deep: true });
+function onStepsUpdate(val) {
+  steps.value = val;
+  sync();
+}
 
 function initFromProps() {
+  if (syncingFromInternal) return;
   chainVars.value = { ...(props.modelValue?.vars || {}) };
   const raw = props.modelValue?.steps;
   if (Array.isArray(raw) && raw.length) {

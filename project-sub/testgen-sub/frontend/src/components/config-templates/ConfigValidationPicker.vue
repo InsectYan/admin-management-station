@@ -19,7 +19,7 @@
       <el-button link type="primary" size="small" @click="applyDefault">应用推荐</el-button>
     </p>
   </el-form-item>
-  <el-form-item label="辅验证">
+  <el-form-item v-if="!hideSecondary" label="辅验证">
     <el-select
       v-model="secondaryId"
       clearable
@@ -46,6 +46,7 @@ const props = defineProps({
   options: { type: Array, default: () => [] },
   defaultValidationId: { type: String, default: '' },
   readonly: { type: Boolean, default: false },
+  hideSecondary: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([ 'update:validations' ]);

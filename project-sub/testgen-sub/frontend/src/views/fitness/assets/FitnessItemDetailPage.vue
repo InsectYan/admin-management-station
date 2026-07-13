@@ -15,18 +15,92 @@
         </template>
         <span v-else>—</span>
       </el-descriptions-item>
-      <el-descriptions-item label="主方案">
-        <SchemeCodeNameCell :code="item.scheme_primary_id" :name="item.scheme_primary_name" />
-      </el-descriptions-item>
-      <el-descriptions-item label="主验证">
-        <SchemeCodeNameCell :code="item.validation_primary_id" :name="item.validation_primary_name" />
-      </el-descriptions-item>
       <el-descriptions-item label="六站/三端">{{ item.station_name || item.station_id }} / {{ item.role_scope_name || item.role_scope_id }}</el-descriptions-item>
       <el-descriptions-item label="自动化">{{ item.automation_status_name || item.automation_status_id }}</el-descriptions-item>
-      <el-descriptions-item label="配置模板">{{ item.template_name || item.template_code || '—' }}</el-descriptions-item>
     </el-descriptions>
 
-    <el-divider v-if="isMixedTs" content-position="left">配置模板（混合 TS）</el-divider>
+    <el-divider content-position="left">主方案（TS）与验证</el-divider>
+    <el-alert type="info" :closable="false" show-icon style="margin-bottom:12px">
+      当用例与自动分配的 TS 不符时可在此手动调整。保存后将联动更新<strong>配置模板</strong>与<strong>默认配置</strong>，请到
+      <router-link :to="configRoute">配置页</router-link>
+      核对细节。
+    </el-alert>
+    <el-form v-if="item" label-width="110px" class="scheme-form">
+      <el-form-item label="主方案 TS">
+        <el-select
+          v-model="primaryForm.scheme_primary_id"
+          filterable
+          style="width: 360px"
+          @change="onPrimarySchemeChange"
+        >
+          <el-option
+            v-for="s in schemeOptions"
+            :key="s.scheme_id"
+            :label="`${s.scheme_id} · ${s.name}`"
+            :value="s.scheme_id"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="主验证 VS">
+        <el-select
+          v-model="primaryForm.validation_primary_id"
+          filterable
+          style="width: 360px"
+        >
+          <el-option
+            v-for="v in primaryValidationOptions"
+            :key="v.validation_id"
+            :label="`${v.validation_id} · ${v.name}${v.is_primary ? ' (方案默认)' : ''}`"
+            :value="v.validation_id"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="配置模板">
+        <el-select
+          v-if="primaryTemplateOptions.length > 1"
+          v-model="primaryForm.template_code"
+          style="width: 360px"
+        >
+          <el-option
+            v-for="code in primaryTemplateOptions"
+            :key="code"
+            :label="`${code} · ${TEMPLATE_DISPLAY_NAMES[code] || code}`"
+            :value="code"
+          />
+        </el-select>
+        <span v-else class="tpl-readonly">
+          {{ primaryForm.template_code || defaultTemplateForScheme(primaryForm.scheme_primary_id) }}
+          · {{ TEMPLATE_DISPLAY_NAMES[primaryForm.template_code || defaultTemplateForScheme(primaryForm.scheme_primary_id)] || '—' }}
+        </span>
+      </el-form-item>
+      <el-form-item label="配置初始化">
+        <el-checkbox v-model="primaryForm.migrate_config">
+          按新 TS 自动初始化配置模板（推荐；取消则仅改元数据，保留原配置表数据）
+        </el-checkbox>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" :loading="savingPrimary" @click="savePrimarySchemes">保存主方案</el-button>
+        <router-link :to="configRoute" class="hint" style="margin-left:12px">前往配置页</router-link>
+      </el-form-item>
+    </el-form>
+
+    <el-alert
+      v-if="lastMigration"
+      :title="lastMigration.hint"
+      type="success"
+      :closable="true"
+      show-icon
+      style="margin-bottom:12px"
+      @close="lastMigration = null"
+    >
+      <template v-if="lastMigration.scheme_changed">
+        TS：{{ lastMigration.old_scheme_id }} → {{ lastMigration.new_scheme_id }}；
+        模板：{{ lastMigration.template_code }}
+        <span v-if="lastMigration.validation_auto_adjusted">；主验证已自动匹配</span>
+      </template>
+    </el-alert>
+
+    <el-divider v-if="isMixedTs" content-position="left">配置模板快捷切换（混合 TS）</el-divider>
     <MixedTsTemplateSwitcher
       v-if="isMixedTs && item"
       :item-id="item.item_id"
@@ -51,7 +125,7 @@
             :key="s.scheme_id"
             :label="`${s.scheme_id} · ${s.name}`"
             :value="s.scheme_id"
-            :disabled="s.scheme_id === item.scheme_primary_id"
+            :disabled="s.scheme_id === primaryForm.scheme_primary_id"
           />
         </el-select>
       </el-form-item>
@@ -131,13 +205,14 @@
 import { onMounted, reactive, ref, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import SchemeCodeNameCell from '@/components/fitness/SchemeCodeNameCell.vue';
 import MixedTsTemplateSwitcher from '@/components/config-templates/MixedTsTemplateSwitcher.vue';
 import {
   MIXED_TS_MAJORS,
   SCHEME_TEMPLATE_ALTERNATIVES,
   API_CTX_SCHEME,
   CHAIN_SCHEME,
+  SCHEME_TO_TEMPLATE,
+  TEMPLATE_DISPLAY_NAMES,
   resolveMixedEffectiveTemplate,
 } from '@/components/config-templates/registry.js';
 import {
@@ -153,15 +228,29 @@ const route = useRoute();
 const router = useRouter();
 const loading = ref(false);
 const savingSchemes = ref(false);
+const savingPrimary = ref(false);
 const item = ref(null);
 const schemeOptions = ref([]);
+const primaryValidationOptions = ref([]);
 const secondaryValidationOptions = ref([]);
+const lastMigration = ref(null);
+
+const primaryForm = reactive({
+  scheme_primary_id: '',
+  validation_primary_id: '',
+  template_code: '',
+  migrate_config: true,
+});
 const secondaryForm = reactive({
   scheme_secondary_id: '',
   validation_secondary_id: '',
 });
 
 const isMixedTs = computed(() => MIXED_TS_MAJORS.has(item.value?.category_major_id));
+
+const configRoute = computed(() =>
+  buildItemDetailRoute(route.params.itemId, { module: 'config', query: route.query }),
+);
 
 const switchMeta = computed(() => {
   const row = item.value;
@@ -181,6 +270,20 @@ const switchMeta = computed(() => {
   };
 });
 
+function defaultTemplateForScheme(schemeId) {
+  if (isMixedTs.value && schemeId === CHAIN_SCHEME) return 'TPL-API-CTX';
+  return SCHEME_TO_TEMPLATE[schemeId] || 'TPL-DET';
+}
+
+const primaryTemplateOptions = computed(() => {
+  const schemeId = primaryForm.scheme_primary_id;
+  if (!schemeId) return [];
+  const alts = SCHEME_TEMPLATE_ALTERNATIVES[schemeId];
+  if (alts?.length) return alts;
+  const def = defaultTemplateForScheme(schemeId);
+  return [ def ];
+});
+
 async function onTemplateSwitched(data) {
   item.value = { ...item.value, ...data.item, template_code: data.template_code };
   await loadItem();
@@ -190,9 +293,25 @@ function relationTag(typeId) {
   return riskRelationTag(typeId);
 }
 
+function syncPrimaryForm() {
+  primaryForm.scheme_primary_id = item.value?.scheme_primary_id || '';
+  primaryForm.validation_primary_id = item.value?.validation_primary_id || '';
+  primaryForm.template_code = item.value?.template_code
+    || resolveMixedEffectiveTemplate(item.value)
+    || defaultTemplateForScheme(primaryForm.scheme_primary_id);
+}
+
 function syncSecondaryForm() {
   secondaryForm.scheme_secondary_id = item.value?.scheme_secondary_id || '';
   secondaryForm.validation_secondary_id = item.value?.validation_secondary_id || '';
+}
+
+async function loadPrimaryValidations(schemeId) {
+  if (!schemeId) {
+    primaryValidationOptions.value = [];
+    return;
+  }
+  primaryValidationOptions.value = await fetchSchemeValidations(schemeId);
 }
 
 async function loadSecondaryValidations(schemeId) {
@@ -201,6 +320,18 @@ async function loadSecondaryValidations(schemeId) {
     return;
   }
   secondaryValidationOptions.value = await fetchSchemeValidations(schemeId);
+}
+
+async function onPrimarySchemeChange(schemeId) {
+  await loadPrimaryValidations(schemeId);
+  const defTpl = defaultTemplateForScheme(schemeId);
+  primaryForm.template_code = defTpl;
+  if (!primaryValidationOptions.value.some(v => v.validation_id === primaryForm.validation_primary_id)) {
+    const primary = primaryValidationOptions.value.find(v => v.is_primary);
+    primaryForm.validation_primary_id = primary?.validation_id
+      || primaryValidationOptions.value[0]?.validation_id
+      || '';
+  }
 }
 
 async function onSecondarySchemeChange(schemeId) {
@@ -215,6 +346,38 @@ async function onSecondarySchemeChange(schemeId) {
     secondaryForm.validation_secondary_id = primary?.validation_id
       || secondaryValidationOptions.value[0]?.validation_id
       || '';
+  }
+}
+
+async function savePrimarySchemes() {
+  if (!primaryForm.scheme_primary_id || !primaryForm.validation_primary_id) {
+    ElMessage.warning('请选择主方案与主验证');
+    return;
+  }
+  savingPrimary.value = true;
+  try {
+    const data = await updateItemSchemes(route.params.itemId, {
+      scheme_primary_id: primaryForm.scheme_primary_id,
+      validation_primary_id: primaryForm.validation_primary_id,
+      template_code: primaryTemplateOptions.value.length > 1
+        ? primaryForm.template_code
+        : undefined,
+      migrate_config: primaryForm.migrate_config,
+    });
+    item.value = data;
+    lastMigration.value = data.scheme_migration || {
+      hint: '主方案已保存，请到配置页核对。',
+    };
+    syncPrimaryForm();
+    syncSecondaryForm();
+    if (secondaryForm.scheme_secondary_id) {
+      await loadSecondaryValidations(secondaryForm.scheme_secondary_id);
+    }
+    ElMessage.success(lastMigration.value.hint || '主方案已保存');
+  } catch (e) {
+    ElMessage.error(e.response?.data?.message || e.message || '保存失败');
+  } finally {
+    savingPrimary.value = false;
   }
 }
 
@@ -245,7 +408,11 @@ async function loadItem() {
   loading.value = true;
   try {
     item.value = await fetchTestItem(route.params.itemId);
+    syncPrimaryForm();
     syncSecondaryForm();
+    if (primaryForm.scheme_primary_id) {
+      await loadPrimaryValidations(primaryForm.scheme_primary_id);
+    }
     if (secondaryForm.scheme_secondary_id) {
       await loadSecondaryValidations(secondaryForm.scheme_secondary_id);
     }
@@ -272,12 +439,16 @@ onMounted(async () => {
   border-radius: 4px;
   word-break: break-all;
 }
+.scheme-form,
 .secondary-form {
-  max-width: 640px;
+  max-width: 720px;
 }
 .hint {
-  margin-left: 12px;
   color: #909399;
   font-size: 13px;
+}
+.tpl-readonly {
+  color: #606266;
+  font-size: 14px;
 }
 </style>

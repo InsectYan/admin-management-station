@@ -16,6 +16,7 @@ const {
   buildItemTemplateSwitchMeta,
 } = require('../lib/configTemplateRegistry');
 const { normalizeDetConfigJson } = require('../lib/httpRequestBody');
+const { buildAgentExplanation } = require('../lib/agentConfigExplanation');
 const {
   resolveDefaultValidationId,
   isValidationCompatibleWithScheme,
@@ -537,8 +538,13 @@ class ConfigTemplateService extends require('egg').Service {
         threshold_json: thresholdJson,
         sample_set_id: sampleSetId,
         env_id: body.env_id,
-        api_template_id: configJson.api_template_id ?? null,
-        use_api_template: Boolean(configJson.use_api_template),
+      api_template_id: configJson.preflight_api_template_id
+        ?? configJson.api_template_id
+        ?? null,
+      use_api_template: Boolean(
+        configJson.use_api_template
+        || configJson.preflight_api_template_id,
+      ),
         inject_bindings: configJson.inject_bindings || {},
       });
       return this.getItemConfig(itemId, { scheme_role: 'secondary' });
@@ -632,9 +638,12 @@ class ConfigTemplateService extends require('egg').Service {
       threshold_json: thresholdJson,
       sample_set_id: sampleSetId,
       env_id: body.env_id,
-      api_template_id: configJson.api_template_id ?? null,
+      api_template_id: configJson.preflight_api_template_id
+        ?? configJson.api_template_id
+        ?? null,
       use_api_template: Boolean(
         configJson.use_api_template
+        || configJson.preflight_api_template_id
         || templateCode === 'TPL-API-CTX'
         || configJson.execution_mode === 'api_ctx',
       ),
@@ -718,6 +727,15 @@ class ConfigTemplateService extends require('egg').Service {
         samples: output.samples,
       };
     } else {
+      let apiTemplates = [];
+      if (templateCode === 'TPL-DET') {
+        const rows = await this.ctx.model.FtApiTemplate.findAll({
+          where: { is_active: true },
+          attributes: [ 'id', 'template_code', 'name', 'url_path', 'preflight_steps', 'export_schema' ],
+          limit: 50,
+        });
+        apiTemplates = rows.map(r => r.toJSON());
+      }
       const res = await this.ctx.service.agentProxy.invokeFitnessConfig({
         action: meta.agent_action || 'generate_config',
         template_code: templateCode,
@@ -736,20 +754,30 @@ class ConfigTemplateService extends require('egg').Service {
           category_major_id: item.category_major_id,
           validation_primary_id: item.validation_primary_id,
         },
+        api_templates: apiTemplates,
         trace: { item_id: itemId },
       });
       const output = res.output || res;
+      const configJson = output.config_json || output.config || {};
+      if (templateCode === 'TPL-DET' && item.automation_command) {
+        configJson.execution_mode = 'cli';
+      } else if (templateCode === 'TPL-DET') {
+        configJson.execution_mode = configJson.execution_mode || 'http';
+        configJson.use_api_template = false;
+      }
       generated = {
-        config_json: output.config_json || output.config || {},
+        config_json: configJson,
         threshold_json: output.threshold_json || output.threshold || {},
+        agent_explanation: buildAgentExplanation(item, templateCode, configJson, output),
       };
     }
 
     if (body.auto_save) {
-      return this.saveItemConfig(itemId, {
+      const saved = await this.saveItemConfig(itemId, {
         ...generated,
         config_source: 'agent',
       });
+      return { ...saved, agent_explanation: generated.agent_explanation };
     }
 
     return {

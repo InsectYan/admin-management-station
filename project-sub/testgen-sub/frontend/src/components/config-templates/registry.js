@@ -34,10 +34,38 @@ export const MIXED_TS_MAJORS = new Set([ 'C1', 'C2', 'C3', 'C4' ]);
 export const API_CTX_SCHEME = 'TS-05-API';
 export const CHAIN_SCHEME = 'TS-05-CHAIN';
 export const API_CTX_TEMPLATE = 'TPL-API-CTX';
+export const DET_TEMPLATE = 'TPL-DET';
+
+/** 不需要辅验证的配置模板（多模板共用一个验证选择器时维护此列表） */
+export const TEMPLATES_WITHOUT_SECONDARY_VALIDATION = [ 'TPL-DET' ];
 
 export const TEMPLATE_DISPLAY_NAMES = {
+  'TPL-DET': '确定性单次',
+  'TPL-BND': '边界矩阵',
+  'TPL-REP': '重复抽样',
+  'TPL-SET': '固定样本集',
   'TPL-CHAIN': '多步链路',
   'TPL-API-CTX': '前置链路+接口模板',
+  'TPL-PAIR': '对照对比',
+  'TPL-NEG': '对抗专项',
+  'TPL-OBS': '可观测稽核',
+  'TPL-LOAD': '压测容量',
+  'TPL-MAN': '人工评审',
+};
+
+/** scheme → 默认模板 */
+export const SCHEME_TO_TEMPLATE = {
+  'TS-01-DET': 'TPL-DET',
+  'TS-02-BND': 'TPL-BND',
+  'TS-03-REP': 'TPL-REP',
+  'TS-04-SET': 'TPL-SET',
+  'TS-05-CHAIN': 'TPL-CHAIN',
+  'TS-05-API': 'TPL-API-CTX',
+  'TS-06-PAIR': 'TPL-PAIR',
+  'TS-07-NEG': 'TPL-NEG',
+  'TS-08-OBS': 'TPL-OBS',
+  'TS-09-LOAD': 'TPL-LOAD',
+  'TS-10-MAN': 'TPL-MAN',
 };
 
 export const SCHEME_TEMPLATE_ALTERNATIVES = {

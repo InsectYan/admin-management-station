@@ -1,5 +1,6 @@
 'use strict';
 
+const { loadGlobalRequestContext } = require('../../lib/globalRequestContext');
 const { emitProgress } = require('../../lib/fitnessRunEvents');
 const { buildSchemePhases } = require('../../lib/schemePhaseHelper');
 const { RunStepTracker } = require('../../lib/runStepTracker');
@@ -20,6 +21,7 @@ const {
  * @property {object|null} env
  * @property {object} run
  * @property {import('egg').Context} ctx
+ * @property {{ headers: Record<string,string>, vars: Record<string,unknown> }} [globalRequestContext]
  */
 
 /**
@@ -395,8 +397,12 @@ class RunOrchestrator {
     emitProgress(runId, { phase: 'running', percent: 5, run_id: runId });
 
     try {
+      const globalRequestContext = await loadGlobalRequestContext(this.ctx, {
+        execution_env: env?.toJSON ? env.toJSON() : env,
+        project_code: item.project_code || 'fitness-agent',
+      });
       /** @type {ExecutionContext} */
-      const execCtx = { item, runConfig, env, run, ctx: this.ctx };
+      const execCtx = { item, runConfig, env, run, ctx: this.ctx, globalRequestContext };
       const hookRunner = new AgentHookRunner(this.ctx);
       await hookRunner.runPreExecute(execCtx);
 

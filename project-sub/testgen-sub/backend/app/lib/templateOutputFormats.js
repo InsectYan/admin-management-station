@@ -5,15 +5,18 @@ const { TEMPLATE_NAMES } = require('./configTemplateRegistry');
 const TEMPLATE_OUTPUT_FORMATS = {
   'TPL-DET': {
     config_json: {
-      endpoint_path: 'string HTTP 路径',
+      execution_mode: 'http|cli 有 automation_command 时为 cli',
+      preflight_api_template_id: 'number 可选，仅执行模板 preflight_steps 获取变量',
+      preflight_input_params: 'object 前置模板外部入参',
+      endpoint_path: 'string 主请求 HTTP 路径（必填，除纯 CLI 外）',
       http_method: 'GET|POST|PUT|PATCH|DELETE',
       http_status_expected: 'number 期望状态码',
+      headers: 'object 主请求头，支持 {{key}} 插值',
       test_input_example: 'string POST/PUT/PATCH 时 JSON 请求体文本',
-      headers: 'object 可选，如 X-Internal-Service-Key',
-      body: 'object 与 test_input_example 等价，解析后的 JSON',
+      body: 'object 与 test_input_example 等价',
     },
     threshold_json: {},
-    note: 'submit 首次 202，幂等 client_turn_id 重试 200',
+    note: '主请求为主体；前置模板仅提供 session_id/turn_id 等变量。submit 首次 202，幂等重试 200',
   },
   'TPL-BND': {
     config_json: {
