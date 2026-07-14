@@ -1,5 +1,8 @@
 <template>
   <div v-loading="loading" class="project-env-page">
+    <el-alert type="info" :closable="false" show-icon style="margin-bottom:12px">
+      此处配置会同步到执行环境（Launch / 批量跑用例）。请填写「域名 / IP」作为请求基址（对应执行侧 bff_coach_url）。
+    </el-alert>
     <div class="toolbar">
       <el-button type="primary" @click="openForm()">新增环境模板</el-button>
     </div>

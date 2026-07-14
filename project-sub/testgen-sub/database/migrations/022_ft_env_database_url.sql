@@ -6,4 +6,9 @@ SET auth_configured = COALESCE(auth_configured, '{}'::jsonb) || jsonb_build_obje
 ),
 updated_at = NOW()
 WHERE name = 'local-docker'
+  AND (
+    project_code = 'fitness-agent'
+    OR project_code IS NULL
+    OR TRIM(COALESCE(project_code, '')) = ''
+  )
   AND NOT (COALESCE(auth_configured, '{}'::jsonb) ? 'database_url');

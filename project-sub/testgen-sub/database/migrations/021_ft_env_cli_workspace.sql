@@ -6,4 +6,9 @@ ALTER TABLE ft_execution_env
 UPDATE ft_execution_env
 SET cli_workspace_root = '/fitness-agent'
 WHERE name = 'local-docker'
+  AND (
+    project_code = 'fitness-agent'
+    OR project_code IS NULL
+    OR TRIM(COALESCE(project_code, '')) = ''
+  )
   AND (cli_workspace_root IS NULL OR TRIM(cli_workspace_root) = '');

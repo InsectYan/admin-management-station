@@ -226,7 +226,7 @@ async function loadLaunchData() {
     ]);
     envs.value = envData.list || [];
     if (!envs.value.length) {
-      engineMsg.value = `项目「${projectCode}」暂无执行环境，请先在本项目下创建`;
+      engineMsg.value = `项目「${projectCode}」暂无执行环境。请在「项目 → 环境配置」或「执行 → 环境与服务端点」中为本项目创建`;
     }
     const def = envs.value.find(e => e.is_default) || envs.value[0];
     envId.value = def?.id ?? null;
@@ -282,9 +282,22 @@ async function launch() {
     router.push(buildRunConsoleRoute(run.id, route.query));
   } catch (e) {
     const payload = e.response?.data;
-    if (payload?.code === 'CONFIG_AUTOFILL_BLOCKED' && payload?.data) {
-      const miss = (payload.data.missing_fixed || []).map(m => m.field).join(', ');
-      engineMsg.value = `${payload.message}${miss ? `；缺失: ${miss}` : ''}`;
+    if (payload?.code === 'CONFIG_AUTOFILL_BLOCKED') {
+      const data = payload.data || {};
+      // 后端 message 已含中文 field label + detail；兜底再拼 missing_fixed
+      if (payload.message && !/缺失:\s*endpoint_path/i.test(payload.message)) {
+        engineMsg.value = payload.message;
+      } else {
+        const miss = (data.missing_fixed || []).map(m => {
+          const head = m.label && m.field && m.label !== m.field
+            ? `${m.label}（${m.field}）`
+            : (m.label || m.field);
+          return m.detail ? `${head}：${m.detail}` : head;
+        });
+        engineMsg.value = miss.length
+          ? `执行前配置不齐全：${miss.join('；')}`
+          : (payload.message || '执行前配置不齐全');
+      }
     } else {
       engineMsg.value = payload?.message || e.message || '执行失败';
     }

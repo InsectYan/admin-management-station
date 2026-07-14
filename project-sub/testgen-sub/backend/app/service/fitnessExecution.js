@@ -47,6 +47,10 @@ class FitnessExecutionService extends require('egg').Service {
       err.code = 'PROJECT_CODE_REQUIRED';
       throw err;
     }
+    // X-03：项目页已配的环境模板，按需同步到执行表，避免 Launch 空列表
+    const { ensureProjectTemplatesSynced } = require('../lib/projectEnvToExecution');
+    await ensureProjectTemplatesSynced(this.ctx, projectCode);
+
     const where = { project_code: projectCode };
     const { count, rows } = await this.ctx.model.FtExecutionEnv.findAndCountAll({
       where,

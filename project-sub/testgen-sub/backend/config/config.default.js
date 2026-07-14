@@ -79,6 +79,9 @@ module.exports = appInfo => {
     sampleTimeoutMs: Number(process.env.FITNESS_SAMPLE_TIMEOUT_MS || 120000),
     configTimeoutMs: Number(process.env.FITNESS_CONFIG_TIMEOUT_MS || 120000),
     exploreTimeoutMs: Number(process.env.FITNESS_EXPLORE_TIMEOUT_MS || 90000),
+    /** 为 true 时：执行期补齐要求 Agent N1/N2/N3 可用，不可达则阻断（默认 false，降级本地规则） */
+    autofillRequireAgent: process.env.AUTOFILL_REQUIRE_AGENT === '1'
+      || process.env.AUTOFILL_REQUIRE_AGENT === 'true',
   };
 
   config.testRun = {

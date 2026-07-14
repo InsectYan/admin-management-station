@@ -2,6 +2,10 @@
 
 const { Op } = require('sequelize');
 const { probeEnvironment, sanitizeEnv, pickEnvFields } = require('../lib/projectEnvProbe');
+const {
+  upsertExecutionEnvFromTemplate,
+  deleteSyncedExecutionEnv,
+} = require('../lib/projectEnvToExecution');
 
 class ProjectEnvService extends require('egg').Service {
   async assertProject(projectCode) {
@@ -57,11 +61,18 @@ class ProjectEnvService extends require('egg').Service {
       project_code: projectCode,
       ...pickEnvFields(payload),
     });
+    const execCount = await this.ctx.model.FtExecutionEnv.count({
+      where: { project_code: projectCode },
+    });
+    await upsertExecutionEnvFromTemplate(this.ctx, row.toJSON(), {
+      preferDefault: execCount === 0,
+    });
     return sanitizeEnv(row);
   }
 
   async updateEnvironment(projectCode, envId, payload) {
     const row = await this.findEnv(projectCode, envId);
+    const prevName = row.name;
     if (payload.name && payload.name !== row.name) {
       const dup = await this.ctx.model.ProjectEnvTemplate.findOne({
         where: {
@@ -77,12 +88,19 @@ class ProjectEnvService extends require('egg').Service {
       }
     }
     await row.update(pickEnvFields(payload, row));
+    await row.reload();
+    if (payload.name && payload.name !== prevName) {
+      await deleteSyncedExecutionEnv(this.ctx, projectCode, prevName);
+    }
+    await upsertExecutionEnvFromTemplate(this.ctx, row.toJSON(), { preferDefault: false });
     return sanitizeEnv(row);
   }
 
   async deleteEnvironment(projectCode, envId) {
     const row = await this.findEnv(projectCode, envId);
+    const name = row.name;
     await row.destroy();
+    await deleteSyncedExecutionEnv(this.ctx, projectCode, name);
     return true;
   }
 

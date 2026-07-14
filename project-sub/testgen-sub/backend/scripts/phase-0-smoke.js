@@ -48,6 +48,35 @@ function run() {
   );
   assert(ok.complete === true, 'full det should be complete');
 
+  // 用例表已有 path/method/status，但 ft_run_config 为空 → 必须判定不齐（触发自动补齐）
+  const itemOnly = assessDetCompleteness(
+    {
+      item_id: 'fitness-agent-TS-01-DET-VS-01-EXACT-J1-008',
+      project_code: 'fitness-agent',
+      endpoint_path: '/api/chat/turns/submit',
+      http_method: 'POST',
+      http_status_expected: 401,
+    },
+    null,
+    { env_catalog: { has_bff_url: true } },
+  );
+  assert(itemOnly.complete === false, 'item metadata alone must NOT skip autofill');
+  assert(itemOnly.gaps.some(g => g.field === 'endpoint_path' && g.role === 'structure'), 'path from item is structure');
+  assert(itemOnly.gaps.some(g => g.field === 'body'), 'POST needs body structure gap');
+  assert(!itemOnly.gaps.some(g => g.field === 'http_method' && g.role === 'fixed'), 'POST on item is not fixed-missing');
+
+  const blockedEnv = buildAutofillBlockedEnvelope({
+    item: { item_id: 'x', project_code: 'demo' },
+    env: { id: 1, name: 'e1' },
+    assessment: {
+      gaps: [{ field: 'preflight_api_template_id', role: 'fixed', reason: '无匹配模板' }],
+      config_snapshot: {},
+      warnings: [],
+    },
+  });
+  assert(blockedEnv.missing_fixed[0].label.includes('前置'), 'chinese label');
+  assert(/前置接口模板/.test(blockedEnv.message), 'message in chinese');
+
   const pollOk = assessDetCompleteness(
     { endpoint_path: '/api/chat/turns/{{turn_id}}', http_method: 'GET', http_status_expected: 200 },
     {

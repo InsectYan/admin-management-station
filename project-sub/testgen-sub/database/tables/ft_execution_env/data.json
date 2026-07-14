@@ -1,0 +1,28 @@
+[
+  {
+    "project_code": "fitness-agent",
+    "name": "local-docker",
+    "config_env_id": "LOCAL_DOCKER",
+    "bff_coach_url": "http://host.docker.internal:3001",
+    "bff_member_url": "http://host.docker.internal:3001",
+    "bff_manager_url": "http://host.docker.internal:3001",
+    "agent_chat_url": "http://host.docker.internal:3001",
+    "cli_workspace_root": "/fitness-agent",
+    "auth_configured": {
+      "database_url": "postgresql://fitness:fitness_secret@host.docker.internal:5433/fitness_db"
+    },
+    "is_default": true
+  },
+  {
+    "project_code": "fitness-agent",
+    "name": "local-host",
+    "config_env_id": "LOCAL_HOST",
+    "bff_coach_url": "http://127.0.0.1:3001",
+    "bff_member_url": "http://127.0.0.1:3001",
+    "bff_manager_url": "http://127.0.0.1:3001",
+    "agent_chat_url": "http://127.0.0.1:3001",
+    "cli_workspace_root": null,
+    "auth_configured": {},
+    "is_default": false
+  }
+]

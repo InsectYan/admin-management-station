@@ -115,6 +115,10 @@
     "pk": "project_code",
     "type": "table"
   },
+  "ft_execution_env": {
+    "pk": ["project_code", "name"],
+    "type": "table"
+  },
   "tpl_config_det": {
     "pk": "item_id",
     "type": "table"

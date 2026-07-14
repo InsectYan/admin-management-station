@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS test_plan_report (
 
 -- 执行层（与已有 test_runs 区分，前缀 ft_）
 
+-- 完整目标结构见 database/tables/ft_execution_env/init.sql；project_code 由 038 / 补列同步。
 CREATE TABLE IF NOT EXISTS ft_execution_env (
   id              SERIAL PRIMARY KEY,
   name            VARCHAR(128) NOT NULL,

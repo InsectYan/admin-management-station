@@ -91,15 +91,28 @@ class RunOrchestrator {
       const row = await this.ctx.model.FtExecutionEnv.findByPk(envId);
       return assertEnvBelongsToProject(row, code);
     }
-    const def = await this.ctx.model.FtExecutionEnv.findOne({
+    let def = await this.ctx.model.FtExecutionEnv.findOne({
       where: { project_code: code, is_default: true },
       order: [[ 'id', 'ASC' ]],
     });
     if (def) return def;
-    const first = await this.ctx.model.FtExecutionEnv.findOne({
+    let first = await this.ctx.model.FtExecutionEnv.findOne({
       where: { project_code: code },
       order: [[ 'id', 'ASC' ]],
     });
+    if (!first) {
+      const { ensureProjectTemplatesSynced } = require('../../lib/projectEnvToExecution');
+      await ensureProjectTemplatesSynced(this.ctx, code);
+      def = await this.ctx.model.FtExecutionEnv.findOne({
+        where: { project_code: code, is_default: true },
+        order: [[ 'id', 'ASC' ]],
+      });
+      if (def) return def;
+      first = await this.ctx.model.FtExecutionEnv.findOne({
+        where: { project_code: code },
+        order: [[ 'id', 'ASC' ]],
+      });
+    }
     return assertEnvBelongsToProject(first, code);
   }
 
@@ -297,12 +310,24 @@ class RunOrchestrator {
         } catch (err) {
           if (err.code === 'CONFIG_AUTOFILL_BLOCKED') throw err;
           this.ctx.logger.warn('[launch] autofill pipeline failed: %s', err.message);
-          throwAutofillBlocked(buildAutofillBlockedEnvelope({
+          // 不要把「插件加载失败等技术错误」伪装成空 missing_fixed 的配置门禁
+          const wrapped = buildAutofillBlockedEnvelope({
             item,
             env,
-            assessment,
-            pipeline_step: err.pipeline_step || 'gate',
-          }));
+            assessment: {
+              ...assessment,
+              gaps: [
+                ...(assessment.gaps || []).filter(g => g.role === 'fixed'),
+                {
+                  field: 'autofill_pipeline',
+                  role: 'fixed',
+                  reason: `自动补齐管线异常：${err.message}`,
+                },
+              ],
+            },
+            pipeline_step: err.pipeline_step || 'pipeline',
+          });
+          throwAutofillBlocked(wrapped);
         }
       }
     }

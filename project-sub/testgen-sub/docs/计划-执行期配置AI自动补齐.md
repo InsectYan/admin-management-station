@@ -304,7 +304,7 @@ async function runAutofillPipeline(ctx, { item, config, catalogs, gaps }) {
 
 ### 8.2 Gate + Pipeline + Orchestrator
 
-- `configCompletenessGate.js`：首期 TPL-DET；gap 角色可先粗分，细角色以 N1 为准。  
+- `configCompletenessGate.js`：首期 TPL-DET；**只认 `config_json`，禁止用 item 元数据冒充齐全**；gap 含 fixed/structure。  
 - `autofillPipeline.js`：串行 N1→N2→N3→(N4)。  
 - `launch`：`autofill` / `persist_autofill` 开关；默认只写 `ft_run_config`。  
 - PlanBatch：逐条 Pipeline；阻断项带 missing 摘要。
@@ -473,7 +473,7 @@ async function runAutofillPipeline(ctx, { item, config, catalogs, gaps }) {
 
 | 用途 | 路径 |
 |------|------|
-| 环境表 | `database/migrations/003_fitness_runtime.sql` → `ft_execution_env` |
+| 环境表 | `database/tables/ft_execution_env/`（`init.sql` + `data.json`）+ `migrations/038_*.sql` |
 | resolveEnv | `backend/app/service/execution/runOrchestrator.js` |
 | 全局上下文 | `backend/app/lib/globalRequestContext.js` |
 | 环境 API | `fitnessExecution.listEnvs` · `FitnessEnvironmentsPage.vue` |

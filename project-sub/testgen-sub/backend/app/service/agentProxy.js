@@ -179,6 +179,57 @@ class AgentProxyService extends Service {
     return this.invokeSkill(path, { ...payload, action: payload.action || 'propose_patch', _skill: 'fitness-config-structure-skill' }, configTimeoutMs);
   }
 
+  /**
+   * 探测执行期补齐所需 N1/N2/N3 Skill 是否已在 Agent 平台加载。
+   * @returns {Promise<{ ok: boolean, baseUrl: string, missing: string[], loaded: string[], error?: string }>}
+   */
+  async probeAutofillSkills() {
+    const { baseUrl, timeout } = this._skillConfig();
+    const required = [
+      'fitness-intent-classify-skill',
+      'fitness-fixed-resolve-skill',
+      'fitness-config-structure-skill',
+    ];
+    try {
+      const res = await this.ctx.curl(`${baseUrl}/api/plugins`, {
+        method: 'GET',
+        dataType: 'json',
+        timeout: Math.min(timeout || 300000, 8000),
+      });
+      if (res.status !== 200) {
+        return {
+          ok: false,
+          baseUrl,
+          missing: required,
+          loaded: [],
+          error: `Agent 平台 HTTP ${res.status}`,
+        };
+      }
+      const list = res.data?.data || res.data?.plugins || res.data || [];
+      const names = new Set(
+        (Array.isArray(list) ? list : [])
+          .map(p => p.name || p.id || p)
+          .filter(Boolean)
+          .map(String),
+      );
+      const missing = required.filter(n => !names.has(n));
+      return {
+        ok: missing.length === 0,
+        baseUrl,
+        missing,
+        loaded: required.filter(n => names.has(n)),
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        baseUrl,
+        missing: required,
+        loaded: [],
+        error: err.message || String(err),
+      };
+    }
+  }
+
   async invokeFitnessExplore(payload) {
     const { exploreInvokePath, exploreTimeoutMs } = this._skillConfig();
     const path = exploreInvokePath || '/api/skills/fitness-explore-skill/invoke';
