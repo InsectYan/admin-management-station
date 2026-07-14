@@ -1,5 +1,8 @@
 'use strict';
 
+const { requireProjectCode } = require('./envProjectScope');
+const { EXTRACT_RUNTIME_NOTE } = require('./extractRuntimeNote');
+
 /**
  * 合并执行环境 auth_configured、项目全局变量，供 HTTP 请求注入。
  * auth_configured 形状：
@@ -8,12 +11,13 @@
  *   fixed_params: { token: '...', session_id: '...', turn_id: '...' }
  * }
  * @param {import('egg').Context} ctx
- * @param {{ project_code?: string }} [opts]
+ * @param {{ project_code: string, execution_env?: object }} opts
  */
 async function loadGlobalRequestContext(ctx, opts = {}) {
-  const projectCode = opts.project_code || 'fitness-agent';
+  const projectCode = requireProjectCode(opts.project_code);
   const headers = {};
   const vars = {};
+  const skipped_extract_keys = [];
 
   const env = opts.execution_env || null;
   const auth = env?.auth_configured || {};
@@ -35,13 +39,21 @@ async function loadGlobalRequestContext(ctx, opts = {}) {
     for (const row of rows) {
       if (row.source === 'manual' && row.var_value) {
         vars[row.var_key] = row.var_value;
+      } else if (row.source === 'extract') {
+        skipped_extract_keys.push(row.var_key);
       }
     }
   } catch {
     // project_env_variable 表可能未初始化
   }
 
-  return { headers, vars };
+  return {
+    headers,
+    vars,
+    project_code: projectCode,
+    skipped_extract_keys,
+    extract_runtime_note: skipped_extract_keys.length ? EXTRACT_RUNTIME_NOTE : null,
+  };
 }
 
 /**

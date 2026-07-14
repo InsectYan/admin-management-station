@@ -161,6 +161,24 @@ class AgentProxyService extends Service {
     return this.invokeSkill(path, { ...payload, _skill: 'fitness-config-skill' }, configTimeoutMs);
   }
 
+  async invokeFitnessFixedResolve(payload) {
+    const { fixedResolveInvokePath, configTimeoutMs } = this._skillConfig();
+    const path = fixedResolveInvokePath || '/api/skills/fitness-fixed-resolve-skill/invoke';
+    return this.invokeSkill(path, { ...payload, action: payload.action || 'resolve', _skill: 'fitness-fixed-resolve-skill' }, configTimeoutMs);
+  }
+
+  async invokeFitnessIntentClassify(payload) {
+    const { intentClassifyInvokePath, configTimeoutMs } = this._skillConfig();
+    const path = intentClassifyInvokePath || '/api/skills/fitness-intent-classify-skill/invoke';
+    return this.invokeSkill(path, { ...payload, action: payload.action || 'classify', _skill: 'fitness-intent-classify-skill' }, configTimeoutMs);
+  }
+
+  async invokeFitnessConfigStructure(payload) {
+    const { configStructureInvokePath, configTimeoutMs } = this._skillConfig();
+    const path = configStructureInvokePath || '/api/skills/fitness-config-structure-skill/invoke';
+    return this.invokeSkill(path, { ...payload, action: payload.action || 'propose_patch', _skill: 'fitness-config-structure-skill' }, configTimeoutMs);
+  }
+
   async invokeFitnessExplore(payload) {
     const { exploreInvokePath, exploreTimeoutMs } = this._skillConfig();
     const path = exploreInvokePath || '/api/skills/fitness-explore-skill/invoke';

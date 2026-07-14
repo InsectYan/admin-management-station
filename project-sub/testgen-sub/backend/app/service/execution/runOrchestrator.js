@@ -1,6 +1,17 @@
 'use strict';
 
 const { loadGlobalRequestContext } = require('../../lib/globalRequestContext');
+const {
+  requireProjectCode,
+  assertEnvBelongsToProject,
+} = require('../../lib/envProjectScope');
+const { validateDetLaunchPreconditions } = require('../../lib/detLaunchGuard');
+const AutofillPipeline = require('./autofillPipeline');
+const {
+  assessConfigCompleteness,
+  buildAutofillBlockedEnvelope,
+  throwAutofillBlocked,
+} = require('../../lib/configCompletenessGate');
 const { emitProgress } = require('../../lib/fitnessRunEvents');
 const { buildSchemePhases } = require('../../lib/schemePhaseHelper');
 const { RunStepTracker } = require('../../lib/runStepTracker');
@@ -69,16 +80,27 @@ class RunOrchestrator {
     return item;
   }
 
-  async resolveEnv(envId) {
+  /**
+   * 按项目解析执行环境；禁止跨项目回落到 fitness 默认环境。
+   * @param {number|string|null|undefined} envId
+   * @param {string} projectCode
+   */
+  async resolveEnv(envId, projectCode) {
+    const code = requireProjectCode(projectCode);
     if (envId) {
-      return this.ctx.model.FtExecutionEnv.findByPk(envId);
+      const row = await this.ctx.model.FtExecutionEnv.findByPk(envId);
+      return assertEnvBelongsToProject(row, code);
     }
     const def = await this.ctx.model.FtExecutionEnv.findOne({
-      where: { is_default: true },
+      where: { project_code: code, is_default: true },
       order: [[ 'id', 'ASC' ]],
     });
     if (def) return def;
-    return this.ctx.model.FtExecutionEnv.findOne({ order: [[ 'id', 'ASC' ]] });
+    const first = await this.ctx.model.FtExecutionEnv.findOne({
+      where: { project_code: code },
+      order: [[ 'id', 'ASC' ]],
+    });
+    return assertEnvBelongsToProject(first, code);
   }
 
   /**
@@ -97,6 +119,10 @@ class RunOrchestrator {
     const runConfig = await this.ctx.model.FtRunConfig.findOne({
       where: { item_id: itemId, scheme_id: schemeId },
     });
+
+    if (schemeId === 'TS-01-DET') {
+      validateDetLaunchPreconditions(item, runConfig);
+    }
 
     if (schemeId === 'TS-04-SET') {
       if (!runConfig?.sample_set_id) {
@@ -236,12 +262,49 @@ class RunOrchestrator {
     const schemeId = body.scheme_id || resolveExecutionScheme(item, templateCode);
     const validationId = body.validation_id || item.validation_primary_id;
 
-    const env = await this.resolveEnv(body.env_id);
+    requireProjectCode(item.project_code, '用例 project_code');
+    const env = await this.resolveEnv(body.env_id, item.project_code);
     if (!env) {
-      const err = new Error('未配置执行环境，请先在执行环境页添加或运行 db 迁移');
+      const err = new Error('未配置执行环境，请先在本项目的执行环境页添加');
       err.status = 400;
       err.code = 'ENV_NOT_CONFIGURED';
       throw err;
+    }
+
+    const autofill = body.autofill !== false;
+    let runConfigPreview = await this.ctx.model.FtRunConfig.findOne({
+      where: { item_id: itemId, scheme_id: schemeId },
+    });
+    if (autofill) {
+      const assessment = assessConfigCompleteness(schemeId, item, runConfigPreview, {
+        env_catalog: {
+          has_bff_url: Boolean(env.bff_coach_url),
+          global_header_keys: Object.keys(env.auth_configured?.global_headers || {}),
+          has_authorization: Boolean(env.auth_configured?.global_headers?.Authorization),
+        },
+      });
+      if (!assessment.complete && !assessment.skipped) {
+        try {
+          const pipe = new AutofillPipeline(this.ctx);
+          const result = await pipe.run({
+            item,
+            env,
+            runConfig: runConfigPreview,
+            schemeId,
+            persist_autofill: body.persist_autofill === true,
+          });
+          if (result.runConfig) runConfigPreview = result.runConfig;
+        } catch (err) {
+          if (err.code === 'CONFIG_AUTOFILL_BLOCKED') throw err;
+          this.ctx.logger.warn('[launch] autofill pipeline failed: %s', err.message);
+          throwAutofillBlocked(buildAutofillBlockedEnvelope({
+            item,
+            env,
+            assessment,
+            pipeline_step: err.pipeline_step || 'gate',
+          }));
+        }
+      }
     }
 
     const runConfig = await this._validateSchemeLaunch(itemId, schemeId, item);
@@ -382,6 +445,9 @@ class RunOrchestrator {
     const env = run.env_id
       ? await this.ctx.model.FtExecutionEnv.findByPk(run.env_id)
       : null;
+    if (env) {
+      assertEnvBelongsToProject(env, requireProjectCode(item.project_code, '用例 project_code'));
+    }
     const runConfig = run.run_config_id
       ? await this.ctx.model.FtRunConfig.findByPk(run.run_config_id)
       : await this.ctx.model.FtRunConfig.findOne({
@@ -399,7 +465,7 @@ class RunOrchestrator {
     try {
       const globalRequestContext = await loadGlobalRequestContext(this.ctx, {
         execution_env: env?.toJSON ? env.toJSON() : env,
-        project_code: item.project_code || 'fitness-agent',
+        project_code: requireProjectCode(item.project_code, '用例 project_code'),
       });
       /** @type {ExecutionContext} */
       const execCtx = { item, runConfig, env, run, ctx: this.ctx, globalRequestContext };
@@ -588,7 +654,7 @@ class RunOrchestrator {
       err.status = 404;
       throw err;
     }
-    const env = await this.resolveEnv(body.env_id);
+    const env = await this.resolveEnv(body.env_id, item.project_code);
     if (!env) {
       const err = new Error('执行环境不存在');
       err.status = 400;
@@ -599,12 +665,17 @@ class RunOrchestrator {
     const runConfig = await this.ctx.model.FtRunConfig.findOne({
       where: { item_id: itemId, scheme_id: schemeId },
     });
+    const globalRequestContext = await loadGlobalRequestContext(this.ctx, {
+      execution_env: env?.toJSON ? env.toJSON() : env,
+      project_code: requireProjectCode(item.project_code, '用例 project_code'),
+    });
     const subResults = await engine.execute({
       item,
       runConfig,
       env,
       run: fakeRun,
       ctx: this.ctx,
+      globalRequestContext,
     });
     const vsEngine = vsRegistry.get(body.validation_id || item.validation_primary_id, runConfig);
     const verdictResult = await vsEngine.judge(
@@ -612,7 +683,7 @@ class RunOrchestrator {
       runConfig?.threshold_json || {},
       item,
       body.validation_id || item.validation_primary_id,
-      { item, runConfig, env, run: fakeRun, ctx: this.ctx },
+      { item, runConfig, env, run: fakeRun, ctx: this.ctx, globalRequestContext },
     );
     return { sub_results: subResults, ...verdictResult };
   }
@@ -634,7 +705,7 @@ class RunOrchestrator {
     const validationId = body.validation_id || item.validation_primary_id;
     engineRegistry.get(schemeId);
 
-    const env = await this.resolveEnv(body.env_id);
+    const env = await this.resolveEnv(body.env_id, item.project_code);
     if (!env) {
       const err = new Error('未配置执行环境');
       err.status = 400;
@@ -653,8 +724,13 @@ class RunOrchestrator {
       dry_run: true,
     };
 
+    const globalRequestContext = await loadGlobalRequestContext(this.ctx, {
+      execution_env: env?.toJSON ? env.toJSON() : env,
+      project_code: requireProjectCode(item.project_code, '用例 project_code'),
+    });
+
     /** @type {ExecutionContext} */
-    const execCtx = { item, runConfig, env, run: fakeRun, ctx: this.ctx };
+    const execCtx = { item, runConfig, env, run: fakeRun, ctx: this.ctx, globalRequestContext };
     const hookRunner = new AgentHookRunner(this.ctx);
     await hookRunner.runPreExecute(execCtx);
 
@@ -685,7 +761,20 @@ class RunOrchestrator {
 
   /** @param {object} body */
   async healthCheck(body = {}) {
-    const env = await this.resolveEnv(body.env_id);
+    let env;
+    if (body.env_id) {
+      env = await this.ctx.model.FtExecutionEnv.findByPk(body.env_id);
+      if (!env) {
+        const err = new Error('执行环境不存在');
+        err.status = 404;
+        throw err;
+      }
+      if (body.project_code) {
+        assertEnvBelongsToProject(env, body.project_code);
+      }
+    } else {
+      env = await this.resolveEnv(null, body.project_code);
+    }
     if (!env) {
       const err = new Error('执行环境不存在');
       err.status = 404;
@@ -693,7 +782,7 @@ class RunOrchestrator {
     }
     const url = String(env.bff_coach_url || '').replace(/\/$/, '');
     if (!url) {
-      return { env_id: env.id, name: env.name, ok: false, message: '未配置 bff_coach_url' };
+      return { env_id: env.id, name: env.name, project_code: env.project_code, ok: false, message: '未配置 bff_coach_url' };
     }
     const { runHttp } = require('./runners/httpRunner');
     try {

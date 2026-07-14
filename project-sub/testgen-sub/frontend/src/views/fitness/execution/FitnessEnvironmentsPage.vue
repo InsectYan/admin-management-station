@@ -5,10 +5,30 @@
       <el-button @click="healthCheck">环境探活</el-button>
     </template>
     <el-alert type="info" :closable="false" show-icon style="margin-bottom:12px">
-      <template #title>全局请求配置</template>
-      在此配置所有 HTTP 请求自动携带的<strong>请求头</strong>与<strong>固定参数</strong>（如 token、session_id、turn_id），
-      执行时合并进 TS-01-DET / 链路 / 接口模板请求。项目级变量另见「项目变量」页。
+      <template #title>全局请求配置（按项目隔离）</template>
+      请先选择项目。HTTP 请求自动携带的<strong>请求头</strong>与<strong>固定参数</strong>仅对本项目执行生效，
+      不会串用其它项目（如 fitness-agent）的环境。项目级变量另见「项目变量」页。
+      <div style="margin-top:6px;font-size:12px">
+        注意：项目变量 source=extract 运行时<strong>不会</strong>自动注入，仅 manual / 环境 fixed_params / 前置 extract 可用。
+      </div>
     </el-alert>
+    <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center">
+      <span>项目</span>
+      <el-select
+        v-model="projectCode"
+        filterable
+        placeholder="选择项目"
+        style="width:280px"
+        @change="onProjectChange"
+      >
+        <el-option
+          v-for="p in projects"
+          :key="p.project_code"
+          :label="`${p.project_name || p.project_code} (${p.project_code})`"
+          :value="p.project_code"
+        />
+      </el-select>
+    </div>
     <FitnessLabeledTable
       :data="envs"
       :columns="envColumns"
@@ -36,6 +56,9 @@
     </FitnessLabeledTable>
     <el-dialog v-model="showForm" :title="editingId ? '编辑环境' : '新增环境'" width="640px">
       <el-form label-width="120px">
+        <el-form-item label="所属项目">
+          <el-input :model-value="projectCode" disabled />
+        </el-form-item>
         <el-form-item label="名称">
           <el-input v-model="form.name" :disabled="!!editingId" />
         </el-form-item>
@@ -93,8 +116,11 @@ import PageShell from '@/components/PageShell.vue';
 import FitnessLabeledTable from '@/components/fitness/FitnessLabeledTable.vue';
 import { api } from '@/services/apiConfig.js';
 import { fetchEnvironments, updateEnvironment } from '@/services/fitnessService.js';
+import { fetchProjects } from '@/services/projectService.js';
 
 const loading = ref(false);
+const projects = ref([]);
+const projectCode = ref('');
 const envs = ref([]);
 const total = ref(0);
 const page = ref(1);
@@ -111,6 +137,7 @@ const form = reactive({
 });
 
 const envColumns = [
+  { prop: 'project_code', label: '项目', width: 140 },
   { prop: 'name', label: '环境名称', minWidth: 140 },
   { prop: 'config_env_id', label: '配置项编码', width: 160 },
   { prop: 'bff_coach_url', label: '教练 BFF', minWidth: 200 },
@@ -136,6 +163,10 @@ function resetForm() {
 }
 
 function openCreate() {
+  if (!projectCode.value) {
+    ElMessage.warning('请先选择项目');
+    return;
+  }
   resetForm();
   showForm.value = true;
 }
@@ -173,9 +204,18 @@ function buildAuthConfigured() {
 }
 
 async function load() {
+  if (!projectCode.value) {
+    envs.value = [];
+    total.value = 0;
+    return;
+  }
   loading.value = true;
   try {
-    const data = await fetchEnvironments({ page: page.value, pageSize: pageSize.value });
+    const data = await fetchEnvironments({
+      page: page.value,
+      pageSize: pageSize.value,
+      project_code: projectCode.value,
+    });
     envs.value = data.list || [];
     total.value = data.total || 0;
   } finally {
@@ -183,8 +223,17 @@ async function load() {
   }
 }
 
+function onProjectChange() {
+  page.value = 1;
+  load();
+}
+
 async function save() {
   try {
+    if (!projectCode.value) {
+      ElMessage.warning('请先选择项目');
+      return;
+    }
     const auth_configured = buildAuthConfigured();
     if (editingId.value) {
       await updateEnvironment(editingId.value, {
@@ -196,9 +245,11 @@ async function save() {
     } else {
       await api.post('/fitness/environments', {
         name: form.name,
+        project_code: projectCode.value,
         bff_coach_url: form.bff_coach_url,
         cli_workspace_root: form.cli_workspace_root,
         auth_configured,
+        is_default: envs.value.length === 0,
       });
       ElMessage.success('已创建');
     }
@@ -206,19 +257,35 @@ async function save() {
     resetForm();
     await load();
   } catch (e) {
-    ElMessage.error(e.message || '保存失败');
+    ElMessage.error(e.response?.data?.message || e.message || '保存失败');
   }
 }
 
 async function healthCheck() {
   try {
-    await api.post('/fitness/environments/health-check');
+    if (!envs.value[0]?.id) {
+      ElMessage.warning('当前项目无环境可探活');
+      return;
+    }
+    await api.post('/fitness/environments/health-check', {
+      env_id: envs.value[0].id,
+      project_code: projectCode.value,
+    });
+    ElMessage.success('已提交探活');
   } catch (e) {
-    ElMessage.warning(e.message || '探活引擎未开发');
+    ElMessage.warning(e.response?.data?.message || e.message || '探活失败');
   }
 }
 
-onMounted(load);
+onMounted(async () => {
+  const data = await fetchProjects({ pageSize: 200 });
+  projects.value = data.list || data || [];
+  if (projects.value.length) {
+    const prefer = projects.value.find(p => p.project_code === 'fitness-agent') || projects.value[0];
+    projectCode.value = prefer.project_code;
+  }
+  await load();
+});
 </script>
 
 <style scoped>

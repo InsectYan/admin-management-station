@@ -104,6 +104,7 @@ class Ts05ChainEngine extends BaseTsEngine {
     /** @type {Record<string, unknown>} */
     const vars = {
       uuid: randomUUID(),
+      ...(ctx.globalRequestContext?.vars || {}),
       ...(runConfig?.config_json?.vars || {}),
     };
     const results = [];

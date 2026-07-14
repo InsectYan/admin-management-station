@@ -95,8 +95,17 @@ async function loadPending() {
 async function launchReview() {
   launching.value = true;
   try {
-    const envs = await fetchEnvironments({ pageSize: 50 });
+    const projectCode = props.item?.project_code;
+    if (!projectCode) {
+      ElMessage.error('用例缺少 project_code，无法选择执行环境');
+      return;
+    }
+    const envs = await fetchEnvironments({ pageSize: 50, project_code: projectCode });
     const env = envs.list?.find(e => e.is_default) || envs.list?.[0];
+    if (!env) {
+      ElMessage.error(`项目「${projectCode}」暂无执行环境，请先创建`);
+      return;
+    }
     const run = await launchRun(props.item.item_id, {
       env_id: env?.id,
       scheme_id: 'TS-10-MAN',

@@ -14,9 +14,10 @@ const TEMPLATE_OUTPUT_FORMATS = {
       headers: 'object 主请求头，支持 {{key}} 插值',
       test_input_example: 'string POST/PUT/PATCH 时 JSON 请求体文本',
       body: 'object 与 test_input_example 等价',
+      assertions: '[{ type:"status"|"json_path"|"body_contains", path?, expect?, exists? }]；可从期望观测自动解析 code=XXX',
     },
     threshold_json: {},
-    note: '主请求为主体；前置模板仅提供 session_id/turn_id 等变量。submit 首次 202，幂等重试 200',
+    note: '主请求为主体；前置模板仅提供 session_id/turn_id 等变量。期望观测可写「429 + code=TURN_SESSION_INFLIGHT」自动加 body 断言',
   },
   'TPL-BND': {
     config_json: {

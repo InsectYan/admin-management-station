@@ -4,6 +4,7 @@ module.exports = app => {
   const { INTEGER, STRING, BOOLEAN, JSONB } = app.Sequelize;
   return app.model.define('ft_execution_env', {
     id: { type: INTEGER, primaryKey: true, autoIncrement: true },
+    project_code: { type: STRING(64), allowNull: false, defaultValue: 'fitness-agent' },
     name: { type: STRING(128), allowNull: false },
     config_env_id: { type: STRING(64) },
     bff_coach_url: { type: STRING(512) },

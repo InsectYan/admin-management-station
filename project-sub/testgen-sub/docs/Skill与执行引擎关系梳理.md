@@ -43,7 +43,7 @@ admin-management-station/                    # AMS 基座（Qiankun 主应用 + 
 
 ## 2. Agent Platform Skill 清单与使用位置
 
-共 **8 个** Skill 经 BFF 接入。插件源码在 `agent-management-sub/plugins/`（`api-template-skill` 同时在 `agent-management-master/plugins/` 部署）。
+共 **11 个** Skill 经 BFF 接入（含执行期补齐三件套）。插件源码在 `agent-management-sub/plugins/`（运行时可 junction 到 `agent-management-master/plugins/`）。
 
 ### 2.1 总览表
 
@@ -51,12 +51,17 @@ admin-management-station/                    # AMS 基座（Qiankun 主应用 + 
 |---|-------|----------|----------|----------|------------|
 | A1 | `testgen-skill` | `plugins/testgen-skill/` | `invokeTestgen` | 用例生成 | `generationJob.js` |
 | A2 | `fitness-judge-skill` | `plugins/fitness-judge-skill/` | `invokeFitnessJudge` | 执行判定 / 评审 / 报告 | `agentHook.js`, `fitnessExecution.js`, `fitnessPlan.js`, `vsAgentJudge.js` |
-| A3 | `fitness-sample-skill` | `plugins/fitness-sample-skill/` | `invokeFitnessSample` | 配置生成 / 样本补全 / 执行前 hook | `configTemplate.js`, `fitnessExecution.js`, `agentHook.js` |
+| A3 | `fitness-sample-skill` | `plugins/fitness-sample-skill/` | `invokeFitnessSample` | 配置生成 / 样本补全 / 执行前 hook / **Autofill 按需** | `configTemplate.js`, `fitnessExecution.js`, `agentHook.js`, `autofillPipeline.js` |
 | A4 | `fitness-config-skill` | `plugins/fitness-config-skill/` | `invokeFitnessConfig` | 配置模板 AI 生成 | `configTemplate.js` |
 | A5 | `fitness-explore-skill` | `plugins/fitness-explore-skill/` | `invokeFitnessExplore` | TS-05 探索式多步规划 | `agentHook.js` → `ts05ChainEngine.js` |
 | A6 | `fitness-observation-match-skill` | `plugins/fitness-observation-match-skill/` | `invokeObservationMatch` | TPL-API-CTX 内容语义比对 | `agentHook.js` |
 | A7 | `api-template-skill` | `plugins/api-template-skill/` | `invokeApiTemplate` | 接口模板草案生成 | `apiTemplateGenerationJob.js` |
 | A8 | `perf-bottleneck-skill` | `plugins/perf-bottleneck-skill/` | `invokePerfAnalysis` | 负载/性能瓶颈分析 | `fitnessExecution.js`, `testRun.js` |
+| **A9** | `fitness-intent-classify-skill` | `plugins/fitness-intent-classify-skill/` | `invokeFitnessIntentClassify` | **执行前意图分类** | `autofillPipeline.js` |
+| **A10** | `fitness-fixed-resolve-skill` | `plugins/fitness-fixed-resolve-skill/` | `invokeFitnessFixedResolve` | **执行前固定值解析** | `autofillPipeline.js` |
+| **A11** | `fitness-config-structure-skill` | `plugins/fitness-config-structure-skill/` | `invokeFitnessConfigStructure` | **执行前配置结构补丁** | `autofillPipeline.js` |
+
+> 执行期自动补齐：`RunOrchestrator.launch`（`autofill!==false`）→ `configCompletenessGate` → `AutofillPipeline`（N1→N2→N3→可选 N4）。详见 [计划-执行期配置AI自动补齐.md](./计划-执行期配置AI自动补齐.md)。
 
 ### 2.2 按业务链路分组
 

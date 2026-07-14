@@ -40,22 +40,55 @@ class FitnessExecutionService extends require('egg').Service {
     const page = Number(query.page) || 1;
     const pageSize = Number(query.pageSize) || 20;
     const offset = (page - 1) * pageSize;
+    const projectCode = query.project_code == null ? '' : String(query.project_code).trim();
+    if (!projectCode) {
+      const err = new Error('listEnvs 需要 project_code，禁止返回跨项目环境列表');
+      err.status = 400;
+      err.code = 'PROJECT_CODE_REQUIRED';
+      throw err;
+    }
+    const where = { project_code: projectCode };
     const { count, rows } = await this.ctx.model.FtExecutionEnv.findAndCountAll({
+      where,
       order: [[ 'id', 'ASC' ]],
       limit: pageSize,
       offset,
     });
-    return { list: rows, total: count, page, pageSize };
+    return { list: rows, total: count, page, pageSize, project_code: projectCode };
   }
 
   async createEnv(body) {
-    return this.ctx.model.FtExecutionEnv.create(body);
+    const projectCode = body.project_code == null ? '' : String(body.project_code).trim();
+    if (!projectCode) {
+      const err = new Error('创建执行环境必须指定 project_code');
+      err.status = 400;
+      err.code = 'PROJECT_CODE_REQUIRED';
+      throw err;
+    }
+    if (body.is_default) {
+      await this.ctx.model.FtExecutionEnv.update(
+        { is_default: false },
+        { where: { project_code: projectCode, is_default: true } },
+      );
+    }
+    return this.ctx.model.FtExecutionEnv.create({
+      ...body,
+      project_code: projectCode,
+    });
   }
 
   async updateEnv(id, body) {
     const row = await this.ctx.model.FtExecutionEnv.findByPk(id);
     if (!row) return null;
-    await row.update(body);
+    if (body.is_default) {
+      await this.ctx.model.FtExecutionEnv.update(
+        { is_default: false },
+        { where: { project_code: row.project_code, is_default: true } },
+      );
+    }
+    const patch = { ...body };
+    delete patch.project_code;
+    await row.update(patch);
     return row;
   }
 
@@ -289,12 +322,23 @@ class FitnessExecutionService extends require('egg').Service {
       ...(config?.config_json || {}),
       ...(config?.threshold_json || {}),
     };
+    const item = await this.orchestrator().loadItem(itemId);
+    const projectCode = item?.project_code;
     let env = null;
     if (config?.env_id) {
       env = await this.ctx.model.FtExecutionEnv.findByPk(config.env_id);
+      if (env && projectCode && env.project_code !== projectCode) {
+        env = null;
+      }
     }
-    if (!env) {
-      env = await this.ctx.model.FtExecutionEnv.findOne({ order: [[ 'id', 'ASC' ]] });
+    if (!env && projectCode) {
+      env = await this.ctx.model.FtExecutionEnv.findOne({
+        where: { project_code: projectCode, is_default: true },
+        order: [[ 'id', 'ASC' ]],
+      }) || await this.ctx.model.FtExecutionEnv.findOne({
+        where: { project_code: projectCode },
+        order: [[ 'id', 'ASC' ]],
+      });
     }
     const script = buildK6Script(cfg, env?.toJSON?.() || env || {});
     return {

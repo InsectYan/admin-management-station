@@ -37,6 +37,8 @@ description: >-
 | [Agent联调配置](../../../project-sub/testgen-sub/docs/设计-Agent联调配置.md) | `docs/设计-Agent联调配置.md` | 端口、Token、双向 API |
 | [开发节点追踪](../../../project-sub/testgen-sub/docs/待办-开发节点追踪.md) | `docs/待办-开发节点追踪.md` | 执行/前端/DB 勾选 |
 | [Agent任务清单](../../../project-sub/testgen-sub/docs/待办-Agent开发任务清单.md) | `docs/待办-Agent开发任务清单.md` | Phase 0~7 |
+| [执行期配置AI自动补齐计划](../../../project-sub/testgen-sub/docs/计划-执行期配置AI自动补齐.md) | `docs/计划-执行期配置AI自动补齐.md` | ENV-01 / Gate / 单职责 Agent 管线 |
+| [执行期补齐开发 Skill](./execution-config-autofill/SKILL.md) | `execution-config-autofill/SKILL.md` | 按该计划**分阶段双轮**开发、检测、CR |
 
 ### 外部 agent 仓（用例生成原始设计）
 

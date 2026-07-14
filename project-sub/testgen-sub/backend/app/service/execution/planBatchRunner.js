@@ -82,7 +82,15 @@ class PlanBatchRunner {
     }
 
     const orchestrator = new RunOrchestrator(this.ctx);
-    const env = await orchestrator.resolveEnv(body.env_id);
+    const firstItem = await orchestrator.loadItem(planItems[0].item_id);
+    const projectCode = firstItem?.project_code;
+    if (!projectCode) {
+      const err = new Error('计划用例缺少 project_code，无法解析执行环境');
+      err.status = 400;
+      err.code = 'PROJECT_CODE_REQUIRED';
+      throw err;
+    }
+    const env = await orchestrator.resolveEnv(body.env_id, projectCode);
     if (!env) {
       const err = new Error('未配置执行环境');
       err.status = 400;
@@ -133,6 +141,20 @@ class PlanBatchRunner {
               continue;
             }
             throw new Error(`${planItem.item_id} 不可执行`);
+          }
+
+          if (item.project_code && env.project_code && item.project_code !== env.project_code) {
+            const reason = `用例项目「${item.project_code}」与执行环境项目「${env.project_code}」不匹配`;
+            if (skipFlag) {
+              batchSummary.skipped.push({ item_id: planItem.item_id, reason });
+              const [ rec ] = await bgCtx.model.TestPlanItemResult.findOrCreate({
+                where: { plan_id: planId, plan_item_id: planItem.id },
+                defaults: { result_status: 'skipped' },
+              });
+              await rec.update({ result_status: 'skipped', notes: reason });
+              continue;
+            }
+            throw new Error(`${planItem.item_id}: ${reason}`);
           }
 
           const run = await bgOrchestrator.launch(planItem.item_id, {

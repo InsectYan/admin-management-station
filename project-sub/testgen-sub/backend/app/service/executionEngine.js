@@ -57,6 +57,7 @@ class ExecutionEngineService extends Service {
   }
 
   async runAssertions(assertions, { statusCode, body, responseTimeMs }) {
+    const { evalJsonPathRule } = require('../lib/detAssertions');
     const details = [];
     let passed = true;
 
@@ -64,24 +65,35 @@ class ExecutionEngineService extends Service {
       const type = rule.type;
       let ok = true;
       let message = '';
+      let actual;
 
       if (type === 'status') {
         ok = statusCode === Number(rule.expect);
         message = ok ? '状态码匹配' : `期望 ${rule.expect}，实际 ${statusCode}`;
-      } else if (type === 'json_path') {
-        const actual = jsonPathGet(body, rule.path);
-        ok = String(actual) === String(rule.expect);
-        message = ok ? 'JSONPath 匹配' : `期望 ${rule.expect}，实际 ${actual}`;
+        actual = statusCode;
+      } else if (type === 'json_path' || type === 'json_field') {
+        const path = rule.path || rule.json_path || (rule.field ? `$.${rule.field}` : '');
+        const judged = evalJsonPathRule(body, { ...rule, path });
+        ok = judged.ok;
+        message = judged.message;
+        actual = judged.actual;
+      } else if (type === 'body_contains') {
+        const text = typeof body === 'string' ? body : JSON.stringify(body ?? '');
+        ok = text.includes(String(rule.expect ?? rule.substring ?? ''));
+        message = ok
+          ? '响应体包含期望片段'
+          : `响应体未包含: ${rule.expect ?? rule.substring}`;
       } else if (type === 'latency_ms') {
         ok = responseTimeMs <= Number(rule.max);
         message = ok ? '响应时间达标' : `期望 ≤${rule.max}ms，实际 ${responseTimeMs}ms`;
+        actual = responseTimeMs;
       } else {
         ok = true;
         message = `未知断言类型: ${type}`;
       }
 
       if (!ok) passed = false;
-      details.push({ type, ok, message, rule });
+      details.push({ type, ok, message, rule, actual });
     }
 
     if (!assertions?.length && statusCode >= 400) {

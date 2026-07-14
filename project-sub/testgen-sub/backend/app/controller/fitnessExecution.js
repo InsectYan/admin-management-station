@@ -12,7 +12,7 @@ class FitnessExecutionController extends Controller {
       this.ctx.body = {
         code: err.code || status,
         message: err.message,
-        data: null,
+        data: err.data != null ? err.data : null,
       };
       return true;
     }

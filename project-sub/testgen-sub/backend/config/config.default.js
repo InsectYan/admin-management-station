@@ -62,6 +62,12 @@ module.exports = appInfo => {
       || '/api/skills/fitness-observation-match-skill/invoke',
     sampleInvokePath: process.env.FITNESS_SAMPLE_INVOKE_PATH || '/api/skills/fitness-sample-skill/invoke',
     configInvokePath: process.env.FITNESS_CONFIG_INVOKE_PATH || '/api/skills/fitness-config-skill/invoke',
+    fixedResolveInvokePath: process.env.FITNESS_FIXED_RESOLVE_INVOKE_PATH
+      || '/api/skills/fitness-fixed-resolve-skill/invoke',
+    intentClassifyInvokePath: process.env.FITNESS_INTENT_CLASSIFY_INVOKE_PATH
+      || '/api/skills/fitness-intent-classify-skill/invoke',
+    configStructureInvokePath: process.env.FITNESS_CONFIG_STRUCTURE_INVOKE_PATH
+      || '/api/skills/fitness-config-structure-skill/invoke',
     exploreInvokePath: process.env.FITNESS_EXPLORE_INVOKE_PATH || '/api/skills/fitness-explore-skill/invoke',
     apiTemplateInvokePath: process.env.API_TEMPLATE_INVOKE_PATH || '/api/skills/api-template-skill/invoke',
     apiTemplateTimeoutMs: Number(process.env.API_TEMPLATE_TIMEOUT_MS || 300000),

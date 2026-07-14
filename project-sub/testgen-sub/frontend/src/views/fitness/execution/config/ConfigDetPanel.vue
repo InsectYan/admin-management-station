@@ -35,8 +35,15 @@
           />
         </el-select>
         <p class="field-hint">
-          仅执行模板中的 <code>preflight_steps</code>，成功后变量写入池供下方主请求 <code v-pre>{{key}}</code> 插值使用
+          执行 <code>preflight_steps</code>；若主请求 Path 含 <code v-pre>{{turn_id}}</code> 等变量且前置未提取，将<strong>自动执行模板主请求</strong>（如 submit）获取变量
         </p>
+      </el-form-item>
+
+      <el-form-item v-if="local.preflight_api_template_id" label="前置选项">
+        <el-checkbox v-model="local.preflight_include_main_request" :disabled="readonly" @change="sync">
+          执行模板主请求（submit 等）以获取 turn_id
+        </el-checkbox>
+        <p class="field-hint">poll 类用例（Path 为 /api/chat/turns/{{turn_id}}）必须开启；仅 bootstrap 无法得到 turn_id</p>
       </el-form-item>
 
       <template v-if="local.preflight_api_template_id && selectedPreflight">
@@ -62,6 +69,10 @@
             />
           </div>
         </el-form-item>
+
+        <el-alert v-if="pathPlaceholderWarning" type="warning" :closable="false" show-icon style="margin-bottom:12px">
+          {{ pathPlaceholderWarning }}
+        </el-alert>
 
         <el-alert v-if="exportFields.length" type="success" :closable="false" style="margin-bottom:12px">
           <template #title>可抛出字段 · 主请求入参用法</template>
@@ -103,17 +114,6 @@
         <el-input-number v-model="local.http_status_expected" :disabled="readonly" @change="sync" />
         <p v-if="submitStatusHint" class="field-hint">{{ submitStatusHint }}</p>
       </el-form-item>
-      <el-form-item label="请求头">
-        <el-input
-          v-model="headersText"
-          type="textarea"
-          :rows="2"
-          :disabled="readonly"
-          placeholder='{"Authorization":"Bearer {{token}}"}'
-          @blur="parseHeaders"
-        />
-        <p class="field-hint">JSON 对象；合并环境全局请求头；支持 <code v-pre>{{key}}</code> 插值</p>
-      </el-form-item>
       <HttpBodyFormItems
         :method="local.http_method"
         :endpoint-path="local.endpoint_path"
@@ -121,6 +121,58 @@
         :readonly="readonly"
         @update:model-value="onBodyConfigUpdate"
       />
+
+      <el-divider content-position="left">响应断言</el-divider>
+      <el-form-item label="Body 字段断言">
+        <el-table :data="local.assertions" size="small" border style="width:100%;max-width:720px">
+          <el-table-column label="JSONPath" min-width="160">
+            <template #default="{ row }">
+              <el-input
+                v-model="row.path"
+                size="small"
+                :disabled="readonly || row.type === 'status'"
+                placeholder="$.code"
+                @change="sync"
+              />
+            </template>
+          </el-table-column>
+          <el-table-column label="期望值" min-width="180">
+            <template #default="{ row }">
+              <el-input
+                v-if="!row.exists"
+                v-model="row.expect"
+                size="small"
+                :disabled="readonly"
+                placeholder="TURN_SESSION_INFLIGHT"
+                @change="sync"
+              />
+              <el-tag v-else size="small" type="info">仅要求字段存在</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="70">
+            <template #default="{ $index, row }">
+              <el-button
+                v-if="row.type !== 'status'"
+                link
+                type="danger"
+                :disabled="readonly"
+                @click="removeAssertion($index)"
+              >删</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div v-if="!readonly" style="margin-top:8px">
+          <el-button size="small" @click="addAssertion">添加字段断言</el-button>
+          <el-button size="small" @click="addExistsAssertion">添加「字段存在」</el-button>
+          <el-button size="small" type="primary" link @click="applyDerivedAssertions">
+            从期望观测 / 断言点解析
+          </el-button>
+        </div>
+        <p class="field-hint">
+          例：<code>$.code</code> = <code>TURN_SESSION_INFLIGHT</code>。
+          也可写在用例「期望观测」里如 <code>429 + code=TURN_SESSION_INFLIGHT</code>，执行时自动解析。
+        </p>
+      </el-form-item>
     </template>
 
     <el-divider content-position="left">用例元数据</el-divider>
@@ -152,16 +204,17 @@ const local = reactive({
   execution_mode: 'http',
   preflight_api_template_id: null,
   preflight_input_params: {},
+  preflight_include_main_request: true,
   http_method: 'GET',
   endpoint_path: '',
   http_status_expected: 200,
-  headers: {},
+  assertions: [],
 });
 const bodyConfig = ref({});
-const headersText = ref('{}');
 const apiTemplates = ref([]);
 const selectedPreflight = ref(null);
 let applying = false;
+let bodySyncing = false;
 
 const executionMode = computed(() =>
   (props.item?.automation_command ? 'cli' : local.execution_mode) || 'http',
@@ -180,6 +233,29 @@ const submitStatusHint = computed(() => {
 function varPlaceholder(key) {
   return `{{${key}}}`;
 }
+
+function collectPathPlaceholders(text) {
+  const keys = [];
+  const re = /\{\{(\w+)\}\}/g;
+  let m;
+  while ((m = re.exec(String(text || '')))) keys.push(m[1]);
+  return keys;
+}
+
+const pathPlaceholderWarning = computed(() => {
+  if (!local.preflight_api_template_id) return '';
+  const needed = collectPathPlaceholders(local.endpoint_path);
+  if (!needed.length) return '';
+  const available = new Set(exportFields.value.map(f => f.key));
+  available.add('session_id');
+  available.add('uuid');
+  const missing = needed.filter(k => !available.has(k));
+  if (!missing.length) return '';
+  const mainHint = /\/turns\/submit/i.test(selectedPreflight.value?.url_path || '')
+    ? '请勾选「执行模板主请求」或在 preflight 增加 submit 步骤。'
+    : '请在前置链路 extract 或 export_schema 中配置对应字段。';
+  return `主请求 Path 需要 ${missing.map(k => varPlaceholder(k)).join('、')}，当前前置模板可能无法提供。${mainHint}`;
+});
 
 const preflightInputFields = computed(() =>
   selectedPreflight.value?.input_params_schema || [],
@@ -210,13 +286,40 @@ function snapshotConfig(src = {}) {
     execution_mode: src.execution_mode,
     preflight_api_template_id: src.preflight_api_template_id,
     preflight_input_params: src.preflight_input_params,
+    preflight_include_main_request: src.preflight_include_main_request,
     http_method: src.http_method || src.method || 'GET',
     endpoint_path: src.endpoint_path ?? '',
     http_status_expected: src.http_status_expected ?? 200,
     body: src.body,
     headers: src.headers,
     test_input_example: src.test_input_example,
+    assertions: src.assertions,
   });
+}
+
+function normalizeAssertionRows(list = []) {
+  return (list || [])
+    .filter(a => a && a.type !== 'status')
+    .map(a => ({
+      type: a.type || 'json_path',
+      path: a.path || a.json_path || (a.field ? `$.${a.field}` : '$.code'),
+      expect: a.expect != null ? String(a.expect) : '',
+      exists: Boolean(a.exists),
+    }));
+}
+
+function parseAssertHintsFromText(...texts) {
+  const rules = [];
+  const flat = texts.flat().filter(Boolean).map(String).join('\n');
+  const codeRe = /\bcode\s*[=:：]\s*['"]?([A-Z][A-Z0-9_]+)['"]?/gi;
+  let m;
+  while ((m = codeRe.exec(flat))) {
+    rules.push({ type: 'json_path', path: '$.code', expect: m[1], exists: false });
+  }
+  if (/\bretry_after_sec\b/i.test(flat) && !rules.some(r => r.path === '$.retry_after_sec')) {
+    rules.push({ type: 'json_path', path: '$.retry_after_sec', expect: '', exists: true });
+  }
+  return rules;
 }
 
 async function loadApiTemplates() {
@@ -242,7 +345,7 @@ async function loadPreflightDetail(id) {
 }
 
 function applyModel(v) {
-  if (applying) return;
+  if (applying || bodySyncing) return;
   const src = v || {};
   applying = true;
   try {
@@ -251,11 +354,11 @@ function applyModel(v) {
       ?? (src.use_api_template ? src.api_template_id : null)
       ?? null;
     local.preflight_input_params = { ...(src.preflight_input_params || {}) };
+    local.preflight_include_main_request = src.preflight_include_main_request !== false;
     local.http_method = src.http_method || src.method || props.item?.http_method || 'GET';
     local.endpoint_path = src.endpoint_path ?? props.item?.endpoint_path ?? '';
     local.http_status_expected = src.http_status_expected ?? props.item?.http_status_expected ?? 200;
-    local.headers = { ...(src.headers || {}) };
-    headersText.value = JSON.stringify(local.headers, null, 2);
+    local.assertions = normalizeAssertionRows(src.assertions);
     bodyConfig.value = { ...src };
     if (local.preflight_api_template_id) {
       loadPreflightDetail(local.preflight_api_template_id);
@@ -268,11 +371,18 @@ function applyModel(v) {
 }
 
 function buildPayload() {
+  const fieldAssertions = (local.assertions || [])
+    .filter(a => a.path)
+    .map(a => {
+      if (a.exists) return { type: 'json_path', path: a.path, exists: true };
+      return { type: 'json_path', path: a.path, expect: a.expect };
+    });
   return {
     ...bodyConfig.value,
     execution_mode: executionMode.value,
     preflight_api_template_id: local.preflight_api_template_id || null,
     preflight_input_params: { ...local.preflight_input_params },
+    preflight_include_main_request: local.preflight_include_main_request,
     use_api_template: false,
     api_template_id: null,
     inject_bindings: {},
@@ -280,7 +390,7 @@ function buildPayload() {
     endpoint_path: local.endpoint_path,
     http_status_expected: local.http_status_expected,
     method: local.http_method,
-    headers: local.headers,
+    assertions: fieldAssertions,
   };
 }
 
@@ -291,23 +401,53 @@ function sync() {
   emit('update:modelValue', next);
 }
 
-function parseHeaders() {
-  try {
-    local.headers = JSON.parse(headersText.value || '{}');
-    sync();
-  } catch {
-    // 保留编辑态，等用户修正
-  }
+function onBodyConfigUpdate(v) {
+  bodySyncing = true;
+  bodyConfig.value = v;
+  sync();
+  queueMicrotask(() => {
+    bodySyncing = false;
+  });
 }
 
-function onBodyConfigUpdate(v) {
-  bodyConfig.value = v;
+function addAssertion() {
+  local.assertions.push({ type: 'json_path', path: '$.code', expect: '', exists: false });
+  sync();
+}
+
+function addExistsAssertion() {
+  local.assertions.push({ type: 'json_path', path: '$.retry_after_sec', expect: '', exists: true });
+  sync();
+}
+
+function removeAssertion(i) {
+  local.assertions.splice(i, 1);
+  sync();
+}
+
+function applyDerivedAssertions() {
+  const derived = parseAssertHintsFromText(
+    props.item?.expected_observation,
+    props.item?.assertion_points,
+  );
+  if (!derived.length) {
+    local.assertions.push({ type: 'json_path', path: '$.code', expect: '', exists: false });
+  } else {
+    for (const r of derived) {
+      if (!local.assertions.some(a => a.path === r.path && String(a.expect) === String(r.expect))) {
+        local.assertions.push(r);
+      }
+    }
+  }
   sync();
 }
 
 async function onPreflightTemplateChange(id) {
   local.preflight_input_params = {};
   await loadPreflightDetail(id);
+  if (collectPathPlaceholders(local.endpoint_path).includes('turn_id')) {
+    local.preflight_include_main_request = true;
+  }
   sync();
 }
 

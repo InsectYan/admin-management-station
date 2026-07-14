@@ -69,7 +69,7 @@ class FitnessPlanService extends require('egg').Service {
     let schemeByItem = {};
     if (itemIds.length) {
       const [ rows ] = await this.app.model.query(`
-        SELECT t.item_id, t.item_name,
+        SELECT t.item_id, t.item_name, t.project_code,
           COALESCE(t.scheme_primary_id, cms.scheme_primary_id) AS scheme_primary_id
         FROM test_item_detail t
         LEFT JOIN test_category_minor_scheme cms ON cms.category_minor_id = t.category_minor_id
@@ -78,6 +78,7 @@ class FitnessPlanService extends require('egg').Service {
       schemeByItem = Object.fromEntries(rows.map(r => [ r.item_id, {
         scheme_primary_id: r.scheme_primary_id,
         item_name: stripIdPrefixFromLabel(r.item_id, r.item_name),
+        project_code: r.project_code,
       } ]));
     }
 
@@ -85,6 +86,7 @@ class FitnessPlanService extends require('egg').Service {
       ...row.toJSON(),
       scheme_primary_id: schemeByItem[row.item_id]?.scheme_primary_id || null,
       item_name: schemeByItem[row.item_id]?.item_name || null,
+      project_code: schemeByItem[row.item_id]?.project_code || null,
     }));
 
     return {

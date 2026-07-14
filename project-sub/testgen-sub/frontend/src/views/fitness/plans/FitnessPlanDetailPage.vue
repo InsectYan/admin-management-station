@@ -510,14 +510,21 @@ function stopPolling() {
 onMounted(async () => {
   loading.value = true;
   try {
-    const [ envData, enumData ] = await Promise.all([
-      fetchEnvironments({ pageSize: 50 }),
-      fetchEnums('threshold_param_enum'),
-    ]);
-    envs.value = envData.list || [];
+    const enumData = await fetchEnums('threshold_param_enum');
     thresholdParams.value = enumData.list || [];
-    envId.value = envs.value.find(e => e.is_default)?.id ?? envs.value[0]?.id ?? null;
     await reload();
+    const projectCode = plan.value?.items?.find(i => i.project_code)?.project_code
+      || plan.value?.project_code
+      || planMeta.value?.project_code;
+    if (projectCode) {
+      const envData = await fetchEnvironments({ pageSize: 50, project_code: projectCode });
+      envs.value = envData.list || [];
+      envId.value = envs.value.find(e => e.is_default)?.id ?? envs.value[0]?.id ?? null;
+    } else {
+      envs.value = [];
+      envId.value = null;
+      ElMessage.warning('无法确定计划所属项目，请确认用例含 project_code 后再选执行环境');
+    }
     if (plan.value?.status === 'running') startPolling();
   } finally {
     loading.value = false;

@@ -8,7 +8,8 @@ const { mergeRequestHeaders } = require('../../../lib/globalRequestContext');
 const { applyVarsToRow } = require('../runners/varPool');
 const { runCli } = require('../runners/cliRunner');
 const { runHttp } = require('../runners/httpRunner');
-const { runDetPreflight } = require('../runners/detPreflightRunner');
+const { runDetPreflight, collectPlaceholders, missingPlaceholders } = require('../runners/detPreflightRunner');
+const { buildDetAssertions } = require('../../../lib/detAssertions');
 
 class Ts01DetEngine extends BaseTsEngine {
   constructor() {
@@ -72,7 +73,20 @@ class Ts01DetEngine extends BaseTsEngine {
     const preflightResults = [];
 
     if (preflightTemplateId) {
-      const pf = await runDetPreflight(ctx, preflightTemplateId, configJson.preflight_input_params || {});
+      const requiredPlaceholders = collectPlaceholders(
+        path,
+        configJson.test_input_example,
+        JSON.stringify(configJson.body || {}),
+      );
+      const pf = await runDetPreflight(
+        ctx,
+        preflightTemplateId,
+        configJson.preflight_input_params || {},
+        {
+          include_main_request: configJson.preflight_include_main_request,
+          required_placeholders: requiredPlaceholders,
+        },
+      );
       preflightResults.push(...(pf.steps || []));
       if (!pf.ok) {
         return [{
@@ -86,6 +100,18 @@ class Ts01DetEngine extends BaseTsEngine {
         }];
       }
       vars = { ...vars, ...pf.vars };
+    }
+
+    const missing = missingPlaceholders(vars, collectPlaceholders(path));
+    if (missing.length) {
+      const err = new Error(
+        `主请求 Path 含未解析变量：${missing.map(k => `{{${k}}}`).join(', ')}。`
+        + '请在前置模板中执行 submit 获取 turn_id，或勾选「执行模板主请求」，或在接口模板 export_schema / preflight extract 中配置提取规则。'
+        + ' 注意：项目全局变量 source=extract 运行时不会自动注入，请使用 manual / 环境 fixed_params / 前置 extract。',
+      );
+      err.status = 400;
+      err.code = 'UNRESOLVED_PATH_PLACEHOLDER';
+      throw err;
     }
 
     const interpolated = applyVarsToRow({
@@ -109,11 +135,10 @@ class Ts01DetEngine extends BaseTsEngine {
       body: interpolated.body,
     });
 
-    const assertions = configJson.assertions || [];
-    const expectStatus = statusExpected ?? 200;
-    if (!assertions.length) {
-      assertions.push({ type: 'status', expect: expectStatus });
-    }
+    const assertions = buildDetAssertions(
+      { ...configJson, http_status_expected: statusExpected ?? configJson.http_status_expected ?? 200 },
+      item,
+    );
     const { passed, details } = await ctx.ctx.service.executionEngine.runAssertions(assertions, {
       statusCode: httpResult.statusCode,
       body: httpResult.body,
@@ -131,6 +156,7 @@ class Ts01DetEngine extends BaseTsEngine {
         preflight: preflightResults.length ? preflightResults : undefined,
         vars: Object.keys(vars).length ? vars : undefined,
         preflight_api_template_id: preflightTemplateId || undefined,
+        assertions,
       },
     }];
   }
@@ -189,10 +215,10 @@ class Ts01DetEngine extends BaseTsEngine {
         body,
       });
 
-      const assertions = configJson.assertions || [];
-      if (!assertions.length) {
-        assertions.push({ type: 'status', expect: expectStatus });
-      }
+      const assertions = buildDetAssertions(
+        { ...configJson, http_status_expected: expectStatus },
+        item,
+      );
       const { passed, details } = await eggCtx.service.executionEngine.runAssertions(assertions, {
         statusCode: httpResult.statusCode,
         body: httpResult.body,
@@ -205,7 +231,12 @@ class Ts01DetEngine extends BaseTsEngine {
         output_summary: `HTTP ${httpResult.statusCode} (${httpResult.responseTimeMs}ms)`,
         assertion_detail: details,
         sub_verdict: passed ? 'pass' : 'fail',
-        artifacts: { http: httpResult, api_template_id: apiTemplateId, inject_index: i },
+        artifacts: {
+          http: httpResult,
+          api_template_id: apiTemplateId,
+          inject_index: i,
+          assertions,
+        },
       });
     }
 

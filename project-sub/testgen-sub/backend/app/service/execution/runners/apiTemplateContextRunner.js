@@ -55,6 +55,7 @@ async function executeApiTemplateContext(ctx, template, options = {}) {
 
   /** @type {Record<string, unknown>} */
   const vars = {
+    ...(ctx.globalRequestContext?.vars || {}),
     ...resolveInputParams(tpl.input_params_schema, inputParams),
   };
 

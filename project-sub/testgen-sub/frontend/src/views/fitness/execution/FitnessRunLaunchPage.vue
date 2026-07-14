@@ -212,12 +212,22 @@ const dryRunSubRows = computed(() => dryRunResult.value?.sub_results || []);
 async function loadLaunchData() {
   loading.value = true;
   try {
-    const [ itemData, envData ] = await Promise.all([
-      fetchTestItem(itemId.value),
-      fetchEnvironments({ pageSize: 50 }),
-    ]);
+    const itemData = await fetchTestItem(itemId.value);
     item.value = itemData;
+    const projectCode = itemData.project_code;
+    if (!projectCode) {
+      engineMsg.value = '用例缺少 project_code，无法加载执行环境';
+      envs.value = [];
+      envId.value = null;
+      return;
+    }
+    const [ envData ] = await Promise.all([
+      fetchEnvironments({ pageSize: 50, project_code: projectCode }),
+    ]);
     envs.value = envData.list || [];
+    if (!envs.value.length) {
+      engineMsg.value = `项目「${projectCode}」暂无执行环境，请先在本项目下创建`;
+    }
     const def = envs.value.find(e => e.is_default) || envs.value[0];
     envId.value = def?.id ?? null;
 
@@ -267,10 +277,17 @@ async function launch() {
       env_id: envId.value,
       scheme_id: schemeId.value,
       validation_id: validationId.value,
+      autofill: true,
     });
     router.push(buildRunConsoleRoute(run.id, route.query));
   } catch (e) {
-    engineMsg.value = e.response?.data?.message || e.message || '执行失败';
+    const payload = e.response?.data;
+    if (payload?.code === 'CONFIG_AUTOFILL_BLOCKED' && payload?.data) {
+      const miss = (payload.data.missing_fixed || []).map(m => m.field).join(', ');
+      engineMsg.value = `${payload.message}${miss ? `；缺失: ${miss}` : ''}`;
+    } else {
+      engineMsg.value = payload?.message || e.message || '执行失败';
+    }
   } finally {
     launching.value = false;
   }

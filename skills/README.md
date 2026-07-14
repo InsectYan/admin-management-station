@@ -19,6 +19,7 @@ skills/
 | 新建/维护主应用基座 | `@skills/main-app-developer/SKILL.md` |
 | 新建子应用或接入 Qiankun | `@skills/sub-app-developer/SKILL.md` |
 | 在已有子应用上按设计文档开发 | `@skills/project-developer/{app_key}/SKILL.md` |
+| 执行期配置 AI 自动补齐（分阶段双轮） | `@skills/project-developer/testgen-sub/execution-config-autofill/SKILL.md` 或仓库根 `@开发SKILL.MD` |
 
 ## 与 docs-project 的关系
 
