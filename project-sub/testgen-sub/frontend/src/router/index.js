@@ -54,6 +54,12 @@ export function createAppRouter(basename) {
                 meta: { title: '全局变量', group: 'project' },
               },
               {
+                path: 'headers',
+                name: 'project-headers',
+                component: () => import('../views/projects/ProjectHeadersPage.vue'),
+                meta: { title: '请求头', group: 'project' },
+              },
+              {
                 path: 'monitoring',
                 name: 'project-monitoring',
                 component: () => import('../views/projects/ProjectMonitoringPage.vue'),

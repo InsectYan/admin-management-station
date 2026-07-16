@@ -122,6 +122,11 @@
       <el-table-column type="selection" width="48" reserve-selection />
       <el-table-column prop="item_id" label="用例 ID" width="160" show-overflow-tooltip />
       <el-table-column prop="item_name" label="用例名称" min-width="220" show-overflow-tooltip />
+      <el-table-column label="期望" min-width="180" show-overflow-tooltip>
+        <template #default="{ row }">
+          {{ row.expected_observation || '—' }}
+        </template>
+      </el-table-column>
       <el-table-column prop="scheme_primary_id" label="TS" width="120" />
       <el-table-column label="结果" width="100">
         <template #default="{ row }">
@@ -244,6 +249,7 @@ import FitnessStatusTag from '@/components/fitness/FitnessStatusTag.vue';
 import { parsePlanMeta, THRESHOLD_DEFAULTS } from '@/constants/planReleaseCriteria.js';
 import { STATUS_FILTER_OPTIONS } from '@/utils/fitnessStatusTags.js';
 import {
+  downloadPlanMarkdown,
   exportPlanReport,
   fetchEnums,
   fetchEnvironments,
@@ -448,7 +454,8 @@ async function handleExportReport() {
   try {
     const data = await exportPlanReport(id);
     reportPreview.value = data.content || '';
-    ElMessage.success('报告已生成');
+    downloadPlanMarkdown(plan.value?.name || data.plan?.name || `plan-${id}`, data.content || '');
+    ElMessage.success('报告已生成并下载');
   } catch (e) {
     ElMessage.error(e.response?.data?.message || e.message || '导出失败');
   } finally {

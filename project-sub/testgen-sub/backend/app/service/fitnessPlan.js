@@ -70,6 +70,7 @@ class FitnessPlanService extends require('egg').Service {
     if (itemIds.length) {
       const [ rows ] = await this.app.model.query(`
         SELECT t.item_id, t.item_name, t.project_code,
+          t.expected_observation, t.test_input_example,
           COALESCE(t.scheme_primary_id, cms.scheme_primary_id) AS scheme_primary_id
         FROM test_item_detail t
         LEFT JOIN test_category_minor_scheme cms ON cms.category_minor_id = t.category_minor_id
@@ -79,6 +80,8 @@ class FitnessPlanService extends require('egg').Service {
         scheme_primary_id: r.scheme_primary_id,
         item_name: stripIdPrefixFromLabel(r.item_id, r.item_name),
         project_code: r.project_code,
+        expected_observation: r.expected_observation || null,
+        test_input_example: r.test_input_example || null,
       } ]));
     }
 
@@ -87,6 +90,8 @@ class FitnessPlanService extends require('egg').Service {
       scheme_primary_id: schemeByItem[row.item_id]?.scheme_primary_id || null,
       item_name: schemeByItem[row.item_id]?.item_name || null,
       project_code: schemeByItem[row.item_id]?.project_code || null,
+      expected_observation: schemeByItem[row.item_id]?.expected_observation || null,
+      test_input_example: schemeByItem[row.item_id]?.test_input_example || null,
     }));
 
     return {
@@ -193,17 +198,17 @@ class FitnessPlanService extends require('egg').Service {
     return true;
   }
 
-  async exportReport(planId) {
+  async exportReport(planId, options = {}) {
     const plan = await this.findById(planId);
     if (!plan) return null;
     const stats = await this.buildReportStats(plan);
-    const content = this.buildReportMarkdown(plan, stats);
+    const content = this.buildReportMarkdown(plan, stats, options);
     await this.ctx.model.TestPlanReport.create({
       plan_id: planId,
       report_format: 'markdown',
       content,
     });
-    return { content, plan, stats };
+    return { content, plan, stats, filter: options };
   }
 
   async exportPlanDocument(planId, format = 'markdown') {
@@ -220,6 +225,105 @@ class FitnessPlanService extends require('egg').Service {
     }
     const content = this.buildReportMarkdown(plan, stats);
     return { format: 'markdown', content, plan, stats };
+  }
+
+  formatResultStatus(status) {
+    const map = {
+      passed: '通过',
+      failed: '失败',
+      skipped: '跳过',
+      pending: '待执行',
+    };
+    return map[status] || status || '待执行';
+  }
+
+  formatPlanStatus(status) {
+    const map = {
+      draft: '草稿',
+      ready: '就绪',
+      running: '执行中',
+      completed: '已完成',
+      archived: '已归档',
+      cancelled: '已取消',
+    };
+    return map[status] || status || '-';
+  }
+
+  /** 将绝对 URL 收成 path，拼成 `POST /api/xxx` */
+  formatHttpPathLabel(method, pathOrUrl) {
+    if (!pathOrUrl) return '';
+    let path = String(pathOrUrl).trim();
+    if (!path) return '';
+    try {
+      if (/^https?:\/\//i.test(path)) {
+        const u = new URL(path);
+        path = u.pathname + (u.search || '');
+      }
+    } catch { /* keep raw */ }
+    // 已是 "POST /x" 形式
+    const already = path.match(/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+(\S+)/i);
+    if (already) return `${already[1].toUpperCase()} ${already[2]}`;
+    const m = String(method || 'GET').trim().toUpperCase() || 'GET';
+    if (!path.startsWith('/')) path = `/${path}`;
+    return `${m} ${path}`;
+  }
+
+  /** 从执行配置 / 用例元数据提取接口 path；非接口用例返回空串 */
+  extractApiPathLabel(configJson, itemMeta = {}) {
+    const cfg = configJson && typeof configJson === 'object' ? configJson : {};
+    const pick = (obj) => {
+      if (!obj || typeof obj !== 'object') return null;
+      const path = obj.endpoint_path || obj.path || obj.url_path || obj.submit_path || null;
+      if (!path) return null;
+      const method = obj.http_method || obj.method || null;
+      return { path, method };
+    };
+
+    let hit = pick(cfg);
+    if (!hit && Array.isArray(cfg.matrix)) {
+      for (const row of cfg.matrix) {
+        hit = pick(row);
+        if (hit) break;
+      }
+    }
+    if (!hit && Array.isArray(cfg.pairs)) {
+      for (const row of cfg.pairs) {
+        hit = pick(row);
+        if (hit) break;
+      }
+    }
+    if (!hit && Array.isArray(cfg.steps)) {
+      for (const row of cfg.steps) {
+        hit = pick(row);
+        if (hit) break;
+      }
+    }
+    if (!hit && Array.isArray(cfg.cases)) {
+      for (const row of cfg.cases) {
+        hit = pick(row);
+        if (hit) break;
+      }
+    }
+    if (!hit) {
+      hit = pick(itemMeta);
+    }
+    if (!hit) return '';
+    // CLI-only 且无真实 path 时不展示
+    if (/^(cli|command)$/i.test(String(cfg.runner || '')) && !String(hit.path).startsWith('/') && !/^https?:/i.test(hit.path)) {
+      return '';
+    }
+    return this.formatHttpPathLabel(hit.method || itemMeta.http_method, hit.path);
+  }
+
+  /** 从执行摘要 `POST https://.../x` 回退解析 */
+  extractApiPathFromInputSummary(summary) {
+    if (!summary) return '';
+    const s = String(summary).trim();
+    const m = s.match(/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+(\S+)/i);
+    if (!m) return '';
+    const target = m[2];
+    if (!/^https?:\/\//i.test(target) && !target.startsWith('/')) return '';
+    return this.formatHttpPathLabel(m[1], target);
   }
 
   resolveThresholdActual(paramId, stats) {
@@ -243,7 +347,9 @@ class FitnessPlanService extends require('egg').Service {
     let itemMeta = {};
     if (itemIds.length) {
       const [ rows ] = await this.app.model.query(`
-        SELECT t.item_id, t.dimension_id, d.name AS dimension_name,
+        SELECT t.item_id, t.item_name, t.dimension_id, d.name AS dimension_name,
+          t.expected_observation, t.test_input_example,
+          t.endpoint_path, t.http_method,
           COALESCE(t.scheme_primary_id, cms.scheme_primary_id) AS scheme_id,
           t.validation_primary_id AS validation_id,
           t.priority_id
@@ -252,7 +358,113 @@ class FitnessPlanService extends require('egg').Service {
         LEFT JOIN test_category_minor_scheme cms ON cms.category_minor_id = t.category_minor_id
         WHERE t.item_id IN (:itemIds)
       `, { replacements: { itemIds } });
-      itemMeta = Object.fromEntries(rows.map(r => [ r.item_id, r ]));
+      itemMeta = Object.fromEntries(rows.map(r => [ r.item_id, {
+        ...r,
+        item_name: stripIdPrefixFromLabel(r.item_id, r.item_name),
+      } ]));
+    }
+
+    const configByItemId = {};
+    if (itemIds.length) {
+      try {
+        const [ cfgRows ] = await this.app.model.query(`
+          SELECT DISTINCT ON (item_id) item_id, config_json
+          FROM ft_run_config
+          WHERE item_id IN (:itemIds)
+          ORDER BY item_id, id DESC
+        `, { replacements: { itemIds } });
+        for (const row of cfgRows) {
+          configByItemId[row.item_id] = row.config_json || {};
+        }
+      } catch { /* ignore */ }
+    }
+
+    const thresholdNameById = {};
+    const schemeNameById = {};
+    const validationNameById = {};
+    try {
+      const [ enumRows ] = await this.app.model.query(
+        'SELECT param_id, name, unit FROM threshold_param_enum',
+      );
+      for (const row of enumRows) {
+        thresholdNameById[row.param_id] = {
+          name: row.name || row.param_id,
+          unit: row.unit || null,
+        };
+      }
+    } catch {
+      // enum 表异常时仍返回 param_id
+    }
+    try {
+      const [ schemeRows ] = await this.app.model.query(
+        'SELECT scheme_id, name FROM test_scheme_enum',
+      );
+      for (const row of schemeRows) {
+        schemeNameById[row.scheme_id] = row.name || row.scheme_id;
+      }
+    } catch { /* ignore */ }
+    try {
+      const [ vsRows ] = await this.app.model.query(
+        'SELECT validation_id, name FROM test_validation_enum',
+      );
+      for (const row of vsRows) {
+        validationNameById[row.validation_id] = row.name || row.validation_id;
+      }
+    } catch { /* ignore */ }
+
+    const runIds = (plan.results || [])
+      .map(r => r.ft_run_id)
+      .filter(Boolean);
+    const runFailById = {};
+    const runInputById = {};
+    if (runIds.length) {
+      const runs = await this.ctx.model.FtRun.findAll({
+        where: { id: runIds },
+        attributes: [ 'id', 'progress', 'verdict', 'status' ],
+      });
+      for (const run of runs) {
+        const progress = run.progress || {};
+        if (progress.error) runFailById[run.id] = String(progress.error);
+      }
+      const subRows = await this.ctx.model.FtRunResult.findAll({
+        where: { ft_run_id: runIds },
+        order: [[ 'ft_run_id', 'ASC' ], [ 'sub_index', 'ASC' ]],
+      });
+      const outputFallbackById = {};
+      for (const sub of subRows) {
+        if (runInputById[sub.ft_run_id] == null && sub.input_summary) {
+          runInputById[sub.ft_run_id] = String(sub.input_summary);
+        }
+        if (outputFallbackById[sub.ft_run_id] == null && sub.output_summary) {
+          outputFallbackById[sub.ft_run_id] = String(sub.output_summary);
+        } else if (outputFallbackById[sub.ft_run_id] == null && sub.assertion_detail != null) {
+          try {
+            outputFallbackById[sub.ft_run_id] = typeof sub.assertion_detail === 'string'
+              ? sub.assertion_detail
+              : JSON.stringify(sub.assertion_detail);
+          } catch {
+            outputFallbackById[sub.ft_run_id] = String(sub.assertion_detail);
+          }
+        }
+        if (!runFailById[sub.ft_run_id] && sub.sub_verdict && ![ 'pass', 'success', 'ok' ].includes(String(sub.sub_verdict).toLowerCase())) {
+          if (sub.output_summary) {
+            runFailById[sub.ft_run_id] = String(sub.output_summary);
+          } else if (sub.assertion_detail != null) {
+            try {
+              runFailById[sub.ft_run_id] = typeof sub.assertion_detail === 'string'
+                ? sub.assertion_detail
+                : JSON.stringify(sub.assertion_detail);
+            } catch {
+              runFailById[sub.ft_run_id] = String(sub.assertion_detail);
+            }
+          }
+        }
+      }
+      for (const runId of runIds) {
+        if (!runFailById[runId] && outputFallbackById[runId]) {
+          runFailById[runId] = outputFallbackById[runId];
+        }
+      }
     }
 
     const byDimension = {};
@@ -261,6 +473,7 @@ class FitnessPlanService extends require('egg').Service {
     let passed = 0;
     let failed = 0;
     let pending = 0;
+    const executionRows = [];
 
     for (const item of plan.items || []) {
       const meta = itemMeta[item.item_id] || {};
@@ -275,20 +488,61 @@ class FitnessPlanService extends require('egg').Service {
       byDimension[dim].total += 1;
       byDimension[dim][status === 'passed' ? 'passed' : status === 'failed' ? 'failed' : 'pending'] += 1;
 
-      const scheme = meta.scheme_id || '未知';
-      if (!byScheme[scheme]) byScheme[scheme] = { total: 0, passed: 0 };
+      const schemeId = meta.scheme_id || '未知';
+      const scheme = schemeNameById[schemeId] || schemeId;
+      if (!byScheme[scheme]) byScheme[scheme] = { total: 0, passed: 0, scheme_id: schemeId };
       byScheme[scheme].total += 1;
       if (status === 'passed') byScheme[scheme].passed += 1;
 
-      const vs = meta.validation_id || '未知';
-      if (!byValidation[vs]) byValidation[vs] = { total: 0, passed: 0 };
+      const vsId = meta.validation_id || '未知';
+      const vs = validationNameById[vsId] || vsId;
+      if (!byValidation[vs]) byValidation[vs] = { total: 0, passed: 0, validation_id: vsId };
       byValidation[vs].total += 1;
       if (status === 'passed') byValidation[vs].passed += 1;
+
+      const ftRunId = result?.ft_run_id || null;
+      let inputJson = runInputById[ftRunId] || meta.test_input_example || item.test_input_example || '';
+      if (inputJson && typeof inputJson === 'object') {
+        try { inputJson = JSON.stringify(inputJson); } catch { inputJson = String(inputJson); }
+      }
+      let failReason = '';
+      if (status === 'failed' || status === 'skipped') {
+        failReason = result?.notes
+          || runFailById[ftRunId]
+          || result?.validation_result
+          || '';
+      }
+
+      const apiPath = this.extractApiPathLabel(configByItemId[item.item_id], meta)
+        || this.extractApiPathFromInputSummary(inputJson)
+        || '';
+
+      executionRows.push({
+        plan_item_id: item.id,
+        item_id: item.item_id,
+        item_name: meta.item_name || item.item_name || item.item_id,
+        expected_observation: meta.expected_observation || item.expected_observation || '',
+        input_json: inputJson ? String(inputJson) : '',
+        api_path: apiPath,
+        fail_reason: failReason ? String(failReason) : '',
+        result_status: status,
+        validation_result: result?.validation_result || '',
+        notes: result?.notes || '',
+        ft_run_id: ftRunId,
+        dimension: dim,
+        scheme_id: schemeId,
+        scheme_name: scheme,
+        validation_id: vsId,
+        validation_name: vs,
+        result_status_label: this.formatResultStatus(status),
+      });
     }
 
     const passRate = plan.items?.length ? Math.round(100 * passed / plan.items.length) : 0;
-    const thresholdCompare = (plan.thresholds || []).map(t => {
-      const actual = this.resolveThresholdActual(t.param_id, {
+    const plainThresholds = (plan.thresholds || []).map(t => (typeof t.toJSON === 'function' ? t.toJSON() : t));
+    const thresholdCompare = plainThresholds.map(t => {
+      const paramId = t.param_id;
+      const actual = this.resolveThresholdActual(paramId, {
         pass_rate: passRate,
         by_dimension: byDimension,
         by_scheme: byScheme,
@@ -298,19 +552,23 @@ class FitnessPlanService extends require('egg').Service {
       const configured = Number(t.param_value);
       let met = null;
       if (actual != null && Number.isFinite(configured)) {
-        if (t.param_id.startsWith('block_')) met = actual <= configured;
-        else if (t.param_id.startsWith('rate_')) met = actual >= configured;
-        else if (t.param_id.startsWith('error_rate_')) met = actual <= configured;
-        else if (t.param_id.startsWith('submit_p99_ms_') || t.param_id.startsWith('ttft_ms_')) {
+        if (String(paramId).startsWith('block_')) met = actual <= configured;
+        else if (String(paramId).startsWith('rate_')) met = actual >= configured;
+        else if (String(paramId).startsWith('error_rate_')) met = actual <= configured;
+        else if (String(paramId).startsWith('submit_p99_ms_') || String(paramId).startsWith('ttft_ms_')) {
           met = actual <= configured;
         }
       }
+      const enumMeta = thresholdNameById[paramId] || {};
       return {
-        param_id: t.param_id,
+        param_id: paramId,
+        param_name: enumMeta.name || paramId,
+        unit: enumMeta.unit || null,
         configured: t.param_value,
         notes: t.notes,
         actual,
         met,
+        met_label: met === true ? '达标' : met === false ? '未达标' : '—',
       };
     });
 
@@ -330,6 +588,7 @@ class FitnessPlanService extends require('egg').Service {
       by_scheme: byScheme,
       by_validation: byValidation,
       thresholds: thresholdCompare,
+      execution_rows: executionRows,
       prd_goals: prdGoals,
     };
   }
@@ -372,45 +631,103 @@ class FitnessPlanService extends require('egg').Service {
     return lines.join('\n');
   }
 
-  buildReportMarkdown(plan, stats) {
+  buildReportMarkdown(plan, stats, options = {}) {
+    const statusFilter = Array.isArray(options.result_statuses)
+      ? options.result_statuses.filter(Boolean)
+      : [];
+    const filterActive = statusFilter.length > 0
+      && statusFilter.length < 4; // 未选齐四类则按筛选；全选等同不过滤
+
     const lines = [
       `# 测试完成报告 — ${plan.name}`,
       '',
       `- 版本: ${plan.version_tag || '-'}`,
       `- 环境: ${plan.env_name || '-'}`,
-      `- 状态: ${plan.status}`,
-      `- 通过率: ${stats.totals.pass_rate}% (${stats.totals.passed}/${stats.totals.items})`,
-      '',
-      '## 维度聚合',
-      '',
+      `- 状态: ${this.formatPlanStatus(plan.status)}`,
+      `- 通过率: ${stats.totals.pass_rate}%（通过 ${stats.totals.passed} / 共 ${stats.totals.items}）`,
     ];
-    for (const [ dim, row ] of Object.entries(stats.by_dimension)) {
-      const rate = row.total ? Math.round(100 * row.passed / row.total) : 0;
-      lines.push(`- ${dim}: ${rate}% (${row.passed}/${row.total})`);
+    if (filterActive) {
+      const labels = statusFilter.map(s => this.formatResultStatus(s)).join('、');
+      lines.push(`- 执行明细筛选: ${labels}`);
     }
-    lines.push('', '## TS 方案聚合', '');
-    for (const [ scheme, row ] of Object.entries(stats.by_scheme)) {
+    lines.push('', '## 测试层级通过率', '');
+    for (const [ dim, row ] of Object.entries(stats.by_dimension || {})) {
       const rate = row.total ? Math.round(100 * row.passed / row.total) : 0;
-      lines.push(`- ${scheme}: ${rate}% (${row.passed}/${row.total})`);
+      lines.push(`- ${dim}: ${rate}%（通过 ${row.passed}/${row.total}）`);
     }
-    lines.push('', '## VS 验证聚合', '');
-    for (const [ vs, row ] of Object.entries(stats.by_validation)) {
+    lines.push('', '## TS 方案通过率', '');
+    for (const [ scheme, row ] of Object.entries(stats.by_scheme || {})) {
       const rate = row.total ? Math.round(100 * row.passed / row.total) : 0;
-      lines.push(`- ${vs}: ${rate}% (${row.passed}/${row.total})`);
+      lines.push(`- ${scheme}: ${rate}%（通过 ${row.passed}/${row.total}）`);
     }
-    if (stats.thresholds.length) {
+    lines.push('', '## VS 验证通过率', '');
+    for (const [ vs, row ] of Object.entries(stats.by_validation || {})) {
+      const rate = row.total ? Math.round(100 * row.passed / row.total) : 0;
+      lines.push(`- ${vs}: ${rate}%（通过 ${row.passed}/${row.total}）`);
+    }
+    if (stats.thresholds?.length) {
       lines.push('', '## 阈值对比', '');
       for (const t of stats.thresholds) {
-        const actualStr = t.actual != null ? `，实际 ${t.actual}` : '';
-        const metStr = t.met === true ? ' ✓' : t.met === false ? ' ✗' : '';
-        lines.push(`- ${t.param_id}: 配置 ${t.configured}${actualStr}${metStr}`);
+        const label = t.param_name || t.param_id;
+        const unitHint = t.unit === 'percent' || String(t.param_id || '').startsWith('rate_')
+          || String(t.param_id || '').startsWith('block_') || String(t.param_id || '').startsWith('error_rate_')
+          ? '%'
+          : (t.unit === 'ms' ? 'ms' : '');
+        const actualStr = t.actual != null ? `，实际 ${t.actual}${unitHint}` : '';
+        const metStr = t.met === true ? '，达标' : t.met === false ? '，未达标' : '';
+        const notesStr = t.notes ? `（${t.notes}）` : '';
+        lines.push(`- ${label}: 计划配置 ${t.configured}${unitHint}${actualStr}${metStr}${notesStr}`);
       }
     }
     lines.push('', '## 执行明细', '');
-    for (const item of plan.items) {
-      const result = plan.results.find(r => r.plan_item_id === item.id);
-      const runHint = result?.ft_run_id ? ` (run #${result.ft_run_id})` : '';
-      lines.push(`- ${item.item_id}: ${result?.result_status || 'pending'}${runHint}`);
+    let execRows = stats.execution_rows?.length
+      ? [ ...stats.execution_rows ]
+      : (plan.items || []).map(item => {
+        const result = (plan.results || []).find(r => Number(r.plan_item_id) === Number(item.id));
+        return {
+          item_id: item.item_id,
+          item_name: item.item_name || item.item_id,
+          expected_observation: item.expected_observation || '',
+          input_json: item.test_input_example || '',
+          api_path: '',
+          fail_reason: result?.notes || '',
+          result_status: result?.result_status || 'pending',
+          validation_result: result?.validation_result || '',
+          scheme_name: '',
+          validation_name: '',
+          ft_run_id: result?.ft_run_id || null,
+        };
+      });
+    if (filterActive) {
+      const allow = new Set(statusFilter);
+      execRows = execRows.filter(r => allow.has(r.result_status || 'pending'));
+      lines.push(`（共 ${execRows.length} 条，已按结果筛选）`, '');
+    }
+    if (!execRows.length) {
+      lines.push('- （无匹配用例）', '');
+    }
+    for (const row of execRows) {
+      lines.push(`### ${row.item_name || row.item_id}`);
+      lines.push(`- 结果: ${row.result_status_label || this.formatResultStatus(row.result_status)}`);
+      if (row.scheme_name) lines.push(`- 测试方案: ${row.scheme_name}`);
+      if (row.validation_name || row.validation_result) {
+        lines.push(`- 验证判定: ${row.validation_name || row.validation_result}`);
+      }
+      if (row.api_path) lines.push(`- 接口: ${row.api_path}`);
+      if (row.expected_observation) lines.push(`- 期望: ${row.expected_observation}`);
+      if (row.input_json) {
+        lines.push('- 入参:');
+        lines.push('```json');
+        lines.push(String(row.input_json));
+        lines.push('```');
+      }
+      if (row.fail_reason) {
+        lines.push('- 失败原因:');
+        lines.push('```');
+        lines.push(String(row.fail_reason));
+        lines.push('```');
+      }
+      lines.push('');
     }
     return lines.join('\n');
   }

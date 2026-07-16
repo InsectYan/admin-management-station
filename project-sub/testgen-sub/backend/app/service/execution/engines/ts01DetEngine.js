@@ -118,7 +118,13 @@ class Ts01DetEngine extends BaseTsEngine {
       path,
       method,
       headers: { ...(configJson.headers || {}) },
-      body: methodNeedsBody(method) ? resolveHttpBody(method, configJson) : undefined,
+      body: methodNeedsBody(method)
+        ? resolveHttpBody(method, {
+          ...configJson,
+          // 配置页 body 为空 {} 时，回退用例表 test_input_example
+          test_input_example: configJson.test_input_example ?? item.test_input_example,
+        })
+        : undefined,
     }, vars);
 
     const headers = mergeRequestHeaders(ctx.globalRequestContext?.headers || {}, {

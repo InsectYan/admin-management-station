@@ -119,6 +119,11 @@
     "summary": "Launch / 批量执行用的 BFF 基址与鉴权；按 project_code 隔离（ENV-01）。",
     "purpose": "禁止跨项目落到 fitness-agent 默认环境；种子见 tables/ft_execution_env/data.json 与 migrations 007/008/038。"
   },
+  "project_request_header": {
+    "title": "项目默认请求头",
+    "summary": "项目管理「请求头」Tab：本项目用例默认 HTTP Headers。",
+    "purpose": "执行合并 `{...环境 global_headers, ...项目请求头, ...用例 Headers}`；执行前不因缺 Authorization 阻断。"
+  },
   "test_item_detail": {
     "title": "测试核心细节主表",
     "summary": "383 条可执行测试项，汇聚分类、步骤、TS/VS、六站、自动化与 PRD/架构引用。",

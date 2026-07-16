@@ -22,7 +22,7 @@ function matchesAliases(path, aliases = []) {
  * 根据当前路由解析侧栏应高亮的 menu index
  */
 export function resolveNavActivePath(path) {
-  const projectDetail = path.match(/^\/projects\/[^/]+\/(environments|variables|monitoring|sync)/);
+  const projectDetail = path.match(/^\/projects\/[^/]+\/(environments|variables|headers|monitoring|sync)/);
   if (projectDetail) return '/projects';
   if (path.match(/^\/projects\/[^/]+\/edit/)) return '/projects';
   if (path === '/projects/new') return '/projects';

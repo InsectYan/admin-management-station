@@ -125,6 +125,26 @@ function run() {
   assert(!r3.blocked, '401 should not need template if no session');
   assert(!r3.patch.headers.Authorization, '401 strips auth');
 
+  // 请求头不在执行前闸门阻断（即使无 Authorization）
+  const rAuthSkip = runPipelineLocal(
+    {
+      item_id: 'x',
+      project_code: 'demo-proj',
+      endpoint_path: '/api/llm/profiles',
+      http_method: 'GET',
+      http_status_expected: 200,
+      expected_observation: '200',
+    },
+    {},
+    {
+      env_catalog: { has_bff_url: true, has_authorization: false, global_header_keys: [] },
+      api_templates_catalog: [],
+    },
+  );
+  assert(!rAuthSkip.blocked, 'headers must not block launch gate');
+  if (rAuthSkip.envelope) {
+    assert(!(rAuthSkip.envelope.missing_fixed || []).some(m => /Authorization/i.test(m.field)), 'no auth missing');
+  }
   // 400 omit
   const r4 = runPipelineLocal(
     {

@@ -42,7 +42,11 @@ class FitnessPlanController extends Controller {
   }
 
   async exportReport() {
-    const data = await this.service.fitnessPlan.exportReport(this.ctx.params.id);
+    const body = this.ctx.request.body || {};
+    const resultStatuses = Array.isArray(body.result_statuses) ? body.result_statuses : undefined;
+    const data = await this.service.fitnessPlan.exportReport(this.ctx.params.id, {
+      result_statuses: resultStatuses,
+    });
     if (!data) {
       this.ctx.status = 404;
       this.ctx.body = { code: 404, message: '计划不存在', data: null };

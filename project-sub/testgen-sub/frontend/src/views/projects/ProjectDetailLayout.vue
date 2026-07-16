@@ -20,6 +20,7 @@
       <el-tab-pane label="概览" name="overview" />
       <el-tab-pane label="环境配置" name="environments" />
       <el-tab-pane label="全局变量" name="variables" />
+      <el-tab-pane label="请求头" name="headers" />
       <el-tab-pane label="环境监控" name="monitoring" />
       <el-tab-pane label="环境同步" name="sync" />
     </el-tabs>
@@ -45,6 +46,7 @@ const tabRouteMap = {
   overview: '',
   environments: 'environments',
   variables: 'variables',
+  headers: 'headers',
   monitoring: 'monitoring',
   sync: 'sync',
 };

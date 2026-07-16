@@ -67,3 +67,13 @@ export async function saveProjectVariables(projectCode, payload) {
   const { data } = await api.put(`/projects/${encodeURIComponent(projectCode)}/variables`, payload);
   return data.data;
 }
+
+export async function fetchProjectRequestHeaders(projectCode) {
+  const { data } = await api.get(`/projects/${encodeURIComponent(projectCode)}/request-headers`);
+  return data.data;
+}
+
+export async function saveProjectRequestHeaders(projectCode, payload) {
+  const { data } = await api.put(`/projects/${encodeURIComponent(projectCode)}/request-headers`, payload);
+  return data.data;
+}

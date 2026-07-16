@@ -17,13 +17,28 @@ export function parseJsonBodyText(text) {
   }
 }
 
+export function isEmptyBodyValue(value) {
+  if (value == null || value === '') return true;
+  if (typeof value === 'object') {
+    if (Array.isArray(value)) return value.length === 0;
+    return Object.keys(value).length === 0;
+  }
+  if (typeof value === 'string') {
+    const t = value.trim();
+    return !t || t === '{}' || t === '[]';
+  }
+  return false;
+}
+
 export function bodyTextFromConfig(config = {}) {
-  if (config.body != null && typeof config.body === 'object') {
+  if (config.body != null && typeof config.body === 'object' && !isEmptyBodyValue(config.body)) {
     return JSON.stringify(config.body, null, 2);
   }
   const example = config.test_input_example;
   if (example == null) return '';
-  if (typeof example === 'object') return JSON.stringify(example, null, 2);
+  if (typeof example === 'object') {
+    return isEmptyBodyValue(example) ? '' : JSON.stringify(example, null, 2);
+  }
   return String(example);
 }
 

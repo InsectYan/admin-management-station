@@ -218,9 +218,9 @@ const itemColumns = [
   { prop: 'execution_status', label: '执行状态', width: 96 },
   { prop: 'current_pass_rate', label: '当前达标率', width: 100 },
   { prop: 'target_pass_rate', label: '目标达标率', width: 100 },
-  { prop: 'automation_status_name', label: '自动化', width: 96 },
+  { prop: 'automation_status_name', label: '自动化', width: 120 },
   { prop: 'station_name', label: '六站', width: 140 },
-  { prop: 'role_scope_name', label: '三端', width: 80 },
+  { prop: 'role_scope_name', label: '三端', width: 110 },
 ];
 
 function applyFilters(v) {

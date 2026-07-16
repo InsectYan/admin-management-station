@@ -119,8 +119,8 @@ export async function savePlanResults(id, results) {
   return data.data;
 }
 
-export async function exportPlanReport(id) {
-  const { data } = await api.post(`/fitness/plans/${id}/export-report`);
+export async function exportPlanReport(id, options = {}) {
+  const { data } = await api.post(`/fitness/plans/${id}/export-report`, options);
   return data.data;
 }
 

@@ -133,6 +133,29 @@ class TestProjectController extends Controller {
     }
   }
 
+  async listRequestHeaders() {
+    try {
+      const data = await this.service.projectEnv.listRequestHeaders(this.ctx.params.projectCode);
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
+  async saveRequestHeaders() {
+    try {
+      const data = await this.service.projectEnv.saveRequestHeaders(
+        this.ctx.params.projectCode,
+        this.ctx.request.body || {},
+      );
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
   async healthStatus() {
     try {
       const data = await this.service.projectEnv.healthStatus(this.ctx.params.projectCode);

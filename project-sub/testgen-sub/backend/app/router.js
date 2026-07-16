@@ -18,6 +18,8 @@ module.exports = app => {
   router.post('/api/projects/:projectCode/environments/sync', controller.testProject.syncEnvironments);
   router.get('/api/projects/:projectCode/variables', controller.testProject.listVariables);
   router.put('/api/projects/:projectCode/variables', controller.testProject.saveVariables);
+  router.get('/api/projects/:projectCode/request-headers', controller.testProject.listRequestHeaders);
+  router.put('/api/projects/:projectCode/request-headers', controller.testProject.saveRequestHeaders);
   router.get('/api/projects/:projectCode/health', controller.testProject.healthStatus);
 
   router.get('/api/documents', controller.document.index);

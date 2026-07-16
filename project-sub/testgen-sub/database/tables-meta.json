@@ -119,6 +119,10 @@
     "pk": ["project_code", "name"],
     "type": "table"
   },
+  "project_request_header": {
+    "pk": ["project_code", "header_key"],
+    "type": "table"
+  },
   "tpl_config_det": {
     "pk": "item_id",
     "type": "table"

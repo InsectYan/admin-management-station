@@ -1,5 +1,7 @@
 'use strict';
 
+const { tryParseJsonBody, isEmptyBodyValue } = require('../httpRequestBody');
+
 /**
  * 配置结构补丁（不填 secret、不虚构 template_id）
  */
@@ -12,6 +14,21 @@ function proposeConfigPatchRule(params = {}) {
   const current = params.config_json || {};
   const gaps = Array.isArray(params.gaps) ? params.gaps : [];
 
+  const currentBody = (typeof current.body === 'object' && current.body && !Array.isArray(current.body))
+    ? { ...current.body }
+    : {};
+  let seedBody = currentBody;
+  if (isEmptyBodyValue(seedBody)) {
+    const fromItem = tryParseJsonBody(item.test_input_example);
+    if (fromItem && typeof fromItem === 'object' && !Array.isArray(fromItem) && !isEmptyBodyValue(fromItem)) {
+      seedBody = { ...fromItem };
+    } else if (Array.isArray(fromItem) && fromItem.length) {
+      seedBody = fromItem;
+    } else {
+      seedBody = {};
+    }
+  }
+
   const patch = {
     execution_mode: current.execution_mode || 'http',
     endpoint_path: current.endpoint_path || item.endpoint_path || null,
@@ -21,7 +38,7 @@ function proposeConfigPatchRule(params = {}) {
       ?? item.http_status_expected
       ?? 200,
     headers: { ...(current.headers || {}) },
-    body: { ...(typeof current.body === 'object' && current.body ? current.body : {}) },
+    body: seedBody && typeof seedBody === 'object' && !Array.isArray(seedBody) ? { ...seedBody } : seedBody,
     assertions: Array.isArray(current.assertions) ? [ ...current.assertions ] : [],
     preflight_api_template_id: current.preflight_api_template_id || null,
     preflight_include_main_request: current.preflight_include_main_request,
@@ -30,6 +47,10 @@ function proposeConfigPatchRule(params = {}) {
       sources: [],
     },
   };
+
+  if (!isEmptyBodyValue(seedBody) && isEmptyBodyValue(currentBody)) {
+    patch.autofill_meta.sources.push('item.test_input_example');
+  }
 
   if (!patch.endpoint_path) {
     for (const g of gaps) {
@@ -41,7 +62,6 @@ function proposeConfigPatchRule(params = {}) {
     const catalog = params.api_templates_catalog || [];
     const ok = catalog.some(t => Number(t.id) === Number(bindings.preflight_api_template_id));
     if (ok || !catalog.length) {
-      // catalog 空时仅当 bindings 来自 N2 白名单才信任；有 catalog 必须命中
       if (!catalog.length || ok) {
         patch.preflight_api_template_id = bindings.preflight_api_template_id;
         patch.autofill_meta.sources.push('fixed.bindings.preflight');
@@ -64,24 +84,26 @@ function proposeConfigPatchRule(params = {}) {
     ...fields.filter(f => f.role === 'omit_on_purpose').map(f => (f.location === 'body' ? `body.${f.name}` : f.name)),
   ]);
 
-  for (const f of fields) {
-    if (f.location !== 'body' || f.role === 'omit_on_purpose') continue;
-    const key = f.name;
-    if (omit.has(key) || omit.has(`body.${key}`)) {
-      delete patch.body[key];
-      continue;
-    }
-    if (f.role === 'variable') {
-      if (patch.body[key] == null || patch.body[key] === '') {
-        patch.body[key] = `{{${key}}}`;
-        patch.autofill_meta.sources.push(`body.{{${key}}}`);
+  if (patch.body && typeof patch.body === 'object' && !Array.isArray(patch.body)) {
+    for (const f of fields) {
+      if (f.location !== 'body' || f.role === 'omit_on_purpose') continue;
+      const key = f.name;
+      if (omit.has(key) || omit.has(`body.${key}`)) {
+        delete patch.body[key];
+        continue;
+      }
+      if (f.role === 'variable') {
+        if (patch.body[key] == null || patch.body[key] === '') {
+          patch.body[key] = `{{${key}}}`;
+          patch.autofill_meta.sources.push(`body.{{${key}}}`);
+        }
       }
     }
-  }
 
-  for (const o of omit) {
-    const key = String(o).replace(/^body\./, '');
-    delete patch.body[key];
+    for (const o of omit) {
+      const key = String(o).replace(/^body\./, '');
+      delete patch.body[key];
+    }
   }
 
   if (!patch.assertions.some(a => a.type === 'status')) {
@@ -101,7 +123,6 @@ function proposeConfigPatchRule(params = {}) {
     }
   }
 
-  // 禁止臆造 Authorization 实体值
   if (patch.headers.Authorization && intent.kind === 'unauth_401') {
     delete patch.headers.Authorization;
   }

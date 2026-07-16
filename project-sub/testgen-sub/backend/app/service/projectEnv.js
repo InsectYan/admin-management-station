@@ -236,6 +236,68 @@ class ProjectEnvService extends require('egg').Service {
 
     return this.listVariables(projectCode);
   }
+
+  mapHeaderRow(row) {
+    return {
+      key: row.header_key,
+      value: row.header_value || '',
+    };
+  }
+
+  async listRequestHeaders(projectCode) {
+    await this.assertProject(projectCode);
+    const rows = await this.ctx.model.ProjectRequestHeader.findAll({
+      where: { project_code: projectCode },
+      order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
+    });
+    const list = rows.map(r => this.mapHeaderRow(r));
+    return { list, total: list.length };
+  }
+
+  async saveRequestHeaders(projectCode, payload) {
+    await this.assertProject(projectCode);
+    const headers = payload?.headers;
+    if (!Array.isArray(headers)) {
+      const err = new Error('headers 必须为数组');
+      err.status = 400;
+      throw err;
+    }
+    const keys = new Set();
+    for (const h of headers) {
+      const key = String(h.key || '').trim();
+      if (!key) {
+        const err = new Error('请求头名称不能为空');
+        err.status = 400;
+        throw err;
+      }
+      if (keys.has(key.toLowerCase())) {
+        const err = new Error(`请求头名称重复: ${key}`);
+        err.status = 409;
+        throw err;
+      }
+      keys.add(key.toLowerCase());
+    }
+
+    await this.ctx.model.sequelize.transaction(async transaction => {
+      await this.ctx.model.ProjectRequestHeader.destroy({
+        where: { project_code: projectCode },
+        transaction,
+      });
+      if (headers.length) {
+        await this.ctx.model.ProjectRequestHeader.bulkCreate(
+          headers.map((h, i) => ({
+            project_code: projectCode,
+            header_key: String(h.key).trim(),
+            header_value: h.value == null ? '' : String(h.value),
+            sort_order: i,
+          })),
+          { transaction },
+        );
+      }
+    });
+
+    return this.listRequestHeaders(projectCode);
+  }
 }
 
 module.exports = ProjectEnvService;
