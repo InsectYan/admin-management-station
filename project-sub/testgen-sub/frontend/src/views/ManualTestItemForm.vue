@@ -34,20 +34,14 @@
       />
     </el-form-item>
 
-    <el-form-item label="测试大类" prop="category_major_id">
-      <el-select
+    <el-form-item label="测试分类" prop="category_major_id">
+      <CategoryMajorCascader
         v-model="form.category_major_id"
-        filterable
-        style="width: 100%"
+        :majors="majorOptions"
+        placeholder="选择测试分类"
+        width="100%"
         @change="onMajorChange"
-      >
-        <el-option
-          v-for="m in majorOptions"
-          :key="m.category_major_id"
-          :label="`${m.category_major_id} · ${m.name}`"
-          :value="m.category_major_id"
-        />
-      </el-select>
+      />
     </el-form-item>
 
     <el-form-item label="测试小类" prop="category_minor_id">
@@ -69,23 +63,23 @@
 
     <el-divider content-position="left">方案与验证</el-divider>
 
-    <el-form-item label="主方案" prop="scheme_primary_id">
+    <el-form-item label="执行方案（TS）" prop="scheme_primary_id">
       <el-select v-model="form.scheme_primary_id" filterable style="width: 100%" @change="onSchemeChange">
         <el-option
           v-for="s in schemeOptions"
           :key="s.scheme_id"
-          :label="`${s.scheme_id} · ${s.name}`"
+          :label="formatSchemeLabel(s.scheme_id, s.name)"
           :value="s.scheme_id"
         />
       </el-select>
     </el-form-item>
 
-    <el-form-item label="主验证" prop="validation_primary_id">
+    <el-form-item label="判定方式（VS）" prop="validation_primary_id">
       <el-select v-model="form.validation_primary_id" filterable style="width: 100%">
         <el-option
           v-for="v in schemeValidationOptions"
           :key="v.validation_id"
-          :label="`${v.validation_id} · ${v.name}${v.is_primary ? ' (默认)' : ''}`"
+          :label="`${formatValidationLabel(v.validation_id, v.name)}${v.is_primary ? ' (默认)' : ''}`"
           :value="v.validation_id"
         />
       </el-select>
@@ -100,7 +94,7 @@
           :value="code"
         />
       </el-select>
-      <p v-if="majorProfile?.is_mixed" class="hint">混合 TS 大类可指定 TPL-API-CTX 等变体</p>
+      <p v-if="majorProfile?.is_mixed" class="hint">混合执行方案的测试分类可指定 TPL-API-CTX 等变体</p>
     </el-form-item>
 
     <el-divider content-position="left">用例内容</el-divider>
@@ -174,6 +168,7 @@ import {
   API_CTX_SCHEME,
   CHAIN_SCHEME,
 } from '@/components/config-templates/registry.js';
+import CategoryMajorCascader from '@/components/fitness/CategoryMajorCascader.vue';
 import {
   createManualTestItem,
   fetchEnums,
@@ -182,6 +177,7 @@ import {
   fetchSchemes,
 } from '@/services/fitnessService.js';
 import { fetchProjects } from '@/services/projectService.js';
+import { formatSchemeLabel, formatValidationLabel } from '@/utils/testCategoryDisplay.js';
 
 const HTTP_METHODS = [ 'GET', 'POST', 'PUT', 'PATCH', 'DELETE' ];
 
@@ -222,11 +218,11 @@ const form = ref(defaultForm());
 
 const rules = {
   project_code: [{ required: true, message: '请选择项目', trigger: 'change' }],
-  category_major_id: [{ required: true, message: '请选择测试大类', trigger: 'change' }],
+  category_major_id: [{ required: true, message: '请选择测试分类', trigger: 'change' }],
   category_minor_id: [{ required: true, message: '请选择测试小类', trigger: 'change' }],
   priority_id: [{ required: true, message: '请选择优先级', trigger: 'change' }],
-  scheme_primary_id: [{ required: true, message: '请选择主方案', trigger: 'change' }],
-  validation_primary_id: [{ required: true, message: '请选择主验证', trigger: 'change' }],
+  scheme_primary_id: [{ required: true, message: '请选择执行方案', trigger: 'change' }],
+  validation_primary_id: [{ required: true, message: '请选择判定方式', trigger: 'change' }],
   item_name: [{ required: true, message: '请输入用例名称', trigger: 'blur' }],
   detail_summary: [{ required: true, message: '请输入测什么', trigger: 'blur' }],
   expected_observation: [{ required: true, message: '请输入期望结果', trigger: 'blur' }],

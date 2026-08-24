@@ -62,7 +62,7 @@
 
     <div class="quick-actions">
       <el-button type="primary" @click="router.push('/fitness/plans/new')">新建测试计划</el-button>
-      <el-button @click="router.push({ path: '/testgen/items', query: { preset: 'coach_p0' } })">教练 P0 用例</el-button>
+      <el-button @click="router.push({ path: '/testgen/items', query: { preset: 'coach_p0' } })">工作流 P0</el-button>
       <el-button @click="router.push({ path: '/testgen/items', query: { station_id: 'S02' } })">六站 B2 门禁</el-button>
     </div>
   </PageShell>

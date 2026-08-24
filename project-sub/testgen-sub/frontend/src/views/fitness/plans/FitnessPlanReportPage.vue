@@ -27,7 +27,7 @@
       </el-col>
       <el-col :span="12">
         <el-card shadow="never">
-          <template #header>VS 验证通过率</template>
+          <template #header>判定方式通过率</template>
           <div v-for="v in validationRates" :key="v.label" class="rate-row">
             <span>{{ v.label }}</span>
             <el-progress :percentage="v.rate" :stroke-width="14" />
@@ -74,82 +74,36 @@
         </el-checkbox>
       </el-checkbox-group>
       <el-button link type="primary" @click="statusFilter = []">全部</el-button>
-      <span class="result-filter-hint">当前 {{ filteredResultRows.length }}/{{ resultRows.length }} 条；导出按当前筛选</span>
+      <span class="result-filter-hint">
+        当前 {{ filteredResultRows.length }}/{{ resultRows.length }} 条；导出按当前筛选；虚拟滚动不影响「保存结果」
+      </span>
     </div>
 
-    <el-table :data="filteredResultRows" size="small" class="exec-table" max-height="500">
-      <el-table-column label="测试用例名称" min-width="160" show-overflow-tooltip>
-        <template #default="{ row }">
-          <div
-            class="item-name-link"
-            @click="router.push(`/fitness/assets/items/${encodeURIComponent(row.item_id)}`)"
-          >
-            {{ row.item_name || row.item_id }}
-          </div>
+    <div class="report-exec-vtable">
+      <el-auto-resizer>
+        <template #default="{ height, width }">
+          <el-table-v2
+            class="exec-table"
+            :columns="reportColumns"
+            :data="filteredResultRows"
+            :width="width"
+            :height="height"
+            :row-height="52"
+            :header-height="44"
+            row-key="plan_item_id"
+            fixed
+          />
         </template>
-      </el-table-column>
-      <el-table-column label="Path" min-width="160" show-overflow-tooltip>
-        <template #default="{ row }">
-          <code v-if="row.api_path" class="path-cell">{{ row.api_path }}</code>
-          <span v-else>—</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="期望" min-width="180" show-overflow-tooltip>
-        <template #default="{ row }">
-          {{ row.expected_observation || '—' }}
-        </template>
-      </el-table-column>
-      <el-table-column label="入参" min-width="160">
-        <template #default="{ row }">
-          <el-tooltip v-if="row.input_json" placement="top" :show-after="400">
-            <template #content>
-              <pre class="json-tip">{{ row.input_json }}</pre>
-            </template>
-            <code class="json-cell">{{ truncateText(row.input_json, 80) }}</code>
-          </el-tooltip>
-          <span v-else>—</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="失败原因" min-width="160">
-        <template #default="{ row }">
-          <el-tooltip v-if="row.fail_reason" placement="top" :show-after="400">
-            <template #content>
-              <pre class="json-tip">{{ row.fail_reason }}</pre>
-            </template>
-            <span class="fail-cell">{{ truncateText(row.fail_reason, 80) }}</span>
-          </el-tooltip>
-          <span v-else>—</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="结果" width="130">
-        <template #default="{ row }">
-          <el-select v-model="row.result_status" size="small">
-            <el-option label="通过" value="passed" />
-            <el-option label="失败" value="failed" />
-            <el-option label="跳过" value="skipped" />
-            <el-option label="待执行" value="pending" />
-          </el-select>
-        </template>
-      </el-table-column>
-      <el-table-column label="VS 判定" width="140">
-        <template #default="{ row }">
-          <el-input v-model="row.validation_result" size="small" />
-        </template>
-      </el-table-column>
-      <el-table-column label="备注" width="140">
-        <template #default="{ row }">
-          <el-input v-model="row.notes" size="small" />
-        </template>
-      </el-table-column>
-    </el-table>
+      </el-auto-resizer>
+    </div>
     <el-input v-if="reportContent" v-model="reportContent" type="textarea" :rows="12" style="margin-top:16px" readonly />
   </PageShell>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, h, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { ElInput, ElMessage, ElOption, ElSelect, ElTooltip } from 'element-plus';
 import PageShell from '@/components/PageShell.vue';
 import {
   downloadPlanMarkdown,
@@ -209,6 +163,92 @@ function truncateText(text, max) {
   const s = String(text || '');
   return s.length > max ? `${s.slice(0, max)}…` : s;
 }
+
+function tipCell(fullText, displayClass) {
+  if (!fullText) return h('span', '—');
+  return h(ElTooltip, { placement: 'top', showAfter: 400 }, {
+    content: () => h('pre', { class: 'json-tip' }, String(fullText)),
+    default: () => h('span', { class: displayClass }, truncateText(fullText, 80)),
+  });
+}
+
+const reportColumns = computed(() => [
+  {
+    key: 'item_name',
+    title: '测试用例名称',
+    width: 180,
+    flexGrow: 1,
+    cellRenderer: ({ rowData }) => h('div', {
+      class: 'item-name-link',
+      onClick: () => router.push(`/fitness/assets/items/${encodeURIComponent(rowData.item_id)}`),
+    }, rowData.item_name || rowData.item_id),
+  },
+  {
+    key: 'api_path',
+    title: 'Path',
+    width: 180,
+    flexGrow: 1,
+    cellRenderer: ({ rowData }) => (rowData.api_path
+      ? h('code', { class: 'path-cell' }, rowData.api_path)
+      : h('span', '—')),
+  },
+  {
+    key: 'expected_observation',
+    title: '期望',
+    width: 180,
+    flexGrow: 1,
+    cellRenderer: ({ rowData }) => h('span', rowData.expected_observation || '—'),
+  },
+  {
+    key: 'input_json',
+    title: '入参',
+    width: 160,
+    flexGrow: 1,
+    cellRenderer: ({ rowData }) => tipCell(rowData.input_json, 'json-cell'),
+  },
+  {
+    key: 'fail_reason',
+    title: '失败原因',
+    width: 160,
+    flexGrow: 1,
+    cellRenderer: ({ rowData }) => tipCell(rowData.fail_reason, 'fail-cell'),
+  },
+  {
+    key: 'result_status',
+    title: '结果',
+    width: 130,
+    cellRenderer: ({ rowData }) => h(ElSelect, {
+      modelValue: rowData.result_status,
+      size: 'small',
+      style: { width: '100%' },
+      'onUpdate:modelValue': v => { rowData.result_status = v; },
+    }, () => statusFilterOptions.map(opt => h(ElOption, {
+      key: opt.value,
+      label: opt.label,
+      value: opt.value,
+    }))),
+  },
+  {
+    key: 'validation_result',
+    title: '判定结果',
+    width: 140,
+    cellRenderer: ({ rowData }) => h(ElInput, {
+      modelValue: rowData.validation_result,
+      size: 'small',
+      'onUpdate:modelValue': v => { rowData.validation_result = v; },
+    }),
+  },
+  {
+    key: 'notes',
+    title: '备注',
+    width: 140,
+    cellRenderer: ({ rowData }) => h(ElInput, {
+      modelValue: rowData.notes,
+      size: 'small',
+      'onUpdate:modelValue': v => { rowData.notes = v; },
+    }),
+  },
+]);
 
 function resolveThresholdName(row) {
   if (row.param_name && row.param_name !== row.param_id) return row.param_name;
@@ -470,6 +510,13 @@ async function handleSummarize() {
   font-size: 12px;
   color: var(--el-text-color-secondary);
 }
+.report-exec-vtable {
+  height: 520px;
+  width: 100%;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 4px;
+  overflow: hidden;
+}
 .json-cell,
 .fail-cell,
 .path-cell {
@@ -487,8 +534,8 @@ async function handleSummarize() {
   word-break: break-all;
   font-size: 12px;
 }
-.exec-table :deep(.el-table__cell) {
-  vertical-align: top;
+.exec-table :deep(.el-table-v2__row-cell) {
+  align-items: center;
 }
 .item-name-link {
   color: var(--el-color-primary);

@@ -1,4 +1,5 @@
--- E5.3：E5-INJ-001 TS-07-NEG 种子（C1-SAFE-001 主方案为 TS-04-SET，不作 NEG 验收项）
+-- E5.3：E5-INJ-001 TS-07-NEG 种子 + E5 回归计划
+-- 用例缺失时跳过，避免精简 seed 下 FK 失败
 
 INSERT INTO ft_run_config (
   item_id,
@@ -37,12 +38,13 @@ SELECT
   '{"block_rate_min": 95}'::jsonb,
   NOW(),
   NOW()
-WHERE NOT EXISTS (
+WHERE EXISTS (
+  SELECT 1 FROM test_item_detail WHERE item_id = 'E5-INJ-001'
+)
+AND NOT EXISTS (
   SELECT 1 FROM ft_run_config
   WHERE item_id = 'E5-INJ-001' AND scheme_id = 'TS-07-NEG'
 );
-
--- E5.1：E4 回归计划种子（批量执行验收）
 
 INSERT INTO test_plan (name, version_tag, env_name, plan_type, status, notes, created_at, updated_at)
 SELECT
@@ -66,6 +68,9 @@ CROSS JOIN (VALUES
   ('E5-INJ-001', 3)
 ) AS v(item_id, sort_order)
 WHERE p.name = 'E5 自动化回归'
+  AND EXISTS (
+    SELECT 1 FROM test_item_detail d WHERE d.item_id = v.item_id
+  )
   AND NOT EXISTS (
     SELECT 1 FROM test_plan_item pi
     WHERE pi.plan_id = p.id AND pi.item_id = v.item_id

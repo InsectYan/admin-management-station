@@ -1,4 +1,4 @@
-# Unified Docker Compose entry for ams-novel CLI.
+﻿# Unified Docker Compose entry for ams-novel CLI.
 param(
   [Parameter(ValueFromRemainingArguments = $true)]
   [string[]]$ComposeArgs

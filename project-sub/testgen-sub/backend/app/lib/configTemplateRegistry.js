@@ -1,7 +1,7 @@
 'use strict';
 
 /** 混合 TS 大类：不挂载大类模板，按 scheme_primary_id 解析 */
-const MIXED_TS_MAJORS = new Set([ 'C1', 'C2', 'C3', 'C4' ]);
+const MIXED_TS_MAJORS = new Set([ 'T3' ]);
 
 const SCHEME_TO_TEMPLATE = {
   'TS-01-DET': 'TPL-DET',

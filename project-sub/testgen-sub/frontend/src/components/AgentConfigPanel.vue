@@ -62,6 +62,11 @@
 <script setup>
 import { computed } from 'vue';
 import { getLlmProfileId } from '../utils/llmProfileSession.js';
+import {
+  formatCategoryDisplay,
+  formatSchemeLabel,
+  formatValidationLabel,
+} from '../utils/testCategoryDisplay.js';
 import ExpandableTextBlock from './ExpandableTextBlock.vue';
 
 const DIRECTION_MAX = 500;
@@ -114,9 +119,15 @@ const quotaLines = computed(() => {
     || props.jobOptions?.scheme_targets
     || [];
   if (targets.length) {
-    return targets.map(t =>
-      `${t.scheme_id || ''} · ${t.validation_id || ''}：${t.count ?? '—'} 条`,
-    );
+    return targets.map(t => {
+      const major = t.category_major_id
+        ? formatCategoryDisplay(t.category_major_id, t.category_major_name)
+        : '';
+      const scheme = t.scheme_id ? formatSchemeLabel(t.scheme_id, t.scheme_name) : '';
+      const validation = t.validation_id ? formatValidationLabel(t.validation_id, t.validation_name) : '';
+      const parts = [ major, scheme, validation ].filter(Boolean);
+      return `${parts.join(' · ')}：${t.count ?? '—'} 条`;
+    });
   }
   return [];
 });

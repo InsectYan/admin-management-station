@@ -1,7 +1,7 @@
 ﻿<template>
   <PageShell title="方案与验证百科" v-loading="loading">
     <el-tabs v-model="activeTab" @tab-change="onTabChange">
-      <el-tab-pane label="TS 测试方案" name="schemes">
+      <el-tab-pane label="执行方案（TS）" name="schemes">
         <FitnessLabeledTable
           :data="data?.schemes || []"
           :columns="schemeColumns"
@@ -14,7 +14,7 @@
           @update:page-size="pageSize = $event"
         />
       </el-tab-pane>
-      <el-tab-pane label="VS 验证标准" name="validations">
+      <el-tab-pane label="判定方式（VS）" name="validations">
         <FitnessLabeledTable
           :data="data?.validations || []"
           :columns="validationColumns"

@@ -1,4 +1,4 @@
-# Local stack: infra + API + Frontend (Vite dev，对齐 cartoon local)
+﻿# Local stack: infra + API + Frontend (Vite dev，对齐 cartoon local)
 $ErrorActionPreference = "Stop"
 
 . "$PSScriptRoot\_utf8.ps1"

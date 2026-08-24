@@ -1,24 +1,28 @@
 <template>
   <PageShell title="用例模板">
     <el-tabs v-model="activeTab" @tab-change="onTabChange">
-      <el-tab-pane label="大类列表" name="majors">
+      <el-tab-pane label="测试分类列表" name="majors">
         <el-table v-loading="loading" :data="majorRows" border stripe size="small" max-height="calc(100vh - 220px)">
-          <el-table-column prop="category_major_id" label="大类 ID" width="90" />
-          <el-table-column prop="major_name" label="名称" min-width="120" />
-          <el-table-column prop="dimension_name" label="维度" width="100" />
+          <el-table-column prop="category_major_id" label="分类 ID" width="90" />
+          <el-table-column label="测试分类" min-width="160">
+            <template #default="{ row }">
+              {{ formatCategoryDisplay(row.category_major_id, row.major_name) }}
+            </template>
+          </el-table-column>
           <el-table-column label="挂载模板" min-width="140">
             <template #default="{ row }">
-              <el-tag v-if="row.is_mixed" type="warning" size="small">混合 TS</el-tag>
+              <el-tag v-if="row.is_mixed" type="warning" size="small">混合执行方案</el-tag>
               <template v-else>
                 <el-tag type="primary" size="small">{{ row.template_code || '—' }}</el-tag>
                 <span v-if="row.template_name" class="cell-meta">{{ row.template_name }}</span>
               </template>
             </template>
           </el-table-column>
-          <el-table-column label="主验证" min-width="140">
+          <el-table-column label="判定方式（VS）" min-width="160">
             <template #default="{ row }">
-              <el-tag v-if="row.default_validation_id" size="small">{{ row.default_validation_id }}</el-tag>
-              <span v-if="row.validation_name" class="cell-meta">{{ row.validation_name }}</span>
+              <el-tag v-if="row.default_validation_id" size="small">
+                {{ formatValidationLabel(row.default_validation_id, row.validation_name) }}
+              </el-tag>
               <span v-else class="cell-muted">—</span>
             </template>
           </el-table-column>
@@ -43,7 +47,7 @@
           </el-table-column>
           <el-table-column prop="function_desc" label="功能" min-width="160" show-overflow-tooltip />
           <el-table-column prop="scenario_desc" label="适用场景" min-width="180" show-overflow-tooltip />
-          <el-table-column label="关联大类" min-width="220">
+          <el-table-column label="关联测试分类" min-width="220">
             <template #default="{ row }">
               <TagOverflowCell
                 :items="row.linked_majors || []"
@@ -52,7 +56,7 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="验证方案" min-width="160">
+          <el-table-column label="判定方式" min-width="160">
             <template #default="{ row }">
               <el-tag
                 v-for="vid in row.validation_ids || []"
@@ -61,7 +65,7 @@
                 type="success"
                 style="margin: 2px"
               >
-                {{ vid }}
+                {{ formatValidationLabel(vid) }}
               </el-tag>
               <span v-if="!(row.validation_ids || []).length" class="cell-muted">—</span>
             </template>
@@ -75,15 +79,17 @@
       </el-tab-pane>
     </el-tabs>
 
-    <!-- 大类详情 -->
+    <!-- 测试分类详情 -->
     <el-drawer v-model="majorDrawerVisible" :title="majorDetailTitle" size="640px" destroy-on-close>
       <template v-if="majorDetail">
         <el-descriptions :column="1" border size="small" class="detail-block">
-          <el-descriptions-item label="维度">{{ majorDetail.dimension_name }} ({{ majorDetail.dimension_id }})</el-descriptions-item>
+          <el-descriptions-item label="测试分类">
+            {{ formatCategoryDisplay(majorDetail.category_major_id, majorDetail.major_name) }}
+          </el-descriptions-item>
           <el-descriptions-item label="说明">{{ majorDetail.major_description || '—' }}</el-descriptions-item>
         </el-descriptions>
 
-        <el-form label-width="100px" class="detail-form">
+        <el-form label-width="120px" class="detail-form">
           <el-form-item label="配置模板">
             <el-select
               v-model="majorEdit.template_code"
@@ -99,9 +105,9 @@
                 :value="t.template_code"
               />
             </el-select>
-            <div v-if="majorDetail.is_mixed" class="form-hint">混合 TS 大类，用例级按 scheme 解析模板</div>
+            <div v-if="majorDetail.is_mixed" class="form-hint">混合执行方案分类，用例级按 scheme 解析模板</div>
           </el-form-item>
-          <el-form-item label="主验证">
+          <el-form-item label="判定方式（VS）">
             <el-select
               v-model="majorEdit.validation_id"
               filterable
@@ -112,7 +118,7 @@
               <el-option
                 v-for="v in majorValidations"
                 :key="v.validation_id"
-                :label="`${v.validation_id} ${v.name || ''}`.trim()"
+                :label="formatValidationLabel(v.validation_id, v.name)"
                 :value="v.validation_id"
               />
             </el-select>
@@ -145,7 +151,7 @@
         </el-descriptions>
 
         <div class="detail-block">
-          <div class="detail-label">关联大类</div>
+          <div class="detail-label">关联测试分类</div>
           <el-tag
             v-for="m in templateDetail.linked_majors || []"
             :key="m.category_major_id"
@@ -172,7 +178,7 @@
                 :value="v.validation_id"
               />
             </el-select>
-            <div class="form-hint">切换后将同步更新所有关联大类的 default_validation_id</div>
+            <div class="form-hint">切换后将同步更新所有关联测试分类的 default_validation_id</div>
           </el-form-item>
         </el-form>
 
@@ -210,6 +216,7 @@ import {
   updateMajorValidation,
   updateTemplateValidation,
 } from '@/services/fitnessService.js';
+import { formatCategoryDisplay, formatValidationLabel } from '@/utils/testCategoryDisplay.js';
 
 const activeTab = ref('majors');
 const loading = ref(false);
@@ -234,7 +241,9 @@ const demoConfig = ref({});
 const demoThreshold = ref({});
 
 const majorDetailTitle = computed(() =>
-  majorDetail.value ? `${majorDetail.value.category_major_id} · ${majorDetail.value.major_name}` : '大类详情',
+  majorDetail.value
+    ? formatCategoryDisplay(majorDetail.value.category_major_id, majorDetail.value.major_name)
+    : '测试分类详情',
 );
 const templateDetailTitle = computed(() =>
   templateDetail.value ? `${templateDetail.value.template_code} · ${templateDetail.value.name}` : '模板详情',
@@ -250,7 +259,7 @@ const templatePanelComponent = computed(() =>
 function formatLinkedMajorLabel(major) {
   if (!major) return '—';
   const name = major.major_name || major.name || '';
-  return name ? `${major.category_major_id} · ${name}` : (major.category_major_id || '—');
+  return formatCategoryDisplay(major.category_major_id, name);
 }
 
 function linkedMajorKey(major) {
@@ -391,7 +400,7 @@ async function onTemplateValidationChange(validationId) {
     await loadMajors();
     await loadTemplates();
     templateDetail.value = templateRows.value.find(t => t.template_code === templateDetail.value.template_code);
-    ElMessage.success(`验证方案已同步至 ${result.updated_majors || 0} 个大类`);
+    ElMessage.success(`判定方式已同步至 ${result.updated_majors || 0} 个测试分类`);
   } catch (err) {
     ElMessage.error(err.message || '更新验证方案失败');
   }

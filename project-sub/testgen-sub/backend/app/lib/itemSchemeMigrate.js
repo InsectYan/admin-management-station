@@ -112,7 +112,8 @@ async function migrateItemPrimaryScheme(ctx, item, opts = {}) {
     throw err;
   }
 
-  const [ schemeRows ] = await ctx.app.model.query(
+  // QueryTypes.SELECT 直接返回行数组，勿再按 [rows, meta] 解构
+  const schemeRows = await ctx.app.model.query(
     'SELECT scheme_id FROM test_scheme_enum WHERE scheme_id = :id LIMIT 1',
     { replacements: { id: schemeId }, type: QueryTypes.SELECT },
   );

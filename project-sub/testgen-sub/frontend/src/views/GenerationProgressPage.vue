@@ -120,15 +120,21 @@
       size="small"
       border
       style="margin-top: 24px"
+      :row-key="targetRowKey"
     >
-      <el-table-column label="主方案" min-width="120">
+      <el-table-column label="测试分类" min-width="140">
         <template #default="{ row }">
-          {{ row.scheme_id }} {{ row.scheme_name || '' }}
+          {{ formatCategoryDisplay(row.category_major_id, row.category_major_name) }}
         </template>
       </el-table-column>
-      <el-table-column label="主验证" min-width="120">
+      <el-table-column label="执行方案（TS）" min-width="140">
         <template #default="{ row }">
-          {{ row.validation_id }} {{ row.validation_name || '' }}
+          {{ formatSchemeLabel(row.scheme_id, row.scheme_name) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="判定方式（VS）" min-width="140">
+        <template #default="{ row }">
+          {{ formatValidationLabel(row.validation_id, row.validation_name) }}
         </template>
       </el-table-column>
       <el-table-column prop="count" label="目标条数" width="88" />
@@ -262,6 +268,11 @@ import AgentConfigPanel from '../components/AgentConfigPanel.vue';
 import { useJobProgress } from '../composables/useJobProgress';
 import { importJobSamples } from '../services/generationService.js';
 import { fetchSampleSets } from '../services/fitnessService.js';
+import {
+  formatCategoryDisplay,
+  formatSchemeLabel,
+  formatValidationLabel,
+} from '../utils/testCategoryDisplay.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -305,8 +316,25 @@ const currentPhaseLabel = computed(() => {
 const currentTargetLabel = computed(() => {
   const t = store.currentTarget;
   if (!t) return '';
-  return `${t.scheme_id || ''} ${t.scheme_name || ''} · ${t.validation_id || ''} ${t.validation_name || ''}`.trim();
+  return [
+    t.category_major_id ? `${t.category_major_id} ${t.category_major_name || ''}`.trim() : '',
+    `${t.scheme_id || ''} ${t.scheme_name || ''}`.trim(),
+    `${t.validation_id || ''} ${t.validation_name || ''}`.trim(),
+  ].filter(Boolean).join(' · ');
 });
+
+function targetRowKey(row) {
+  return `${row.category_major_id || ''}::${row.scheme_id || ''}::${row.validation_id || ''}`;
+}
+
+function formatTargetLabel(t) {
+  if (!t) return '';
+  return [
+    t.category_major_id || t.category_major_name,
+    t.scheme_id,
+    t.validation_id,
+  ].filter(Boolean).join(' · ');
+}
 
 const roundSizeNumber = computed(() => {
   const t = store.currentTarget;
@@ -384,7 +412,7 @@ const failedTargetsNotice = computed(() => {
   const failed = (store.targetStates || []).filter(t => t.status === 'failed');
   if (!failed.length) return '';
   const labels = failed.map(t =>
-    `${t.scheme_id || ''} · ${t.validation_id || ''}（目标 ${t.count} 条，有效 0 条）`,
+    `${formatTargetLabel(t)}（目标 ${t.count} 条，有效 0 条）`,
   );
   return `以下目标未生成有效用例：${labels.join('；')}`;
 });

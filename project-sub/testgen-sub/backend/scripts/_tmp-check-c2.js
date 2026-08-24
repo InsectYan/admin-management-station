@@ -1,0 +1,10 @@
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const init = fs.readFileSync(path.join(__dirname, '../../database/tables/test_item_detail/init.sql'), 'utf8');
+console.log('init has C2-BOUND-004:', init.includes('C2-BOUND-004'));
+const ids = [...init.matchAll(/VALUES \('([A-Z0-9_-]+)'/g)].map(m => m[1]);
+console.log('init insert ids:', ids.length);
+console.log('C2 ids sample:', ids.filter(i => i.startsWith('C2')).slice(0, 30));
+const data = JSON.parse(fs.readFileSync(path.join(__dirname, '../../database/tables/test_item_detail/data.json'), 'utf8'));
+console.log('data.json:', data.length, 'has004', data.some(r => r.item_id === 'C2-BOUND-004'));

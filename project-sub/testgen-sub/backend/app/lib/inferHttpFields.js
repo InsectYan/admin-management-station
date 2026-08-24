@@ -103,9 +103,10 @@ function resolveDetHttpTarget(item = {}, configJson = {}) {
   const method = (
     item.http_method || configJson.http_method || configJson.method || 'GET'
   ).toUpperCase();
-  const statusExpected = item.http_status_expected
-    ?? configJson.http_status_expected
+  // 配置面板（config_json）优先于用例表字段，避免「面板已改 Status 但 item 列仍是旧码」
+  const statusExpected = configJson.http_status_expected
     ?? configJson.expect_status
+    ?? item.http_status_expected
     ?? null;
   return { path, method, statusExpected };
 }

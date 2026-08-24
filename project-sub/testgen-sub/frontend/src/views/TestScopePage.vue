@@ -53,26 +53,17 @@
         <el-input :model-value="selectedProject.project_code" disabled />
       </el-form-item>
 
-      <el-form-item label="测试大类" prop="category_major_ids">
-        <el-select
+      <el-form-item label="测试分类" prop="category_major_ids">
+        <CategoryMajorCascader
           v-model="form.category_major_ids"
-          placeholder="选择大类（可多选，决定配置模板与主方案）"
-          filterable
+          :majors="majorOptions"
           multiple
-          collapse-tags
-          collapse-tags-tooltip
-          style="width: 100%"
+          placeholder="选择测试分类（可多选场景，决定配置模板与执行方案）"
+          width="100%"
           @change="onMajorsChange"
-        >
-          <el-option
-            v-for="m in majorOptions"
-            :key="m.category_major_id"
-            :label="`${m.category_major_id} · ${m.name}`"
-            :value="m.category_major_id"
-          />
-        </el-select>
+        />
         <div class="testgen-major-hint">
-          大类仅决定模板与方案结构，<strong>不包含默认条数</strong>。历史上「每大类 5 条」仅为系统占位，并非推荐值；推荐条数由 Agent 分析给出，可在生成目标表中手动调整。
+          测试分类仅决定模板与方案结构，<strong>不包含默认条数</strong>。历史上「每大类 5 条」仅为系统占位，并非推荐值；推荐条数由 Agent 分析给出，可在生成目标表中手动调整。
         </div>
         <div v-if="selectedMajorSummaries.length" class="testgen-major-summary-list">
           <div
@@ -80,16 +71,16 @@
             :key="item.category_major_id"
             class="testgen-major-summary-row"
           >
-            <span class="testgen-major-summary-label">{{ item.category_major_id }} · {{ item.category_major_name }}</span>
+            <span class="testgen-major-summary-label">{{ formatCategoryDisplay(item.category_major_id, item.category_major_name) }}</span>
             <el-tag v-if="item.template_code" size="small" type="primary">{{ item.template_code }}</el-tag>
             <span v-if="item.template_name" class="testgen-major-summary-meta">{{ item.template_name }}</span>
-            <span class="testgen-major-summary-meta">{{ item.scheme_id }} {{ item.scheme_name || '' }}</span>
-            <span v-if="item.is_mixed" class="testgen-major-summary-hint">（混合 TS，按方案解析模板）</span>
+            <span class="testgen-major-summary-meta">{{ formatSchemeLabel(item.scheme_id, item.scheme_name) }}</span>
+            <span v-if="item.is_mixed" class="testgen-major-summary-hint">（混合执行方案，按方案解析模板）</span>
           </div>
         </div>
       </el-form-item>
 
-      <el-form-item label="主验证 (VS)" prop="validation_ids">
+      <el-form-item label="判定方式（VS）" prop="validation_ids">
         <el-checkbox-group v-model="form.validation_ids">
           <el-checkbox
             v-for="item in validationOptions"
@@ -97,7 +88,7 @@
             :label="item.validation_id"
             :value="item.validation_id"
           >
-            {{ item.validation_id }} {{ item.name || '' }}
+            {{ formatValidationLabel(item.validation_id, item.name) }}
           </el-checkbox>
         </el-checkbox-group>
       </el-form-item>
@@ -233,22 +224,34 @@
 
       <el-form-item v-if="schemeTargetPreview.length" label="生成目标">
         <el-table :data="schemeTargetPreview" size="small" border max-height="280">
-          <el-table-column prop="category_major_name" label="测试大类" min-width="100" />
+          <el-table-column label="测试分类" min-width="140">
+            <template #default="{ row }">
+              {{ formatCategoryDisplay(row.category_major_id, row.category_major_name) }}
+            </template>
+          </el-table-column>
           <el-table-column label="配置模板" min-width="120">
             <template #default="{ row }">
               <span v-if="row.template_code">{{ row.template_code }}</span>
               <span v-else class="testgen-target-muted">按方案解析</span>
             </template>
           </el-table-column>
-          <el-table-column prop="scheme_name" label="主方案" min-width="100" />
-          <el-table-column prop="validation_name" label="主验证" min-width="100" />
+          <el-table-column label="执行方案（TS）" min-width="130">
+            <template #default="{ row }">
+              {{ formatSchemeLabel(row.scheme_id, row.scheme_name) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="判定方式（VS）" min-width="130">
+            <template #default="{ row }">
+              {{ formatValidationLabel(row.validation_id, row.validation_name) }}
+            </template>
+          </el-table-column>
           <el-table-column label="生成条数" width="120">
             <template #default="{ row }">
               <el-input-number
                 v-if="estimateResult"
                 :model-value="row.count ?? 1"
                 :min="1"
-                :max="200"
+                :max="8000"
                 size="small"
                 controls-position="right"
                 class="testgen-count-input"
@@ -259,7 +262,7 @@
           </el-table-column>
         </el-table>
         <div class="testgen-target-hint">
-          每个大类×验证为一个生成目标；Agent 分析完成后填入<strong>推荐条数</strong>，可在上表手动修改，生成时将使用表中当前数值
+          每个测试分类×判定方式为一个生成目标；Agent 分析完成后填入<strong>推荐条数</strong>，可在上表手动修改，生成时将使用表中当前数值
         </div>
       </el-form-item>
 
@@ -280,6 +283,19 @@
               · 当前合计 <strong>{{ currentTotalCount }}</strong> 条
             </template>
             <el-tag size="small" type="info">{{ estimateSourceLabel }}</el-tag>
+            <el-tag
+              v-if="estimateResult.endpoint_count != null"
+              size="small"
+              type="success"
+            >
+              识别接口 {{ estimateResult.endpoint_count }} 个
+            </el-tag>
+            <el-tag
+              v-if="estimateResult.document_chars"
+              size="small"
+            >
+              文档约 {{ formatDocChars(estimateResult.document_chars) }}
+            </el-tag>
           </span>
           <el-alert
             v-if="estimateResult?.agent_warning"
@@ -292,8 +308,29 @@
           <div v-if="estimateResult?.reasoning" class="testgen-estimate-reason">
             {{ estimateResult.reasoning }}
           </div>
+          <div
+            v-if="estimateResult?.endpoints?.length"
+            class="testgen-estimate-endpoints"
+          >
+            <details>
+              <summary>接口清单（{{ estimateResult.endpoint_count || estimateResult.endpoints.length }}）</summary>
+              <ul>
+                <li
+                  v-for="(ep, idx) in estimateResult.endpoints.slice(0, 80)"
+                  :key="`${ep}-${idx}`"
+                >
+                  {{ ep }}
+                </li>
+                <li v-if="estimateResult.endpoints.length > 80">
+                  …其余 {{ estimateResult.endpoints.length - 80 }} 个已省略
+                </li>
+              </ul>
+            </details>
+          </div>
           <div class="testgen-estimate-hint">
-            分析仅依据文档内容与所选大类/验证结构，<strong>不使用表单中的任何条数配置</strong>。分析结果为推荐值，可在「生成目标」表中调整后生成。
+            分析由 <strong>AI 按文档内容与每一行生成目标</strong>分别给出条数（各行可以不同），不是「接口数×固定系数」。
+            系统<strong>不再做软下限抬升</strong>；仅合计硬顶 8000。Agent 失败时才回落启发式建议。
+            接口清单供 AI 判断覆盖范围；正文摘录可能截断但不影响清单完整性。可在表中手动改条数后生成。
           </div>
         </div>
       </el-form-item>
@@ -319,11 +356,17 @@ import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { UploadFilled } from '@element-plus/icons-vue';
 import PageShell from '../components/PageShell.vue';
+import CategoryMajorCascader from '../components/fitness/CategoryMajorCascader.vue';
 import ManualTestItemForm from './ManualTestItemForm.vue';
 import { listDocuments, previewDocument, getDocumentPreview } from '../services/documentService';
 import { startGeneration, estimateGeneration } from '../services/generationService';
 import { fetchEnums, fetchMajorTemplateMapping } from '../services/fitnessService.js';
 import { fetchProjects } from '../services/projectService.js';
+import {
+  formatCategoryDisplay,
+  formatSchemeLabel,
+  formatValidationLabel,
+} from '../utils/testCategoryDisplay.js';
 
 const targetCountByKey = ref({});
 
@@ -346,7 +389,7 @@ const validationOptions = ref([]);
 const majorOptions = ref([]);
 const majorProfiles = ref({});
 
-const MIXED_TS_MAJORS = new Set([ 'C1', 'C2', 'C3', 'C4' ]);
+const MIXED_TS_MAJORS = new Set([ 'T3' ]);
 
 const emptyPreview = () => ({
   staging_id: null,
@@ -396,12 +439,12 @@ const selectedProject = computed(() =>
 
 function majorLabel(majorId) {
   const row = majorOptions.value.find(m => m.category_major_id === majorId);
-  return row ? `${row.category_major_id} ${row.name || ''}`.trim() : majorId;
+  return formatCategoryDisplay(majorId, row?.name || '');
 }
 
 function validationLabel(validationId) {
   const row = validationOptions.value.find(v => v.validation_id === validationId);
-  return row ? `${row.validation_id} ${row.name || ''}`.trim() : validationId;
+  return formatValidationLabel(validationId, row?.name || '');
 }
 
 function resolveMajorProfile(majorId) {
@@ -456,7 +499,7 @@ function buildSchemeTargets(includeCounts = true) {
 
 function setTargetCount(majorId, validationId, count) {
   const key = targetKey(majorId, validationId);
-  const n = Math.max(1, Math.min(200, Math.round(Number(count) || 1)));
+  const n = Math.max(1, Math.min(8000, Math.round(Number(count) || 1)));
   targetCountByKey.value = { ...targetCountByKey.value, [key]: n };
 }
 
@@ -486,8 +529,8 @@ const currentTotalCount = computed(() =>
 const rules = {
   task_name: [{ required: true, message: '请输入任务名称', trigger: 'blur' }],
   project_code: [{ required: true, message: '请选择项目', trigger: 'change' }],
-  category_major_ids: [{ type: 'array', min: 1, message: '请至少选择一个测试大类', trigger: 'change' }],
-  validation_ids: [{ type: 'array', min: 1, message: '至少选择一项主验证', trigger: 'change' }],
+  category_major_ids: [{ type: 'array', min: 1, message: '请至少选择一个测试分类', trigger: 'change' }],
+  validation_ids: [{ type: 'array', min: 1, message: '至少选择一项判定方式', trigger: 'change' }],
 };
 
 const canEstimate = computed(() =>
@@ -500,6 +543,13 @@ const estimateSourceLabel = computed(() => {
   const map = { agent: 'Agent', heuristic: '文档分析', configured: '配置合计' };
   return map[estimateResult.value?.source] || estimateResult.value?.source || '';
 });
+
+function formatDocChars(n) {
+  const num = Number(n) || 0;
+  if (num >= 10000) return `${(num / 10000).toFixed(1)} 万字`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}k 字`;
+  return `${num} 字`;
+}
 
 const canSubmit = computed(() =>
   form.value.task_name?.trim()
@@ -765,7 +815,7 @@ async function buildGenerationPayload(forEstimate = false) {
 
 async function handleAgentEstimate() {
   if (!canEstimate.value) {
-    ElMessage.warning('请先选择大类、验证并确认文档');
+    ElMessage.warning('请先选择测试分类、判定方式并确认文档');
     return;
   }
   estimating.value = true;
@@ -897,6 +947,20 @@ onMounted(() => {
   font-size: 12px;
   color: #606266;
   line-height: 1.5;
+}
+.testgen-estimate-endpoints {
+  font-size: 12px;
+  color: #606266;
+}
+.testgen-estimate-endpoints summary {
+  cursor: pointer;
+  color: #409eff;
+}
+.testgen-estimate-endpoints ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  max-height: 180px;
+  overflow: auto;
 }
 .testgen-estimate-hint {
   font-size: 12px;

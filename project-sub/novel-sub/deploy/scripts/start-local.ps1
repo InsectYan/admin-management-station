@@ -1,4 +1,4 @@
-# Local stack: infra + novel (profile novel)
+﻿# Local stack: infra + novel (profile novel)
 $ErrorActionPreference = "Stop"
 . "$PSScriptRoot\_utf8.ps1"
 

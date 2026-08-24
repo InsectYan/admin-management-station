@@ -4,7 +4,11 @@ const { buildSchemePhases } = require('../lib/schemePhaseHelper');
 const {
   buildExplainObservationFromResult,
   buildRunExplainContext,
+  buildExplainTriadTexts,
 } = require('../lib/runExplainBuilder');
+
+/** 解读失败原因：等待 AI 最长 15 分钟 */
+const EXPLAIN_TIMEOUT_MS = 15 * 60 * 1000;
 
 const RunOrchestrator = require('./execution/runOrchestrator');
 const vsRegistry = require('./execution/vsRegistry');
@@ -371,7 +375,11 @@ class FitnessExecutionService extends require('egg').Service {
     return this.orchestrator().executeSchemeDebug(schemeId, body);
   }
 
-  async explainRun(runId, options = {}) {
+  /**
+   * 组装 explain 请求体（配置项 + 目标项 + 实际返回）
+   * @returns {Promise<object|null>}
+   */
+  async prepareExplainPayload(runId, options = {}) {
     const runData = await this.getRun(runId);
     if (!runData) return null;
 
@@ -385,28 +393,65 @@ class FitnessExecutionService extends require('egg').Service {
 
     const item = await this.orchestrator().loadItem(runData.item_id);
     const runConfig = await this.getRunConfig(runData.item_id, runData.scheme_id);
-    const runContext = buildRunExplainContext(runData, item, runConfig, results);
+    let env = null;
+    if (runData.env_id) {
+      env = await this.ctx.model.FtExecutionEnv.findByPk(runData.env_id);
+    }
+    const runContext = buildRunExplainContext(runData, item, runConfig, results, env);
     const obsCtx = {
       template_code: runContext.template_code,
       scheme_id: runContext.scheme_id,
+      config_json: runContext.config_json,
+      config_bundle: runContext.config_json,
     };
 
     const failedRows = results.filter(r => r.sub_verdict === 'fail');
     const focusFailed = options.focus !== 'all';
     const sourceRows = focusFailed && failedRows.length ? failedRows : results;
-
     const observations = sourceRows.map(r => buildExplainObservationFromResult(r, item, obsCtx));
+    const triad = buildExplainTriadTexts(runContext, observations);
+    const focus = focusFailed && failedRows.length ? 'failed' : 'all';
 
-    const agentRes = await this.ctx.service.agentProxy.invokeFitnessJudge({
-      action: 'explain',
-      run_id: Number(runId),
-      item_id: runData.item_id,
-      llm_profile: options.llm_profile,
-      focus: focusFailed && failedRows.length ? 'failed' : 'all',
+    return {
+      runData,
+      item,
+      runContext,
       observations,
-      run_context: runContext,
-      trace: { run_id: runId, item_id: runData.item_id },
-    });
+      triad,
+      focus,
+      agentPayload: {
+        action: 'explain',
+        run_id: Number(runId),
+        item_id: runData.item_id,
+        llm_profile: options.llm_profile,
+        focus,
+        observations,
+        run_context: runContext,
+        config_text: triad.config_text,
+        expected_text: triad.expected_text,
+        actual_text: triad.actual_text,
+        assertion_diff_text: triad.assertion_diff_text,
+        trace: { run_id: runId, item_id: runData.item_id },
+      },
+    };
+  }
+
+  async explainRun(runId, options = {}) {
+    const prepared = await this.prepareExplainPayload(runId, options);
+    if (!prepared) return null;
+
+    const agentRes = await this.ctx.service.agentProxy.invokeFitnessJudge(
+      prepared.agentPayload,
+      EXPLAIN_TIMEOUT_MS,
+    );
+
+    if (agentRes.meta?.fallback) {
+      const err = new Error('AI 解读不可用（LLM 未配置或未返回有效结果），请检查 Agent/LLM 后重试');
+      err.status = 502;
+      err.code = 'EXPLAIN_AI_UNAVAILABLE';
+      err.data = { fallback: true, meta: agentRes.meta || {} };
+      throw err;
+    }
 
     const markdown = agentRes.output?.markdown || agentRes.reply || '';
     if (!markdown.trim()) {
@@ -419,11 +464,82 @@ class FitnessExecutionService extends require('egg').Service {
     return {
       run_id: Number(runId),
       markdown,
-      focus: focusFailed && failedRows.length ? 'failed' : 'all',
-      observation_count: observations.length,
-      run_context: runContext,
-      meta: { ...(agentRes.meta || {}), fallback: !!agentRes.meta?.fallback },
+      focus: prepared.focus,
+      observation_count: prepared.observations.length,
+      run_context: prepared.runContext,
+      triad_preview: {
+        config_text: prepared.triad.config_text.slice(0, 500),
+        expected_text: prepared.triad.expected_text.slice(0, 500),
+        assertion_diff_text: prepared.triad.assertion_diff_text.slice(0, 800),
+      },
+      meta: { ...(agentRes.meta || {}), fallback: false, timeout_ms: EXPLAIN_TIMEOUT_MS },
     };
+  }
+
+  /**
+   * SSE：先推送思考/状态，最终 event=done 仅含结果文案
+   * @param {string|number} runId
+   * @param {object} options
+   * @param {(event: string, data: object) => void} emit
+   */
+  async explainRunStream(runId, options = {}, emit) {
+    const prepared = await this.prepareExplainPayload(runId, options);
+    if (!prepared) {
+      const err = new Error('运行记录不存在');
+      err.status = 404;
+      throw err;
+    }
+
+    emit('status', {
+      phase: 'prepare',
+      label: '已组装配置项 / 目标项 / 实际返回，正在调用 AI…',
+      focus: prepared.focus,
+      observation_count: prepared.observations.length,
+    });
+    emit('thinking', {
+      label: '对照材料已就绪',
+      assertion_diff_text: prepared.triad.assertion_diff_text,
+    });
+
+    await this.ctx.service.agentProxy.invokeFitnessJudgeStream(
+      prepared.agentPayload,
+      EXPLAIN_TIMEOUT_MS,
+      (event, data) => {
+        if (event === 'status' || event === 'delta') {
+          const thinkText = data?.thinking || data?.label || data?.delta || data?.text || '';
+          emit('thinking', {
+            phase: data?.phase || event,
+            label: thinkText || 'AI 思考中…',
+            detail: data,
+          });
+          return;
+        }
+        if (event === 'error') {
+          emit('error', data);
+          return;
+        }
+        if (event === 'done') {
+          const markdown = data?.output?.markdown || data?.reply || '';
+          const fallback = !!data?.meta?.fallback;
+          if (fallback || !String(markdown).trim()) {
+            emit('error', {
+              message: fallback
+                ? 'AI 解读不可用（LLM 未配置或未返回有效结果）'
+                : 'Agent 未返回解读内容',
+              code: fallback ? 'EXPLAIN_AI_UNAVAILABLE' : 'EXPLAIN_EMPTY',
+            });
+            return;
+          }
+          emit('result', {
+            run_id: Number(runId),
+            markdown,
+            focus: prepared.focus,
+            observation_count: prepared.observations.length,
+            meta: { ...(data.meta || {}), fallback: false, timeout_ms: EXPLAIN_TIMEOUT_MS },
+          });
+        }
+      },
+    );
   }
 
   async generateSamples(body = {}) {

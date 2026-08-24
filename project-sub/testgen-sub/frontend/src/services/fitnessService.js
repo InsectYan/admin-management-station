@@ -49,6 +49,11 @@ export async function createManualTestItem(payload) {
   return data.data;
 }
 
+export async function updateTestItem(itemId, payload) {
+  const { data } = await api.put(`/fitness/items/${encodeURIComponent(itemId)}`, payload);
+  return data.data;
+}
+
 export async function updateItemSchemes(itemId, payload) {
   const { data } = await api.put(`/fitness/items/${encodeURIComponent(itemId)}/schemes`, payload);
   return data.data;
@@ -331,8 +336,103 @@ export async function healthCheckEnv(payload) {
 }
 
 export async function explainFtRun(runId, payload = {}) {
-  const { data } = await api.post(`/fitness/runs/${runId}/explain`, payload);
+  const { data } = await api.post(`/fitness/runs/${runId}/explain`, payload, {
+    timeout: 15 * 60 * 1000,
+  });
   return data.data;
+}
+
+/**
+ * SSE 解读失败原因：思考过程走 onThinking，最终文案走 onResult
+ * @param {number|string} runId
+ * @param {object} payload
+ * @param {{ onThinking?: (p: object) => void, onResult?: (p: object) => void, onError?: (e: Error) => void, signal?: AbortSignal }} handlers
+ */
+export async function streamExplainFtRun(runId, payload = {}, handlers = {}) {
+  const { onThinking, onResult, onError, signal } = handlers;
+  const url = `${resolveApiBase()}/fitness/runs/${encodeURIComponent(runId)}/explain/stream`;
+  let res;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+      body: JSON.stringify(payload),
+      signal,
+    });
+  } catch (e) {
+    onError?.(e);
+    throw e;
+  }
+  if (!res.ok || !res.body) {
+    const text = await res.text().catch(() => '');
+    const err = new Error(text || `解读流失败 HTTP ${res.status}`);
+    onError?.(err);
+    throw err;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder('utf-8');
+  let buffer = '';
+  let settled = false;
+
+  const flushBlock = (block) => {
+    const lines = block.split(/\r?\n/);
+    let event = 'message';
+    const dataLines = [];
+    for (const line of lines) {
+      if (line.startsWith('event:')) event = line.slice(6).trim();
+      else if (line.startsWith('data:')) dataLines.push(line.slice(5).trimStart());
+    }
+    if (!dataLines.length) return;
+    let data;
+    try {
+      data = JSON.parse(dataLines.join('\n'));
+    } catch {
+      data = { raw: dataLines.join('\n') };
+    }
+    if (event === 'thinking' || event === 'status' || event === 'delta') {
+      onThinking?.(data);
+      return;
+    }
+    if (event === 'result') {
+      settled = true;
+      onResult?.(data);
+      return;
+    }
+    if (event === 'error') {
+      settled = true;
+      const err = new Error(data?.message || '解读失败');
+      err.code = data?.code;
+      onError?.(err);
+      return;
+    }
+    if (event === 'done' && data?.markdown) {
+      settled = true;
+      onResult?.(data);
+    }
+  };
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let idx;
+      while ((idx = buffer.indexOf('\n\n')) >= 0) {
+        const block = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 2);
+        flushBlock(block);
+      }
+    }
+    if (buffer.trim()) flushBlock(buffer);
+    if (!settled) {
+      const err = new Error('AI 流结束但未返回结果');
+      onError?.(err);
+      throw err;
+    }
+  } finally {
+    try { reader.releaseLock(); } catch { /* ignore */ }
+  }
 }
 
 export async function generateFitnessSamples(payload) {

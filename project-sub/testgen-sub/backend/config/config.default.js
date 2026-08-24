@@ -90,7 +90,11 @@ module.exports = appInfo => {
 
   config.fitnessExecution = {
     fitnessAgentRoot: detectDefaultFitnessAgentRoot(),
-    cliAllowlist: [ 'npm run test:stations', 'npm run test:e2e' ],
+    cliAllowlist: [
+      'npm run test:stations',
+      'npm run test:e2e',
+      'npm test',
+    ],
     cliAutoInstallDeps: process.env.FT_CLI_AUTO_INSTALL !== 'false',
     cliInstallTimeoutMs: Number(process.env.FT_CLI_INSTALL_TIMEOUT_MS || 600000),
     cliDefaultDatabaseUrl: process.env.FITNESS_TEST_DATABASE_URL

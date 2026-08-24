@@ -6,6 +6,10 @@ const {
   SCHEME_TO_TEMPLATE,
 } = require('./configTemplateRegistry');
 
+/** explain 专用：配置/响应可稍长，便于 AI 对照 */
+const BODY_MAX = 6000;
+const FIELD_MAX = 1200;
+
 function truncateExplainText(value, max = 2048) {
   const s = typeof value === 'string' ? value : JSON.stringify(value ?? '');
   return s.length > max ? `${s.slice(0, max)}…` : s;
@@ -57,9 +61,9 @@ function collectAssertionSummary(assertions) {
 function extractTemplateHints(templateCode, artifacts, semantic, assertions) {
   const hints = [];
   if (templateCode === 'TPL-API-CTX') {
-    if (artifacts.poll) hints.push('api_ctx: 含 poll 轮询阶段');
-    if (artifacts.submit) hints.push('api_ctx: 含 submit 提交阶段');
-    if (semantic) hints.push('api_ctx: 含语义/观测文案比对');
+    if (artifacts.poll) hints.push('api_ctx: 含 poll 阶段');
+    if (artifacts.submit) hints.push('api_ctx: 含 submit 阶段');
+    if (semantic) hints.push('api_ctx: 含语义比对');
   }
   if (templateCode === 'TPL-CHAIN' && artifacts.vars) {
     hints.push(`chain: extract 变量 ${Object.keys(artifacts.vars).join(', ')}`);
@@ -72,19 +76,48 @@ function extractTemplateHints(templateCode, artifacts, semantic, assertions) {
     hints.push(`obs: trace_id=${artifacts.trace_id}`);
   }
   if (templateCode === 'TPL-MAN' || assertions.some(a => a.type === 'manual_queue')) {
-    hints.push('manual: 人工评审队列');
+    hints.push('manual: 人工评审');
   }
-  if (templateCode === 'TPL-NEG') {
-    hints.push('neg: 对抗/注入专项');
-  }
+  if (templateCode === 'TPL-NEG') hints.push('neg: 对抗/注入');
   return hints;
+}
+
+function pickConfigBundle(configJson = {}) {
+  const cfg = configJson && typeof configJson === 'object' ? configJson : {};
+  return {
+    endpoint_path: cfg.endpoint_path || cfg.path || null,
+    method: cfg.http_method || cfg.method || null,
+    body: cfg.body ?? null,
+    headers: cfg.headers || {},
+    http_status_expected: cfg.http_status_expected ?? null,
+    assertions: Array.isArray(cfg.assertions) ? cfg.assertions : [],
+    test_steps: Array.isArray(cfg.test_steps) ? cfg.test_steps : [],
+    assertion_points: cfg.assertion_points || [],
+    test_input_example: cfg.test_input_example || null,
+    execution_mode: cfg.execution_mode || null,
+    use_api_template: cfg.use_api_template === true,
+    api_template_id: cfg.api_template_id || null,
+    preflight_api_template_id: cfg.preflight_api_template_id || null,
+  };
+}
+
+function buildAssertionDiffs(assertions = []) {
+  return assertions.map(a => {
+    const rule = a.rule || a;
+    const ok = !(a.pass === false || a.ok === false || a.status === 'fail' || a.status === 'failed');
+    return {
+      ok,
+      type: a.type || rule.type || null,
+      path: rule.path || a.path || null,
+      expect: rule.expect !== undefined ? rule.expect : a.expect,
+      actual: a.actual !== undefined ? a.actual : a.actual_status,
+      message: a.message || a.detail || a.reason || null,
+    };
+  });
 }
 
 /**
  * 将 ft_run_result 转为 fitness-judge-skill explain 所需的 observation
- * @param {object} row
- * @param {object|null} item
- * @param {{ template_code?: string, scheme_id?: string }} [ctx]
  */
 function buildExplainObservationFromResult(row, item, ctx = {}) {
   const { artifacts, semantic, phase, assertions } = unwrapResultDetail(row);
@@ -92,6 +125,7 @@ function buildExplainObservationFromResult(row, item, ctx = {}) {
   const cli = artifacts.cli;
   const { failed, types, failureText } = collectAssertionSummary(assertions);
   const templateCode = ctx.template_code || resolveTemplateCodeFromItem(item || {});
+  const assertionDiffs = buildAssertionDiffs(assertions);
 
   let httpStatus = http?.statusCode ?? null;
   if (httpStatus == null && cli?.exitCode != null) {
@@ -101,24 +135,26 @@ function buildExplainObservationFromResult(row, item, ctx = {}) {
     for (const a of assertions) {
       if (a.actual_status != null) httpStatus = a.actual_status;
       else if (a.status_code != null) httpStatus = a.status_code;
-      else if (a.actual != null && typeof a.actual === 'number') httpStatus = a.actual;
     }
     const m = String(row.output_summary || '').match(/HTTP\s+(\d{3})/i);
     if (httpStatus == null && m) httpStatus = Number(m[1]);
   }
 
+  let responseBody = null;
   let responseExcerpt = '';
   if (http?.body != null) {
-    responseExcerpt = truncateExplainText(http.body);
+    responseBody = http.body;
+    responseExcerpt = truncateExplainText(http.body, BODY_MAX);
   } else if (cli?.stderr) {
-    responseExcerpt = truncateExplainText(cli.stderr);
+    responseExcerpt = truncateExplainText(cli.stderr, BODY_MAX);
   } else if (cli?.stdout || artifacts.output_tail) {
-    responseExcerpt = truncateExplainText(cli?.stdout || artifacts.output_tail);
+    responseExcerpt = truncateExplainText(cli?.stdout || artifacts.output_tail, BODY_MAX);
   } else if (row.output_summary) {
-    responseExcerpt = truncateExplainText(row.output_summary);
+    responseExcerpt = truncateExplainText(row.output_summary, FIELD_MAX);
   }
 
   const templateHints = extractTemplateHints(templateCode, artifacts, semantic, assertions);
+  const configBundle = ctx.config_bundle || pickConfigBundle(ctx.config_json || {});
 
   return {
     sub_run_index: row.sub_index,
@@ -130,11 +166,31 @@ function buildExplainObservationFromResult(row, item, ctx = {}) {
     scheme_id: ctx.scheme_id || item?.scheme_primary_id || null,
     phase: phase || null,
     http_status: httpStatus,
+    request_url: http?.url || null,
+    request_method: http?.method || configBundle.method || null,
     input_summary: row.input_summary || '',
     output_summary: row.output_summary || '',
     response_excerpt: responseExcerpt,
+    response_body: responseBody,
     expected_hint: item?.expected_observation || item?.expected_result || '',
-    journey_summary: artifacts.journey || artifacts.obs || semantic || null,
+    /** 三角对照：配置期望 / 文案目标 / 实际 */
+    config_expect: {
+      http_status_expected: configBundle.http_status_expected,
+      assertions: configBundle.assertions,
+      test_steps: configBundle.test_steps,
+      assertion_points: configBundle.assertion_points,
+    },
+    target_expect: {
+      expected_observation: item?.expected_observation || '',
+      http_status_expected: item?.http_status_expected ?? configBundle.http_status_expected,
+      endpoint_path: item?.endpoint_path || configBundle.endpoint_path,
+    },
+    actual: {
+      http_status: httpStatus,
+      body: responseBody,
+      assertion_results: assertionDiffs,
+    },
+    assertion_diffs: assertionDiffs,
     assertion_failures: failureText,
     assertion_types: types,
     semantic_summary: semantic
@@ -142,9 +198,7 @@ function buildExplainObservationFromResult(row, item, ctx = {}) {
       : null,
     poll_status: artifacts.poll?.http?.statusCode ?? artifacts.poll_status ?? null,
     template_hints: templateHints.length ? templateHints.join(' · ') : null,
-    perf_summary: artifacts.perf
-      ? truncateExplainText(artifacts.perf, 400)
-      : null,
+    perf_summary: artifacts.perf ? truncateExplainText(artifacts.perf, 400) : null,
     error_message: cli?.stderr
       ? truncateExplainText(
         String(cli.stderr).split('\n').find(l => /Error:|FAIL|ENOENT|MODULE_NOT_FOUND/i.test(l)) || cli.stderr,
@@ -158,11 +212,13 @@ function buildExplainObservationFromResult(row, item, ctx = {}) {
   };
 }
 
-function buildRunExplainContext(runData, item, runConfig, results) {
+function buildRunExplainContext(runData, item, runConfig, results, env = null) {
   const passCount = results.filter(r => r.sub_verdict === 'pass').length;
   const failCount = results.filter(r => r.sub_verdict === 'fail').length;
   const templateCode = resolveTemplateCodeFromItem(item || {});
   const schemeId = runData.scheme_id || item?.scheme_primary_id || null;
+  const configJson = runConfig?.config_json || {};
+  const configBundle = pickConfigBundle(configJson);
 
   return {
     status: runData.status,
@@ -183,11 +239,79 @@ function buildRunExplainContext(runData, item, runConfig, results) {
     progress: runData.progress || {},
     threshold_json: runConfig?.threshold_json || {},
     env_id: runData.env_id || null,
+    env_name: env?.name || null,
+    base_url: env?.bff_coach_url || env?.base_url || null,
+    /** 完整可执行配置（供 AI 对照） */
+    config_json: configBundle,
+    config_raw: truncateExplainText(configJson, BODY_MAX),
   };
+}
+
+/**
+ * 组装 explain 专用三块文本（配置 / 目标 / 实际）
+ */
+function buildExplainTriadTexts(runContext, observations = []) {
+  const cfg = runContext.config_json || {};
+  const config_text = [
+    '【配置项 config】',
+    `- 模板/方案/判定: ${runContext.template_code || '—'} / ${runContext.scheme_id || '—'} / ${runContext.validation_id || '—'}`,
+    `- 环境: ${runContext.env_name || runContext.env_id || '—'} · base=${runContext.base_url || '—'}`,
+    `- 请求: ${cfg.method || '—'} ${cfg.endpoint_path || '—'}`,
+    `- http_status_expected: ${cfg.http_status_expected ?? '—'}`,
+    `- assertions: ${JSON.stringify(cfg.assertions || [])}`,
+    `- test_steps: ${JSON.stringify(cfg.test_steps || [])}`,
+    `- assertion_points: ${JSON.stringify(cfg.assertion_points || [])}`,
+    `- body: ${truncateExplainText(cfg.body, 1500)}`,
+  ].join('\n');
+
+  const expected_text = [
+    '【目标项 expected / 文案期望】',
+    `- expected_observation: ${runContext.expected_observation || '—'}`,
+    `- detail_summary: ${truncateExplainText(runContext.detail_summary || '—', 400)}`,
+    `- 用例期望状态码(item): ${observations[0]?.target_expect?.http_status_expected ?? '—'}`,
+    '- 说明: test_steps/assertion_points 为自然语言目标；assertions.expect 为可执行期望，二者冲突时以可执行断言为准并应指出矛盾',
+  ].join('\n');
+
+  const actualBlocks = observations.map((o, i) => {
+    const diffs = (o.assertion_diffs || [])
+      .map(d => `  - [${d.ok ? 'PASS' : 'FAIL'}] ${d.type}${d.path ? ` ${d.path}` : ''}: expect=${JSON.stringify(d.expect)} actual=${JSON.stringify(d.actual)} | ${d.message || ''}`)
+      .join('\n');
+    return [
+      `### 子项 #${o.sub_run_index ?? i} · ${o.sub_verdict || '—'}`,
+      `- 请求: ${o.request_method || '—'} ${o.request_url || o.input_summary || '—'}`,
+      `- HTTP: ${o.http_status ?? '—'}`,
+      `- 断言对照:\n${diffs || '  （无断言明细）'}`,
+      `- 响应体: ${o.response_excerpt || '—'}`,
+    ].join('\n');
+  });
+
+  const actual_text = [ '【实际返回 actual】', ...actualBlocks ].join('\n\n');
+
+  const failLines = [];
+  for (const o of observations) {
+    for (const d of o.assertion_diffs || []) {
+      if (!d.ok) {
+        failLines.push(
+          `- 子项#${o.sub_run_index}: ${d.type}${d.path ? ` ${d.path}` : ''} | expect=${JSON.stringify(d.expect)} | actual=${JSON.stringify(d.actual)} | ${d.message || ''}`,
+        );
+      }
+    }
+    if (o.assertion_failures && !(o.assertion_diffs || []).some(d => !d.ok)) {
+      failLines.push(`- 子项#${o.sub_run_index}: ${o.assertion_failures}`);
+    }
+  }
+  const assertion_diff_text = [
+    '【已失败断言（优先据此定位根因）】',
+    failLines.length ? failLines.join('\n') : '- （未解析到失败断言行，请结合实际 HTTP/响应判断）',
+  ].join('\n');
+
+  return { config_text, expected_text, actual_text, assertion_diff_text };
 }
 
 module.exports = {
   truncateExplainText,
+  pickConfigBundle,
   buildExplainObservationFromResult,
   buildRunExplainContext,
+  buildExplainTriadTexts,
 };

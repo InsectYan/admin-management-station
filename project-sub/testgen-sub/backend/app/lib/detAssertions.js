@@ -75,20 +75,22 @@ function dedupeRules(rules) {
 
 /**
  * 组装 DET 主请求断言：status + config.assertions + 文案推导
+ * Status 以配置面板 http_status_expected 为准；不从期望观察文案再追加冲突的 status。
  * @param {object} configJson
  * @param {object} [item]
  */
 function buildDetAssertions(configJson = {}, item = {}) {
   const statusExpected = configJson.http_status_expected
+    ?? configJson.expect_status
     ?? item.http_status_expected
     ?? 200;
   const manual = Array.isArray(configJson.assertions) ? [ ...configJson.assertions ] : [];
-  const hasStatus = manual.some(a => a && a.type === 'status');
-  const assertions = [];
-  if (!hasStatus) {
-    assertions.push({ type: 'status', expect: Number(statusExpected) });
-  }
-  assertions.push(...manual);
+  // 去掉手写/旧的 type:status，统一用面板 Status，避免「面板 200 + assertions 里仍 404」双断言
+  const manualRest = manual.filter(a => !(a && a.type === 'status'));
+  const assertions = [
+    { type: 'status', expect: Number(statusExpected) },
+    ...manualRest,
+  ];
 
   const derived = parseExpectRulesFromText(
     item.expected_observation,
@@ -96,6 +98,8 @@ function buildDetAssertions(configJson = {}, item = {}) {
     configJson.assertion_text,
   );
   for (const rule of derived) {
+    // 文案里的「期望 404」等不再覆盖/叠加 Status 断言（面板已改仍失败的主因）
+    if (rule.type === 'status') continue;
     const dup = assertions.some(a =>
       a.type === rule.type
       && (a.path || '') === (rule.path || '')

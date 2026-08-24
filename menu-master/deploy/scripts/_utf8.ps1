@@ -1,4 +1,4 @@
-# Shared UTF-8 console init for deploy/scripts (ASCII-only source; safe without BOM).
+﻿# Shared UTF-8 console init for deploy/scripts (ASCII-only source; safe without BOM).
 
 if ($script:AmsUtf8Initialized) {
     return

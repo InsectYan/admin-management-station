@@ -19,8 +19,20 @@
 | 类型 | 命令 | 前置 |
 |------|------|------|
 | 离线 Skill 规则 | `cd backend && npm run smoke:e6` | 无 |
+| 离线文档解析 | `node ../../../../agent-management-master/plugins/testgen-skill/lib/docParser.selftest.js [md路径]` | 无 |
 | 在线 BFF ↔ Agent | `cd backend && npm run smoke:agent-linkage` | testgen BFF + Agent `:4001` |
 | 手动 | 见 [设计-Agent联调配置.md §5](./设计-Agent联调配置.md#5-启动顺序与验证) | — |
+
+### [2026-07-29] 文档解析与 Agent 分析
+
+| # | 任务 | 状态 |
+|---|------|------|
+| DOC-1 | Apifox `接口URL`/`请求方式` 分行解析（Skill + BFF） | ✅ |
+| DOC-2 | `estimate_case_count`：**AI 逐行** `target_breakdown`；无软下限；硬顶 8000 | ✅ 2026-08-18 |
+| DOC-3 | 生成 Loop：清单优先 + 按接口块截取；`docContentMaxLen=14000` | ✅ |
+| DOC-4 | estimate 返回 `endpoint_count`；生成用例页展示 | ✅ |
+
+> 改 Skill 后须**重启** `agent-management-master`（`:4001`）再测 Agent 分析。
 
 
 

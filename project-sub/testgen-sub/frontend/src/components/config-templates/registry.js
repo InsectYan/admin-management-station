@@ -29,7 +29,7 @@ export const PANEL_KEY_TO_TEMPLATE = {
   'api-ctx': 'TPL-API-CTX',
 };
 
-export const MIXED_TS_MAJORS = new Set([ 'C1', 'C2', 'C3', 'C4' ]);
+export const MIXED_TS_MAJORS = new Set([ 'T3' ]);
 
 export const API_CTX_SCHEME = 'TS-05-API';
 export const CHAIN_SCHEME = 'TS-05-CHAIN';

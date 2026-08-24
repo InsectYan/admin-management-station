@@ -20,7 +20,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, provide, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import PageShell from '@/components/PageShell.vue';
 import { fetchTestItem } from '@/services/fitnessService.js';
@@ -64,6 +64,8 @@ async function loadItem() {
     loading.value = false;
   }
 }
+
+provide('reloadFitnessItem', loadItem);
 
 watch(itemId, loadItem);
 

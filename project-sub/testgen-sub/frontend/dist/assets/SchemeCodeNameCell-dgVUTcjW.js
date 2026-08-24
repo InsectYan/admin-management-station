@@ -1,2 +1,0 @@
-import{b as n,f as o,t as s,q as c}from"./index-CqgBCwDs.js";const l=["title"],p={key:1},m={__name:"SchemeCodeNameCell",props:{code:{type:String,default:""},name:{type:String,default:""}},setup(e){const t=e,a=c(()=>t.name||t.code||"");return(d,i)=>a.value?(n(),o("span",{key:0,title:e.code||void 0},s(a.value),9,l)):(n(),o("span",p,"—"))}};export{m as _};
-//# sourceMappingURL=SchemeCodeNameCell-dgVUTcjW.js.map

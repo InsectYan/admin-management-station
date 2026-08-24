@@ -1,4 +1,4 @@
-# Local stack: postgres + api + frontend
+﻿# Local stack: postgres + api + frontend
 $ErrorActionPreference = "Stop"
 . "$PSScriptRoot\_utf8.ps1"
 

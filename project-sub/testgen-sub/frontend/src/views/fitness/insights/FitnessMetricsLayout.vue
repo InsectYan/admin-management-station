@@ -11,6 +11,6 @@ const tabs = [
   { label: '自动化', path: '/fitness/insights/metrics/automation' },
   { label: '风险防护', path: '/fitness/insights/metrics/risk-guard' },
   { label: '优先级', path: '/fitness/insights/metrics/priority' },
-  { label: '六站×三端', path: '/fitness/insights/metrics/station-role' },
+  { label: '六站×业务角色', path: '/fitness/insights/metrics/station-role' },
 ];
 </script>

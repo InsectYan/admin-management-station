@@ -1,36 +1,36 @@
 /** @typedef {'success'|'info'|'warning'|'danger'|''} ElTagType */
 
-/** 维度 A–H → Tag 样式 */
+import { formatCategoryDisplay } from './testCategoryDisplay.js';
+
+/** 维度 S/B/Q/R → Tag 样式 */
 const DIMENSION_TAG = {
-  A: { type: 'primary', effect: 'plain' },
+  S: { type: 'primary', effect: 'plain' },
   B: { type: 'success', effect: 'plain' },
-  C: { type: 'warning', effect: 'plain' },
-  D: { color: '#7c3aed', effect: 'plain' },
-  E: { type: 'danger', effect: 'plain' },
-  F: { color: '#0891b2', effect: 'plain' },
-  G: { type: 'info', effect: 'plain' },
-  H: { color: '#0d9488', effect: 'plain' },
+  Q: { type: 'warning', effect: 'plain' },
+  R: { color: '#0891b2', effect: 'plain' },
 };
 
-/** 大类编码前缀 → Tag 颜色（按维度族） */
+/** 通用大类 T1–T12 */
 const MAJOR_TAG = {
-  A1: { color: '#2563eb', effect: 'light' },
-  A2: { color: '#1d4ed8', effect: 'light' },
-  A3: { color: '#3b82f6', effect: 'light' },
-  A4: { color: '#60a5fa', effect: 'light' },
-  A5: { color: '#1e40af', effect: 'light' },
-  A6: { color: '#6366f1', effect: 'light' },
-  B1: { color: '#16a34a', effect: 'light' },
-  B2: { color: '#15803d', effect: 'light' },
-  B3: { color: '#22c55e', effect: 'light' },
-  B4: { color: '#4ade80', effect: 'light' },
-  B5: { color: '#166534', effect: 'light' },
-  B6: { color: '#059669', effect: 'light' },
-  C1: { color: '#d97706', effect: 'light' },
-  C2: { color: '#ea580c', effect: 'light' },
-  C3: { color: '#f59e0b', effect: 'light' },
-  C4: { color: '#b45309', effect: 'light' },
-  E_RISK: { type: 'danger', effect: 'dark' },
+  T1: { color: '#2563eb', effect: 'light' },
+  T2: { color: '#1d4ed8', effect: 'light' },
+  T3: { color: '#16a34a', effect: 'light' },
+  T4: { color: '#15803d', effect: 'light' },
+  T5: { color: '#059669', effect: 'light' },
+  T6: { type: 'danger', effect: 'plain' },
+  T7: { color: '#7c3aed', effect: 'light' },
+  T8: { color: '#0891b2', effect: 'plain' },
+  T9: { color: '#0e7490', effect: 'plain' },
+  T10: { color: '#d97706', effect: 'light' },
+  T11: { color: '#0d9488', effect: 'light' },
+  T12: { color: '#b45309', effect: 'light' },
+};
+
+const MAJOR_TO_DIM = {
+  T1: 'S', T2: 'S', T7: 'S',
+  T3: 'B', T4: 'B', T5: 'B',
+  T6: 'Q', T10: 'Q', T12: 'Q',
+  T8: 'R', T9: 'R', T11: 'R',
 };
 
 /** 优先级 → Tag */
@@ -76,7 +76,7 @@ export function dimensionTagProps(row) {
 export function categoryMajorTagProps(row) {
   const id = String(row.category_major_id || '');
   if (MAJOR_TAG[id]) return { ...MAJOR_TAG[id] };
-  const dim = id.charAt(0);
+  const dim = MAJOR_TO_DIM[id] || String(row.dimension_id || '');
   return pickTagStyle(DIMENSION_TAG, dim);
 }
 
@@ -98,11 +98,13 @@ export function envTierTagProps(row) {
   return pickTagStyle(ENV_TIER_TAG, id);
 }
 
-/** @param {Record<string, unknown>} row @param {'dimension'|'major'|'priority'|'exec_env'|'env_tier'} kind */
+/** @param {Record<string, unknown>} row @param {'dimension'|'major'|'priority'|'exec_env'|'env_tier'|'category'} kind */
 export function itemTagLabel(row, kind) {
+  if (kind === 'major' || kind === 'category') {
+    return formatCategoryDisplay(row.category_major_id, row.category_major_name);
+  }
   const map = {
     dimension: row.dimension_name || row.dimension_id,
-    major: row.category_major_name || row.category_major_id,
     priority: row.priority_name || row.priority_id,
     exec_env: row.exec_env_name || row.exec_env_id,
     env_tier: row.env_tier_name || row.env_tier_id,

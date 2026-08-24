@@ -1,11 +1,13 @@
 -- E4：B6-HB-001 TS-05-CHAIN + C3-ALERT-001 TS-08-OBS 种子
+-- 用例缺失时跳过，避免精简 seed 下 FK 失败
 
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM ft_run_config
-    WHERE item_id = 'B6-HB-001' AND scheme_id = 'TS-05-CHAIN'
-  ) THEN
+  IF EXISTS (SELECT 1 FROM test_item_detail WHERE item_id = 'B6-HB-001')
+     AND NOT EXISTS (
+       SELECT 1 FROM ft_run_config
+       WHERE item_id = 'B6-HB-001' AND scheme_id = 'TS-05-CHAIN'
+     ) THEN
     INSERT INTO ft_run_config (
       item_id,
       scheme_id,
@@ -30,10 +32,11 @@ BEGIN
     );
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM ft_run_config
-    WHERE item_id = 'C3-ALERT-001' AND scheme_id = 'TS-08-OBS'
-  ) THEN
+  IF EXISTS (SELECT 1 FROM test_item_detail WHERE item_id = 'C3-ALERT-001')
+     AND NOT EXISTS (
+       SELECT 1 FROM ft_run_config
+       WHERE item_id = 'C3-ALERT-001' AND scheme_id = 'TS-08-OBS'
+     ) THEN
     INSERT INTO ft_run_config (
       item_id,
       scheme_id,

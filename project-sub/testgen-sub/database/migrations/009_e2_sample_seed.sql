@@ -1,9 +1,17 @@
 -- E2：C2-BOUND-004 样本集种子 + run_config（3× GET /health HTTP smoke）
+-- 若 test_item_detail 未注入该用例（精简 seed），整段跳过，避免 FK 失败
 
 DO $$
 DECLARE
   v_set_id INT;
 BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM test_item_detail WHERE item_id = 'C2-BOUND-004'
+  ) THEN
+    RAISE NOTICE '[009] skip E2 seed: test_item_detail 缺少 C2-BOUND-004';
+    RETURN;
+  END IF;
+
   IF NOT EXISTS (
     SELECT 1 FROM ft_sample_set WHERE name = 'C2-BOUND-004 E2 smoke'
   ) THEN

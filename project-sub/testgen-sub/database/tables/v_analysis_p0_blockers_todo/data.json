@@ -6,7 +6,7 @@
     "category_major_id": "B2",
     "automation_entry_id": "AUTO_TODO_SCRIPT",
     "is_risk_flag": false,
-    "dimension_name": "六站流水线",
+    "dimension_name": "行为验证",
     "category_major_name": "② 门禁",
     "automation_entry_name": "待建脚本"
   },

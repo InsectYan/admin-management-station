@@ -80,11 +80,16 @@ ams-testgen db:seed test_item_detail   # 仅注入指定表
 ams-testgen db:sync            # 仅 DDL，不注入数据
 ams-testgen db:reset           # 清空全库 → 重建 Schema → 全量注入
 ams-testgen db:reset test_item_detail  # 删表重建 + 仅注入指定表
-# 以下是每次更新数测试用例状态后，以此处理
-cd admin-management-station/project-sub/testgen-sub
-node test-project/fitness-agent/scripts/sync-automation-status.mjs
-cd deploy && ams-testgen db:reset test_item_detail
 ```
+
+**Fitness Agent 用例（仅 `.pi`）**：由 `test-project/fitness-agent/scripts/generate-pi-only-cases.mjs` 全量覆盖 `test_item_detail`（约 95 条）。旧六站/套壳用例已移除。
+
+```bash
+cd project-sub/testgen-sub
+node test-project/fitness-agent/scripts/generate-pi-only-cases.mjs
+cd deploy && ams-testgen db:reset test_item_detail test_item_prefix_scheme test_item_risk_link test_item_prd_ref_link test_item_prd_goal_link test_item_arch_ref_link test_category_major
+```
+
 
 **改表时须同步**：`init.sql` / `migrations/` / Model / `database/tables/` seed / `deploy/scripts/run.mjs` 表顺序，保证 `db:seed` 与 `db:reset` 行为一致（见 `subapp-development.mdc` §2）。
 

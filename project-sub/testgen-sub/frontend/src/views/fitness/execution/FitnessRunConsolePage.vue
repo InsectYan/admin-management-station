@@ -287,8 +287,11 @@
 
     <el-card v-if="run && isTerminal" shadow="never" style="margin-top:16px">
       <template #header>
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <span>AI 解读</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div>
+            <div>AI 解读失败原因</div>
+            <div class="explain-sub">对比配置项、目标项与实际返回，分析失败差异（最长约 15 分钟）</div>
+          </div>
           <el-button
             size="small"
             type="primary"
@@ -303,8 +306,15 @@
       <div v-if="failCount === 0" class="explain-hint">
         全部子项已通过，无需失败解读。
       </div>
-      <div v-else-if="explainMarkdown" class="explain-md">{{ explainMarkdown }}</div>
-      <el-empty v-else :description="`共 ${failCount} 条失败子项，点击按钮生成解读（不改变 verdict）`" />
+      <template v-else>
+        <div v-if="explainLoading" class="explain-thinking">
+          <div class="explain-thinking-title">AI 思考中…</div>
+          <pre class="explain-thinking-body">{{ explainThinkingText || '正在组装对照材料并调用模型…' }}</pre>
+        </div>
+        <div v-else-if="explainMarkdown" class="explain-md">{{ explainMarkdown }}</div>
+        <div v-else-if="explainError" class="explain-error">{{ explainError }}</div>
+        <el-empty v-else :description="`共 ${failCount} 条失败子项，点击按钮由 AI 做差异分析（不改变 verdict）`" />
+      </template>
     </el-card>
 
     <el-dialog v-model="showPlanDialog" title="写入计划报告" width="420px">
@@ -347,7 +357,7 @@ import {
   rerunFailedRun,
   savePlanResults,
   streamFtRun,
-  explainFtRun,
+  streamExplainFtRun,
 } from '@/services/fitnessService.js';
 import { downloadJson } from '@/utils/fitnessExport.js';
 import { getLlmProfileId } from '@/utils/llmProfileSession.js';
@@ -387,6 +397,11 @@ const liveSteps = ref([]);
 const focusTraceId = ref('');
 const explainLoading = ref(false);
 const explainMarkdown = ref('');
+const explainThinkingLines = ref([]);
+const explainError = ref('');
+/** @type {AbortController | null} */
+let explainAbort = null;
+const explainThinkingText = computed(() => explainThinkingLines.value.slice(-40).join('\n'));
 const rerunning = ref(false);
 const exportingLog = ref(false);
 const analyzingLoad = ref(false);
@@ -573,25 +588,55 @@ async function loadExplain() {
     ElMessage.info('全部子项已通过');
     return;
   }
+  if (explainAbort) {
+    explainAbort.abort();
+    explainAbort = null;
+  }
+  explainAbort = new AbortController();
   explainLoading.value = true;
+  explainMarkdown.value = '';
+  explainError.value = '';
+  explainThinkingLines.value = [ '开始调用 AI…' ];
   try {
     const llm_profile = getLlmProfileId();
-    const data = await explainFtRun(route.params.runId, {
-      ...(llm_profile ? { llm_profile } : {}),
-      focus: 'failed',
-    });
-    explainMarkdown.value = data.markdown || '';
-    if (!explainMarkdown.value) {
-      ElMessage.warning('未返回解读内容');
-    } else if (data.meta?.fallback) {
-      ElMessage.info('LLM 未返回有效解读，已使用规则降级分析');
-    }
+    await streamExplainFtRun(
+      route.params.runId,
+      {
+        ...(llm_profile ? { llm_profile } : {}),
+        focus: 'failed',
+      },
+      {
+        signal: explainAbort.signal,
+        onThinking: (p) => {
+          const line = p?.label || p?.thinking || p?.delta || p?.phase || p?.assertion_diff_text || '';
+          if (!line) return;
+          const text = typeof line === 'string' ? line : JSON.stringify(line);
+          explainThinkingLines.value = [ ...explainThinkingLines.value, text ].slice(-80);
+        },
+        onResult: (data) => {
+          explainThinkingLines.value = [];
+          explainMarkdown.value = data?.markdown || '';
+          if (!explainMarkdown.value) {
+            explainError.value = 'AI 未返回解读正文';
+            ElMessage.warning(explainError.value);
+          } else {
+            ElMessage.success('AI 差异分析完成');
+          }
+        },
+        onError: (e) => {
+          explainThinkingLines.value = [];
+          explainError.value = e?.message || '解读失败';
+        },
+      },
+    );
   } catch (e) {
-    const msg = e?.response?.data?.message || e.message || '解读失败';
-    explainMarkdown.value = msg;
-    ElMessage.error(msg);
+    if (e?.name === 'AbortError') return;
+    explainThinkingLines.value = [];
+    explainError.value = e?.message || '解读失败';
+    ElMessage.error(explainError.value);
   } finally {
     explainLoading.value = false;
+    explainAbort = null;
   }
 }
 
@@ -738,7 +783,13 @@ onMounted(async () => {
   }
 });
 
-onBeforeUnmount(closeStream);
+onBeforeUnmount(() => {
+  closeStream();
+  if (explainAbort) {
+    explainAbort.abort();
+    explainAbort = null;
+  }
+});
 </script>
 
 <style scoped>
@@ -762,6 +813,12 @@ onBeforeUnmount(closeStream);
   overflow: auto;
   max-height: 320px;
 }
+.explain-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  font-weight: normal;
+}
 .explain-md {
   white-space: pre-wrap;
   font-size: 14px;
@@ -770,6 +827,31 @@ onBeforeUnmount(closeStream);
 .explain-hint {
   color: var(--el-text-color-secondary);
   font-size: 13px;
+}
+.explain-thinking {
+  border: 1px dashed var(--el-border-color);
+  border-radius: 6px;
+  padding: 12px;
+  background: var(--el-fill-color-lighter);
+}
+.explain-thinking-title {
+  font-size: 13px;
+  color: var(--el-color-primary);
+  margin-bottom: 8px;
+}
+.explain-thinking-body {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--el-text-color-regular);
+}
+.explain-error {
+  color: var(--el-color-danger);
+  font-size: 13px;
+  white-space: pre-wrap;
 }
 .tab-hint {
   color: var(--el-text-color-secondary);

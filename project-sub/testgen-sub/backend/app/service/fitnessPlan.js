@@ -2,6 +2,30 @@
 
 const { stripIdPrefixFromLabel } = require('../../scripts/lib/display-field-rules');
 
+/**
+ * 将 ft_run.status / verdict 映射为计划结果表同语义字段，供「用例最新」列展示。
+ * @param {string|null|undefined} status
+ * @param {string|null|undefined} verdict
+ */
+function mapFtRunToPlanResultFields(status, verdict) {
+  if (!status) {
+    return { result_status: null, validation_result: null };
+  }
+  const s = String(status).toLowerCase();
+  if (s === 'pending' || s === 'running') {
+    return { result_status: 'pending', validation_result: s === 'running' ? 'running' : null };
+  }
+  if (s === 'cancelled') {
+    return { result_status: 'skipped', validation_result: 'cancelled' };
+  }
+  const v = verdict != null && verdict !== '' ? String(verdict).toLowerCase() : '';
+  const passed = v === 'pass' || s === 'success';
+  return {
+    result_status: passed ? 'passed' : 'failed',
+    validation_result: v || s,
+  };
+}
+
 class FitnessPlanService extends require('egg').Service {
   async list() {
     const { page = 1, pageSize = 20 } = this.ctx.query;
@@ -71,18 +95,28 @@ class FitnessPlanService extends require('egg').Service {
       const [ rows ] = await this.app.model.query(`
         SELECT t.item_id, t.item_name, t.project_code,
           t.expected_observation, t.test_input_example,
+          t.latest_ft_run_id,
+          lr.status AS latest_run_status,
+          lr.verdict AS latest_run_verdict,
           COALESCE(t.scheme_primary_id, cms.scheme_primary_id) AS scheme_primary_id
         FROM test_item_detail t
         LEFT JOIN test_category_minor_scheme cms ON cms.category_minor_id = t.category_minor_id
+        LEFT JOIN ft_run lr ON lr.id = t.latest_ft_run_id
         WHERE t.item_id IN (:itemIds)
       `, { replacements: { itemIds } });
-      schemeByItem = Object.fromEntries(rows.map(r => [ r.item_id, {
-        scheme_primary_id: r.scheme_primary_id,
-        item_name: stripIdPrefixFromLabel(r.item_id, r.item_name),
-        project_code: r.project_code,
-        expected_observation: r.expected_observation || null,
-        test_input_example: r.test_input_example || null,
-      } ]));
+      schemeByItem = Object.fromEntries(rows.map(r => {
+        const latest = mapFtRunToPlanResultFields(r.latest_run_status, r.latest_run_verdict);
+        return [ r.item_id, {
+          scheme_primary_id: r.scheme_primary_id,
+          item_name: stripIdPrefixFromLabel(r.item_id, r.item_name),
+          project_code: r.project_code,
+          expected_observation: r.expected_observation || null,
+          test_input_example: r.test_input_example || null,
+          latest_ft_run_id: r.latest_ft_run_id != null ? Number(r.latest_ft_run_id) : null,
+          latest_result_status: latest.result_status,
+          latest_validation_result: latest.validation_result,
+        } ];
+      }));
     }
 
     const enrichedItems = items.map(row => ({
@@ -92,6 +126,9 @@ class FitnessPlanService extends require('egg').Service {
       project_code: schemeByItem[row.item_id]?.project_code || null,
       expected_observation: schemeByItem[row.item_id]?.expected_observation || null,
       test_input_example: schemeByItem[row.item_id]?.test_input_example || null,
+      latest_ft_run_id: schemeByItem[row.item_id]?.latest_ft_run_id ?? null,
+      latest_result_status: schemeByItem[row.item_id]?.latest_result_status ?? null,
+      latest_validation_result: schemeByItem[row.item_id]?.latest_validation_result ?? null,
     }));
 
     return {

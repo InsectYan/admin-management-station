@@ -1,6 +1,6 @@
 <template>
-  <el-divider content-position="left">验证方案</el-divider>
-  <el-form-item label="主验证">
+  <el-divider content-position="left">判定方式</el-divider>
+  <el-form-item label="判定方式（VS）">
     <el-select
       v-model="primaryId"
       style="width:100%"
@@ -10,16 +10,16 @@
       <el-option
         v-for="v in options"
         :key="v.validation_id"
-        :label="`${v.validation_id} · ${v.name}${v.is_primary ? ' (方案默认)' : ''}`"
+        :label="`${formatValidationLabel(v.validation_id, v.name)}${v.is_primary ? ' (方案默认)' : ''}`"
         :value="v.validation_id"
       />
     </el-select>
     <p v-if="defaultValidationId && defaultValidationId !== primaryId" class="hint-inline">
-      模板/大类推荐：<code>{{ defaultValidationId }}</code>
+      模板/分类推荐：<code>{{ formatValidationLabel(defaultValidationId) }}</code>
       <el-button link type="primary" size="small" @click="applyDefault">应用推荐</el-button>
     </p>
   </el-form-item>
-  <el-form-item v-if="!hideSecondary" label="辅验证">
+  <el-form-item v-if="!hideSecondary" label="辅判定方式">
     <el-select
       v-model="secondaryId"
       clearable
@@ -30,7 +30,7 @@
       <el-option
         v-for="v in options"
         :key="'s-' + v.validation_id"
-        :label="`${v.validation_id} · ${v.name}`"
+        :label="formatValidationLabel(v.validation_id, v.name)"
         :value="v.validation_id"
       />
     </el-select>
@@ -39,6 +39,7 @@
 
 <script setup>
 import { ref, watch } from 'vue';
+import { formatValidationLabel } from '@/utils/testCategoryDisplay.js';
 
 const props = defineProps({
   item: { type: Object, required: true },

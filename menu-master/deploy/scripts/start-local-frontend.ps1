@@ -1,4 +1,4 @@
-# Frontend only (Docker container; no infra / api-main)
+﻿# Frontend only (Docker container; no infra / api-main)
 # API proxy: frontend/.env.local VITE_PROXY_TARGET
 $ErrorActionPreference = "Stop"
 

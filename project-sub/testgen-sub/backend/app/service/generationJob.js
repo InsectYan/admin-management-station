@@ -14,7 +14,14 @@ const PHASES = [ 'analyze', 'generate', 'review' ];
 const MAX_BATCH_ATTEMPTS = 9999;
 const ROUND_SIZE_LOCAL = 5;
 const ROUND_SIZE_CLOUD = 10;
-const ESTIMATE_MAX_TOTAL = 120;
+/** 与 testgen-skill 对齐：分层估算 + 硬顶（TESTGEN_ESTIMATE_MAX_TOTAL，默认 8000） */
+const {
+  ESTIMATE_MAX_TOTAL,
+  applyEstimateBounds,
+  distributeEstimateEvenly,
+  tieredCoverageEstimate,
+  scaleBreakdownToTotal,
+} = require('../lib/tieredCaseEstimate');
 const DEFAULT_ESTIMATE_TIMEOUT_MS = 60000;
 
 function isLocalOllamaProfile(profileId) {
@@ -122,72 +129,77 @@ function formatAgentEstimateWarning(err) {
   return `Agent 暂不可用（${brief}），已改用文档分析估算`;
 }
 
-function applyEstimateBounds(estimated, targetCount) {
-  const targets = Math.max(Number(targetCount) || 1, 1);
-  return Math.max(targets, Math.min(Math.round(estimated), ESTIMATE_MAX_TOTAL));
-}
-
-/** 将合计条数均分到各生成目标（余数从前向后 +1） */
-function distributeEstimateEvenly(total, targetCount) {
-  const n = Math.max(1, Math.round(Number(targetCount) || 1));
-  const safeTotal = Math.max(n, Math.round(Number(total) || 0));
-  const base = Math.floor(safeTotal / n);
-  let remainder = safeTotal - base * n;
-  return Array.from({ length: n }, () => {
-    if (remainder > 0) {
-      remainder -= 1;
-      return base + 1;
-    }
-    return base;
-  });
-}
-
 function stripTargetCounts(schemeTargets) {
   return (schemeTargets || []).map(({ count, ...rest }) => ({ ...rest }));
+}
+
+function formatSchemeTargetLabel(target) {
+  if (!target) return '';
+  return [
+    target.category_major_id || target.category_major_name,
+    target.scheme_name || target.scheme_id,
+    target.validation_name || target.validation_id,
+  ].filter(Boolean).join(' · ');
 }
 
 function analyzeDocumentHeuristic(content, schemeTargets, categoryMajorIds, validationIds) {
   const text = content || '';
   const len = text.length;
   const sectionCount = (text.match(/^#{1,3}\s+/gm) || []).length;
+  const { extractMarkdownEndpoints } = require('./docParser');
+  const parsedEndpoints = extractMarkdownEndpoints(text);
+  const uniqueApiOps = parsedEndpoints.length;
   const rawApiMethodCount = (text.match(/\b(GET|POST|PUT|PATCH|DELETE)\b/gi) || []).length;
   const rawEndpointCount = (text.match(/\/[a-zA-Z0-9_\-/{:?=.&]+/g) || []).length;
-  const uniqueEndpoints = countUniqueMatches(
+  const uniqueEndpoints = uniqueApiOps || countUniqueMatches(
     text,
     /\/[a-zA-Z0-9_\-/{:?=.&]+/g,
     normalizeEndpointPath,
-  );
-  const uniqueApiOps = countUniqueMatches(
-    text,
-    /\b(GET|POST|PUT|PATCH|DELETE)\s+\/[^\s"'`，,;]+/gi,
-    s => s.replace(/\s+/g, ' ').trim(),
   );
   const listItemCount = (text.match(/^\s*[-*]\s+/gm) || []).length;
   const tableRowCount = (text.match(/^\|.+\|$/gm) || []).length;
   const codeBlockCount = Math.floor((text.match(/```/g) || []).length / 2);
 
-  const endpointSignal = Math.round(Math.sqrt(Math.max(uniqueEndpoints, 1)) * 2.2 + Math.min(uniqueApiOps, 24) * 0.6);
-  const structureSignal = Math.round(sectionCount * 1.2 + Math.sqrt(Math.max(listItemCount, 1)) * 0.5 + tableRowCount * 0.08);
-  const lengthSignal = Math.round(Math.sqrt(Math.max(len, 1) / 600));
-  const contentBase = Math.max(1, Math.min(
-    ESTIMATE_MAX_TOTAL,
-    endpointSignal + structureSignal + lengthSignal + codeBlockCount * 0.5,
-  ));
-
   const targetN = schemeTargets.length
     || Math.max(categoryMajorIds.length, 1) * Math.max(validationIds.length, 1);
+  const targetsForTier = schemeTargets.length
+    ? schemeTargets
+    : Array.from({ length: targetN }, () => ({ scheme_id: 'functional' }));
 
-  let estimated = applyEstimateBounds(contentBase, targetN);
-  if (len < 300) {
-    estimated = Math.min(estimated, targetN);
+  const coverage = tieredCoverageEstimate(uniqueApiOps, parsedEndpoints, targetsForTier);
+  let estimated;
+  let targetBreakdown;
+  let formulaHint = null;
+
+  if (coverage) {
+    estimated = coverage.estimated_count;
+    targetBreakdown = coverage.target_breakdown;
+    formulaHint = coverage.formula_hint;
+  } else {
+    const endpointSignal = Math.round(
+      Math.sqrt(Math.max(uniqueEndpoints, 1)) * 2.2 + Math.min(uniqueEndpoints, 64) * 0.85,
+    );
+    const structureSignal = Math.round(sectionCount * 1.2 + Math.sqrt(Math.max(listItemCount, 1)) * 0.5 + tableRowCount * 0.08);
+    const lengthSignal = Math.round(Math.sqrt(Math.max(len, 1) / 600));
+    const contentBase = Math.max(1, Math.min(
+      ESTIMATE_MAX_TOTAL,
+      endpointSignal + structureSignal + lengthSignal + codeBlockCount * 0.5,
+    ));
+    estimated = applyEstimateBounds(contentBase, targetN);
+    if (len < 300) {
+      estimated = Math.min(estimated, targetN);
+    }
+    targetBreakdown = distributeEstimateEvenly(estimated, targetN);
+    softFloor = 0;
   }
-  const targetBreakdown = distributeEstimateEvenly(estimated, targetN);
 
   const parts = [
     `文档约 ${len} 字`,
     sectionCount ? `${sectionCount} 个章节` : null,
-    rawApiMethodCount ? `${rawApiMethodCount} 处 HTTP 方法（去重接口 ${uniqueApiOps || uniqueEndpoints} 个）` : null,
-    rawEndpointCount ? `${rawEndpointCount} 处路径/接口（去重 ${uniqueEndpoints} 个）` : null,
+    uniqueApiOps
+      ? `识别接口 ${uniqueApiOps} 个`
+      : (rawApiMethodCount ? `${rawApiMethodCount} 处 HTTP 方法（去重路径 ${uniqueEndpoints} 个）` : null),
+    !uniqueApiOps && rawEndpointCount ? `${rawEndpointCount} 处路径片段（去重 ${uniqueEndpoints} 个）` : null,
     listItemCount ? `${listItemCount} 条列表项` : null,
   ].filter(Boolean);
 
@@ -201,7 +213,12 @@ function analyzeDocumentHeuristic(content, schemeTargets, categoryMajorIds, vali
   return {
     estimated_count: estimated,
     target_breakdown: targetBreakdown,
-    reasoning: `${parts.join('、')}；${targetDesc}，建议生成约 ${estimated} 条${breakdownStr}`,
+    endpoint_count: uniqueApiOps,
+    endpoints: parsedEndpoints.map(e => `${e.method} ${e.path}`),
+    document_chars: len,
+    soft_floor: 0,
+    estimate_strategy: 'heuristic_fallback',
+    reasoning: `${parts.join('、')}；${targetDesc}${formulaHint ? `，回落启发式：${formulaHint}` : ''}，建议约 ${estimated} 条${breakdownStr}（正式条数应以 AI 逐行分析为准）`,
   };
 }
 
@@ -423,6 +440,45 @@ class GenerationJobService extends Service {
     let source = 'heuristic';
     let reasoning = heuristic.reasoning;
     let agentWarning = null;
+    let endpointCount = heuristic.endpoint_count || 0;
+    let endpoints = heuristic.endpoints || [];
+    const documentChars = heuristic.document_chars || resolvedContent.length;
+    const targetN = Math.max(scheme_targets.length || 1, 1);
+
+    const clampCap = (n) => Math.max(0, Math.min(Math.round(Number(n) || 0), ESTIMATE_MAX_TOTAL));
+
+    /** AI 主导：采纳逐行 target_breakdown，不抬升、不用公式重算 */
+    const applyAgentOutput = (output) => {
+      if (Number.isFinite(Number(output.endpoint_count))) {
+        endpointCount = Number(output.endpoint_count);
+      }
+      if (Array.isArray(output.endpoints) && output.endpoints.length) {
+        endpoints = output.endpoints;
+      }
+
+      const rawBd = Array.isArray(output.target_breakdown)
+        ? output.target_breakdown
+        : (Array.isArray(output.counts) ? output.counts : null);
+
+      if (rawBd && rawBd.length === targetN) {
+        targetBreakdown = rawBd.map(v => clampCap(v));
+        estimatedCount = clampCap(targetBreakdown.reduce((s, n) => s + n, 0));
+        if (estimatedCount > 0 && estimatedCount !== targetBreakdown.reduce((s, n) => s + n, 0)) {
+          targetBreakdown = scaleBreakdownToTotal(targetBreakdown, estimatedCount);
+        }
+        source = output.source || 'agent';
+        reasoning = output.reasoning || output.summary || reasoning;
+        return true;
+      }
+
+      const agentEstimate = Number(output.estimated_count ?? output.estimate ?? output.count);
+      if (!Number.isFinite(agentEstimate) || agentEstimate < 0) return false;
+      estimatedCount = clampCap(agentEstimate);
+      targetBreakdown = distributeEstimateEvenly(estimatedCount, targetN);
+      source = output.source || 'agent';
+      reasoning = output.reasoning || output.summary || reasoning;
+      return true;
+    };
 
     const estimateTimeoutMs = Number(this.config.agentPlatform?.estimateTimeoutMs) || DEFAULT_ESTIMATE_TIMEOUT_MS;
 
@@ -446,15 +502,7 @@ class GenerationJobService extends Service {
     try {
       const agentRes = await tryAgentEstimate(llm_profile);
       const output = agentRes.output || agentRes;
-      const agentEstimate = Number(output.estimated_count ?? output.estimate ?? output.count);
-      if (Number.isFinite(agentEstimate) && agentEstimate > 0) {
-        estimatedCount = applyEstimateBounds(agentEstimate, scheme_targets.length || 1);
-        targetBreakdown = Array.isArray(output.target_breakdown) && output.target_breakdown.length
-          ? output.target_breakdown.map(n => Math.max(1, Math.round(Number(n) || 1)))
-          : distributeEstimateEvenly(estimatedCount, scheme_targets.length || 1);
-        source = output.source || 'agent';
-        reasoning = output.reasoning || output.summary || reasoning;
-      }
+      applyAgentOutput(output);
     } catch (err) {
       this.ctx.app.logger.warn('[generationJob] estimate agent failed: %s', err.message);
       agentWarning = formatAgentEstimateWarning(err);
@@ -463,15 +511,8 @@ class GenerationJobService extends Service {
         try {
           const agentRes = await tryAgentEstimate('ollama-qwen');
           const output = agentRes.output || agentRes;
-          const agentEstimate = Number(output.estimated_count ?? output.estimate ?? output.count);
-          if (Number.isFinite(agentEstimate) && agentEstimate > 0) {
-            estimatedCount = applyEstimateBounds(agentEstimate, scheme_targets.length || 1);
-            targetBreakdown = Array.isArray(output.target_breakdown) && output.target_breakdown.length
-              ? output.target_breakdown.map(n => Math.max(1, Math.round(Number(n) || 1)))
-              : distributeEstimateEvenly(estimatedCount, scheme_targets.length || 1);
-            source = output.source || 'agent';
+          if (applyAgentOutput(output)) {
             agentWarning = null;
-            reasoning = output.reasoning || output.summary || reasoning;
           }
         } catch (retryErr) {
           this.ctx.app.logger.warn('[generationJob] estimate ollama fallback failed: %s', retryErr.message);
@@ -492,19 +533,30 @@ class GenerationJobService extends Service {
       reasoning,
       agent_warning: agentWarning,
       scheme_target_count: scheme_targets.length,
+      endpoint_count: endpointCount,
+      endpoints: endpoints.slice(0, 200),
+      document_chars: documentChars,
+      soft_floor: 0,
+      estimate_strategy: source === 'agent' ? 'ai_per_target' : 'heuristic_fallback',
     };
   }
 
-  async loadExistingCaseContext(jobId, schemeId, validationId) {
+  async loadExistingCaseContext(jobId, schemeId, validationId, categoryMajorId) {
     const { QueryTypes } = require('sequelize');
+    const replacements = { jobId, schemeId, validationId };
+    let majorClause = '';
+    if (categoryMajorId) {
+      majorClause = ' AND category_major_id = :categoryMajorId';
+      replacements.categoryMajorId = categoryMajorId;
+    }
     const rows = await this.app.model.query(
-      `SELECT item_name, detail_summary, expected_observation
+      `SELECT item_name, detail_summary, expected_observation, category_major_id
        FROM test_item_detail
        WHERE generation_job_id = :jobId
          AND scheme_primary_id = :schemeId
-         AND validation_primary_id = :validationId`,
+         AND validation_primary_id = :validationId${majorClause}`,
       {
-        replacements: { jobId, schemeId, validationId },
+        replacements,
         type: QueryTypes.SELECT,
       },
     );
@@ -523,22 +575,25 @@ class GenerationJobService extends Service {
   async syncTargetStatesFromDb(jobId, targetStates = []) {
     const { QueryTypes } = require('sequelize');
     const counts = await this.app.model.query(
-      `SELECT scheme_primary_id, validation_primary_id, COUNT(*)::int AS cnt
+      `SELECT category_major_id, scheme_primary_id, validation_primary_id, COUNT(*)::int AS cnt
        FROM test_item_detail
        WHERE generation_job_id = :jobId
-       GROUP BY scheme_primary_id, validation_primary_id`,
+       GROUP BY category_major_id, scheme_primary_id, validation_primary_id`,
       { replacements: { jobId }, type: QueryTypes.SELECT },
     );
     const map = new Map(
       counts.map(c => [
-        `${c.scheme_primary_id}::${c.validation_primary_id}`,
+        `${c.category_major_id || ''}::${c.scheme_primary_id}::${c.validation_primary_id}`,
         Number(c.cnt) || 0,
       ]),
     );
-    return targetStates.map(t => ({
-      ...t,
-      produced: map.get(`${t.scheme_id}::${t.validation_id}`) ?? (Number(t.produced) || 0),
-    }));
+    return targetStates.map(t => {
+      const fullKey = `${t.category_major_id || ''}::${t.scheme_id}::${t.validation_id}`;
+      const produced = map.has(fullKey)
+        ? map.get(fullKey)
+        : (Number(t.produced) || 0);
+      return { ...t, produced };
+    });
   }
 
   /** 取消/失败时从 DB 同步已入库条数，保留已通过审查的数据 */
@@ -627,7 +682,12 @@ class GenerationJobService extends Service {
         targetStates[ti].status = 'running';
 
         const roundSize = roundRequestSize(effectiveLlmProfile);
-        const existing = await this.loadExistingCaseContext(jobId, target.scheme_id, target.validation_id);
+        const existing = await this.loadExistingCaseContext(
+          jobId,
+          target.scheme_id,
+          target.validation_id,
+          target.category_major_id,
+        );
         const seenKeys = existing.seenKeys;
         let produced = existing.produced;
         let writtenSummaries = [ ...existing.writtenSummaries ];
@@ -654,7 +714,7 @@ class GenerationJobService extends Service {
             target_total: target.count,
           };
 
-          const targetLabel = `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id}`;
+          const targetLabel = formatSchemeTargetLabel(target);
           const existingCasesContext = buildExistingCasesContextText(writtenSummaries, requestCount);
 
           await this.updateSchemeProgress(jobId, {
@@ -867,9 +927,9 @@ class GenerationJobService extends Service {
             target,
             targetStates,
             scheme_targets,
-            direction: `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id}：未生成任何通过字段校验的用例`,
+            direction: `${formatSchemeTargetLabel(target)}：未生成任何通过字段校验的用例`,
             steps_log: allSteps,
-            retry_notice: `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id} 分批生成后仍无有效用例`,
+            retry_notice: `${formatSchemeTargetLabel(target)} 分批生成后仍无有效用例`,
           });
           continue;
         }
@@ -882,9 +942,9 @@ class GenerationJobService extends Service {
             target,
             targetStates,
             scheme_targets,
-            direction: `${target.scheme_name || target.scheme_id} 部分完成，写入 ${produced}/${target.count} 条`,
+            direction: `${formatSchemeTargetLabel(target)} 部分完成，写入 ${produced}/${target.count} 条`,
             steps_log: allSteps,
-            retry_notice: `${target.scheme_name || target.scheme_id} · ${target.validation_name || target.validation_id} 未达目标条数，已写入 ${produced}/${target.count} 条`,
+            retry_notice: `${formatSchemeTargetLabel(target)} 未达目标条数，已写入 ${produced}/${target.count} 条`,
           });
         } else {
           await this.updateSchemeProgress(jobId, {
@@ -893,7 +953,7 @@ class GenerationJobService extends Service {
             target,
             targetStates,
             scheme_targets,
-            direction: `${target.scheme_name || target.scheme_id} 已完成，写入 ${produced} 条`,
+            direction: `${formatSchemeTargetLabel(target)} 已完成，写入 ${produced} 条`,
             steps_log: allSteps,
             retry_notice: null,
           });

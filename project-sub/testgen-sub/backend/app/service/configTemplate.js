@@ -44,7 +44,7 @@ class ConfigTemplateService extends require('egg').Service {
               t.function_desc, t.scenario_desc,
               ts.name AS scheme_name,
               v.name AS validation_name,
-              CASE WHEN m.category_major_id IN ('C1','C2','C3','C4') THEN TRUE ELSE FALSE END AS is_mixed
+              CASE WHEN m.category_major_id IN ('T3') THEN TRUE ELSE FALSE END AS is_mixed
        FROM test_category_major m
        LEFT JOIN test_dimension d ON d.dimension_id = m.dimension_id
        LEFT JOIN test_category_major_template mt ON mt.category_major_id = m.category_major_id

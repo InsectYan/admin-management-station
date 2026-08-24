@@ -17,7 +17,7 @@
     </el-checkbox-group>
     <el-divider content-position="left">执行方案</el-divider>
     <SchemePhaseTable :phases="launchPhases" />
-    <p v-if="hasSecondary" class="hint">主方案完成后自动串联执行辅方案</p>
+    <p v-if="hasSecondary" class="hint">主执行方案完成后自动串联辅执行方案</p>
     <el-divider />
     <p v-if="isSetScheme">样本集 ID: {{ runConfig?.sample_set_id || '未绑定' }}</p>
     <p v-if="isBndScheme">矩阵行数: {{ matrixCount }}</p>
@@ -117,7 +117,7 @@ const launchPhases = computed(() => {
   const phases = [
     {
       role: 'primary',
-      role_label: '主方案',
+      role_label: '主执行方案',
       scheme_id: schemeId.value,
       scheme_name: item.value?.scheme_primary_name,
       validation_id: validationId.value,
@@ -129,7 +129,7 @@ const launchPhases = computed(() => {
   if (hasSecondary.value) {
     phases.push({
       role: 'secondary',
-      role_label: '辅方案',
+      role_label: '辅执行方案',
       scheme_id: secondarySchemeId.value,
       scheme_name: item.value?.scheme_secondary_name,
       validation_id: item.value?.validation_secondary_id,

@@ -1,14 +1,15 @@
--- E3：B4-MEM-001 TS-02-BND 矩阵种子（3× GET /health HTTP smoke）
--- 附：E4-STAB-001 TS-03-REP 重复种子（便于 Pass^k 联调）
+-- E3：B4-MEM-001 TS-02-BND 矩阵种子 + E4-STAB-001 TS-03-REP
+-- 用例缺失时跳过，避免精简 seed 下 FK 失败
 
 DO $$
 DECLARE
   v_health_row JSONB := '{"runner":"http","path":"/health","method":"GET","expect_status":200}'::jsonb;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM ft_run_config
-    WHERE item_id = 'B4-MEM-001' AND scheme_id = 'TS-02-BND'
-  ) THEN
+  IF EXISTS (SELECT 1 FROM test_item_detail WHERE item_id = 'B4-MEM-001')
+     AND NOT EXISTS (
+       SELECT 1 FROM ft_run_config
+       WHERE item_id = 'B4-MEM-001' AND scheme_id = 'TS-02-BND'
+     ) THEN
     INSERT INTO ft_run_config (
       item_id,
       scheme_id,
@@ -30,10 +31,11 @@ BEGIN
     );
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM ft_run_config
-    WHERE item_id = 'E4-STAB-001' AND scheme_id = 'TS-03-REP'
-  ) THEN
+  IF EXISTS (SELECT 1 FROM test_item_detail WHERE item_id = 'E4-STAB-001')
+     AND NOT EXISTS (
+       SELECT 1 FROM ft_run_config
+       WHERE item_id = 'E4-STAB-001' AND scheme_id = 'TS-03-REP'
+     ) THEN
     INSERT INTO ft_run_config (
       item_id,
       scheme_id,

@@ -5,9 +5,9 @@ const { inferHttpFields } = require('./inferHttpFields');
 
 const FIELD_MAX = 300;
 const DEFAULTS = {
-  dimension_id: 'C',
-  category_major_id: 'C1',
-  category_minor_id: 'C1_MACRO',
+  dimension_id: 'B',
+  category_major_id: 'T3',
+  category_minor_id: 'T3_FLOW',
   automation_status_id: 'AUTO_TODO',
   station_id: 'NONE',
   role_scope_id: 'ALL',

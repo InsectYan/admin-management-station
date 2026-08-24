@@ -106,6 +106,15 @@
         <template #prefix>
           <el-table-column type="selection" width="48" reserve-selection />
         </template>
+        <template #col-category_major_name="{ row }">
+          {{ formatCategoryDisplay(row.category_major_id, row.category_major_name) }}
+        </template>
+        <template #col-scheme_primary_name="{ row }">
+          {{ formatSchemeLabel(row.scheme_primary_id, row.scheme_primary_name) }}
+        </template>
+        <template #col-validation_primary_name="{ row }">
+          {{ formatValidationLabel(row.validation_primary_id, row.validation_primary_name) }}
+        </template>
       </FitnessLabeledTable>
     </div>
 
@@ -220,6 +229,11 @@ import ItemFilterBar from '@/components/fitness/ItemFilterBar.vue';
 import FitnessLabeledTable from '@/components/fitness/FitnessLabeledTable.vue';
 import FitnessStatusTag from '@/components/fitness/FitnessStatusTag.vue';
 import {
+  formatCategoryDisplay,
+  formatSchemeLabel,
+  formatValidationLabel,
+} from '@/utils/testCategoryDisplay.js';
+import {
   coverageTagType,
   statusCellLabel,
 } from '@/utils/fitnessStatusTags.js';
@@ -263,10 +277,10 @@ const releaseCriteria = RELEASE_CRITERIA;
 const wizardItemColumns = [
   { prop: 'item_id', label: '用例编码', width: 180 },
   { prop: 'detail_summary', label: '测试用例名称', minWidth: 200 },
-  { prop: 'dimension_name', label: '维度', width: 120 },
+  { prop: 'category_major_name', label: '测试分类', width: 140 },
   { prop: 'priority_name', label: '优先级', width: 88 },
-  { prop: 'scheme_primary_name', label: '主方案', width: 110 },
-  { prop: 'validation_primary_name', label: '主验证', width: 110 },
+  { prop: 'scheme_primary_name', label: '执行方案（TS）', width: 130 },
+  { prop: 'validation_primary_name', label: '判定方式（VS）', width: 130 },
   { prop: 'automation_status_name', label: '自动化', width: 96 },
 ];
 

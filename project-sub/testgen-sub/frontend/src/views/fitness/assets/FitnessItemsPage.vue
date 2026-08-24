@@ -58,14 +58,9 @@
       <template #prefix>
         <el-table-column type="selection" width="48" reserve-selection />
       </template>
-      <template #col-dimension_name="{ row }">
-        <el-tag v-bind="dimensionTagProps(row)" size="small">
-          {{ itemTagLabel(row, 'dimension') }}
-        </el-tag>
-      </template>
       <template #col-category_major_name="{ row }">
         <el-tag v-bind="categoryMajorTagProps(row)" size="small">
-          {{ itemTagLabel(row, 'major') }}
+          {{ itemTagLabel(row, 'category') }}
         </el-tag>
       </template>
       <template #col-generation_task_name="{ row }">
@@ -155,7 +150,6 @@ import { fetchGenerationTasks } from '@/services/generationService.js';
 import { downloadBlob, downloadJson } from '@/utils/fitnessExport.js';
 import {
   categoryMajorTagProps,
-  dimensionTagProps,
   envTierTagProps,
   execEnvTagProps,
   itemTagLabel,
@@ -203,24 +197,23 @@ const itemColumns = [
   { prop: 'project_name', label: '项目名称', width: 220 },
   { prop: 'generation_task_name', label: '生成任务', width: 160 },
   { prop: 'detail_summary', label: '测试用例名称', minWidth: 220 },
-  { prop: 'dimension_name', label: '维度', width: 140 },
-  { prop: 'category_major_name', label: '大类', width: 100 },
+  { prop: 'category_major_name', label: '测试分类', width: 160 },
   { prop: 'template_name', label: '配置模板', width: 110 },
   { prop: 'priority_name', label: '优先级', width: 88 },
   { prop: 'exec_env_name', label: '可执行环境', width: 100 },
   { prop: 'env_tier_name', label: '环境分层', width: 100 },
   { prop: 'sub_class', label: '子类标签', width: 110 },
   { prop: 'expected_observation', label: '期望观测', minWidth: 180 },
-  { prop: 'scheme_primary_name', label: '主方案', width: 130 },
-  { prop: 'validation_primary_name', label: '主验证', width: 130 },
-  { prop: 'scheme_secondary_name', label: '辅方案', width: 130 },
-  { prop: 'validation_secondary_name', label: '辅验证', width: 130 },
+  { prop: 'scheme_primary_name', label: '执行方案（TS）', width: 150 },
+  { prop: 'validation_primary_name', label: '判定方式（VS）', width: 150 },
+  { prop: 'scheme_secondary_name', label: '辅执行方案', width: 140 },
+  { prop: 'validation_secondary_name', label: '辅判定方式', width: 140 },
   { prop: 'execution_status', label: '执行状态', width: 96 },
   { prop: 'current_pass_rate', label: '当前达标率', width: 100 },
   { prop: 'target_pass_rate', label: '目标达标率', width: 100 },
   { prop: 'automation_status_name', label: '自动化', width: 120 },
   { prop: 'station_name', label: '六站', width: 140 },
-  { prop: 'role_scope_name', label: '三端', width: 110 },
+  { prop: 'role_scope_name', label: '业务角色', width: 110 },
 ];
 
 function applyFilters(v) {

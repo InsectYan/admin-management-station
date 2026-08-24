@@ -140,9 +140,9 @@ function buildTestItemWhere(query) {
   }
 
   if (preset === 'coach_p0') {
-    conditions.push(`t.dimension_id = 'C' AND t.category_major_id = 'C1' AND t.priority_id = 'P0'`);
+    conditions.push(`t.category_major_id = 'T3' AND t.priority_id = 'P0' AND t.role_scope_id = 'COACH'`);
   } else if (preset === 'member_boundary') {
-    conditions.push(`t.category_major_id = 'C2' AND t.is_p0_blocker = TRUE`);
+    conditions.push(`t.category_major_id = 'T2' AND t.role_scope_id = 'MEMBER' AND t.is_p0_blocker = TRUE`);
   } else if (preset === 'station_gate') {
     conditions.push(`t.station_id = 'S02'`);
   } else if (preset === 'auto_todo_p0') {
@@ -600,6 +600,143 @@ class FitnessAssetService extends require('egg').Service {
     const [, meta] = await this.app.model.query(updateSql, { replacements });
     await this.ctx.service.generationTask.syncFromItems();
     return { deleted: meta?.rowCount ?? total, total };
+  }
+
+  /**
+   * 用例详情整单编辑（定义侧字段 + 主/辅 TS/VS/模板）
+   * 不可改：item_id、project_*、category_major_id、dimension_id、来源、生成任务、automation_status 等
+   */
+  async updateTestItemDetail(itemId, body = {}) {
+    const item = await this.getTestItem(itemId);
+    if (!item) {
+      const err = new Error('测试项不存在');
+      err.status = 404;
+      throw err;
+    }
+
+    const setParts = [];
+    const replacements = { itemId };
+
+    const trimOrNull = v => {
+      if (v == null) return null;
+      const s = String(v).trim();
+      return s === '' ? null : s;
+    };
+
+    const stringFields = [
+      'item_name', 'detail_summary', 'expected_observation', 'test_input_example',
+      'sample_execution_note', 'notes', 'endpoint_path', 'http_method',
+      'automation_command', 'sub_class', 'priority_id', 'station_id', 'role_scope_id',
+    ];
+    for (const field of stringFields) {
+      if (!(field in body)) continue;
+      const key = `f_${field}`;
+      const next = trimOrNull(body[field]);
+      // NOT NULL 列禁止写成 null
+      if ((field === 'station_id' || field === 'role_scope_id' || field === 'priority_id') && next == null) {
+        continue;
+      }
+      setParts.push(`${field} = :${key}`);
+      replacements[key] = next;
+    }
+
+    if ('http_status_expected' in body) {
+      const raw = body.http_status_expected;
+      let status = null;
+      if (raw != null && raw !== '') {
+        status = Number(raw);
+        if (!Number.isInteger(status) || status < 100 || status > 599) {
+          const err = new Error('http_status_expected 须为 100–599 的整数');
+          err.status = 400;
+          throw err;
+        }
+      }
+      setParts.push('http_status_expected = :httpStatus');
+      replacements.httpStatus = status;
+    }
+
+    const arrayFields = [ 'preconditions', 'test_steps', 'assertion_points', 'tags' ];
+    for (const field of arrayFields) {
+      if (!(field in body)) continue;
+      let arr = body[field];
+      if (arr == null) arr = [];
+      if (!Array.isArray(arr)) {
+        const err = new Error(`${field} 须为数组`);
+        err.status = 400;
+        throw err;
+      }
+      const normalized = arr.map(x => String(x).trim()).filter(Boolean);
+      const key = `a_${field}`;
+      setParts.push(`${field} = CAST(:${key} AS jsonb)`);
+      replacements[key] = JSON.stringify(normalized);
+    }
+
+    if ('category_minor_id' in body) {
+      const minorId = trimOrNull(body.category_minor_id);
+      if (!minorId) {
+        const err = new Error('category_minor_id 不能为空');
+        err.status = 400;
+        throw err;
+      }
+      const [ minorRows ] = await this.app.model.query(
+        `SELECT 1 FROM test_category_minor
+         WHERE category_minor_id = :minorId AND category_major_id = :majorId LIMIT 1`,
+        { replacements: { minorId, majorId: item.category_major_id } },
+      );
+      if (!minorRows.length) {
+        const err = new Error('测试小类与当前大类不匹配');
+        err.status = 400;
+        throw err;
+      }
+      setParts.push('category_minor_id = :categoryMinorId');
+      replacements.categoryMinorId = minorId;
+    }
+
+    const requiredChecks = [
+      [ 'item_name', body.item_name ?? item.item_name ],
+      [ 'detail_summary', body.detail_summary ?? item.detail_summary ],
+      [ 'expected_observation', body.expected_observation ?? item.expected_observation ],
+    ];
+    for (const [ label, val ] of requiredChecks) {
+      if (!String(val || '').trim()) {
+        const err = new Error(`${label} 不能为空`);
+        err.status = 400;
+        throw err;
+      }
+    }
+    const stepsAfter = 'test_steps' in body
+      ? (Array.isArray(body.test_steps) ? body.test_steps : [])
+      : (item.test_steps || []);
+    if (!Array.isArray(stepsAfter) || !stepsAfter.length) {
+      const err = new Error('test_steps 不能为空');
+      err.status = 400;
+      throw err;
+    }
+
+    if (setParts.length) {
+      setParts.push('updated_at = NOW()');
+      await this.app.model.query(
+        `UPDATE test_item_detail SET ${setParts.join(', ')} WHERE item_id = :itemId AND is_active = TRUE`,
+        { replacements },
+      );
+    }
+
+    const schemeKeys = [
+      'scheme_primary_id', 'validation_primary_id', 'template_code', 'migrate_config',
+      'scheme_secondary_id', 'validation_secondary_id',
+    ];
+    const schemeBody = {};
+    let hasSchemePatch = false;
+    for (const key of schemeKeys) {
+      if (!(key in body)) continue;
+      hasSchemePatch = true;
+      schemeBody[key] = body[key];
+    }
+    if (hasSchemePatch) {
+      return this.updateItemSchemes(itemId, schemeBody);
+    }
+
+    return this.getTestItem(itemId);
   }
 
   async updateItemSchemes(itemId, body = {}) {

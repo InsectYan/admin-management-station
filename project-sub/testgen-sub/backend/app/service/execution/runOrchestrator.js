@@ -24,6 +24,7 @@ const {
   resolveExecutionScheme,
   API_CTX_SCHEME,
 } = require('../../lib/configTemplateRegistry');
+const { touchItemLatestFtRunId } = require('../../lib/touchItemLatestFtRunId');
 
 /**
  * @typedef {object} ExecutionContext
@@ -351,6 +352,13 @@ class RunOrchestrator {
       sequence_index: 0,
       progress: { phase: 'pending', percent: 0 },
     });
+
+    // 仅主 run 写回用例最新执行指针（计划批量走同一 launch 路径）
+    try {
+      await touchItemLatestFtRunId(this.ctx, itemId, run.id);
+    } catch (err) {
+      this.ctx.logger.warn('[fitnessRun] touch latest_ft_run_id item=%s run=%s %s', itemId, run.id, err.message);
+    }
 
     const app = this.app;
     const runId = run.id;

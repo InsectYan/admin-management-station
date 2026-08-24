@@ -276,6 +276,48 @@ class FitnessExecutionController extends Controller {
     }
   }
 
+  /**
+   * SSE：解读失败原因（思考事件 + 最终 result）
+   * POST /api/fitness/runs/:runId/explain/stream
+   */
+  async explainRunStream() {
+    const { ctx } = this;
+    const runId = ctx.params.runId;
+    const body = ctx.request.body || {};
+
+    ctx.status = 200;
+    ctx.set({
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    ctx.respond = false;
+
+    const res = ctx.res;
+    const emit = (event, data) => {
+      try {
+        res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      } catch {
+        /* client closed */
+      }
+    };
+
+    emit('status', { phase: 'start', label: '开始 AI 解读…' });
+
+    try {
+      await this.service.fitnessExecution.explainRunStream(runId, body, emit);
+      emit('done', { ok: true });
+    } catch (err) {
+      emit('error', {
+        message: err.message || '解读失败',
+        code: err.code || err.status || 500,
+      });
+    } finally {
+      try { res.end(); } catch { /* ignore */ }
+    }
+  }
+
   async generateSamples() {
     try {
       const data = await this.service.fitnessExecution.generateSamples(

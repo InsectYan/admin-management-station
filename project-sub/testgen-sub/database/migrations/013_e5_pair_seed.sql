@@ -1,4 +1,5 @@
 -- E5.2：C2-PAYLOAD-001 TS-06-PAIR 种子
+-- 用例缺失时跳过，避免精简 seed 下 FK 失败
 
 UPDATE test_item_detail t
 SET
@@ -48,7 +49,10 @@ SELECT
   '{}'::jsonb,
   NOW(),
   NOW()
-WHERE NOT EXISTS (
+WHERE EXISTS (
+  SELECT 1 FROM test_item_detail WHERE item_id = 'C2-PAYLOAD-001'
+)
+AND NOT EXISTS (
   SELECT 1 FROM ft_run_config
   WHERE item_id = 'C2-PAYLOAD-001' AND scheme_id = 'TS-06-PAIR'
 );

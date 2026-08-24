@@ -1,11 +1,13 @@
 -- E5 修正：C1-SAFE-001 主方案为 TS-04-SET，对抗验收改用 E5-INJ-001
+-- 无目标用例时为空操作
 
 UPDATE test_plan_item pi
 SET item_id = 'E5-INJ-001'
 FROM test_plan p
 WHERE pi.plan_id = p.id
   AND p.name = 'E5 自动化回归'
-  AND pi.item_id = 'C1-SAFE-001';
+  AND pi.item_id = 'C1-SAFE-001'
+  AND EXISTS (SELECT 1 FROM test_item_detail WHERE item_id = 'E5-INJ-001');
 
 INSERT INTO ft_run_config (
   item_id,
@@ -25,6 +27,7 @@ SELECT
 FROM ft_run_config fc
 WHERE fc.item_id = 'C1-SAFE-001'
   AND fc.scheme_id = 'TS-07-NEG'
+  AND EXISTS (SELECT 1 FROM test_item_detail WHERE item_id = 'E5-INJ-001')
   AND NOT EXISTS (
     SELECT 1 FROM ft_run_config
     WHERE item_id = 'E5-INJ-001' AND scheme_id = 'TS-07-NEG'

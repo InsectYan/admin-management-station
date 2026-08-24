@@ -60,6 +60,19 @@ class FitnessAssetController extends Controller {
     }
   }
 
+  async updateItem() {
+    try {
+      const data = await this.service.fitnessAsset.updateTestItemDetail(
+        this.ctx.params.itemId,
+        this.ctx.request.body || {},
+      );
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      this.ctx.status = err.status || 400;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
   async updateItemSchemes() {
     try {
       const data = await this.service.fitnessAsset.updateItemSchemes(

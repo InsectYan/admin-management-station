@@ -102,6 +102,7 @@ module.exports = app => {
   router.post('/api/fitness/items/manual', controller.fitnessAsset.createManualItem);
   router.delete('/api/fitness/items/:itemId', controller.fitnessAsset.deleteItem);
   router.get('/api/fitness/items/:itemId', controller.fitnessAsset.showItem);
+  router.put('/api/fitness/items/:itemId', controller.fitnessAsset.updateItem);
   router.put('/api/fitness/items/:itemId/schemes', controller.fitnessAsset.updateItemSchemes);
   router.get('/api/fitness/browse', controller.fitnessAsset.browse);
   router.get('/api/fitness/schemes', controller.fitnessAsset.schemes);
@@ -150,6 +151,7 @@ module.exports = app => {
   router.post('/api/fitness/runs/:runId/rerun-failed', controller.fitnessExecution.rerunFailedRun);
   router.get('/api/fitness/runs/:runId/export-log', controller.fitnessExecution.exportRunLog);
   router.post('/api/fitness/runs/:runId/explain', controller.fitnessExecution.explainRun);
+  router.post('/api/fitness/runs/:runId/explain/stream', controller.fitnessExecution.explainRunStream);
   router.post('/api/fitness/runs/:runId/score', controller.fitnessExecution.scoreManualRun);
   router.post('/api/fitness/runs/:runId/pre-review', controller.fitnessExecution.preReviewRun);
   router.post('/api/fitness/runs/:runId/analyze-load', controller.fitnessExecution.analyzeLoadRun);

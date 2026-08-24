@@ -142,11 +142,127 @@ class AgentProxyService extends Service {
   async invokeFitnessJudge(payload, timeoutMs) {
     const { judgeInvokePath, judgeTimeoutMs, generateTimeoutMs, timeout } = this._skillConfig();
     const path = judgeInvokePath || '/api/skills/fitness-judge-skill/invoke';
-    let ms = timeoutMs ?? judgeTimeoutMs ?? generateTimeoutMs ?? timeout ?? 120000;
+    const explainMs = 15 * 60 * 1000;
+    let ms = timeoutMs
+      ?? (payload?.action === 'explain' ? explainMs : null)
+      ?? judgeTimeoutMs
+      ?? generateTimeoutMs
+      ?? timeout
+      ?? 120000;
     if (this._isLocalOllamaProfile(payload?.llm_profile)) {
-      ms = 0;
+      // 本地 Ollama：仍给足 15 分钟（explain）或沿用大超时，避免默认 5s 掐断
+      ms = payload?.action === 'explain'
+        ? (timeoutMs || explainMs)
+        : (timeoutMs === 0 ? 0 : (timeoutMs || this._localOllamaHttpTimeoutMs()));
     }
     return this.invokeSkill(path, { ...payload, _skill: 'fitness-judge-skill' }, ms);
+  }
+
+  /**
+   * 流式调用 fitness-judge-skill（SSE），将 Agent 事件回调给 onEvent
+   * @param {object} payload
+   * @param {number} timeoutMs
+   * @param {(event: string, data: object) => void} onEvent
+   */
+  async invokeFitnessJudgeStream(payload, timeoutMs, onEvent) {
+    const { baseUrl, judgeInvokePath } = this._skillConfig();
+    const invokePath = judgeInvokePath || '/api/skills/fitness-judge-skill/invoke';
+    const streamPath = invokePath.replace(/\/invoke\/?$/, '/invoke-stream');
+    const path = streamPath.startsWith('/') ? streamPath : `/${streamPath}`;
+    const explainMs = 15 * 60 * 1000;
+    const ms = timeoutMs || (payload?.action === 'explain' ? explainMs : 120000);
+    const url = `${baseUrl}${path}`;
+    const body = { ...payload, _skill: 'fitness-judge-skill', stream: true };
+    const started = Date.now();
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+
+    let res;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      clearTimeout(timer);
+      if (err?.name === 'AbortError') {
+        const e = new Error(`AI 解读超时（${ms}ms）`);
+        e.status = 504;
+        e.code = 'EXPLAIN_TIMEOUT';
+        throw e;
+      }
+      const e = new Error(err.message || '连接 Agent 流式接口失败');
+      e.status = 502;
+      e.code = 'AGENT_STREAM_FAILED';
+      throw e;
+    }
+
+    if (!res.ok || !res.body) {
+      clearTimeout(timer);
+      const text = await res.text().catch(() => '');
+      const e = new Error(text || `Agent 流式调用失败: HTTP ${res.status}`);
+      e.status = res.status >= 500 ? 504 : res.status;
+      e.code = 'AGENT_STREAM_FAILED';
+      throw e;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    let currentEvent = 'message';
+
+    const flushBlock = block => {
+      const lines = block.split(/\r?\n/);
+      let event = currentEvent;
+      const dataLines = [];
+      for (const line of lines) {
+        if (line.startsWith('event:')) event = line.slice(6).trim();
+        else if (line.startsWith('data:')) dataLines.push(line.slice(5).trimStart());
+      }
+      if (!dataLines.length) return;
+      let data;
+      try {
+        data = JSON.parse(dataLines.join('\n'));
+      } catch {
+        data = { raw: dataLines.join('\n') };
+      }
+      try {
+        onEvent(event || 'message', data);
+      } catch {
+        /* ignore consumer errors */
+      }
+    };
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf('\n\n')) >= 0) {
+          const block = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          flushBlock(block);
+        }
+      }
+      if (buffer.trim()) flushBlock(buffer);
+    } finally {
+      clearTimeout(timer);
+      try { reader.releaseLock(); } catch { /* ignore */ }
+    }
+
+    await this.ctx.service.agentAudit.log({
+      skill: 'fitness-judge-skill',
+      action: payload.action || 'explain',
+      run_id: payload.trace?.run_id,
+      item_id: payload.trace?.item_id || payload.item_id,
+      duration_ms: Date.now() - started,
+      ok: true,
+      detail: { stream: true },
+    });
   }
 
   async invokeFitnessSample(payload) {

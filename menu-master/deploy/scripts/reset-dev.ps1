@@ -1,4 +1,4 @@
-# Reset dev: down volumes + up main stack
+﻿# Reset dev: down volumes + up main stack
 $ErrorActionPreference = "Stop"
 
 . "$PSScriptRoot\_utf8.ps1"

@@ -27,9 +27,14 @@ function parseAutomationCommand(command, fitnessAgentRoot, allowlist) {
 
   let cwd = fitnessAgentRoot;
   let cmd = String(command).trim();
-  if (/^cd\s+server\s*&&/i.test(cmd)) {
+
+  // 允许相对仓库根或已指向 fitness-agent 根的 cd 前缀
+  if (/^cd\s+(?:fitness-agent\/)?server\s*&&/i.test(cmd)) {
     cwd = path.join(fitnessAgentRoot, 'server');
-    cmd = cmd.replace(/^cd\s+server\s*&&\s*/i, '').trim();
+    cmd = cmd.replace(/^cd\s+(?:fitness-agent\/)?server\s*&&\s*/i, '').trim();
+  } else if (/^cd\s+(?:fitness-agent\/)?\.pi\s*&&/i.test(cmd)) {
+    cwd = path.join(fitnessAgentRoot, '.pi');
+    cmd = cmd.replace(/^cd\s+(?:fitness-agent\/)?\.pi\s*&&\s*/i, '').trim();
   }
 
   const allowed = (allowlist || []).some(prefix => cmd.startsWith(prefix));
@@ -40,26 +45,37 @@ function parseAutomationCommand(command, fitnessAgentRoot, allowlist) {
     throw err;
   }
 
-  const npmMatch = cmd.match(/^npm run (test:stations|test:e2e)(?:\s+--\s+(.+))?$/);
-  if (!npmMatch) {
-    const err = new Error(`无法解析 npm 命令: ${cmd}`);
-    err.status = 400;
-    err.code = 'CLI_PARSE_ERROR';
-    throw err;
+  const isWin = process.platform === 'win32';
+  const runMatch = cmd.match(/^npm run (test:stations|test:e2e)(?:\s+--\s+(.+))?$/);
+  if (runMatch) {
+    const script = runMatch[1];
+    const extra = runMatch[2] ? runMatch[2].trim().split(/\s+/).filter(Boolean) : [];
+    return {
+      cwd,
+      executable: isWin ? 'npm.cmd' : 'npm',
+      args: [ 'run', script, ...(extra.length ? [ '--', ...extra ] : []) ],
+      shell: isWin,
+      summary: `npm run ${script}${extra.length ? ` -- ${extra.join(' ')}` : ''}`,
+    };
   }
 
-  const script = npmMatch[1];
-  const extra = npmMatch[2] ? npmMatch[2].trim().split(/\s+/).filter(Boolean) : [];
-  const args = [ 'run', script, ...(extra.length ? [ '--', ...extra ] : []) ];
-  const isWin = process.platform === 'win32';
+  // .pi 侧：npm test [-- <filter...>]
+  const testMatch = cmd.match(/^npm test(?:\s+--\s+(.+))?$/);
+  if (testMatch) {
+    const extra = testMatch[1] ? testMatch[1].trim().split(/\s+/).filter(Boolean) : [];
+    return {
+      cwd,
+      executable: isWin ? 'npm.cmd' : 'npm',
+      args: [ 'test', ...(extra.length ? [ '--', ...extra ] : []) ],
+      shell: isWin,
+      summary: `npm test${extra.length ? ` -- ${extra.join(' ')}` : ''}`,
+    };
+  }
 
-  return {
-    cwd,
-    executable: isWin ? 'npm.cmd' : 'npm',
-    args,
-    shell: isWin,
-    summary: `npm run ${script}${extra.length ? ` -- ${extra.join(' ')}` : ''}`,
-  };
+  const err = new Error(`无法解析 npm 命令: ${cmd}`);
+  err.status = 400;
+  err.code = 'CLI_PARSE_ERROR';
+  throw err;
 }
 
 function buildCliSpawnEnv(processEnv, executionEnv, cfg) {

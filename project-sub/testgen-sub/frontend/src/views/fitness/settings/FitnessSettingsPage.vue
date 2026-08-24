@@ -51,17 +51,17 @@ const enumTables = [
 ];
 
 const tableLabels = {
-  test_dimension: '测试维度',
-  test_category_major: '测试大类',
+  test_dimension: '测试维度（旧）',
+  test_category_major: '测试分类（大类）',
   test_category_minor: '测试子类',
   config_template_enum: '配置模板',
-  test_category_major_template: '大类模板挂载',
-  test_scheme_enum: 'TS 测试方案',
-  test_validation_enum: 'VS 验证标准',
+  test_category_major_template: '分类模板挂载',
+  test_scheme_enum: '执行方案（TS）',
+  test_validation_enum: '判定方式（VS）',
   test_priority_enum: '优先级',
   test_automation_status_enum: '自动化状态',
   test_station_enum: '六站',
-  test_role_enum: '三端角色',
+  test_role_enum: '业务角色',
   config_env_enum: '配置项（按 domain 分组）',
   automation_entry_enum: '自动化入口',
   threshold_param_enum: '阈值参数',

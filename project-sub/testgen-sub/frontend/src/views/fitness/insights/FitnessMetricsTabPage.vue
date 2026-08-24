@@ -32,7 +32,7 @@
     </div>
 
     <div v-if="showStationHeatmap" class="chart-panel">
-      <h4 class="chart-title">六站 × 三端热力矩阵</h4>
+      <h4 class="chart-title">六站 × 业务角色热力矩阵</h4>
       <div class="heatmap">
         <div class="heatmap-header">
           <span class="heatmap-corner" />

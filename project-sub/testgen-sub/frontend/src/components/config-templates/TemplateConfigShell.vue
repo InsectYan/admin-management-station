@@ -12,8 +12,8 @@
       style="margin-bottom:12px"
       @change="onSchemeRoleChange"
     >
-      <el-radio-button value="primary">主方案配置</el-radio-button>
-      <el-radio-button value="secondary">辅方案配置</el-radio-button>
+      <el-radio-button value="primary">主执行方案配置</el-radio-button>
+      <el-radio-button value="secondary">辅执行方案配置</el-radio-button>
     </el-radio-group>
 
     <MixedTsTemplateSwitcher
@@ -60,7 +60,7 @@
 
     <div v-if="editable && editMode === 'manual'" style="margin-top:16px">
       <el-button type="primary" :loading="saving" @click="save">
-        保存{{ schemeRole === 'secondary' ? '辅方案' : '主方案' }}配置
+        保存{{ schemeRole === 'secondary' ? '辅执行方案' : '主执行方案' }}配置
       </el-button>
     </div>
     <p v-if="!editable" class="hint">详情页只读预览；编辑请前往「配置」页。</p>
@@ -206,7 +206,7 @@ async function save() {
       loadedItem.value = { ...loadedItem.value, ...data.item };
     }
     configSource.value = data.config_source || 'manual';
-    ElMessage.success(schemeRole.value === 'secondary' ? '辅方案配置已保存' : '主方案配置已保存');
+    ElMessage.success(schemeRole.value === 'secondary' ? '辅执行方案配置已保存' : '主执行方案配置已保存');
     emit('saved', data);
   } catch (e) {
     ElMessage.error(e.message || '保存失败');

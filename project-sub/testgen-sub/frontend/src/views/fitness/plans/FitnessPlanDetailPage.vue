@@ -107,51 +107,27 @@
 
     <p v-if="filteredTableRows.length" class="filter-hint">
       显示 {{ filteredTableRows.length }} / {{ tableRows.length }} 条
-      <span v-if="selectedRows.length"> · 已选 {{ selectedRows.length }} 条</span>
+      <span v-if="selectedItemIds.length"> · 已选 {{ selectedItemIds.length }} 条</span>
+      <span class="muted"> · 虚拟滚动（仅渲染可视行）</span>
     </p>
 
     <el-divider />
-    <el-table
-      ref="tableRef"
-      :data="filteredTableRows"
-      size="small"
-      row-key="item_id"
-      :max-height="400"
-      @selection-change="selectedRows = $event"
-    >
-      <el-table-column type="selection" width="48" reserve-selection />
-      <el-table-column prop="item_id" label="用例 ID" width="160" show-overflow-tooltip />
-      <el-table-column prop="item_name" label="用例名称" min-width="220" show-overflow-tooltip />
-      <el-table-column label="期望" min-width="180" show-overflow-tooltip>
-        <template #default="{ row }">
-          {{ row.expected_observation || '—' }}
+    <div class="plan-items-vtable">
+      <el-auto-resizer>
+        <template #default="{ height, width }">
+          <el-table-v2
+            :columns="planItemColumns"
+            :data="filteredTableRows"
+            :width="width"
+            :height="height"
+            :row-height="48"
+            :header-height="44"
+            row-key="item_id"
+            fixed
+          />
         </template>
-      </el-table-column>
-      <el-table-column prop="scheme_primary_id" label="TS" width="120" />
-      <el-table-column label="结果" width="100">
-        <template #default="{ row }">
-          <FitnessStatusTag prop="result_status" :row="row" />
-        </template>
-      </el-table-column>
-      <el-table-column label="VS 判定" width="100">
-        <template #default="{ row }">
-          <FitnessStatusTag prop="validation_result" :row="row" />
-        </template>
-      </el-table-column>
-      <el-table-column label="Run" width="80">
-        <template #default="{ row }">
-          <el-button v-if="row.ft_run_id" link @click="router.push(`/fitness/execution/runs/${row.ft_run_id}`)">
-            #{{ row.ft_run_id }}
-          </el-button>
-          <span v-else>-</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="100">
-        <template #default="{ row }">
-          <el-button type="primary" link @click="router.push(`/fitness/assets/items/${row.item_id}`)">资产</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+      </el-auto-resizer>
+    </div>
 
     <el-card v-if="plan && scopeGoals.length" shadow="never" style="margin-top: 16px">
       <template #header>PRD 目标范围</template>
@@ -241,9 +217,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, h, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { ElButton, ElCheckbox, ElMessage } from 'element-plus';
 import PageShell from '@/components/PageShell.vue';
 import FitnessStatusTag from '@/components/fitness/FitnessStatusTag.vue';
 import { parsePlanMeta, THRESHOLD_DEFAULTS } from '@/constants/planReleaseCriteria.js';
@@ -271,8 +247,8 @@ const runSummary = ref(null);
 const envs = ref([]);
 const envId = ref(null);
 const statusFilter = ref('');
-const selectedRows = ref([]);
-const tableRef = ref(null);
+/** 虚拟表自管勾选（item_id[]），不依赖 DOM */
+const selectedItemIds = ref([]);
 const reportStats = ref(null);
 const reportPreview = ref('');
 const exporting = ref(false);
@@ -343,13 +319,17 @@ const availableThresholdParams = computed(() => {
 const tableRows = computed(() => {
   const items = plan.value?.items || [];
   const results = plan.value?.results || [];
+  const byPlanItem = new Map(results.map(r => [ Number(r.plan_item_id), r ]));
   return items.map(item => {
-    const result = results.find(r => r.plan_item_id === item.id);
+    const result = byPlanItem.get(Number(item.id));
     return {
       ...item,
       result_status: result?.result_status || 'pending',
       validation_result: result?.validation_result || '',
       ft_run_id: result?.ft_run_id || null,
+      latest_ft_run_id: item.latest_ft_run_id || null,
+      latest_result_status: item.latest_result_status || null,
+      latest_validation_result: item.latest_validation_result || null,
     };
   });
 });
@@ -359,9 +339,11 @@ const filteredTableRows = computed(() => {
   return tableRows.value.filter(r => r.result_status === statusFilter.value);
 });
 
+const selectedIdSet = computed(() => new Set(selectedItemIds.value));
+
 const launchItemIds = computed(() => {
-  if (selectedRows.value.length) {
-    return selectedRows.value.map(r => r.item_id);
+  if (selectedItemIds.value.length) {
+    return selectedItemIds.value;
   }
   return filteredTableRows.value.map(r => r.item_id);
 });
@@ -369,16 +351,147 @@ const launchItemIds = computed(() => {
 const launchLabelSuffix = computed(() => {
   const count = launchItemIds.value.length;
   if (!count) return '';
-  if (selectedRows.value.length) return ` (${selectedRows.value.length} 条已选)`;
+  if (selectedItemIds.value.length) return ` (${selectedItemIds.value.length} 条已选)`;
   if (statusFilter.value) return ` (${count} 条${statusFilter.value})`;
   return ` (${count} 条)`;
 });
 
-watch(statusFilter, () => {
-  tableRef.value?.clearSelection?.();
-  selectedRows.value = [];
+function setRowSelected(itemId, checked) {
+  const idStr = String(itemId);
+  if (checked) {
+    if (!selectedItemIds.value.includes(idStr) && !selectedItemIds.value.includes(itemId)) {
+      selectedItemIds.value = [ ...selectedItemIds.value, itemId ];
+    }
+    return;
+  }
+  selectedItemIds.value = selectedItemIds.value.filter(x => String(x) !== idStr);
+}
+
+function setAllFilteredSelected(checked) {
+  if (!checked) {
+    selectedItemIds.value = [];
+    return;
+  }
+  selectedItemIds.value = filteredTableRows.value.map(r => r.item_id);
+}
+
+const planItemColumns = computed(() => {
+  const selected = selectedIdSet.value;
+  const rows = filteredTableRows.value;
+  const allSelected = rows.length > 0 && rows.every(r => selected.has(r.item_id) || selected.has(String(r.item_id)));
+  const someSelected = rows.some(r => selected.has(r.item_id) || selected.has(String(r.item_id)));
+
+  return [
+    {
+      key: 'selection',
+      width: 48,
+      fixed: true,
+      cellRenderer: ({ rowData }) => h(ElCheckbox, {
+        modelValue: selected.has(rowData.item_id) || selected.has(String(rowData.item_id)),
+        'onUpdate:modelValue': v => setRowSelected(rowData.item_id, Boolean(v)),
+      }),
+      headerCellRenderer: () => h(ElCheckbox, {
+        modelValue: allSelected,
+        indeterminate: someSelected && !allSelected,
+        'onUpdate:modelValue': v => setAllFilteredSelected(Boolean(v)),
+      }),
+    },
+    {
+      key: 'item_id',
+      dataKey: 'item_id',
+      title: '用例 ID',
+      width: 160,
+    },
+    {
+      key: 'item_name',
+      dataKey: 'item_name',
+      title: '用例名称',
+      width: 220,
+      flexGrow: 1,
+    },
+    {
+      key: 'expected_observation',
+      title: '期望',
+      width: 180,
+      flexGrow: 1,
+      cellRenderer: ({ rowData }) => h('span', rowData.expected_observation || '—'),
+    },
+    {
+      key: 'scheme_primary_id',
+      dataKey: 'scheme_primary_id',
+      title: '执行方案（TS）',
+      width: 140,
+    },
+    {
+      key: 'result_status',
+      title: '计划本次结果',
+      width: 110,
+      cellRenderer: ({ rowData }) => h(FitnessStatusTag, { prop: 'result_status', row: rowData }),
+    },
+    {
+      key: 'validation_result',
+      title: '计划本次判定',
+      width: 110,
+      cellRenderer: ({ rowData }) => h(FitnessStatusTag, { prop: 'validation_result', row: rowData }),
+    },
+    {
+      key: 'latest_result_status',
+      title: '最新结果',
+      width: 100,
+      cellRenderer: ({ rowData }) => (rowData.latest_result_status
+        ? h(FitnessStatusTag, { prop: 'result_status', row: { result_status: rowData.latest_result_status } })
+        : h('span', { class: 'muted' }, '—')),
+    },
+    {
+      key: 'latest_validation_result',
+      title: '最新判定',
+      width: 100,
+      cellRenderer: ({ rowData }) => (rowData.latest_validation_result
+        ? h(FitnessStatusTag, {
+          prop: 'validation_result',
+          row: { validation_result: rowData.latest_validation_result },
+        })
+        : h('span', { class: 'muted' }, '—')),
+    },
+    {
+      key: 'ft_run_id',
+      title: '计划本次 Run',
+      width: 110,
+      cellRenderer: ({ rowData }) => (rowData.ft_run_id
+        ? h(ElButton, {
+          link: true,
+          onClick: () => router.push(`/fitness/execution/runs/${rowData.ft_run_id}`),
+        }, () => `#${rowData.ft_run_id}`)
+        : h('span', '-')),
+    },
+    {
+      key: 'latest_ft_run_id',
+      title: '用例最新 Run',
+      width: 110,
+      cellRenderer: ({ rowData }) => (rowData.latest_ft_run_id
+        ? h(ElButton, {
+          link: true,
+          onClick: () => router.push(`/fitness/execution/runs/${rowData.latest_ft_run_id}`),
+        }, () => `#${rowData.latest_ft_run_id}`)
+        : h('span', '-')),
+    },
+    {
+      key: 'actions',
+      title: '操作',
+      width: 90,
+      fixed: 'right',
+      cellRenderer: ({ rowData }) => h(ElButton, {
+        type: 'primary',
+        link: true,
+        onClick: () => router.push(`/fitness/assets/items/${rowData.item_id}`),
+      }, () => '资产'),
+    },
+  ];
 });
 
+watch(statusFilter, () => {
+  selectedItemIds.value = [];
+});
 async function loadReportStats() {
   try {
     reportStats.value = await fetchPlanReportStats(id);
@@ -551,6 +664,16 @@ onUnmounted(stopPolling);
   margin: 0 0 8px;
   font-size: 13px;
   color: var(--el-text-color-secondary);
+}
+.plan-items-vtable {
+  height: 420px;
+  width: 100%;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.muted {
+  color: var(--el-text-color-placeholder);
 }
 .card-header {
   display: flex;
