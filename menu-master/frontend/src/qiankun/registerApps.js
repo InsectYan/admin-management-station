@@ -1,5 +1,6 @@
 import { registerMicroApps, start } from 'qiankun';
 import { buildActiveRule, buildBasename, resolveSubAppEntry } from './config.js';
+import { hideQiankunChrome } from './hideQiankunChrome.js';
 
 let qiankunStarted = false;
 
@@ -21,6 +22,10 @@ export function registerSubApps(rootMenus) {
     {
       beforeLoad: app => console.info('[qiankun] beforeLoad', app.name),
       beforeMount: app => console.info('[qiankun] beforeMount', app.name),
+      afterMount: app => {
+        console.info('[qiankun] afterMount', app.name);
+        hideQiankunChrome();
+      },
       afterUnmount: app => console.info('[qiankun] afterUnmount', app.name),
     }
   );

@@ -107,7 +107,7 @@ html.{prefix}-sub-standalone body {
   overflow: hidden;
 }
 html.{prefix}-sub-standalone #app { height: 100%; overflow: hidden; }
-.{prefix}-sub-content.el-main { --el-main-padding: 0; }
+.{prefix}-sub-content.el-main { --el-main-padding: 0; padding: 0 !important; }
 ```
 
 ## PageShell 对齐

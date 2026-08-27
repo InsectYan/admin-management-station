@@ -24,4 +24,8 @@ import { SUBAPP_ROOT_CLASS } from './lib/subappScope.js';
   flex: 1;
   min-height: 0;
 }
+.el-main {
+  --el-main-padding: 0;
+  padding: 0 !important;
+}
 </style>

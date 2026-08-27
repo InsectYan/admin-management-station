@@ -81,4 +81,9 @@ html.novel-sub-standalone #app {
 
 .novel-sub-content.el-main {
   --el-main-padding: 0;
+  padding: 0 !important;
+}
+
+qiankun-head {
+  display: none !important;
 }

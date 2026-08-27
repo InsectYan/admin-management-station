@@ -101,16 +101,26 @@ body {
   overflow: hidden;
 }
 
-/* Qiankun 把子应用 <head> 换成自定义标签并塞进容器。
-   真实 head 不参与布局；qiankun-head 会渲染 title/meta，顶出一条占位高度。 */
-.subapp-container qiankun-head {
+/* Qiankun 把子应用 <head> 换成自定义标签并塞进容器，必须从布局里拿掉。 */
+qiankun-head {
   display: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /* 入口 HTML 里的 html/body 若被一并注入，从盒模型里拿掉，避免再叠一层高度 */
 .subapp-container html,
 .subapp-container body {
   display: contents;
+}
+
+.subapp-container .el-main {
+  --el-main-padding: 0 !important;
+  padding: 0 !important;
 }
 
 .welcome-panel {

@@ -16,6 +16,7 @@ export function bindStandaloneScope() {
     return () => {};
   }
   document.documentElement.classList.add(SUBAPP_STANDALONE_HTML_CLASS);
+  document.title = '小说创作平台';
   return () => {
     document.documentElement.classList.remove(SUBAPP_STANDALONE_HTML_CLASS);
   };
