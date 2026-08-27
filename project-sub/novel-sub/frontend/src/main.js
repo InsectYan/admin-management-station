@@ -50,6 +50,7 @@ renderWithQiankun({
     console.info('[novel-sub] mount', props);
     styleKeeper.restore();
     render(props);
+    styleKeeper.claim();
   },
   unmount() {
     console.info('[novel-sub] unmount');

@@ -12,7 +12,11 @@ export function isEmbeddedMode() {
 
 /** @returns {() => void} */
 export function bindStandaloneScope() {
-  if (typeof document === 'undefined' || isEmbeddedMode()) {
+  if (typeof document === 'undefined') {
+    return () => {};
+  }
+  if (isEmbeddedMode()) {
+    document.documentElement.classList.remove(SUBAPP_STANDALONE_HTML_CLASS);
     return () => {};
   }
   document.documentElement.classList.add(SUBAPP_STANDALONE_HTML_CLASS);

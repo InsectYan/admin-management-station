@@ -28,7 +28,7 @@ body {
 
 .app-content.el-main {
   --el-main-padding: 0;
-  padding: 0;
+  padding: 0 !important;
   margin: 0;
   height: 100%;
   min-height: 0;
@@ -94,11 +94,21 @@ body {
 }
 
 .subapp-container > div,
-.subapp-container > [data-qiankun],
+.subapp-container > [data-qiankun] {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  font-size: 0;
+  line-height: 0;
+}
+
+.subapp-container > [data-qiankun] > #app,
 .subapp-container #app {
   height: 100%;
   min-height: 0;
   overflow: hidden;
+  font-size: 14px;
+  line-height: normal;
 }
 
 /* Qiankun 把子应用 <head> 换成自定义标签并塞进容器，必须从布局里拿掉。 */
