@@ -7,11 +7,11 @@
 | 应用 | Postgres 容器 | CLI |
 |------|---------------|-----|
 | 主应用 | `ams-main-postgres` | `ams-main local` |
-| 小说 | `ams-novel-postgres` | `ams-novel local` |
+| AI 测试 | `ams-testgen-postgres` | `ams-testgen local` |
 
 配置见：
 
 - [`menu-master/deploy/docker-compose.yml`](../menu-master/deploy/docker-compose.yml)
-- [`novel-sub/deploy/docker-compose.yml`](../novel-sub/deploy/docker-compose.yml)
+- [`project-sub/testgen-sub/deploy/docker-compose.yml`](../project-sub/testgen-sub/deploy/docker-compose.yml)
 
 `compose/infra.yml` 仅作历史参考，**新代码不得 include**。

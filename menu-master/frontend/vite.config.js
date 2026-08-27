@@ -22,6 +22,16 @@ export default defineConfig(({ mode }) => {
           target: env.VITE_PROXY_TARGET || apiOrigin,
           changeOrigin: true,
         },
+        '/subapps/novel-app': {
+          target: env.VITE_SUBAPP_NOVEL_PROXY || 'http://127.0.0.1:5101',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/subapps\/novel-app\/?/, '/'),
+        },
+        '/subapps/testgen-app': {
+          target: env.VITE_SUBAPP_TESTGEN_PROXY || 'http://127.0.0.1:5102',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/subapps\/testgen-app\/?/, '/'),
+        },
       },
     },
     build: {

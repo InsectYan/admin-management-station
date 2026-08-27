@@ -22,7 +22,7 @@ module.exports = appInfo => {
     port: Number(process.env.POSTGRES_PORT || 5301),
     username: process.env.POSTGRES_USER || 'admin',
     password: process.env.POSTGRES_PASSWORD || 'admin123',
-    database: process.env.POSTGRES_DB || process.env.NOVEL_POSTGRES_DB || 'novel_db',
+    database: process.env.POSTGRES_DB || 'novel_db',
     define: {
       underscored: true,
       timestamps: true,
@@ -35,7 +35,7 @@ module.exports = appInfo => {
 
   config.cluster = {
     listen: {
-      port: Number(process.env.PORT || process.env.NOVEL_PORT || 5201),
+      port: Number(process.env.NOVEL_PORT || process.env.PORT || 5201),
       hostname: '0.0.0.0',
     },
   };

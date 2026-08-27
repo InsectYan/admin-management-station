@@ -4,49 +4,78 @@ const Controller = require('egg').Controller;
 
 class NovelController extends Controller {
   async index() {
-    const { title, status, page = 1, pageSize = 20 } = this.ctx.query;
-    const data = await this.service.novel.list({
-      title,
-      status,
-      page: Number(page),
-      pageSize: Number(pageSize),
-    });
+    const data = await this.ctx.service.novel.list(this.ctx.query);
     this.ctx.body = { code: 0, message: 'ok', data };
   }
 
   async show() {
-    const novel = await this.service.novel.findById(this.ctx.params.id);
-    if (!novel) {
+    const row = await this.ctx.service.novel.findById(this.ctx.params.id);
+    if (!row) {
       this.ctx.status = 404;
-      this.ctx.body = { code: 404, message: 'novel not found', data: null };
+      this.ctx.body = { code: 404, message: '小说不存在' };
       return;
     }
-    this.ctx.body = { code: 0, message: 'ok', data: novel };
+    this.ctx.body = { code: 0, message: 'ok', data: row };
   }
 
   async create() {
-    const novel = await this.service.novel.create(this.ctx.request.body || {});
-    this.ctx.body = { code: 0, message: 'created', data: novel };
+    const payload = this.ctx.request.body || {};
+    if (!payload.title?.trim()) {
+      this.ctx.status = 400;
+      this.ctx.body = { code: 400, message: '标题不能为空' };
+      return;
+    }
+    const row = await this.ctx.service.novel.create(payload);
+    this.ctx.body = { code: 0, message: 'ok', data: row };
   }
 
   async update() {
-    const novel = await this.service.novel.update(this.ctx.params.id, this.ctx.request.body || {});
-    if (!novel) {
+    const row = await this.ctx.service.novel.update(this.ctx.params.id, this.ctx.request.body || {});
+    if (!row) {
       this.ctx.status = 404;
-      this.ctx.body = { code: 404, message: 'novel not found', data: null };
+      this.ctx.body = { code: 404, message: '小说不存在' };
       return;
     }
-    this.ctx.body = { code: 0, message: 'ok', data: novel };
+    this.ctx.body = { code: 0, message: 'ok', data: row };
   }
 
   async destroy() {
-    const ok = await this.service.novel.destroy(this.ctx.params.id);
+    const ok = await this.ctx.service.novel.remove(this.ctx.params.id);
     if (!ok) {
       this.ctx.status = 404;
-      this.ctx.body = { code: 404, message: 'novel not found', data: null };
+      this.ctx.body = { code: 404, message: '小说不存在' };
       return;
     }
-    this.ctx.body = { code: 0, message: 'deleted', data: null };
+    this.ctx.body = { code: 0, message: 'ok', data: null };
+  }
+
+  async batchDestroy() {
+    const { ids } = this.ctx.request.body || {};
+    const count = await this.ctx.service.novel.batchRemove(ids);
+    this.ctx.body = { code: 0, message: 'ok', data: { count } };
+  }
+
+  async getSetting() {
+    const setting = await this.ctx.service.novel.getSetting(this.ctx.params.id);
+    if (setting === null) {
+      this.ctx.status = 404;
+      this.ctx.body = { code: 404, message: '小说不存在' };
+      return;
+    }
+    this.ctx.body = { code: 0, message: 'ok', data: setting };
+  }
+
+  async updateSetting() {
+    const setting = await this.ctx.service.novel.updateSetting(
+      this.ctx.params.id,
+      this.ctx.request.body || {},
+    );
+    if (setting === null) {
+      this.ctx.status = 404;
+      this.ctx.body = { code: 404, message: '小说不存在' };
+      return;
+    }
+    this.ctx.body = { code: 0, message: 'ok', data: setting };
   }
 }
 

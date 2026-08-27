@@ -9,7 +9,7 @@ skills/
 ├── main-app-developer/       # 主应用（基座）通用开发
 ├── sub-app-developer/        # 子应用脚手架与 Qiankun 接入（通用）
 └── project-developer/        # 按已登记应用扩展（含业务设计文档）
-    └── novel-sub/            # 示例：在 novel-sub 上迭代
+    └── testgen-sub/            # 示例：在 testgen-sub 上迭代
 ```
 
 ## 选用指南
@@ -34,8 +34,8 @@ skills/
 实现菜单 API 与 Qiankun 动态注册
 
 @skills/sub-app-developer/SKILL.md
-复制 novel-sub 骨架登记新 app_key=testgen
+复制 testgen-sub 骨架登记新 app_key
 
-@skills/project-developer/novel-sub/SKILL.md
-根据 docs-project/小说管理页面子应用设计.MD 实现列表页 API
+@skills/project-developer/testgen-sub/SKILL.md
+根据 docs-project 设计文档实现测试平台功能
 ```

@@ -6,7 +6,7 @@ alwaysApply: false
 
 # 子应用接入主应用 — 规范与避坑
 
-新增子应用时**须先读本文件**。参考实现见 `project-sub/novel-sub/` 及 `subapp.manifest.json`。
+新增子应用时**须先读本文件**。参考实现见 `project-sub/testgen-sub/` 及 `subapp.manifest.json`。
 
 **已有子应用的功能迭代**（改表、新 Skill、新页面等）须同时遵守 **`subapp-development.mdc`**。
 

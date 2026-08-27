@@ -41,17 +41,19 @@ alwaysApply: false
 
 ```css
 .{prefix}-sub-layout {
-  height: 100vh;
+  height: 100%;
+  max-height: 100%;
   display: flex;
   overflow: hidden;
   background: #fff;
   padding: 0;
+  box-sizing: border-box;
 }
 
 .{prefix}-sub-layout.embedded {
   height: 100%;
-  min-height: calc(100vh - var(--subapp-layout-offset, 0px));
-  max-height: 100vh;
+  min-height: 0;
+  max-height: none;
   background: transparent;
 }
 
@@ -65,7 +67,7 @@ alwaysApply: false
 }
 
 .{prefix}-sub-sider {
-  height: 100vh;
+  height: 100%;
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -94,12 +96,18 @@ alwaysApply: false
 }
 ```
 
-`App.css` 须含：
+`App.css` 须含（独立 dev 才改 `html/body`，见 **`subapp-style-isolation.mdc`**）：
 
 ```css
-html, body { margin: 0; padding: 0; height: 100%; }
-#app { height: 100%; }
-.el-main { padding: 0; }  /* 由 {prefix}-sub-content 控制内边距 */
+html.{prefix}-sub-standalone,
+html.{prefix}-sub-standalone body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+html.{prefix}-sub-standalone #app { height: 100%; overflow: hidden; }
+.{prefix}-sub-content.el-main { --el-main-padding: 0; }
 ```
 
 ## PageShell 对齐
@@ -110,13 +118,28 @@ html, body { margin: 0; padding: 0; height: 100%; }
 
 ## 主应用宿主（Qiankun）
 
-主应用 `#subapp-container` 须限制高度并 `overflow: hidden`，使子应用 `%` / `calc(100vh - …)` 生效：
+主应用 `#subapp-container` 须限制高度并 `overflow: hidden`，子应用用 `height: 100%` 填满（禁止再用 `100vh` 叠在宿主上）：
 
 ```css
 .subapp-container {
-  height: calc(100vh - var(--subapp-layout-offset, 0px));
+  height: 100%;
   min-height: 0;
   overflow: hidden;
+}
+.subapp-container > div,
+.subapp-container > [data-qiankun],
+.subapp-container #app {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+/* Qiankun 用 qiankun-head 模拟子应用 <head>，必须隐藏，否则 title 会占位 */
+.subapp-container qiankun-head {
+  display: none !important;
+}
+.subapp-container html,
+.subapp-container body {
+  display: contents;
 }
 ```
 
@@ -125,7 +148,6 @@ html, body { margin: 0; padding: 0; height: 100%; }
 | 应用 | 文件 |
 |------|------|
 | AI 测试 | `project-sub/testgen-sub/frontend/src/components/MainLayout.*` |
-| 小说 | `project-sub/novel-sub/frontend/src/components/MainLayout.*` |
 
 ## 禁止
 

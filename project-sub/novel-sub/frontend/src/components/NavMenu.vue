@@ -25,14 +25,14 @@
       :collapse="collapsed"
       :collapse-transition="false"
       default-active="/novels"
-      background-color="#545c64"
-      text-color="#fff"
-      active-text-color="#ffd04b"
+      background-color="transparent"
+      text-color="#2c4336"
+      active-text-color="#2f8a5b"
       router
     >
       <el-menu-item index="/novels">
         <el-icon><Reading /></el-icon>
-        <span>小说管理</span>
+        <span>小说列表</span>
       </el-menu-item>
     </el-menu>
   </el-aside>
@@ -41,14 +41,14 @@
     :class="['novel-sub-nav', { embedded }]"
     mode="horizontal"
     default-active="/novels"
-    background-color="#fff"
-    text-color="#303133"
-    active-text-color="#409eff"
+    background-color="transparent"
+    text-color="#2c4336"
+    active-text-color="#2f8a5b"
     router
   >
     <el-menu-item index="/novels">
       <el-icon><Reading /></el-icon>
-      <span>小说管理</span>
+      <span>小说列表</span>
     </el-menu-item>
   </el-menu>
 </template>
@@ -64,6 +64,5 @@ defineProps({
 });
 
 const { collapsed, toggleCollapsed } = useNavCollapse();
-
 const asideWidth = computed(() => (collapsed.value ? '64px' : '240px'));
 </script>

@@ -8,16 +8,16 @@ require('dotenv').config();
 async function main() {
   const adminClient = new Client({
     host: process.env.POSTGRES_HOST || '127.0.0.1',
-    port: Number(process.env.POSTGRES_PORT || 5432),
+    port: Number(process.env.POSTGRES_PORT || 5301),
     user: process.env.POSTGRES_USER || 'admin',
     password: process.env.POSTGRES_PASSWORD || 'admin123',
     database: 'postgres',
   });
 
-  const dbName = process.env.POSTGRES_DB || process.env.NOVEL_POSTGRES_DB || 'novel_db';
+  const dbName = process.env.POSTGRES_DB || 'novel_db';
 
   await adminClient.connect();
-  const exists = await adminClient.query('SELECT 1 FROM pg_database WHERE datname = $1', [dbName]);
+  const exists = await adminClient.query('SELECT 1 FROM pg_database WHERE datname = $1', [ dbName ]);
   if (!exists.rowCount) {
     await adminClient.query(`CREATE DATABASE "${dbName}"`);
     console.log(`Created database ${dbName}`);
@@ -26,7 +26,7 @@ async function main() {
 
   const client = new Client({
     host: process.env.POSTGRES_HOST || '127.0.0.1',
-    port: Number(process.env.POSTGRES_PORT || 5432),
+    port: Number(process.env.POSTGRES_PORT || 5301),
     user: process.env.POSTGRES_USER || 'admin',
     password: process.env.POSTGRES_PASSWORD || 'admin123',
     database: dbName,

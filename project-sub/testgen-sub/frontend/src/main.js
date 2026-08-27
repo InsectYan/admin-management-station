@@ -11,12 +11,18 @@ import App from './App.vue';
 import { createAppRouter } from './router';
 import { setBasename } from './qiankun/config.js';
 import { bindStandaloneScope } from './lib/subappScope.js';
+import { createQiankunStyleKeeper } from './lib/qiankunStyleKeeper.js';
 import './App.css';
 
 let app = null;
 let router = null;
 let pinia = null;
 let unbindStandaloneScope = null;
+const styleKeeper = createQiankunStyleKeeper({
+  appName: 'testgen-app',
+  pathHint: 'testgen-sub',
+  rootClass: 'testgen-sub-root',
+});
 
 function render(props = {}) {
   unbindStandaloneScope?.();
@@ -42,10 +48,12 @@ renderWithQiankun({
   },
   mount(props) {
     console.info('[testgen-sub] mount', props);
+    styleKeeper.restore();
     render(props);
   },
   unmount() {
     console.info('[testgen-sub] unmount');
+    styleKeeper.save();
     app?.unmount();
     app = null;
     router = null;

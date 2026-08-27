@@ -1,0 +1,155 @@
+---
+description: novel-sub 清新森林风 UI 开发规范（样式真源 + 子应用隔离）
+globs: "project-sub/novel-sub/**"
+alwaysApply: false
+---
+
+# novel-sub 清新森林风样式规范
+
+**适用范围**：`project-sub/novel-sub/` 全部前端样式与 UI 开发。
+
+**视觉真源**：`project-sub/novel-sub/docs/style.md`（色彩、透明表面、分页面景观勾勒、组件、布局与动效）。本规则提炼可执行约束；细节与示例以该文档为准。
+
+**强制叠加**：布局见 `subapp-layout.mdc`；类名前缀与 Qiankun 隔离见 `subapp-style-isolation.mdc`；EP 基础约定见 `vue-element-plus.mdc`。**冲突时以隔离规范优先**——`style.md` 中裸 `body` / `.el-*` 全局覆写示例须改写为下文作用域写法。
+
+---
+
+## 1. 样式隔离（与其他子应用）
+
+`app_key` = `novel`，根容器 = `.novel-sub-root`（`lib/subappScope.js`）。
+
+| 必须 | 说明 |
+|------|------|
+| 主题作用域 | 背景、字体、纹理、CSS 变量**仅**挂在 `.novel-sub-root`、`.novel-sub-layout`、`.novel-sub-content` 或带 `novel-` 前缀的业务容器内 |
+| 类名前缀 | 业务/主题类一律 `novel-*`（如 `novel-card`、`novel-forest-table`、`novel-wood-button`） |
+| EP 覆写 | 禁止裸 `.el-button`、`.el-table`；使用 `.novel-sub-root .el-*`、组件 `scoped` + `:deep()`，或 `.novel-sub-content.el-main .el-*` |
+| 独立 dev | 仅 `html.novel-sub-standalone` / `html.novel-sub-standalone body` 可设 `margin/height`；**禁止**嵌入态修改 `body` 背景/字体 |
+| 图表容器 | AntV 挂载节点使用 `novel-antv-forest` 等带前缀类名，主题通过 `registerTheme('forest', …)` 注册，不写全局图表 CSS |
+| 浮层 | Dialog/Drawer/Popper 样式通过 EP 变量或 `:deep()` 在组件内覆写；避免写死全局 `z-index` 压过主应用或其他子应用 |
+
+```css
+/* ✅ 主题变量与背景 */
+.novel-sub-root {
+  --novel-color-primary: #2f8a5b;
+  --novel-color-success: #2f8a5b;
+  --novel-color-surface: rgba(255, 255, 255, 0.62);
+  --novel-color-glass: rgba(255, 255, 255, 0.42);
+  --novel-color-bg: #f3f8f4;
+  --novel-radius-base: 10px;
+  --novel-border-default: 1px solid rgba(47, 138, 91, 0.2);
+}
+
+/* ✅ EP 覆写（嵌入态安全） */
+.novel-sub-root .el-input__wrapper { border: var(--novel-border-default); }
+
+/* ❌ 禁止（会污染 testgen / 主应用） */
+body { background: url(...); }
+.el-table { border: 2px dashed #d4a017; }
+```
+
+---
+
+## 2. 设计令牌（清新绿 + 透明表面）
+
+新增样式**优先使用 CSS 变量**，禁止散落硬编码色值（景观 SVG 描边除外）。
+
+| 令牌 | 值 | 用途 |
+|------|-----|------|
+| 清新绿 primary | `#2F8A5B` | 主按钮、链接、激活、强调 |
+| 主色浅底 | `rgba(47,138,91,.10)` | 标签底、选中行 |
+| 页面底 | `#F3F8F4` | 内容区 |
+| 玻璃面 | `rgba(255,255,255,.42~.82)` | 按钮、卡片、输入、侧栏 |
+| 深墨 | `#1F3D2C` | 标题 |
+| 雾青 | `#6D8A82` | 次要状态 |
+
+**形状与装饰**：
+- 圆角 `10px`（小控件 `6px`）
+- 卡片/按钮：半透明白 + 细绿边 + 轻阴影，允许景观透出
+- 景观勾勒用低透明度 SVG 线稿，贴在内容区底部，**不得**盖住正文
+- 正文对比度优先（`#2C4336` / 次级 `#5C6B62`）
+
+兼容别名：`--novel-color-parchment` → surface；`--novel-border-gold` → default；`--novel-shadow-glow` → soft。
+
+---
+
+## 3. 样式文件组织
+
+```
+frontend/src/styles/
+├── variables.css          # .novel-sub-root 上的 CSS 变量
+├── element-override.css   # EP 覆写（选择器以 .novel-sub-root 为祖先）
+├── forest-motion.css      # 淡入过渡
+└── landscapes.css         # 分页面自然景观勾勒
+```
+
+`main.js` 引入上述全局样式；页面级样式放各 `.vue` 的 `scoped`。
+
+**静态资源**：
+- `assets/decorations/scene-meadow.svg` — 列表：林间草甸
+- `assets/decorations/scene-grove.svg` — 创建：晨雾远山 / 林木
+- `assets/decorations/scene-lake.svg` — 详情：湖畔倒影
+
+禁止再引入木纹 PNG、符文、魔法阵图。
+
+---
+
+## 4. 组件与页面约定
+
+| 类型 | 命名 / 位置 | 风格要点 |
+|------|-------------|----------|
+| 按钮 | `el-button`（可兼 `novel-wood-button`） | 玻璃底、细绿边；主按钮半透明叶绿 + 白字 |
+| 表单 | `novel-magic-form` | 玻璃面 + 细实线绿框；label 用正文色 |
+| 表格 | `DataTablePanel` | 雾绿表头、透明行底 |
+| 卡片 | `novel-card` | 玻璃面 + 细边；封面临时底用 `--novel-gradient-cover` |
+| 景观 | `MainLayout` 按路由加 `novel-scene--meadow/grove/lake` | 仅背景线稿 |
+
+页面结构保持：`MainLayout` → `PageShell` → 业务区；不改变 `subapp-layout` 高度链与滚动行为。
+
+---
+
+## 5. Element Plus 定制
+
+1. Primary / Success 映射到 `--novel-color-primary`（清新绿），不是金。
+2. 默认按钮玻璃透明；`plain` 更淡。
+3. 表格页继续使用 `DataTablePanel`。
+4. Tag：success 半透明绿底。
+
+---
+
+## 6. AntV 图表
+
+- 色板 `['#2F8A5B', '#6D8A82', '#B8953A', '#5BA87C']`。
+- 图表容器类名 `novel-antv-forest`；背景用雾面，不要羊皮纸黄。
+
+---
+
+## 7. 动效
+
+- 默认过渡 `0.2～0.3s ease`；步骤切换可用 `novel-fade-in`。
+- 高频操作仅轻量 `transition`；禁止常驻 glow、藤蔓、落叶。
+- `prefers-reduced-motion: reduce` 时关闭动画。
+
+---
+
+## 8. 禁止清单
+
+- ❌ 复制 `style.md` 示例中的裸 `body`、全局 `.el-input__inner`、无 `scoped` 的 `<style>` 穿透块
+- ❌ 无前缀类名（`.page`、`.card`、`.forest-table` 应改为 `novel-*`）
+- ❌ 在 `menu-master` 或 `#subapp-container` 写 novel 专属样式
+- ❌ 使用其他子应用前缀（`testgen-*`）或主应用 `app-*` 作为 novel 业务类名
+- ❌ 硬编码色值替代已定义的 `--novel-*` 变量（新增色须先写入 `variables.css`）
+
+---
+
+## 9. 开发自检
+
+- [ ] 新样式均在 `.novel-sub-root` 子树或 `novel-*` 类下
+- [ ] 未新增裸 `html/body/.el-*` 全局规则
+- [ ] 色/圆角/阴影来自 CSS 变量或 `style.md` 令牌表
+- [ ] 切换主应用菜单至 testgen 等子应用后，novel 样式无残留
+- [ ] 嵌入态（5100 主应用）与独立 dev（5101）均视觉一致且布局不双滚动
+
+## 相关文档
+
+- 完整视觉规范：`project-sub/novel-sub/docs/style.md`
+- 隔离：`subapp-style-isolation.mdc` · 布局：`subapp-layout.mdc`

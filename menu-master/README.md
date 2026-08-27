@@ -144,20 +144,20 @@ npm run dev
 
 ## Qiankun
 
-主应用从 **`/api/menus/root`** 动态注册子应用；`database/init.sql` 种子包含 `novel-sub`：
+主应用从 **`/api/menus/root`** 动态注册子应用；子应用由 `sync-subapps.mjs` 扫描 `project-sub/*/subapp.manifest.json` 同步：
 
 | 表 | 说明 |
 |----|------|
 | `subapp_registry` | 子应用 entry、端口元数据 |
-| `menu_items` | 侧栏菜单，`microapp_name=novel-app` |
+| `menu_items` | 侧栏菜单，`microapp_name=testgen-app` 等 |
 
 菜单响应字段：`entry`、`active_rule`、`basename`、`subapp`。
 
-前端 fallback：`VITE_SUBAPP_NOVEL_ENTRY`（默认 `http://localhost:5101`），见 `frontend/.env.local.example`。
+前端 fallback：`VITE_SUBAPP_TESTGEN_ENTRY`（默认 `http://localhost:5102`），见 `frontend/.env.local.example`。
 
 | microapp_name | route_prefix | activeRule |
 |---------------|--------------|------------|
-| `novel-app` | `novel` | `/media/novel` |
+| `testgen-app` | `testgen` | `/media/testgen` |
 
 
 

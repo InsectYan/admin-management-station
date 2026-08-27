@@ -17,6 +17,8 @@ alwaysApply: false
 
 `experimentalStyleIsolation` **不能**替代子应用规范：对 `html/body`、未前缀的 `.el-*` 仍可能泄漏。
 
+Vite 开发态 CSS 由 JS 注入。沙箱会在 **unmount 时摘掉 `<style>`**，二次 mount **不会重跑 CSS import**，表现为切走再回来样式全无。子应用须在 `main.js` 用 `lib/qiankunStyleKeeper.js`：unmount 前 `save()`，mount 时 `restore()`。
+
 ## 子应用必须实现
 
 ### 1. 根容器 `{prefix}-sub-root`
@@ -76,7 +78,7 @@ html, body { margin: 0; }
 
 ### 7. 卸载清理
 
-`unmount` 中：`app.unmount()` + `bindStandaloneScope` 返回的清理函数，避免 standalone 类残留。
+`unmount` 中：先 `styleKeeper.save()`，再 `app.unmount()` + `bindStandaloneScope` 清理。`mount` 开头 `styleKeeper.restore()`。
 
 ## 主应用
 

@@ -15,7 +15,7 @@
 <script setup>
 defineProps({
   title: { type: String, default: '' },
-  /** 表格页：内容区 flex 撑满，配合 DataTablePanel */
+  /** 表格页：撑满视口高度，分页器吸底 */
   tableLayout: { type: Boolean, default: false },
 });
 </script>

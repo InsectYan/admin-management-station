@@ -160,9 +160,19 @@ function handleSelect(key) {
 <style scoped>
 .app-sider {
   background: #545c64;
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
   transition: width 0.25s ease;
   overflow: hidden;
+}
+
+.app-sider :deep(.el-menu) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  border-right: none;
 }
 
 .app-brand {

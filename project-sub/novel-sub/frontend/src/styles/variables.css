@@ -1,0 +1,76 @@
+/* 清新森林风设计令牌 — 仅作用于 .novel-sub-root 子树 */
+
+.novel-sub-root {
+  /* 主色：清新叶绿（非琥珀金、非饱和森林绿） */
+  --novel-color-primary: #2f8a5b;
+  --novel-color-primary-hover: #3a9d6a;
+  --novel-color-primary-muted: rgba(47, 138, 91, 0.1);
+  --novel-color-success: #2f8a5b;
+  --novel-color-warning: #b8953a;
+  --novel-color-danger: #b85c5c;
+  --novel-color-moon: #6d8a82;
+  --novel-color-accent: #2f8a5b;
+  --novel-color-forest: #2f8a5b;
+
+  /* 表面：浅底 + 半透明玻璃，让景观勾勒透出来 */
+  --novel-color-bg: #f3f8f4;
+  --novel-color-surface: rgba(255, 255, 255, 0.62);
+  --novel-color-surface-elevated: rgba(255, 255, 255, 0.82);
+  --novel-color-mist: rgba(240, 247, 242, 0.72);
+  --novel-color-parchment: var(--novel-color-surface);
+  --novel-color-glass: rgba(255, 255, 255, 0.42);
+  --novel-color-glass-hover: rgba(255, 255, 255, 0.68);
+  --novel-backdrop-blur: 12px;
+
+  --novel-color-deep: #1f3d2c;
+  --novel-color-text: #2c4336;
+  --novel-color-text-secondary: #5c6b62;
+  --novel-color-text-muted: #8a968e;
+
+  --novel-radius-base: 10px;
+  --novel-radius-sm: 6px;
+
+  --novel-border-subtle: 1px solid rgba(47, 138, 91, 0.12);
+  --novel-border-default: 1px solid rgba(47, 138, 91, 0.2);
+  --novel-border-strong: 1px solid rgba(47, 138, 91, 0.32);
+  --novel-border-gold: var(--novel-border-default);
+
+  --novel-shadow-soft: 0 1px 2px rgba(31, 61, 44, 0.04), 0 8px 24px rgba(47, 138, 91, 0.06);
+  --novel-shadow-focus: 0 0 0 3px rgba(47, 138, 91, 0.16);
+  --novel-shadow-glow: var(--novel-shadow-soft);
+
+  --novel-gradient-hero: linear-gradient(
+    165deg,
+    rgba(232, 244, 236, 0.9) 0%,
+    rgba(243, 248, 244, 0.55) 48%,
+    rgba(255, 255, 255, 0.35) 100%
+  );
+  --novel-gradient-steps: linear-gradient(
+    90deg,
+    rgba(47, 138, 91, 0.07),
+    rgba(109, 138, 130, 0.05)
+  );
+  --novel-gradient-header: var(--novel-gradient-hero);
+  --novel-gradient-magic: var(--novel-gradient-steps);
+  --novel-gradient-btn: linear-gradient(180deg, rgba(58, 157, 106, 0.9), rgba(47, 138, 91, 0.82));
+  --novel-gradient-cover: linear-gradient(
+    160deg,
+    rgba(232, 244, 236, 0.55) 0%,
+    rgba(47, 138, 91, 0.12) 100%
+  );
+
+  /* Element Plus 色板映射 */
+  --el-color-primary: var(--novel-color-primary);
+  --el-color-primary-light-3: #5ba87c;
+  --el-color-primary-light-5: #86c09e;
+  --el-color-primary-light-7: #b3d8c4;
+  --el-color-primary-light-8: #cce6d6;
+  --el-color-primary-light-9: #e6f4ec;
+  --el-color-primary-dark-2: #26734c;
+  --el-color-success: var(--novel-color-success);
+  --el-color-warning: var(--novel-color-warning);
+  --el-color-danger: var(--novel-color-danger);
+  --el-color-info: var(--novel-color-moon);
+  --el-border-radius-base: var(--novel-radius-sm);
+  --el-font-size-base: 14px;
+}

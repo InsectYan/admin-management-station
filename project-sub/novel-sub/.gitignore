@@ -1,6 +1,8 @@
 node_modules/
-node_modules/
-workspaces/
-data/
+dist/
 *.local
 .env
+
+backend/logs/
+backend/run/
+*.log

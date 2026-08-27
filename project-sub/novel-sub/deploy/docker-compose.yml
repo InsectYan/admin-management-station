@@ -1,4 +1,4 @@
-# 小说子应用完整栈（app_key=novel）— 自包含，无仓库级共享 infra
+﻿# novel-sub（app_key=novel）— 自包含
 # 启动：cd novel-sub/deploy && npm link && ams-novel local
 
 name: ams-novel
@@ -35,7 +35,8 @@ services:
       APP_KEY: novel
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      CACHE_DRIVER: memory
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
       PORT: ${NOVEL_PORT:-5201}
       POSTGRES_DB: ${NOVEL_POSTGRES_DB:-novel_db}
     ports:
@@ -43,6 +44,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - ../backend/app:/app/app
+      - ../backend/config:/app/config
+      - ../database:/app/database:ro
 
   novel-frontend:
     build:
@@ -56,10 +61,13 @@ services:
       - ./config/.env.local
     environment:
       VITE_API_BASE: http://localhost:5201/api
+      VITE_DEV_PORT: 5101
     volumes:
       - ../frontend/src:/app/src
       - ../frontend/index.html:/app/index.html
       - ../frontend/vite.config.js:/app/vite.config.js
+      - ../frontend/package.json:/app/package.json
+      - ../frontend/package-lock.json:/app/package-lock.json
     depends_on:
       - api-novel
 

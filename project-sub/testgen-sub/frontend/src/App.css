@@ -1,14 +1,17 @@
 /* 页面壳层（PageShell）— testgen 子应用全局样式 */
 
-html,
-body {
+html.testgen-sub-standalone,
+html.testgen-sub-standalone body {
   margin: 0;
   padding: 0;
   height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
-#app {
+html.testgen-sub-standalone #app {
   height: 100%;
+  overflow: hidden;
 }
 
 .testgen-page {
@@ -68,7 +71,6 @@ body {
   min-height: 0;
 }
 
-/* 嵌入式布局样式 */
-.el-main {
-  padding: 0;
+.testgen-sub-content.el-main {
+  --el-main-padding: 0;
 }

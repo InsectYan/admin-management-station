@@ -5,7 +5,7 @@ description: >-
   自包含目录（frontend + backend + database + deploy）、Qiankun 生命周期、
   apiConfig 绝对 URL、接入主应用 checklist。
   不含具体业务模块；业务实现见 project-developer/{app_key}。
-  当用户新建子应用、复制 novel-sub 骨架、接入 Qiankun 时使用。
+  当用户新建子应用、复制 testgen-sub 骨架、接入 Qiankun 时使用。
 ---
 
 # Sub App Developer
@@ -15,7 +15,7 @@ description: >-
 ## 前置
 
 1. 在 [`app-registry.mdc`](../../.cursor/rules/app-registry.mdc) **登记**新 `app_key`（API / Vite / PG 端口）
-2. 复制已登记子应用目录为模板（当前参考：`novel-sub/`）
+2. 复制已登记子应用目录为模板（当前参考：`testgen-sub/`）
 3. **必读** [`subapp-onboarding.mdc`](../../.cursor/rules/subapp-onboarding.mdc)
 4. **迭代开发必读** [`subapp-development.mdc`](../../.cursor/rules/subapp-development.mdc)（变更登记、DB 联动、docs 同步）
 5. **新 Skill 必读** [`agent-skill-development.mdc`](../../.cursor/rules/agent-skill-development.mdc)（默认 `agent-management-sub/plugins/`）

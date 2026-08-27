@@ -60,6 +60,7 @@ alwaysApply: false
 
 - 主应用 `start({ sandbox: { experimentalStyleIsolation: true } })`（见 `registerApps.js`）。
 - **各子应用须完成源码级隔离**：`{prefix}-sub-root`、禁止裸 `html/body/.el-*`、类名 `{prefix}-*` 前缀。详见 **`subapp-style-isolation.mdc`**。
+- Vite 子应用二次进入会丢 CSS（沙箱摘 style、import 不重跑）。`main.js` 须接 `qiankunStyleKeeper`（save/restore）。
 
 ## 相关规则
 

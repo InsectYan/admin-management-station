@@ -1,84 +1,143 @@
 <template>
-  <PageShell :title="novel?.title || '小说详情'">
-    <template #extra>
-      <router-link :to="{ name: 'novel-list' }">返回列表</router-link>
-    </template>
+  <div v-loading="loading && !loadError" class="novel-detail-page">
+    <el-alert
+      v-if="loadError"
+      type="error"
+      :title="loadError"
+      show-icon
+      :closable="false"
+      class="novel-detail-page__error"
+    >
+      <el-button link type="primary" @click="retryLoad">重试加载</el-button>
+      <el-button link @click="goBackToList">返回列表</el-button>
+    </el-alert>
 
-    <div v-if="!novel" v-loading="true" style="min-height: 120px" />
+    <NovelDetailShell
+      v-if="!loadError"
+      :title="basic.title"
+      :intent="basic.creative_intent"
+      :genre="basic.genre"
+      :novel-type="basic.novel_type"
+      :cover-url="basic.cover_url"
+      :progress-status="basic.progress_status"
+      :tab-title="tabMeta?.title"
+      @back="goBackToList"
+      @edit="goToWizard()"
+    >
+      <template #tabs>
+        <NovelDetailTabs
+          :tabs="DETAIL_TABS"
+          :current-tab="currentTab"
+          :filled-map="filledMap"
+          @select="goToTab"
+        />
+      </template>
 
-    <template v-else>
-      <el-descriptions :column="2" border size="small" style="margin-bottom: 24px">
-        <el-descriptions-item label="ID">{{ novel.id }}</el-descriptions-item>
-        <el-descriptions-item label="状态">{{ novel.status }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间">{{ novel.created_at }}</el-descriptions-item>
-        <el-descriptions-item label="更新时间">{{ novel.updated_at }}</el-descriptions-item>
-      </el-descriptions>
+      <div
+        class="novel-detail-page__pane"
+        @touchstart.passive="onTouchStart"
+        @touchend.passive="onTouchEnd"
+      >
+        <DetailBasicInfo
+          v-if="currentTab === 1"
+          :form="basic"
+          :meta="novelMeta"
+        />
+        <DetailWorldSetting
+          v-else-if="currentTab === 2"
+          :form="worldForm"
+        />
+        <DetailCharacters
+          v-else-if="currentTab === 3"
+          :characters="characters"
+          :edges="characterEdges"
+        />
+        <DetailOutline
+          v-else-if="currentTab === 4"
+          :form="outlineForm"
+        />
+        <DetailContentOrg
+          v-else-if="currentTab === 5"
+          :form="contentForm"
+        />
+      </div>
 
-      <el-form ref="formRef" :model="form" label-position="top" @submit.prevent="handleSave">
-        <el-form-item label="标题" prop="title" :rules="[{ required: true, message: '请输入标题' }]">
-          <el-input v-model="form.title" />
-        </el-form-item>
-        <el-form-item label="作者" prop="author_name">
-          <el-input v-model="form.author_name" />
-        </el-form-item>
-        <el-form-item label="状态" prop="status">
-          <el-select v-model="form.status" style="width: 100%">
-            <el-option value="draft" label="草稿" />
-            <el-option value="published" label="已发布" />
-            <el-option value="archived" label="归档" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" native-type="submit">保存</el-button>
-        </el-form-item>
-      </el-form>
-    </template>
-  </PageShell>
+      <template #footer>
+        <NovelDetailFooter
+          :progress="progressMeta"
+          :current-tab="currentTab"
+          @prev="goPrevTab"
+          @next="goNextTab"
+          @edit="goToWizard()"
+        />
+      </template>
+    </NovelDetailShell>
+  </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
-import { ElMessage } from 'element-plus';
-import PageShell from '../components/PageShell.vue';
-import { fetchNovel, updateNovel } from '../services/novelService.js';
+import NovelDetailShell from '../components/novel/detail/NovelDetailShell.vue';
+import NovelDetailTabs from '../components/novel/detail/NovelDetailTabs.vue';
+import NovelDetailFooter from '../components/novel/detail/NovelDetailFooter.vue';
+import DetailBasicInfo from '../components/novel/detail/DetailBasicInfo.vue';
+import DetailWorldSetting from '../components/novel/detail/DetailWorldSetting.vue';
+import DetailCharacters from '../components/novel/detail/DetailCharacters.vue';
+import DetailOutline from '../components/novel/detail/DetailOutline.vue';
+import DetailContentOrg from '../components/novel/detail/DetailContentOrg.vue';
+import { useNovelDetail } from '../composables/useNovelDetail.js';
 
-const route = useRoute();
-const novel = ref(null);
-const formRef = ref(null);
-const form = reactive({
-  title: '',
-  author_name: '',
-  status: '',
-});
+const {
+  DETAIL_TABS,
+  loading,
+  loadError,
+  currentTab,
+  tabMeta,
+  basic,
+  worldForm,
+  characters,
+  characterEdges,
+  outlineForm,
+  contentForm,
+  novelMeta,
+  progressMeta,
+  filledMap,
+  retryLoad,
+  goToTab,
+  goPrevTab,
+  goNextTab,
+  goBackToList,
+  goToWizard,
+} = useNovelDetail();
 
-async function loadNovel() {
-  try {
-    const data = await fetchNovel(route.params.id);
-    novel.value = data;
-    Object.assign(form, {
-      title: data.title,
-      author_name: data.author_name,
-      status: data.status,
-    });
-  } catch (e) {
-    ElMessage.error(e.message || '加载失败');
-  }
+let touchStartX = 0;
+
+function onTouchStart(e) {
+  touchStartX = e.changedTouches?.[0]?.clientX || 0;
 }
 
-async function handleSave() {
-  const valid = await formRef.value?.validate().catch(() => false);
-  if (!valid) return;
-
-  try {
-    await updateNovel(route.params.id, { ...form });
-    ElMessage.success('保存成功');
-    loadNovel();
-  } catch (e) {
-    ElMessage.error(e.message || '保存失败');
-  }
+function onTouchEnd(e) {
+  const endX = e.changedTouches?.[0]?.clientX || 0;
+  const delta = endX - touchStartX;
+  if (Math.abs(delta) < 56) return;
+  if (delta < 0) goNextTab();
+  else goPrevTab();
 }
-
-watch(() => route.params.id, loadNovel);
-onMounted(loadNovel);
 </script>
+
+<style scoped>
+.novel-detail-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  height: 100%;
+}
+
+.novel-detail-page__error {
+  margin-bottom: 12px;
+}
+
+.novel-detail-page__pane {
+  min-height: 0;
+}
+</style>

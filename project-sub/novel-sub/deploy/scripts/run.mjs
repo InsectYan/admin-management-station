@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * 小说子应用（自包含）任务调度。日常：ams-novel <命令>
+ * 小说创作平台子应用（自包含）任务调度。日常：ams-novel <命令>
  */
 import { spawnSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -58,8 +58,29 @@ function runPs1(ps1Rel) {
   run(resolvePowerShell(), ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps1])
 }
 
+function runNodeBackendScript(scriptArgs) {
+  const backendDir = join(appRoot, 'backend')
+  const envLocal = join(deployDir, 'config', '.env.local')
+  const env = { ...process.env }
+  if (existsSync(envLocal)) {
+    try {
+      const text = readFileSync(envLocal, 'utf8')
+      for (const line of text.split('\n')) {
+        const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/)
+        if (m && env[m[1]] === undefined) env[m[1]] = m[2].replace(/^["']|["']$/g, '')
+      }
+    } catch { /* ignore */ }
+  }
+  if (!env.POSTGRES_PORT && env.NOVEL_POSTGRES_PORT) {
+    env.POSTGRES_PORT = env.NOVEL_POSTGRES_PORT
+  }
+  const r = spawnSync(process.execPath, scriptArgs, { cwd: backendDir, env, stdio: 'inherit', shell: false })
+  if (r.error) fail(r.error.message)
+  process.exit(r.status ?? 1)
+}
+
 function printHelp() {
-  console.log(`小说子应用 (novel-sub) — 自包含 CLI
+  console.log(`小说创作平台 (novel-sub) — 自包含 CLI
 
 首次:
   cd novel-sub/deploy && npm link
@@ -69,6 +90,9 @@ function printHelp() {
   ams-novel local:infra        仅 Postgres（宿主机热更新业务代码）
   ams-novel local:reset        清库重建
   ams-novel local:down         停止本栈
+
+数据库（须 Postgres 已启动，默认端口见 deploy/config/.env.local）:
+  ams-novel db:init             执行 database/init.sql 初始化 schema 与种子数据
 
 未 link:
   node novel-sub/deploy/scripts/run.mjs <命令>
@@ -98,6 +122,10 @@ switch (task) {
     break
   case 'local:down':
     runCompose(['down'])
+    break
+  case 'db':
+  case 'db:init':
+    runNodeBackendScript([join('scripts', 'init-db.js')])
     break
   default:
     fail(`未知任务: ${task}\n运行 ams-novel help 查看命令列表`)

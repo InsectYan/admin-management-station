@@ -1,4 +1,4 @@
-﻿if ($script:AmsUtf8Initialized) { return }
+if ($script:AmsUtf8Initialized) { return }
 $script:AmsUtf8Initialized = $true
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 $OutputEncoding = $utf8NoBom

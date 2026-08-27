@@ -16,7 +16,6 @@ alwaysApply: false
 | app_key | 应用根 | deploy 目录 | 命令 |
 |---------|--------|-------------|------|
 | `main` | `menu-master/` | `menu-master/deploy/` | **`ams-main`** |
-| `novel` | `project-sub/novel-sub/` | `project-sub/novel-sub/deploy/` | **`ams-novel`** |
 | `testgen` | `project-sub/testgen-sub/` | `project-sub/testgen-sub/deploy/` | **`ams-testgen`** |
 
 首次：`cd {app}/deploy && npm link`  

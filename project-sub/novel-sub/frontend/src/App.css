@@ -1,25 +1,34 @@
-/* novel 子应用样式 — 禁止裸 html/body/.el-* 全局选择器（见 subapp-style-isolation.mdc） */
+/* 页面壳层（PageShell）— novel 子应用全局样式 */
 
 html.novel-sub-standalone,
 html.novel-sub-standalone body {
   margin: 0;
   padding: 0;
   height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 html.novel-sub-standalone #app {
-  height: 100%;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .novel-page {
-  background: #fff;
-  border-radius: 8px;
-  padding: 0;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+  box-sizing: border-box;
+  background: transparent;
+  border-radius: 0;
+  padding: 16px 20px 20px;
+  margin: 0;
+  box-shadow: none;
 }
 
 .novel-sub-layout.embedded .novel-page {
-  border: 1px solid #f0f0f0;
   box-shadow: none;
 }
 
@@ -34,15 +43,16 @@ html.novel-sub-standalone #app {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: #fff;
-  padding-bottom: 4px;
+  background: rgba(243, 248, 244, 0.72);
+  backdrop-filter: blur(var(--novel-backdrop-blur, 12px));
+  padding-bottom: 8px;
 }
 
 .novel-page-title {
   margin: 0 !important;
   font-size: 18px;
   font-weight: 600;
-  color: #303133;
+  color: var(--novel-color-deep, #1f3d2c);
 }
 
 .novel-page-extra {
@@ -69,28 +79,6 @@ html.novel-sub-standalone #app {
   min-height: 0;
 }
 
-.novel-status-tag-draft {
-  color: #d48806;
-  background: #fffbe6;
-  border-color: #ffe58f;
-}
-
-.novel-status-tag-published {
-  color: #389e0d;
-  background: #f6ffed;
-  border-color: #b7eb8f;
-}
-
-.novel-status-tag-archived {
-  color: #595959;
-  background: #fafafa;
-  border-color: #d9d9d9;
-}
-
-.novel-agent-chat-panel {
-  min-height: 320px;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  padding: 16px;
+.novel-sub-content.el-main {
+  --el-main-padding: 0;
 }

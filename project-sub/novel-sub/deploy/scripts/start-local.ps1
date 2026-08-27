@@ -1,4 +1,4 @@
-﻿# Local stack: infra + novel (profile novel)
+# Local stack: postgres + api + frontend
 $ErrorActionPreference = "Stop"
 . "$PSScriptRoot\_utf8.ps1"
 
@@ -7,7 +7,7 @@ Write-Host "==> docker compose up -d --build"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""
-Write-Host "Novel stack started"
-Write-Host "  Frontend  http://localhost:5174"
-Write-Host "  API       http://localhost:7002"
+Write-Host "novel stack started"
+Write-Host "  Frontend  http://localhost:5101"
+Write-Host "  API       http://localhost:5201"
 Write-Host "Stop: ams-novel local:down"

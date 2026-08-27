@@ -1,112 +1,74 @@
-/**
- * @file schemaSync.js
- * @description 启动时校验 ORM 模型与数据库差异：执行 init.sql/migrations、Sequelize alter、删除孤儿表。
- */
-
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
+const SEED_NOVELS = [
+  {
+    title: '星辰引',
+    cover_url: '',
+    genre: '玄幻',
+    novel_type: '长篇',
+    progress_status: 'ongoing',
+    progress_percent: 42,
+    summary: '少年意外获得星图，踏上修行之路。',
+    author_name: '云中客',
+    status: 'published',
+  },
+  {
+    title: '长安旧事',
+    cover_url: '',
+    genre: '历史',
+    novel_type: '中篇',
+    progress_status: 'completed',
+    progress_percent: 100,
+    summary: '盛唐年间，一段被尘封的宫廷秘闻。',
+    author_name: '墨白',
+    status: 'published',
+  },
+  {
+    title: '半夏微凉',
+    cover_url: '',
+    genre: '言情',
+    novel_type: '短篇',
+    progress_status: 'completed',
+    progress_percent: 100,
+    summary: '夏日里的邂逅，改变了两个人的命运。',
+    author_name: '清浅',
+    status: 'published',
+  },
+  {
+    title: '代码江湖',
+    cover_url: '',
+    genre: '都市',
+    novel_type: '长篇',
+    progress_status: 'ongoing',
+    progress_percent: 18,
+    summary: '程序员穿越到武侠世界，用算法改写武林规则。',
+    author_name: '键盘侠',
+    status: 'draft',
+  },
+  {
+    title: '迷雾档案',
+    cover_url: '',
+    genre: '悬疑',
+    novel_type: '中篇',
+    progress_status: 'ongoing',
+    progress_percent: 65,
+    summary: '每起案件背后，都藏着同一张面孔。',
+    author_name: '夜行者',
+    status: 'published',
+  },
+  {
+    title: '灵植记',
+    cover_url: '',
+    genre: '奇幻',
+    novel_type: '长篇',
+    progress_status: 'ongoing',
+    progress_percent: 30,
+    summary: '能与植物对话的少女，守护最后的绿野。',
+    author_name: '青禾',
+    status: 'draft',
+  },
+];
 
-const SYSTEM_TABLES = new Set([
-  'schema_migrations',
-  'SequelizeMeta',
-  'spatial_ref_sys',
-]);
-
-/**
- * @param {import('egg').Application} app
- * @returns {string|null}
- */
-function resolveDatabaseDir(app) {
-  const candidates = [
-    path.join(app.baseDir, '../database'),
-    path.join(app.baseDir, 'database'),
-  ];
-  for (const dir of candidates) {
-    if (fs.existsSync(path.join(dir, 'init.sql'))) return dir;
-  }
-  return null;
-}
-
-/**
- * @param {import('sequelize').Sequelize} sequelize
- * @param {string} dbDir
- * @param {import('egg').EggLogger} logger
- */
-async function runSqlBootstrap(sequelize, dbDir, logger) {
-  const files = [ path.join(dbDir, 'init.sql') ];
-  const migrationsDir = path.join(dbDir, 'migrations');
-  if (fs.existsSync(migrationsDir)) {
-    fs.readdirSync(migrationsDir)
-      .filter(name => name.endsWith('.sql'))
-      .sort()
-      .forEach(name => files.push(path.join(migrationsDir, name)));
-  }
-
-  for (const file of files) {
-    const sql = fs.readFileSync(file, 'utf8');
-    await sequelize.query(sql);
-    logger.info('[SchemaSync] Applied %s', path.basename(file));
-  }
-}
-
-/**
- * @param {import('egg').Application} app
- * @returns {string[]}
- */
-function collectModelTableNames(app) {
-  if (!app.model?.models) return [];
-  return Object.values(app.model.models).map(model => {
-    const tableName = model.getTableName();
-    return typeof tableName === 'string' ? tableName : tableName.tableName;
-  });
-}
-
-/**
- * @param {import('sequelize').Sequelize} sequelize
- * @returns {Promise<string[]>}
- */
-async function listUserTables(sequelize) {
-  const dialect = sequelize.getDialect();
-  if (dialect === 'postgres') {
-    const [ rows ] = await sequelize.query(`
-      SELECT table_name AS name
-      FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-    `);
-    return rows.map(r => r.name);
-  }
-  const [ rows ] = await sequelize.query(`
-    SELECT name FROM sqlite_master
-    WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
-  `);
-  return rows.map(r => r.name);
-}
-
-/**
- * @param {import('sequelize').Sequelize} sequelize
- * @param {string[]} expectedTables
- * @param {import('egg').EggLogger} logger
- */
-async function dropOrphanTables(sequelize, expectedTables, logger) {
-  const expected = new Set(expectedTables);
-  const dbTables = await listUserTables(sequelize);
-  const dialect = sequelize.getDialect();
-
-  for (const table of dbTables) {
-    if (expected.has(table) || SYSTEM_TABLES.has(table)) continue;
-    const dropSql = dialect === 'postgres'
-      ? `DROP TABLE IF EXISTS "${table}" CASCADE`
-      : `DROP TABLE IF EXISTS "${table}"`;
-    await sequelize.query(dropSql);
-    logger.warn('[SchemaSync] Dropped orphan table: %s', table);
-  }
-}
-
-/**
- * @param {import('egg').Application} app
- */
 async function syncSchemaOnStartup(app) {
   const logger = app.logger;
   const sequelize = app.model;
@@ -115,23 +77,15 @@ async function syncSchemaOnStartup(app) {
     return;
   }
 
-  const dbDir = resolveDatabaseDir(app);
-  if (dbDir) {
-    await runSqlBootstrap(sequelize, dbDir, logger);
-  } else {
-    logger.warn('[SchemaSync] database/init.sql not found under %s', app.baseDir);
-  }
-
   await sequelize.sync({ alter: true });
-  logger.info('[SchemaSync] Sequelize sync (alter) completed');
+  logger.info('[SchemaSync] Sequelize sync completed');
 
-  const expected = collectModelTableNames(app);
-  await dropOrphanTables(sequelize, expected, logger);
-  logger.info('[SchemaSync] Completed, model tables=%j', expected);
+  const { Novel } = app.model;
+  const count = await Novel.count();
+  if (count === 0) {
+    await Novel.bulkCreate(SEED_NOVELS);
+    logger.info('[SchemaSync] inserted %d seed novels', SEED_NOVELS.length);
+  }
 }
 
-module.exports = {
-  syncSchemaOnStartup,
-  resolveDatabaseDir,
-  collectModelTableNames,
-};
+module.exports = { syncSchemaOnStartup };

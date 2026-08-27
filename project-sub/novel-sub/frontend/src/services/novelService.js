@@ -1,28 +1,20 @@
-import { resolveNovelApiBase } from './apiConfig.js';
-
-const API_BASE = resolveNovelApiBase();
+import { api, resolveApiBase } from './apiConfig.js';
 
 async function request(path, options = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
+  const res = await api({
+    url: `${resolveApiBase()}${path}`,
     ...options,
   });
-  const json = await res.json().catch(() => null);
-  if (!res.ok) {
-    throw new Error(json?.message || `HTTP ${res.status}`);
-  }
-  if (json && json.code !== 0 && json.code !== 200) {
-    throw new Error(json.message || '请求失败');
-  }
-  return json?.data;
+  return res.data?.data;
 }
 
 export function fetchNovels(params = {}) {
-  const qs = new URLSearchParams(params).toString();
-  return request(`/novels${qs ? `?${qs}` : ''}`);
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([key, val]) => {
+    if (val !== '' && val != null) qs.set(key, String(val));
+  });
+  const q = qs.toString();
+  return request(`/novels${q ? `?${q}` : ''}`);
 }
 
 export function fetchNovel(id) {
@@ -30,13 +22,25 @@ export function fetchNovel(id) {
 }
 
 export function createNovel(payload) {
-  return request('/novels', { method: 'POST', body: JSON.stringify(payload) });
+  return request('/novels', { method: 'POST', data: payload });
 }
 
 export function updateNovel(id, payload) {
-  return request(`/novels/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+  return request(`/novels/${id}`, { method: 'PUT', data: payload });
 }
 
 export function deleteNovel(id) {
   return request(`/novels/${id}`, { method: 'DELETE' });
+}
+
+export function batchDeleteNovels(ids) {
+  return request('/novels/batch-delete', { method: 'POST', data: { ids } });
+}
+
+export function fetchNovelSetting(id) {
+  return request(`/novels/${id}/setting`);
+}
+
+export function updateNovelSetting(id, patch) {
+  return request(`/novels/${id}/setting`, { method: 'PUT', data: patch });
 }

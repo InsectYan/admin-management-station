@@ -62,7 +62,7 @@ const props = defineProps({
   minBodyHeight: { type: Number, default: 200 },
 });
 
-const emit = defineEmits(['update:page', 'update:pageSize', 'change']);
+const emit = defineEmits([ 'update:page', 'update:pageSize', 'change' ]);
 
 const panelRef = ref(null);
 const footerRef = ref(null);
@@ -175,9 +175,10 @@ onUnmounted(() => {
   align-items: center;
   flex-shrink: 0;
   padding: 12px 0;
-  border-top: 1px solid #ebeef5;
-  background: #fff;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
+  border-top: var(--novel-border-subtle);
+  background: var(--novel-color-surface-elevated);
+  backdrop-filter: blur(var(--novel-backdrop-blur, 12px));
+  box-shadow: var(--novel-shadow-soft);
   box-sizing: border-box;
   z-index: 20;
 }

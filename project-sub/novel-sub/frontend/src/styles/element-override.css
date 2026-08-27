@@ -1,0 +1,189 @@
+/* Element Plus 覆写 — 祖先限定 .novel-sub-root；浮层在 standalone 下单独限定 */
+
+.novel-sub-root .el-button {
+  --el-button-bg-color: var(--novel-color-glass);
+  --el-button-border-color: rgba(47, 138, 91, 0.22);
+  --el-button-text-color: var(--novel-color-deep);
+  --el-button-hover-bg-color: var(--novel-color-glass-hover);
+  --el-button-hover-border-color: rgba(47, 138, 91, 0.36);
+  --el-button-hover-text-color: var(--novel-color-deep);
+  --el-button-active-bg-color: rgba(255, 255, 255, 0.78);
+  border-radius: var(--novel-radius-sm);
+  backdrop-filter: blur(var(--novel-backdrop-blur));
+  background-color: var(--el-button-bg-color) !important;
+  background-image: none;
+  border-color: var(--el-button-border-color);
+  color: var(--el-button-text-color);
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.novel-sub-root .el-button:hover {
+  box-shadow: var(--novel-shadow-soft);
+}
+
+.novel-sub-root .el-button--primary {
+  --el-button-bg-color: rgba(47, 138, 91, 0.22);
+  --el-button-border-color: rgba(47, 138, 91, 0.42);
+  --el-button-text-color: #1f3d2c;
+  --el-button-hover-bg-color: rgba(47, 138, 91, 0.34);
+  --el-button-hover-border-color: rgba(47, 138, 91, 0.55);
+  --el-button-hover-text-color: #1f3d2c;
+  --el-button-active-bg-color: rgba(47, 138, 91, 0.42);
+  background-color: rgba(47, 138, 91, 0.22) !important;
+  background-image: none;
+  color: #1f3d2c;
+}
+
+.novel-sub-root .el-button--primary.is-plain,
+.novel-sub-root .el-button--success.is-plain {
+  --el-button-bg-color: rgba(47, 138, 91, 0.08);
+  --el-button-text-color: var(--novel-color-primary);
+  --el-button-border-color: rgba(47, 138, 91, 0.28);
+  --el-button-hover-bg-color: rgba(47, 138, 91, 0.16);
+  --el-button-hover-text-color: var(--novel-color-primary);
+  background: rgba(47, 138, 91, 0.08);
+  color: var(--novel-color-primary);
+}
+
+.novel-sub-root .el-button.is-link {
+  backdrop-filter: none;
+  background-color: transparent !important;
+  background-image: none;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.novel-sub-root .el-button--danger {
+  --el-button-bg-color: rgba(184, 92, 92, 0.82);
+  --el-button-border-color: rgba(184, 92, 92, 0.4);
+  --el-button-text-color: #fff;
+}
+
+.novel-sub-root .el-button--danger.is-plain {
+  --el-button-bg-color: rgba(184, 92, 92, 0.08);
+  --el-button-text-color: var(--novel-color-danger);
+  --el-button-border-color: rgba(184, 92, 92, 0.28);
+  background: rgba(184, 92, 92, 0.08);
+  color: var(--novel-color-danger);
+}
+
+.novel-sub-root .novel-wood-button.el-button {
+  border: var(--novel-border-default);
+  background: var(--novel-color-glass);
+  color: var(--novel-color-deep);
+}
+
+.novel-sub-root .novel-wood-button.el-button--primary {
+  background-color: rgba(47, 138, 91, 0.22);
+  background-image: none;
+  border-color: rgba(47, 138, 91, 0.42);
+  color: var(--novel-color-deep);
+}
+
+.novel-sub-root .novel-wood-button.el-button:active {
+  transform: translateY(1px);
+}
+
+.novel-sub-root .el-input__wrapper,
+.novel-sub-root .el-select__wrapper,
+.novel-sub-root .el-textarea__inner {
+  border: var(--novel-border-default);
+  border-radius: var(--novel-radius-sm);
+  background: var(--novel-color-surface-elevated);
+  box-shadow: none;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.novel-sub-root .el-input__wrapper.is-focus,
+.novel-sub-root .el-select__wrapper.is-focused {
+  box-shadow: var(--novel-shadow-focus);
+  border-color: rgba(47, 138, 91, 0.4);
+}
+
+.novel-sub-root .el-textarea__inner:focus {
+  box-shadow: var(--novel-shadow-focus);
+}
+
+.novel-sub-root .el-form-item__label {
+  color: var(--novel-color-text);
+  font-weight: 500;
+}
+
+.novel-sub-root .el-table {
+  --el-table-header-bg-color: rgba(240, 247, 242, 0.72);
+  --el-table-tr-bg-color: rgba(255, 255, 255, 0.42);
+  --el-table-row-hover-bg-color: rgba(47, 138, 91, 0.06);
+  --el-table-border-color: rgba(47, 138, 91, 0.1);
+  --el-table-header-text-color: var(--novel-color-deep);
+  --el-table-text-color: var(--novel-color-text);
+  background: transparent;
+}
+
+.novel-sub-root .el-table th.el-table__cell {
+  font-weight: 600;
+}
+
+.novel-sub-root .el-tag {
+  --el-tag-bg-color: var(--novel-color-primary-muted);
+  --el-tag-border-color: rgba(47, 138, 91, 0.18);
+  --el-tag-text-color: var(--novel-color-primary);
+  background: var(--el-tag-bg-color);
+}
+
+.novel-sub-root .el-pagination {
+  --el-pagination-button-bg-color: var(--novel-color-glass);
+  --el-pagination-hover-color: var(--novel-color-primary);
+}
+
+.novel-sub-root .el-pagination.is-background .el-pager li {
+  background: var(--novel-color-glass);
+  backdrop-filter: blur(8px);
+}
+
+.novel-sub-root .el-pagination.is-background .el-pager li.is-active {
+  background: rgba(47, 138, 91, 0.28);
+  color: var(--novel-color-deep);
+}
+
+.novel-sub-root .el-segmented {
+  --el-segmented-bg-color: rgba(47, 138, 91, 0.06);
+  --el-segmented-item-selected-bg-color: rgba(255, 255, 255, 0.78);
+  --el-segmented-item-selected-color: var(--novel-color-primary);
+  background: rgba(47, 138, 91, 0.06);
+}
+
+.novel-sub-root .el-progress-bar__inner {
+  background-color: var(--novel-color-primary);
+}
+
+.novel-sub-root .el-empty__description {
+  color: var(--novel-color-text-muted);
+}
+
+.novel-sub-root .novel-parchment-card,
+.novel-sub-root .novel-magic-form,
+.novel-sub-root .novel-world-card {
+  background: var(--novel-color-surface);
+  border: var(--novel-border-subtle);
+  border-radius: var(--novel-radius-base);
+  backdrop-filter: blur(var(--novel-backdrop-blur));
+  box-shadow: var(--novel-shadow-soft);
+}
+
+.novel-sub-root .el-breadcrumb__inner,
+.novel-sub-root .el-breadcrumb__inner a {
+  color: var(--novel-color-text-secondary);
+  font-weight: 500;
+}
+
+.novel-sub-root .el-breadcrumb__item:last-child .el-breadcrumb__inner {
+  color: var(--novel-color-deep);
+}
+
+html.novel-sub-standalone .el-overlay .el-dialog,
+html.novel-sub-standalone .el-overlay .el-drawer {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(47, 138, 91, 0.12);
+  border-radius: 10px;
+}
