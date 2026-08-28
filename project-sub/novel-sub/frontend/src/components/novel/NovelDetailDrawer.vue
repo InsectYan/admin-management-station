@@ -37,7 +37,7 @@
 
       <div v-if="novel.summary" class="novel-detail-summary">
         <div class="novel-detail-summary__label">简介</div>
-        <p>{{ novel.summary }}</p>
+        <NovelMarkdown :source="novel.summary" />
       </div>
     </template>
     <div v-else v-loading="loading" style="min-height: 120px" />
@@ -45,6 +45,7 @@
 </template>
 
 <script setup>
+import NovelMarkdown from './markdown/NovelMarkdown.vue';
 import { coverFallback, progressLabel } from '../../utils/novelMeta.js';
 
 defineProps({
@@ -90,11 +91,9 @@ defineEmits(['close']);
   font-weight: 500;
 }
 
-.novel-detail-summary p {
-  margin: 0;
+.novel-detail-summary :deep(.novel-md) {
   font-size: 14px;
   line-height: 1.7;
   color: var(--novel-color-text);
-  white-space: pre-wrap;
 }
 </style>

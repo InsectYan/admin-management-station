@@ -9,7 +9,9 @@
         </div>
         <div class="novel-detail-fields__row">
           <dt>创作立意</dt>
-          <dd class="novel-detail-intent">{{ displayText(form.creative_intent) }}</dd>
+          <dd class="novel-detail-intent">
+            <NovelMarkdown :source="form.creative_intent" empty-text="未填写" />
+          </dd>
         </div>
         <div class="novel-detail-fields__row novel-detail-fields__row--split">
           <div>
@@ -39,7 +41,9 @@
         <div class="novel-detail-fields__row">
           <dt>小说简介</dt>
           <dd>
-            <p class="novel-detail-summary">{{ summaryText }}</p>
+            <div class="novel-detail-summary" :class="{ 'is-collapsed': needToggle && !expanded }">
+              <NovelMarkdown :source="form.summary" empty-text="未填写" />
+            </div>
             <el-button
               v-if="needToggle"
               link
@@ -92,6 +96,7 @@
 
 <script setup>
 import { computed, ref } from 'vue';
+import NovelMarkdown from '../markdown/NovelMarkdown.vue';
 import { displayText, SUMMARY_PREVIEW_LEN } from '../../../utils/novelDetail.js';
 import { formatGenreLabel, progressLabel } from '../../../utils/novelMeta.js';
 
@@ -112,14 +117,6 @@ const audienceText = computed(() => {
 
 const needToggle = computed(() => (props.form.summary || '').length > SUMMARY_PREVIEW_LEN);
 
-const summaryText = computed(() => {
-  const text = props.form.summary?.trim();
-  if (!text) return '未填写';
-  if (!expanded.value && text.length > SUMMARY_PREVIEW_LEN) {
-    return `${text.slice(0, SUMMARY_PREVIEW_LEN)}…`;
-  }
-  return text;
-});
 </script>
 
 <style scoped>
@@ -163,7 +160,11 @@ const summaryText = computed(() => {
   font-size: 14px;
   color: var(--novel-color-text, #2f3d34);
   line-height: 1.6;
-  white-space: pre-wrap;
+}
+
+.novel-detail-summary.is-collapsed {
+  max-height: 6.4em;
+  overflow: hidden;
 }
 
 .novel-detail-fields__row--split {

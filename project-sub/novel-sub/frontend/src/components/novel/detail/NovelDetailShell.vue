@@ -27,7 +27,12 @@
         </div>
         <div class="novel-detail-hero__meta">
           <h1 class="novel-detail-hero__title">{{ title || '未命名小说' }}</h1>
-          <p v-if="intent" class="novel-detail-hero__intent">{{ intent }}</p>
+          <NovelMarkdown
+            v-if="intent"
+            class="novel-detail-hero__intent"
+            compact
+            :source="intent"
+          />
           <div class="novel-detail-hero__tags">
             <el-tag v-if="genre" size="small">{{ genreLabel }}</el-tag>
             <el-tag v-if="novelType" size="small" effect="plain">{{ novelType }}</el-tag>
@@ -55,6 +60,7 @@
 <script setup>
 import { computed } from 'vue';
 import { EditPen } from '@element-plus/icons-vue';
+import NovelMarkdown from '../markdown/NovelMarkdown.vue';
 import { coverFallback, formatGenreLabel, progressLabel } from '../../../utils/novelMeta.js';
 
 const props = defineProps({

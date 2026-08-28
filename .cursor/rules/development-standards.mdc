@@ -22,6 +22,7 @@ alwaysApply: true
 - 微前端：`subapp-onboarding.mdc`、`qiankun-microfrontend.mdc`
 - **迭代开发：`subapp-development.mdc`**（变更登记、DB CLI 联动、docs 架构图/评分同步）
 - **Agent / Skill：`agent-skill-development.mdc`**（默认落点 agent-management-sub 子 Agent）
+- **小说平台：`novel-sub-development.mdc`**（正文/对话 Markdown 渲染）
 - 后端：`egg-backend.mdc`、`postgresql.mdc`、**`database-schema-sync.mdc`**（涉及 BFF / 数据库时）
 - 部署：`deploy-cli.mdc`、`docker.mdc`、`docker-compose.mdc`（涉及 `deploy/` 时）
 
@@ -56,6 +57,7 @@ alwaysApply: true
 | **`subapp-onboarding.mdc`** | 子应用接入 Qiankun |
 | **`subapp-development.mdc`** | 子应用迭代：变更登记、DB 联动、docs 同步 |
 | **`agent-skill-development.mdc`** | 新 Agent/Skill 默认落点与 agent 主仓规范 |
+| **`novel-sub-development.mdc`** | 小说平台：可读文本用 Markdown 渲染 |
 | **`nav-layout.mdc`** | 垂直导航菜单与折叠 |
 | **`subapp-layout.mdc`** | 子应用视口高度与内容滚动 |
 | **`subapp-style-isolation.mdc`** | 子应用 CSS 隔离 |

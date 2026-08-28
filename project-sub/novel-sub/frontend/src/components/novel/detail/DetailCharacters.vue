@@ -36,19 +36,19 @@
           <dl class="novel-detail-fields">
             <div>
               <dt>性格</dt>
-              <dd>{{ displayText(activeCharacter.personality) }}</dd>
+              <dd><NovelMarkdown :source="activeCharacter.personality" empty-text="未填写" /></dd>
             </div>
             <div>
               <dt>背景</dt>
-              <dd>{{ displayText(activeCharacter.background) }}</dd>
+              <dd><NovelMarkdown :source="activeCharacter.background" empty-text="未填写" /></dd>
             </div>
             <div>
               <dt>目标 / 动机</dt>
-              <dd>{{ displayText(activeCharacter.goal) }}</dd>
+              <dd><NovelMarkdown :source="activeCharacter.goal" empty-text="未填写" /></dd>
             </div>
             <div>
               <dt>人物关系</dt>
-              <dd>{{ displayText(activeCharacter.relations) }}</dd>
+              <dd><NovelMarkdown :source="activeCharacter.relations" empty-text="未填写" /></dd>
             </div>
           </dl>
         </section>
@@ -69,9 +69,9 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import CharacterRelationGraph from '../create/CharacterRelationGraph.vue';
+import NovelMarkdown from '../markdown/NovelMarkdown.vue';
 import {
   characterRoleStats,
-  displayText,
   roleLabel,
   roleTagType,
 } from '../../../utils/novelDetail.js';
@@ -209,7 +209,6 @@ watch(
   font-size: 14px;
   line-height: 1.6;
   color: var(--novel-color-text, #2f3d34);
-  white-space: pre-wrap;
 }
 
 @media (max-width: 768px) {

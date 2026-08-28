@@ -17,6 +17,16 @@
       :step-title="stepMeta?.title"
       @back="goBackToList"
     >
+      <template v-if="currentStep === 1" #dock>
+        <AiFormDock
+          :scenes="BASIC_AI_SCENES"
+          feature-key="basic"
+          :novel-id="novelId"
+          :form-snapshot="basicForm"
+          @apply="onApplyBasic"
+        />
+      </template>
+
       <template #steps>
         <NovelCreateSteps
           :steps="WIZARD_STEPS"
@@ -81,7 +91,10 @@ import StepWorldSetting from '../components/novel/create/StepWorldSetting.vue';
 import StepCharacters from '../components/novel/create/StepCharacters.vue';
 import StepOutline from '../components/novel/create/StepOutline.vue';
 import StepContentOrg from '../components/novel/create/StepContentOrg.vue';
+import AiFormDock from '../components/novel/ai/AiFormDock.vue';
 import { useNovelCreateWizard } from '../composables/useNovelCreateWizard.js';
+import { BASIC_AI_SCENES } from '../utils/aiScenes.js';
+import { applyBasicPatch } from '../utils/aiApplyPatch.js';
 
 const {
   WIZARD_STEPS,
@@ -92,6 +105,7 @@ const {
   outlineForm,
   contentForm,
   currentStep,
+  novelId,
   saving,
   loading,
   loadError,
@@ -112,6 +126,11 @@ const {
   addOutlineVolume,
   addChapter,
 } = useNovelCreateWizard();
+
+function onApplyBasic(patch) {
+  applyBasicPatch(basicForm, patch);
+  markDirty();
+}
 </script>
 
 <style scoped>

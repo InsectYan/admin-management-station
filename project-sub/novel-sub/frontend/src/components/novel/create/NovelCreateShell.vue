@@ -19,12 +19,17 @@
       </div>
     </header>
 
-    <div class="novel-create-shell__body">
-      <slot name="steps" />
-      <div class="novel-create-shell__content novel-fade-in">
-        <slot />
+    <div class="novel-create-shell__workspace">
+      <aside v-if="$slots.dock" class="novel-create-shell__dock">
+        <slot name="dock" />
+      </aside>
+      <div class="novel-create-shell__main">
+        <slot name="steps" />
+        <div class="novel-create-shell__content novel-fade-in">
+          <slot />
+        </div>
+        <slot name="footer" />
       </div>
-      <slot name="footer" />
     </div>
   </div>
 </template>
@@ -45,12 +50,13 @@ defineEmits(['back']);
   flex: 1;
   height: 100%;
   box-sizing: border-box;
-  padding: 16px 20px 0;
+  padding: 16px 0 0;
   gap: 12px;
 }
 
 .novel-create-shell__header {
   flex-shrink: 0;
+  padding: 0 20px;
 }
 
 .novel-create-shell__header-inner {
@@ -89,12 +95,31 @@ defineEmits(['back']);
   font-size: 14px;
 }
 
-.novel-create-shell__body {
+.novel-create-shell__workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: 0;
+}
+
+.novel-create-shell__dock {
+  flex-shrink: 0;
+  min-height: 0;
+  display: flex;
+}
+
+.novel-create-shell__main {
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-width: 0;
   min-height: 0;
   gap: 16px;
+  padding: 0 20px 0 16px;
+}
+
+.novel-create-shell__workspace:not(:has(.novel-create-shell__dock)) .novel-create-shell__main {
+  padding-left: 20px;
 }
 
 .novel-create-shell__content {

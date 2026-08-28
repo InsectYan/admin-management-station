@@ -7,7 +7,7 @@
         class="novel-detail-card novel-detail-card--accent"
       >
         <h3 class="novel-detail-card__title">{{ block.title }}</h3>
-        <p :class="{ 'is-muted': !block.value }">{{ displayText(block.value) }}</p>
+        <NovelMarkdown :source="block.value" empty-text="未填写" />
       </section>
     </div>
 
@@ -19,7 +19,9 @@
           <span class="novel-detail-timeline__index">{{ index + 1 }}</span>
           <div>
             <div class="novel-detail-timeline__year">{{ displayText(node.year, '未标年代') }}</div>
-            <p class="novel-detail-timeline__event">{{ displayText(node.event) }}</p>
+            <p class="novel-detail-timeline__event">
+              <NovelMarkdown compact :source="node.event" empty-text="未填写" />
+            </p>
           </div>
         </li>
       </ol>
@@ -29,6 +31,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import NovelMarkdown from '../markdown/NovelMarkdown.vue';
 import { displayText } from '../../../utils/novelDetail.js';
 
 const props = defineProps({
@@ -78,12 +81,9 @@ const timeline = computed(() => props.form.timeline || []);
   color: var(--novel-color-deep, #2a3a30);
 }
 
-.novel-detail-card p {
-  margin: 0;
+.novel-detail-card :deep(.novel-md) {
   font-size: 14px;
   line-height: 1.7;
-  color: var(--novel-color-text, #2f3d34);
-  white-space: pre-wrap;
 }
 
 .is-muted {
@@ -129,7 +129,6 @@ const timeline = computed(() => props.form.timeline || []);
   margin: 0;
   font-size: 13px;
   color: var(--novel-color-text-secondary, #5c6b62);
-  white-space: pre-wrap;
 }
 
 @media (max-width: 768px) {

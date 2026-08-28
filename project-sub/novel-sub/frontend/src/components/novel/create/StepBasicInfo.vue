@@ -166,8 +166,18 @@
         <el-tag v-if="lengthLabel" size="small" type="warning" effect="plain">{{ lengthLabel }}</el-tag>
         <el-tag v-if="paceLabel" size="small" type="info" effect="plain">{{ paceLabel }}</el-tag>
       </div>
-      <p class="novel-preview-intent">{{ form.creative_intent || '填写创作立意后在此预览…' }}</p>
-      <p class="novel-preview-summary">{{ form.summary || '简介将显示在这里…' }}</p>
+      <NovelMarkdown
+        class="novel-preview-intent"
+        compact
+        :source="form.creative_intent"
+        empty-text="填写创作立意后在此预览…"
+      />
+      <NovelMarkdown
+        class="novel-preview-summary"
+        compact
+        :source="form.summary"
+        empty-text="简介将显示在这里…"
+      />
       <div v-if="themeLabels.length" class="novel-preview-audience">
         <span class="novel-preview-audience__label">题材</span>
         <el-tag v-for="name in themeLabels" :key="name" size="small" effect="plain">{{ name }}</el-tag>
@@ -182,6 +192,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
+import NovelMarkdown from '../markdown/NovelMarkdown.vue';
 import { useNovelEnums, applyGenrePath } from '../../../composables/useNovelEnums.js';
 
 const props = defineProps({

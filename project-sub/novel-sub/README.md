@@ -83,8 +83,14 @@ cd menu-master/deploy && ams-main local       # 自动 sync-subapps
 
 ## 开发规范
 
-见仓库根 [`.cursor/rules/subapp-development.mdc`](../../.cursor/rules/subapp-development.mdc)
+见仓库根：
+
+- [子应用迭代规范](../../.cursor/rules/subapp-development.mdc)
+- [小说平台开发规范](../../.cursor/rules/novel-sub-development.mdc)（正文 / Agent 对话用 Markdown 渲染）
+- [森林风样式](../../.cursor/rules/novel-sub-style.mdc)
 
 变更登记：[`docs/变更记录.md`](docs/变更记录.md)
 
 创建页计划：[`docs/待办-小说创建页开发计划.md`](docs/待办-小说创建页开发计划.md)
+
+Agent 设计：[`docs/Agent设计/readme.md`](docs/Agent设计/readme.md) · 产品说明：[docs-project/小说平台Agent.md](../../docs-project/小说平台Agent.md)

@@ -40,5 +40,10 @@ module.exports = appInfo => {
     },
   };
 
+  config.agentPlatform = {
+    baseUrl: process.env.AGENT_PLATFORM_URL || 'http://127.0.0.1:4001',
+    timeoutMs: Number(process.env.AGENT_PLATFORM_TIMEOUT_MS || 180000),
+  };
+
   return config;
 };

@@ -1,0 +1,54 @@
+---
+description: 小说平台（novel-sub）开发规范——正文/对话等可读文本用 Markdown 渲染
+globs: "project-sub/novel-sub/**"
+alwaysApply: false
+---
+
+# 小说平台开发规范
+
+**适用范围**：`project-sub/novel-sub/`。样式仍遵 `novel-sub-style.mdc`；Agent 落点遵 `agent-skill-development.mdc`。
+
+---
+
+## 1. 可读文本用 Markdown 渲染
+
+创作者或 Agent 写出的**成段文字**，展示时走 `NovelMarkdown`，不要 `{{ text }}` + `white-space: pre-wrap`。
+
+| 用 Markdown | 仍用纯文本 / 控件 |
+|-------------|-------------------|
+| Agent 坞对话（助手、思考、用户长回复） | 书名、人名、标签、枚举、日期、进度 |
+| 详情：立意、简介、世界观段落、人物背景/目标、时间轴事件 | 表单输入（`el-input` / textarea） |
+| 创建页预览区的立意/简介 | 列表卡片一行摘要、表格单元格 |
+| 日后章节正文、大纲说明 | 按钮、导航、空状态短句 |
+
+组件：`frontend/src/components/novel/markdown/NovelMarkdown.vue`  
+解析：`frontend/src/lib/markdown.js`（`markdown-it` + `DOMPurify`）
+
+```vue
+<!-- ✅ -->
+<NovelMarkdown :source="row.content" compact empty-text="未填写" />
+
+<!-- ❌ 成段正文 -->
+<p class="prose">{{ row.content }}</p>
+```
+
+对话气泡加 `compact`。空值用 `empty-text`，不要渲染出 `未填写` 的 Markdown。思考过程生成中走 SSE 流式纯文本，整轮结束后折叠并用 Markdown 展示落库的 thinking。
+
+---
+
+## 2. 安全与样式
+
+- 必须经过 `renderMarkdown()` 再 `v-html`，禁止把 Agent/用户原文直接 `v-html`
+- `html: false`；外链 `target=_blank` + `rel=noopener noreferrer`；禁止 `javascript:` 链接
+- 样式写在 `.novel-md` + `:deep()`，令牌用 `--novel-*`，类名前缀 `novel-`
+- 换行：解析开启 `breaks`，纯文本多行也能看
+
+---
+
+## 3. 编辑 vs 展示
+
+- **编辑**：继续 textarea / 输入框，保留 Markdown 源文
+- **展示 / 预览 / 对话**：`NovelMarkdown`
+- 不要为「截断预览」先 `slice` 再解析（会切坏语法）；用 CSS `max-height` + 展开
+
+Agent `reply` 可用加粗、列表、短标题；不要用代码围栏包住整段回复。

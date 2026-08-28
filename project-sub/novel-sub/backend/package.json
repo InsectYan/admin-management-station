@@ -10,7 +10,8 @@
     "dev": "egg-bin dev",
     "start": "egg-scripts start --daemon --title=novel-sub-backend",
     "stop": "egg-scripts stop --title=novel-sub-backend",
-    "db:init": "node scripts/init-db.js"
+    "db:init": "node scripts/init-db.js",
+    "agent:smoke": "node scripts/agent-linkage-smoke.js"
   },
   "dependencies": {
     "dotenv": "^16.4.7",

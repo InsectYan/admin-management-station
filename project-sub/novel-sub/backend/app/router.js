@@ -15,4 +15,12 @@ module.exports = (app) => {
   router.delete('/api/novels/:id', controller.novel.destroy);
   router.get('/api/novels/:id/setting', controller.novel.getSetting);
   router.put('/api/novels/:id/setting', controller.novel.updateSetting);
+
+  router.get('/api/ai/sessions', controller.aiSession.index);
+  router.post('/api/ai/sessions', controller.aiSession.create);
+  router.patch('/api/ai/sessions/:id', controller.aiSession.update);
+  router.get('/api/ai/sessions/:id/messages', controller.aiSession.messages);
+  router.post('/api/ai/sessions/:id/turns', controller.aiSession.turns);
+  router.post('/api/ai/sessions/:id/turns/stream', controller.aiSession.turnsStream);
+  router.post('/api/ai/sessions/:id/apply', controller.aiSession.apply);
 };
