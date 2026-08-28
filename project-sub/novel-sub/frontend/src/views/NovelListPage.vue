@@ -24,21 +24,22 @@
       />
       <el-select
         v-model="filters.genre"
-        placeholder="题材"
+        placeholder="小说类型"
         clearable
-        style="width: 120px"
+        filterable
+        style="width: 140px"
         @change="applyFilters"
       >
-        <el-option v-for="g in GENRE_OPTIONS" :key="g" :label="g" :value="g" />
+        <el-option v-for="g in enums.genres" :key="g.id" :label="g.name" :value="g.name" />
       </el-select>
       <el-select
         v-model="filters.novel_type"
-        placeholder="小说类型"
+        placeholder="篇幅"
         clearable
         style="width: 120px"
         @change="applyFilters"
       >
-        <el-option v-for="t in NOVEL_TYPE_OPTIONS" :key="t" :label="t" :value="t" />
+        <el-option v-for="t in enums.lengths" :key="t.id" :label="t.name" :value="t.name" />
       </el-select>
       <el-select
         v-model="filters.progress_status"
@@ -100,7 +101,7 @@
               </el-tooltip>
               <div class="novel-card__tags">
                 <el-tag v-if="item.genre" size="small" :type="GENRE_TAG_TYPE[item.genre] || 'info'">
-                  {{ item.genre }}
+                  {{ formatGenreLabel(item) }}
                 </el-tag>
                 <el-tag v-if="item.novel_type" size="small" effect="plain">{{ item.novel_type }}</el-tag>
               </div>
@@ -221,12 +222,12 @@
             <el-table-column
               v-if="visibleColumns.includes('genre')"
               prop="genre"
-              label="题材"
-              width="100"
+              label="小说类型"
+              width="140"
             >
               <template #default="{ row }">
                 <el-tag v-if="row.genre" size="small" :type="GENRE_TAG_TYPE[row.genre] || 'info'">
-                  {{ row.genre }}
+                  {{ formatGenreLabel(row) }}
                 </el-tag>
                 <span v-else>-</span>
               </template>
@@ -234,8 +235,8 @@
             <el-table-column
               v-if="visibleColumns.includes('novel_type')"
               prop="novel_type"
-              label="小说类型"
-              width="100"
+              label="篇幅"
+              width="90"
             />
             <el-table-column
               v-if="visibleColumns.includes('progress_status')"
@@ -319,17 +320,18 @@ import {
   updateNovel,
 } from '../services/novelService.js';
 import {
-  GENRE_OPTIONS,
   GENRE_TAG_TYPE,
-  NOVEL_TYPE_OPTIONS,
   PROGRESS_OPTIONS,
   TABLE_COLUMNS,
   coverFallback,
+  formatGenreLabel,
   progressLabel,
 } from '../utils/novelMeta.js';
+import { useNovelEnums } from '../composables/useNovelEnums.js';
 
 const route = useRoute();
 const router = useRouter();
+const { enums, load: loadEnums } = useNovelEnums();
 
 const viewOptions = [
   { label: '小说看板', value: 'board' },
@@ -566,7 +568,10 @@ watch(
   { immediate: true },
 );
 
-onMounted(readFiltersFromQuery);
+onMounted(() => {
+  loadEnums();
+  readFiltersFromQuery();
+});
 </script>
 
 <style scoped>

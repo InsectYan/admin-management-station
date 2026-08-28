@@ -12,8 +12,17 @@ export function createBasicInfoForm() {
     creative_intent: '',
     novel_type: '',
     genre: '',
+    genre_subcategory: '',
+    genre_category_id: null,
+    genre_subcategory_id: null,
+    genre_path: [],
+    length_id: null,
+    audience_id: null,
+    update_pace_id: null,
+    theme_ids: [],
+    themes: [],
     summary: '',
-    target_audience: [],
+    target_audience: '',
     update_cadence: '',
     author_name: '',
     cover_url: '',
@@ -24,23 +33,32 @@ export function createBasicInfoForm() {
 }
 
 export function parseTargetAudience(value) {
-  if (Array.isArray(value)) return value;
-  if (!value) return [];
-  return String(value).split(',').map((s) => s.trim()).filter(Boolean);
-}
-
-export function serializeTargetAudience(list) {
-  if (!list?.length) return '';
-  return list.join(',');
+  if (Array.isArray(value)) return value[0] || '';
+  if (!value) return '';
+  return String(value).split(',')[0].trim();
 }
 
 export function novelToBasicForm(novel = {}) {
+  const genre_category_id = novel.genre_category_id || null;
+  const genre_subcategory_id = novel.genre_subcategory_id || null;
+  const genre_path = [];
+  if (genre_category_id) genre_path.push(genre_category_id);
+  if (genre_subcategory_id) genre_path.push(genre_subcategory_id);
   return {
     ...createBasicInfoForm(),
     title: novel.title || '',
     creative_intent: novel.creative_intent || '',
     novel_type: novel.novel_type || '',
     genre: novel.genre || '',
+    genre_subcategory: novel.genre_subcategory || '',
+    genre_category_id,
+    genre_subcategory_id,
+    genre_path,
+    length_id: novel.length_id || null,
+    audience_id: novel.audience_id || null,
+    update_pace_id: novel.update_pace_id || null,
+    theme_ids: Array.isArray(novel.theme_ids) ? [...novel.theme_ids] : [],
+    themes: Array.isArray(novel.themes) ? [...novel.themes] : [],
     summary: novel.summary || '',
     target_audience: parseTargetAudience(novel.target_audience),
     update_cadence: novel.update_cadence || '',
@@ -53,19 +71,22 @@ export function novelToBasicForm(novel = {}) {
 }
 
 export function basicFormToPayload(form) {
+  const [categoryId, subcategoryId] = Array.isArray(form.genre_path) ? form.genre_path : [];
   return {
     title: form.title?.trim(),
     creative_intent: form.creative_intent?.trim() || null,
-    novel_type: form.novel_type || null,
-    genre: form.genre || null,
     summary: form.summary?.trim() || null,
-    target_audience: serializeTargetAudience(form.target_audience),
-    update_cadence: form.update_cadence || null,
     author_name: form.author_name?.trim() || null,
     cover_url: form.cover_url?.trim() || null,
-    status: 'draft',
+    status: form.status || 'draft',
     progress_status: form.progress_status || 'ongoing',
     progress_percent: form.progress_percent ?? 0,
+    genre_category_id: categoryId || form.genre_category_id || null,
+    genre_subcategory_id: subcategoryId || form.genre_subcategory_id || null,
+    length_id: form.length_id || null,
+    audience_id: form.audience_id || null,
+    update_pace_id: form.update_pace_id || null,
+    theme_ids: Array.isArray(form.theme_ids) ? form.theme_ids : [],
   };
 }
 

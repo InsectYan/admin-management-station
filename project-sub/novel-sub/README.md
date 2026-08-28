@@ -49,6 +49,7 @@ cd menu-master/deploy && ams-main local       # 自动 sync-subapps
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
+| GET | `/api/novel-enums` | 小说类型树、题材、读者、篇幅、更新节奏 |
 | POST | `/api/novels` | 创建草稿 |
 | PUT | `/api/novels/:id` | 更新基础信息 |
 | PUT | `/api/novels/:id/setting` | 保存世界观/人物/大纲/章节 |

@@ -15,17 +15,26 @@
           <div>
             <dt>小说类型</dt>
             <dd>
-              <el-tag v-if="form.novel_type" size="small" effect="plain">{{ form.novel_type }}</el-tag>
+              <el-tag v-if="genreLabel" size="small">{{ genreLabel }}</el-tag>
               <span v-else class="is-muted">未填写</span>
             </dd>
           </div>
           <div>
-            <dt>题材</dt>
+            <dt>篇幅</dt>
             <dd>
-              <el-tag v-if="form.genre" size="small">{{ form.genre }}</el-tag>
+              <el-tag v-if="form.novel_type" size="small" effect="plain">{{ form.novel_type }}</el-tag>
               <span v-else class="is-muted">未填写</span>
             </dd>
           </div>
+        </div>
+        <div class="novel-detail-fields__row">
+          <dt>题材</dt>
+          <dd>
+            <div v-if="themeNames.length" class="novel-detail-tags">
+              <el-tag v-for="name in themeNames" :key="name" size="small" effect="plain">{{ name }}</el-tag>
+            </div>
+            <span v-else class="is-muted">未填写</span>
+          </dd>
         </div>
         <div class="novel-detail-fields__row">
           <dt>小说简介</dt>
@@ -44,9 +53,7 @@
         <div class="novel-detail-fields__row">
           <dt>目标读者</dt>
           <dd>
-            <div v-if="form.target_audience?.length" class="novel-detail-tags">
-              <el-tag v-for="a in form.target_audience" :key="a" size="small" effect="plain">{{ a }}</el-tag>
-            </div>
+            <el-tag v-if="audienceText" size="small" effect="plain">{{ audienceText }}</el-tag>
             <span v-else class="is-muted">未填写</span>
           </dd>
         </div>
@@ -86,7 +93,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { displayText, SUMMARY_PREVIEW_LEN } from '../../../utils/novelDetail.js';
-import { progressLabel } from '../../../utils/novelMeta.js';
+import { formatGenreLabel, progressLabel } from '../../../utils/novelMeta.js';
 
 const props = defineProps({
   form: { type: Object, required: true },
@@ -94,6 +101,14 @@ const props = defineProps({
 });
 
 const expanded = ref(false);
+
+const genreLabel = computed(() => formatGenreLabel(props.form));
+const themeNames = computed(() => (props.form.themes || []).map((t) => t.name).filter(Boolean));
+const audienceText = computed(() => {
+  const value = props.form.target_audience;
+  if (Array.isArray(value)) return value.filter(Boolean).join('、');
+  return value || '';
+});
 
 const needToggle = computed(() => (props.form.summary || '').length > SUMMARY_PREVIEW_LEN);
 

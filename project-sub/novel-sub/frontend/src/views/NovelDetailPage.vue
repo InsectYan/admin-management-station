@@ -17,6 +17,7 @@
       :title="basic.title"
       :intent="basic.creative_intent"
       :genre="basic.genre"
+      :genre-subcategory="basic.genre_subcategory"
       :novel-type="basic.novel_type"
       :cover-url="basic.cover_url"
       :progress-status="basic.progress_status"

@@ -5,6 +5,8 @@ module.exports = (app) => {
 
   router.get('/api/health', controller.health.index);
 
+  router.get('/api/novel-enums', controller.novelEnum.index);
+
   router.get('/api/novels', controller.novel.index);
   router.post('/api/novels', controller.novel.create);
   router.post('/api/novels/batch-delete', controller.novel.batchDestroy);

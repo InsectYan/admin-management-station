@@ -33,31 +33,60 @@
         <el-row :gutter="16">
           <el-col :xs="24" :sm="12">
             <el-form-item label="小说类型">
-              <el-select
-                v-model="form.novel_type"
+              <el-cascader
+                v-model="form.genre_path"
+                :options="genreCascaderOptions"
+                :props="genreCascaderProps"
                 clearable
-                placeholder="选择类型"
+                filterable
+                placeholder="选择一级 / 二级分类"
                 style="width: 100%"
-                @change="$emit('change')"
-              >
-                <el-option v-for="t in NOVEL_TYPE_OPTIONS" :key="t" :label="t" :value="t" />
-              </el-select>
+                @change="onGenreChange"
+              />
             </el-form-item>
           </el-col>
           <el-col :xs="24" :sm="12">
-            <el-form-item label="题材">
+            <el-form-item label="篇幅">
               <el-select
-                v-model="form.genre"
+                v-model="form.length_id"
                 clearable
-                placeholder="选择题材"
+                placeholder="选择篇幅"
                 style="width: 100%"
                 @change="$emit('change')"
               >
-                <el-option v-for="g in GENRE_OPTIONS" :key="g" :label="g" :value="g" />
+                <el-option
+                  v-for="item in enums.lengths"
+                  :key="item.id"
+                  :label="item.name"
+                  :value="item.id"
+                >
+                  <span>{{ item.name }}</span>
+                  <span class="novel-enum-hint">{{ item.description }}</span>
+                </el-option>
               </el-select>
             </el-form-item>
           </el-col>
         </el-row>
+
+        <el-form-item label="题材">
+          <el-select
+            v-model="form.theme_ids"
+            multiple
+            filterable
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="搜索并选择题材标签"
+            style="width: 100%"
+            @change="$emit('change')"
+          >
+            <el-option
+              v-for="item in enums.themes"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id"
+            />
+          </el-select>
+        </el-form-item>
 
         <el-form-item label="小说简介">
           <el-input
@@ -75,19 +104,18 @@
           <el-col :xs="24" :sm="12">
             <el-form-item label="目标读者">
               <el-select
-                v-model="form.target_audience"
-                multiple
-                collapse-tags
-                collapse-tags-tooltip
-                placeholder="选择读者群"
+                v-model="form.audience_id"
+                clearable
+                filterable
+                placeholder="性别-年龄层-偏好"
                 style="width: 100%"
                 @change="$emit('change')"
               >
                 <el-option
-                  v-for="a in TARGET_AUDIENCE_OPTIONS"
-                  :key="a"
-                  :label="a"
-                  :value="a"
+                  v-for="item in enums.audiences"
+                  :key="item.id"
+                  :label="item.name"
+                  :value="item.id"
                 />
               </el-select>
             </el-form-item>
@@ -95,18 +123,21 @@
           <el-col :xs="24" :sm="12">
             <el-form-item label="更新节奏">
               <el-select
-                v-model="form.update_cadence"
+                v-model="form.update_pace_id"
                 clearable
                 placeholder="计划更新频率"
                 style="width: 100%"
                 @change="$emit('change')"
               >
                 <el-option
-                  v-for="c in UPDATE_CADENCE_OPTIONS"
-                  :key="c"
-                  :label="c"
-                  :value="c"
-                />
+                  v-for="item in enums.update_paces"
+                  :key="item.id"
+                  :label="item.name"
+                  :value="item.id"
+                >
+                  <span>{{ item.name }}</span>
+                  <span class="novel-enum-hint">{{ item.description }}</span>
+                </el-option>
               </el-select>
             </el-form-item>
           </el-col>
@@ -131,43 +162,70 @@
       <h3 class="novel-parchment-card__title">核心立意预览</h3>
       <p class="novel-preview-title">{{ form.title || '尚未命名' }}</p>
       <div class="novel-preview-tags">
-        <el-tag v-if="form.genre" size="small">{{ form.genre }}</el-tag>
-        <el-tag v-if="form.novel_type" size="small" type="warning" effect="plain">{{ form.novel_type }}</el-tag>
-        <el-tag v-if="form.update_cadence" size="small" type="info" effect="plain">{{ form.update_cadence }}</el-tag>
+        <el-tag v-if="genreLabel" size="small">{{ genreLabel }}</el-tag>
+        <el-tag v-if="lengthLabel" size="small" type="warning" effect="plain">{{ lengthLabel }}</el-tag>
+        <el-tag v-if="paceLabel" size="small" type="info" effect="plain">{{ paceLabel }}</el-tag>
       </div>
       <p class="novel-preview-intent">{{ form.creative_intent || '填写创作立意后在此预览…' }}</p>
       <p class="novel-preview-summary">{{ form.summary || '简介将显示在这里…' }}</p>
-      <div v-if="form.target_audience?.length" class="novel-preview-audience">
+      <div v-if="themeLabels.length" class="novel-preview-audience">
+        <span class="novel-preview-audience__label">题材</span>
+        <el-tag v-for="name in themeLabels" :key="name" size="small" effect="plain">{{ name }}</el-tag>
+      </div>
+      <div v-if="audienceLabel" class="novel-preview-audience">
         <span class="novel-preview-audience__label">目标读者</span>
-        <el-tag
-          v-for="a in form.target_audience"
-          :key="a"
-          size="small"
-          effect="plain"
-        >
-          {{ a }}
-        </el-tag>
+        <el-tag size="small" effect="plain">{{ audienceLabel }}</el-tag>
       </div>
     </aside>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import {
-  GENRE_OPTIONS,
-  NOVEL_TYPE_OPTIONS,
-  TARGET_AUDIENCE_OPTIONS,
-  UPDATE_CADENCE_OPTIONS,
-} from '../../../utils/novelMeta.js';
+import { computed, onMounted, ref } from 'vue';
+import { useNovelEnums, applyGenrePath } from '../../../composables/useNovelEnums.js';
 
-defineProps({
+const props = defineProps({
   form: { type: Object, required: true },
 });
 
-defineEmits(['change']);
+const emit = defineEmits(['change']);
 
+const { enums, load, genreCascaderOptions } = useNovelEnums();
+const genreCascaderProps = { checkStrictly: true, emitPath: true, expandTrigger: 'hover' };
 const formRef = ref(null);
+
+onMounted(() => {
+  load();
+});
+
+function onGenreChange(path) {
+  applyGenrePath(props.form, path || []);
+  emit('change');
+}
+
+const genreLabel = computed(() => {
+  const [catId, subId] = props.form.genre_path || [];
+  const cat = enums.value.genres.find((item) => item.id === catId);
+  const sub = cat?.children?.find((item) => item.id === subId);
+  return [cat?.name, sub?.name].filter(Boolean).join(' / ');
+});
+
+const lengthLabel = computed(() => (
+  enums.value.lengths.find((item) => item.id === props.form.length_id)?.name || ''
+));
+
+const paceLabel = computed(() => (
+  enums.value.update_paces.find((item) => item.id === props.form.update_pace_id)?.name || ''
+));
+
+const audienceLabel = computed(() => (
+  enums.value.audiences.find((item) => item.id === props.form.audience_id)?.name || ''
+));
+
+const themeLabels = computed(() => {
+  const ids = new Set(props.form.theme_ids || []);
+  return enums.value.themes.filter((item) => ids.has(item.id)).map((item) => item.name);
+});
 
 async function validate() {
   return formRef.value?.validate().catch(() => false);
@@ -249,6 +307,13 @@ defineExpose({ validate });
   font-size: 13px;
   color: var(--novel-color-moon);
   margin-right: 4px;
+}
+
+.novel-enum-hint {
+  float: right;
+  margin-left: 12px;
+  font-size: 12px;
+  color: var(--novel-color-text-muted, #8a968e);
 }
 
 @media (max-width: 960px) {

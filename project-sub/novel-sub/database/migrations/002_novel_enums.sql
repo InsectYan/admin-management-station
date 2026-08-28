@@ -1,0 +1,7 @@
+-- 小说枚举表与 novels 外键
+
+ALTER TABLE novels ADD COLUMN IF NOT EXISTS genre_category_id INTEGER;
+ALTER TABLE novels ADD COLUMN IF NOT EXISTS genre_subcategory_id INTEGER;
+ALTER TABLE novels ADD COLUMN IF NOT EXISTS length_id INTEGER;
+ALTER TABLE novels ADD COLUMN IF NOT EXISTS audience_id INTEGER;
+ALTER TABLE novels ADD COLUMN IF NOT EXISTS update_pace_id INTEGER;

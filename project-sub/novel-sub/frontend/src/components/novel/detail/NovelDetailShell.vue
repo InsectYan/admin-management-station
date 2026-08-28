@@ -29,7 +29,7 @@
           <h1 class="novel-detail-hero__title">{{ title || '未命名小说' }}</h1>
           <p v-if="intent" class="novel-detail-hero__intent">{{ intent }}</p>
           <div class="novel-detail-hero__tags">
-            <el-tag v-if="genre" size="small">{{ genre }}</el-tag>
+            <el-tag v-if="genre" size="small">{{ genreLabel }}</el-tag>
             <el-tag v-if="novelType" size="small" effect="plain">{{ novelType }}</el-tag>
             <el-tag v-if="statusLabel" size="small" :type="statusType" effect="light">
               {{ statusLabel }}
@@ -55,12 +55,13 @@
 <script setup>
 import { computed } from 'vue';
 import { EditPen } from '@element-plus/icons-vue';
-import { coverFallback, progressLabel } from '../../../utils/novelMeta.js';
+import { coverFallback, formatGenreLabel, progressLabel } from '../../../utils/novelMeta.js';
 
 const props = defineProps({
   title: { type: String, default: '' },
   intent: { type: String, default: '' },
   genre: { type: String, default: '' },
+  genreSubcategory: { type: String, default: '' },
   novelType: { type: String, default: '' },
   coverUrl: { type: String, default: '' },
   progressStatus: { type: String, default: '' },
@@ -70,6 +71,10 @@ const props = defineProps({
 defineEmits(['back', 'edit']);
 
 const coverLetter = computed(() => coverFallback(props.title));
+const genreLabel = computed(() => formatGenreLabel({
+  genre: props.genre,
+  genre_subcategory: props.genreSubcategory,
+}));
 const statusLabel = computed(() => progressLabel(props.progressStatus));
 const statusType = computed(() => (props.progressStatus === 'completed' ? 'success' : 'warning'));
 </script>

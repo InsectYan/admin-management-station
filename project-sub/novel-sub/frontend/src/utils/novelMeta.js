@@ -38,9 +38,14 @@ export function coverFallback(title) {
 
 export const TABLE_COLUMNS = [
   { key: 'title', label: '小说名称', defaultVisible: true, minWidth: 200 },
-  { key: 'genre', label: '题材', defaultVisible: true, width: 100 },
-  { key: 'novel_type', label: '小说类型', defaultVisible: true, width: 100 },
+  { key: 'genre', label: '小说类型', defaultVisible: true, width: 140 },
+  { key: 'novel_type', label: '篇幅', defaultVisible: true, width: 90 },
   { key: 'progress_status', label: '进度', defaultVisible: true, width: 120 },
   { key: 'updated_at', label: '更新时间', defaultVisible: true, width: 170, sortable: true },
   { key: 'created_at', label: '创建时间', defaultVisible: false, width: 170, sortable: true },
 ];
+
+export function formatGenreLabel(row = {}) {
+  if (row.genre && row.genre_subcategory) return `${row.genre} / ${row.genre_subcategory}`;
+  return row.genre || row.genre_subcategory || '';
+}
