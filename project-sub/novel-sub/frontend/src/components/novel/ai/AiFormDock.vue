@@ -51,8 +51,24 @@
           :value="item.id"
         />
       </el-select>
-      <el-button size="small" :disabled="locked" @click="createSession">新开</el-button>
+      <el-button size="small" :disabled="locked" @click="toggleNaming">新开</el-button>
       <el-button size="small" :disabled="locked || sending || !sessionId" @click="removeSession">删除</el-button>
+    </div>
+    <div v-if="!collapsed && namingOpen" class="ai-form-dock__name">
+      <el-input
+        ref="nameInputRef"
+        v-model="newSessionTitle"
+        size="small"
+        maxlength="40"
+        show-word-limit
+        placeholder="给这组话题起个名字"
+        :disabled="locked || naming"
+        @keydown.enter.prevent="confirmCreateSession"
+      />
+      <el-button size="small" type="primary" :loading="naming" :disabled="locked" @click="confirmCreateSession">
+        确认
+      </el-button>
+      <el-button size="small" :disabled="naming" @click="cancelNaming">取消</el-button>
     </div>
 
     <AiSceneTree
@@ -68,6 +84,7 @@
         :messages="messages"
         :sending="sending"
         :streaming-thinking="streamingThinking"
+        :streaming-reply="streamingReply"
         :thinking-live="thinkingLive"
       />
 
@@ -100,7 +117,7 @@
 </template>
 
 <script setup>
-import { computed, toRef, watch } from 'vue';
+import { computed, nextTick, ref, toRef, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import AiSceneTree from './AiSceneTree.vue';
 import AiChatThread from './AiChatThread.vue';
@@ -126,6 +143,43 @@ const props = defineProps({
 
 const emit = defineEmits(['apply', 'focus']);
 
+const namingOpen = ref(false);
+const naming = ref(false);
+const newSessionTitle = ref('');
+const nameInputRef = ref(null);
+
+function cancelNaming() {
+  namingOpen.value = false;
+  newSessionTitle.value = '';
+}
+
+async function toggleNaming() {
+  if (locked.value) return;
+  namingOpen.value = !namingOpen.value;
+  if (!namingOpen.value) {
+    newSessionTitle.value = '';
+    return;
+  }
+  await nextTick();
+  nameInputRef.value?.focus?.();
+}
+
+async function confirmCreateSession() {
+  if (locked.value || naming.value) return;
+  const title = newSessionTitle.value.trim();
+  if (!title) {
+    ElMessage.info('请先给话题起个名字');
+    return;
+  }
+  naming.value = true;
+  try {
+    await createSession(title);
+    cancelNaming();
+  } finally {
+    naming.value = false;
+  }
+}
+
 const {
   collapsed,
   toggleCollapsed,
@@ -143,6 +197,7 @@ const {
   canApply,
   pendingMessage,
   streamingThinking,
+  streamingReply,
   thinkingLive,
   selectScene,
   createSession,
@@ -296,6 +351,13 @@ async function onApply() {
 }
 
 .ai-form-dock__sessions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ai-form-dock__name {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 6px;

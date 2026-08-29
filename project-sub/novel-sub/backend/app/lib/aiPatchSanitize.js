@@ -344,15 +344,162 @@ function sanitizePatch(raw, _catalog, allowedFields, notices = [], options = {})
   return out;
 }
 
+function extractBalancedObjects(text) {
+  const src = String(text || '');
+  const out = [];
+  for (let i = 0; i < src.length; i += 1) {
+    if (src[i] !== '{') continue;
+    let depth = 0;
+    let inStr = false;
+    let esc = false;
+    for (let j = i; j < src.length; j += 1) {
+      const ch = src[j];
+      if (inStr) {
+        if (esc) {
+          esc = false;
+          continue;
+        }
+        if (ch === '\\') {
+          esc = true;
+          continue;
+        }
+        if (ch === '"') inStr = false;
+        continue;
+      }
+      if (ch === '"') {
+        inStr = true;
+        continue;
+      }
+      if (ch === '{') depth += 1;
+      else if (ch === '}') {
+        depth -= 1;
+        if (depth === 0) {
+          try {
+            const parsed = JSON.parse(src.slice(i, j + 1));
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) out.push(parsed);
+          } catch {
+            /* skip */
+          }
+          i = j;
+          break;
+        }
+      }
+    }
+  }
+  return out;
+}
+
+function scoreSkillObject(obj) {
+  let score = 0;
+  if (obj.patch && typeof obj.patch === 'object' && Object.keys(obj.patch).length) score += 10;
+  if (obj.reply) score += 3;
+  if (obj.done != null) score += 2;
+  if (obj.thinking) score += 1;
+  return score;
+}
+
+function salvageSkillPayload(raw) {
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) return raw;
+  const objects = extractBalancedObjects(raw);
+  if (objects.length) {
+    objects.sort((a, b) => scoreSkillObject(b) - scoreSkillObject(a));
+    return objects[0];
+  }
+  return tryParseEnvelope(raw);
+}
+
+function tryParseEnvelope(raw) {
+  const full = String(raw || '');
+  const brace = full.indexOf('{');
+  const text = (brace >= 0 ? full.slice(brace) : full).trim();
+  if (!text.startsWith('{')) return null;
+  try {
+    const parsed = JSON.parse(text);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    const candidate = text.match(/\{[\s\S]*\}/)?.[0];
+    if (!candidate) return null;
+    try {
+      const parsed = JSON.parse(candidate);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+}
+
+function isSkillEnvelope(obj) {
+  if (!obj || typeof obj !== 'object') return false;
+  return obj.reply != null
+    || obj.summary != null
+    || obj.sparks != null
+    || obj.suggested_fields != null
+    || obj.done != null
+    || obj.continue != null;
+}
+
+function peelAssistantText(raw) {
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    const inner = raw.reply || raw.summary;
+    if (inner) return String(inner).trim();
+  }
+  const text = String(raw || '').trim();
+  if (!text) return '';
+  const parsed = tryParseEnvelope(text);
+  if (parsed && isSkillEnvelope(parsed)) {
+    const inner = parsed.reply || parsed.summary;
+    if (inner) return String(inner).trim();
+  }
+  return text;
+}
+
+function peelThinkingText(raw) {
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    return String(raw.thinking || '').trim();
+  }
+  const text = String(raw || '').trim();
+  if (!text) return '';
+  const parsed = tryParseEnvelope(text);
+  if (parsed && isSkillEnvelope(parsed)) {
+    return String(parsed.thinking || '').trim();
+  }
+  return text.startsWith('{') && /"done"\s*:/.test(text) ? '' : text;
+}
+
 function unwrapSkill(data = {}) {
   const output = data.output && typeof data.output === 'object' ? data.output : {};
+  const salvaged = salvageSkillPayload(data.reply)
+    || salvageSkillPayload(data.text)
+    || salvageSkillPayload(output.reply)
+    || salvageSkillPayload(output)
+    || {};
+  const outputPatch = output.patch && typeof output.patch === 'object' ? output.patch : {};
+  const dataPatch = data.patch && typeof data.patch === 'object' ? data.patch : {};
+  const salvagedPatch = salvaged.patch && typeof salvaged.patch === 'object' ? salvaged.patch : {};
+  const patch = Object.keys(outputPatch).length
+    ? outputPatch
+    : (Object.keys(dataPatch).length ? dataPatch : salvagedPatch);
+  const reply = peelAssistantText(salvaged.reply)
+    || peelAssistantText(output.reply)
+    || peelAssistantText(salvaged)
+    || peelAssistantText(data.reply)
+    || peelAssistantText(output.summary)
+    || peelAssistantText(data.text);
+  const thinking = peelThinkingText(salvaged.thinking)
+    || peelThinkingText(data.thinking)
+    || peelThinkingText(output.thinking)
+    || peelThinkingText(salvaged);
   return {
-    reply: data.reply || output.reply || output.summary || data.text || '',
-    thinking: data.thinking || output.thinking || '',
-    patch: output.patch && typeof output.patch === 'object' ? output.patch : (data.patch || {}),
-    sparks: Array.isArray(output.sparks) ? output.sparks : (data.sparks || []),
-    suggested_fields: Array.isArray(output.suggested_fields) ? output.suggested_fields : [],
-    target_fields: Array.isArray(output.target_fields) ? output.target_fields : [],
+    reply,
+    thinking,
+    patch,
+    sparks: Array.isArray(output.sparks) ? output.sparks : (Array.isArray(salvaged.sparks) ? salvaged.sparks : (data.sparks || [])),
+    suggested_fields: Array.isArray(output.suggested_fields)
+      ? output.suggested_fields
+      : (Array.isArray(salvaged.suggested_fields) ? salvaged.suggested_fields : []),
+    target_fields: Array.isArray(output.target_fields)
+      ? output.target_fields
+      : (Array.isArray(salvaged.target_fields) ? salvaged.target_fields : []),
   };
 }
 
@@ -362,11 +509,13 @@ function digestHistory(messages = [], limit = 10) {
     .slice(-limit)
     .map((row) => ({
       role: row.role,
-      content: String(row.content || '').slice(0, 400),
+      content: peelAssistantText(row.content).slice(0, 400),
     }));
 }
 
 module.exports = {
+  peelAssistantText,
+  peelThinkingText,
   BASIC_FIELDS,
   WORLD_TEXT_FIELDS,
   WORLD_FIELDS,

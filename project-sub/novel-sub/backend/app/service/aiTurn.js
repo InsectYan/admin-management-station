@@ -1,5 +1,6 @@
 'use strict';
 
+const { withFormattedTimes } = require('../lib/formatDateTime');
 const { resolveScene } = require('../lib/aiSceneRegistry');
 const { invokeSkill, invokeSkillStream, newTraceId } = require('../lib/agentProxy');
 const {
@@ -10,13 +11,14 @@ const {
   sanitizePatch,
   outlineWordWarning,
   unwrapSkill,
+  peelAssistantText,
+  peelThinkingText,
   digestHistory,
 } = require('../lib/aiPatchSanitize');
 const { coverageFromNovel } = require('../lib/aiPlan');
 
 function toPublicMessage(row) {
-  const json = typeof row.toJSON === 'function' ? row.toJSON() : row;
-  return json;
+  return withFormattedTimes(row);
 }
 
 function extractThinkBlocks(raw) {
@@ -27,8 +29,10 @@ function extractThinkBlocks(raw) {
 }
 
 function salvageThinking(parsedThinking, streamed) {
-  const fromJson = String(parsedThinking || '').trim();
+  const fromJson = peelThinkingText(parsedThinking);
   if (fromJson) return fromJson;
+  const fromStream = peelThinkingText(streamed);
+  if (fromStream) return fromStream;
   const fromTags = extractThinkBlocks(streamed);
   if (fromTags) return fromTags;
   const beforeJson = String(streamed || '').split('{')[0].trim();
@@ -204,7 +208,7 @@ class AiTurnService extends require('egg').Service {
     const fallback = Array.isArray(patch.tasks) && patch.tasks.length
       ? '已拆好开书计划，可执行下一步。'
       : '已生成一稿，可应用到表单。';
-    const reply = [writer.reply || brainstorm.reply || fallback, ...notices]
+    const reply = [peelAssistantText(writer.reply) || peelAssistantText(brainstorm.reply) || fallback, ...notices]
       .filter(Boolean)
       .join('\n\n');
 
@@ -300,7 +304,7 @@ class AiTurnService extends require('egg').Service {
     const fallback = Array.isArray(patch.tasks) && patch.tasks.length
       ? '已拆好开书计划，可执行下一步。'
       : '已生成一稿，可应用到表单。';
-    const reply = [writer.reply || brainstorm.reply || fallback, ...notices]
+    const reply = [peelAssistantText(writer.reply) || peelAssistantText(brainstorm.reply) || fallback, ...notices]
       .filter(Boolean)
       .join('\n\n');
 

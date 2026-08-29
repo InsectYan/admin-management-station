@@ -13,6 +13,7 @@ import {
   buildProgressMeta,
   tabFilled,
 } from '../utils/novelDetail.js';
+import { formatDateTime } from '../utils/formatDateTime.js';
 
 export function useNovelDetail() {
   const route = useRoute();
@@ -57,8 +58,8 @@ export function useNovelDetail() {
     outlineForm.volumes = parsed.outlineForm.volumes;
     contentForm.chapters = parsed.contentForm.chapters;
     novelMeta.id = novel.id;
-    novelMeta.created_at = novel.created_at || '';
-    novelMeta.updated_at = novel.updated_at || '';
+    novelMeta.created_at = formatDateTime(novel.created_at);
+    novelMeta.updated_at = formatDateTime(novel.updated_at);
     novelMeta.status = novel.status || '';
   }
 

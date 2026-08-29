@@ -268,16 +268,20 @@
               v-if="visibleColumns.includes('updated_at')"
               prop="updated_at"
               label="更新时间"
-              width="170"
+              width="180"
               sortable="custom"
-            />
+            >
+              <template #default="{ row }">{{ formatDateTime(row.updated_at) }}</template>
+            </el-table-column>
             <el-table-column
               v-if="visibleColumns.includes('created_at')"
               prop="created_at"
               label="创建时间"
-              width="170"
+              width="180"
               sortable="custom"
-            />
+            >
+              <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
+            </el-table-column>
             <el-table-column label="操作" width="240" fixed="right">
               <template #default="{ row }">
                 <el-button link type="primary" @click="openDetail(row)">详情</el-button>
@@ -331,6 +335,7 @@ import {
   formatGenreLabel,
   progressLabel,
 } from '../utils/novelMeta.js';
+import { formatDateTime } from '../utils/formatDateTime.js';
 import { useNovelEnums } from '../composables/useNovelEnums.js';
 
 const route = useRoute();

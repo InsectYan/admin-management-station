@@ -61,3 +61,18 @@ Agent `reply` 可用加粗、列表、短标题；不要用代码围栏包住整
 必须使用主应用侧栏 **多模态** 当前选中的 `media_profile`（见 `media-model.mdc`），经 `POST /api/ai/cover/generate` → Agent `POST /api/media/generate`。  
 生成结果写入表单 `cover_url`，用户点保存后才 `PUT` 小说。
 
+---
+
+## 5. 日期时间格式
+
+墙钟时间一律：
+
+| 情况 | 格式 |
+|------|------|
+| 只有日期 | `YYYY-MM-DD` |
+| 有具体时刻 | `YYYY-MM-DD HH:mm:ss` |
+
+按东八区。工具：前端 `utils/formatDateTime.js`，BFF `app/lib/formatDateTime.js`。  
+`created_at` / `updated_at` 走上述格式，不要直接展示 ISO。  
+世界观时间轴的「开元三年」等纪元原文保留；只有写成公历日期时才规范化。
+

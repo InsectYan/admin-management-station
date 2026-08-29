@@ -83,11 +83,11 @@
         </div>
         <div class="novel-detail-fields__row">
           <dt>创建时间</dt>
-          <dd>{{ displayText(meta.created_at) }}</dd>
+          <dd>{{ displayText(formatDateTime(meta.created_at)) }}</dd>
         </div>
         <div class="novel-detail-fields__row">
           <dt>更新时间</dt>
-          <dd>{{ displayText(meta.updated_at) }}</dd>
+          <dd>{{ displayText(formatDateTime(meta.updated_at)) }}</dd>
         </div>
       </dl>
     </aside>
@@ -98,6 +98,7 @@
 import { computed, ref } from 'vue';
 import NovelMarkdown from '../markdown/NovelMarkdown.vue';
 import { displayText, SUMMARY_PREVIEW_LEN } from '../../../utils/novelDetail.js';
+import { formatDateTime } from '../../../utils/formatDateTime.js';
 import { formatGenreLabel, progressLabel } from '../../../utils/novelMeta.js';
 
 const props = defineProps({

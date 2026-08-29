@@ -2,6 +2,7 @@
 
 const Service = require('egg').Service;
 const { Op } = require('sequelize');
+const { formatDateTime } = require('../lib/formatDateTime');
 
 const NOVEL_INCLUDES = [
   { association: 'genreCategory', attributes: ['id', 'name'] },
@@ -28,6 +29,8 @@ class NovelService extends Service {
     const themes = (rawThemes || []).map((t) => ({ id: t.id, name: t.name, heat_level: t.heat_level }));
     return {
       ...rest,
+      created_at: formatDateTime(rest.created_at),
+      updated_at: formatDateTime(rest.updated_at),
       genre: genreCategory?.name || rest.genre || null,
       genre_subcategory: genreSubcategory?.name || null,
       novel_type: lengthCategory?.name || rest.novel_type || null,

@@ -1,5 +1,7 @@
 'use strict';
 
+const { withFormattedTimes } = require('../lib/formatDateTime');
+
 function parseNovelId(raw) {
   if (raw === undefined || raw === null || raw === '') return null;
   const n = Number(raw);
@@ -15,10 +17,11 @@ class AiSessionService extends require('egg').Service {
     else where.novel_id = null;
     if (feature_key) where.feature_key = String(feature_key);
 
-    return this.ctx.model.NovelAiSession.findAll({
+    const rows = await this.ctx.model.NovelAiSession.findAll({
       where,
       order: [['updated_at', 'DESC']],
     });
+    return rows.map(withFormattedTimes);
   }
 
   async get(id) {
@@ -27,17 +30,22 @@ class AiSessionService extends require('egg').Service {
     return session;
   }
 
+  toPublic(session) {
+    return withFormattedTimes(session);
+  }
+
   async create(body = {}) {
     const feature_key = String(body.feature_key || '').trim();
     if (!feature_key) this.ctx.throw(400, '缺少 feature_key');
     const novelId = parseNovelId(body.novel_id);
-    return this.ctx.model.NovelAiSession.create({
+    const row = await this.ctx.model.NovelAiSession.create({
       novel_id: novelId,
       feature_key,
       title: body.title || `${feature_key} 会话`,
       status: 'active',
       bound_context_json: body.bound_context_json || {},
     });
+    return withFormattedTimes(row);
   }
 
   async update(id, body = {}) {
@@ -48,7 +56,7 @@ class AiSessionService extends require('egg').Service {
     if (body.bound_context_json !== undefined) patch.bound_context_json = body.bound_context_json;
     if (body.novel_id !== undefined) patch.novel_id = parseNovelId(body.novel_id);
     await session.update(patch);
-    return session;
+    return withFormattedTimes(session);
   }
 
   async destroy(id) {
@@ -65,10 +73,11 @@ class AiSessionService extends require('egg').Service {
 
   async listMessages(sessionId) {
     await this.get(sessionId);
-    return this.ctx.model.NovelAiMessage.findAll({
+    const rows = await this.ctx.model.NovelAiMessage.findAll({
       where: { session_id: sessionId },
       order: [['created_at', 'ASC'], ['id', 'ASC']],
     });
+    return rows.map(withFormattedTimes);
   }
 
   async addMessage(sessionId, attrs) {
@@ -98,7 +107,7 @@ class AiSessionService extends require('egg').Service {
     if (!message) this.ctx.throw(404, '消息不存在');
     if (message.role !== 'assistant') this.ctx.throw(400, '只能采纳助手消息');
     await message.update({ applied: true });
-    return { message, paths: Array.isArray(paths) ? paths : [] };
+    return { message: withFormattedTimes(message), paths: Array.isArray(paths) ? paths : [] };
   }
 }
 

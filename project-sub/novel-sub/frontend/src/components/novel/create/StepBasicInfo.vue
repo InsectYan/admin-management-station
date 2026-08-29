@@ -166,28 +166,26 @@
         <el-tag v-if="lengthLabel" size="small" type="warning" effect="plain">{{ lengthLabel }}</el-tag>
         <el-tag v-if="paceLabel" size="small" type="info" effect="plain">{{ paceLabel }}</el-tag>
       </div>
-      <div>
+      <div class="novel-preview-intent">
         <NovelMarkdown
-          class="novel-preview-intent"
           compact
           :source="form.creative_intent"
           empty-text="填写创作立意后在此预览…"
         />
       </div>
-      <div>
+      <div class="novel-preview-summary">
         <NovelMarkdown
-          class="novel-preview-summary"
           compact
           :source="form.summary"
           empty-text="简介将显示在这里…"
         />
       </div>
-      <div v-if="themeLabels.length" class="novel-preview-audience">
-        <span class="novel-preview-audience__label">题材</span>
+      <div v-if="themeLabels.length" class="novel-preview-themeLabels">
+        <span class="novel-preview-themeLabels__label">题材</span>
         <el-tag v-for="name in themeLabels" :key="name" size="small" effect="plain">{{ name }}</el-tag>
       </div>
-      <div v-if="audienceLabel" class="novel-preview-audience">
-        <span class="novel-preview-audience__label">目标读者</span>
+      <div v-if="audienceLabel" class="novel-preview-targetAudience">
+        <span class="novel-preview-targetAudience__label">目标读者</span>
         <el-tag size="small" effect="plain">{{ audienceLabel }}</el-tag>
       </div>
     </aside>
@@ -320,14 +318,18 @@ defineExpose({ validate });
   font-size: 14px;
 }
 
-.novel-preview-audience {
+.novel-preview-themeLabels {
+  margin-bottom: 16px;
+}
+
+.novel-preview-targetAudience, .novel-preview-themeLabels {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
 
-.novel-preview-audience__label {
+.novel-preview-targetAudience__label, .novel-preview-themeLabels__label {
   font-size: 13px;
   color: var(--novel-color-moon);
   margin-right: 4px;

@@ -10,6 +10,7 @@ import {
   updateAiSession,
 } from '../services/aiService.js';
 import { collectPaths, findSceneNode, isSelectableScene } from '../utils/aiScenes.js';
+import { peelSkillEnvelope, salvagePatchFromContent } from '../utils/aiReplyText.js';
 
 const COLLAPSED_KEY = 'novel-ai-dock-collapsed';
 
@@ -56,6 +57,7 @@ export function useAiDock(options) {
   const selectedId = ref('');
   const pendingAssistantId = ref(null);
   const streamingThinking = ref('');
+  const streamingReply = ref('');
   const thinkingLive = ref(false);
 
   watch(
@@ -76,10 +78,13 @@ export function useAiDock(options) {
   const pendingMessage = computed(() => (
     messages.value.find((row) => row.id === pendingAssistantId.value) || null
   ));
-  const canApply = computed(() => {
-    const patch = pendingMessage.value?.patch_json;
-    return Boolean(patch && typeof patch === 'object' && Object.keys(patch).length);
-  });
+  function effectivePatch(row) {
+    const stored = row?.patch_json;
+    if (stored && typeof stored === 'object' && Object.keys(stored).length) return stored;
+    return salvagePatchFromContent(row?.content);
+  }
+
+  const canApply = computed(() => Object.keys(effectivePatch(pendingMessage.value)).length > 0);
 
   function toggleCollapsed() {
     collapsed.value = !collapsed.value;
@@ -128,15 +133,16 @@ export function useAiDock(options) {
     await loadMessages();
   }
 
-  async function createSession() {
+  async function createSession(title) {
     if (locked.value) {
       ElMessage.info('请先保存基础信息');
       return;
     }
+    const name = String(title || '').trim() || `会话 ${sessions.value.length + 1}`;
     const created = await createAiSession({
       feature_key: featureKeyOf(),
       novel_id: novelIdOf(),
-      title: `会话 ${sessions.value.length + 1}`,
+      title: name,
     });
     sessions.value = [created, ...sessions.value];
     sessionId.value = created.id;
@@ -199,6 +205,7 @@ export function useAiDock(options) {
     input.value = '';
     thinkingLive.value = true;
     streamingThinking.value = '';
+    streamingReply.value = '';
     const tempId = `tmp-user-${Date.now()}`;
     messages.value = [...messages.value, { id: tempId, role: 'user', content: text }];
     try {
@@ -210,15 +217,20 @@ export function useAiDock(options) {
       }, {
         onThinking: (payload) => {
           if (payload?.text) {
-            streamingThinking.value = payload.text;
+            const peeled = peelSkillEnvelope(payload.text);
+            streamingThinking.value = peeled.thinking;
+            streamingReply.value = peeled.reply;
+            if (!peeled.thinking && !peeled.reply) {
+              streamingThinking.value = payload.text;
+            }
             return;
           }
-          const piece = payload?.delta || payload?.label || '';
-          if (piece) streamingThinking.value = `${streamingThinking.value}${streamingThinking.value ? '\n' : ''}${piece}`;
+          if (payload?.label) streamingThinking.value = payload.label;
         },
         onDone: (data) => {
           thinkingLive.value = false;
           streamingThinking.value = '';
+          streamingReply.value = '';
           messages.value = messages.value.filter((row) => row.id !== tempId);
           if (Array.isArray(data?.messages) && data.messages.length) {
             messages.value = [...messages.value, ...data.messages];
@@ -234,6 +246,7 @@ export function useAiDock(options) {
     } finally {
       thinkingLive.value = false;
       streamingThinking.value = '';
+      streamingReply.value = '';
       sending.value = false;
     }
   }
@@ -241,13 +254,16 @@ export function useAiDock(options) {
   async function applyPending() {
     const row = pendingMessage.value;
     if (!row || !sessionId.value) return null;
+    const patch = effectivePatch(row);
+    if (!Object.keys(patch).length) return {};
     await applyAiMessage(sessionId.value, {
       message_id: row.id,
       paths: targetFields.value,
     });
     row.applied = true;
+    row.patch_json = { ...patch };
     pendingAssistantId.value = null;
-    return row.patch_json || {};
+    return patch;
   }
 
   function discardPending() {
@@ -320,6 +336,7 @@ export function useAiDock(options) {
     canApply,
     pendingMessage,
     streamingThinking,
+    streamingReply,
     thinkingLive,
     selectScene,
     createSession,

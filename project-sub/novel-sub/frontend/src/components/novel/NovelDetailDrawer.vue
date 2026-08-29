@@ -31,8 +31,8 @@
           <span v-if="novel.progress_status === 'ongoing'">（{{ novel.progress_percent || 0 }}%）</span>
         </el-descriptions-item>
         <el-descriptions-item label="状态">{{ novel.status || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间">{{ novel.created_at }}</el-descriptions-item>
-        <el-descriptions-item label="更新时间">{{ novel.updated_at }}</el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ formatDateTime(novel.created_at) || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="更新时间">{{ formatDateTime(novel.updated_at) || '-' }}</el-descriptions-item>
       </el-descriptions>
 
       <div v-if="novel.summary" class="novel-detail-summary">
@@ -46,6 +46,7 @@
 
 <script setup>
 import NovelMarkdown from './markdown/NovelMarkdown.vue';
+import { formatDateTime } from '../../utils/formatDateTime.js';
 import { coverFallback, progressLabel } from '../../utils/novelMeta.js';
 
 defineProps({

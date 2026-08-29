@@ -1,6 +1,6 @@
 <template>
   <div ref="scroller" class="ai-chat-thread">
-    <div v-if="!messages.length && !sending && !thinkingLive" class="ai-chat-thread__empty">
+    <div v-if="!messages.length && !sending && !thinkingLive && !streamingReply" class="ai-chat-thread__empty">
       选一张场景卡，跟林间写手说说你的想法。
     </div>
     <div
@@ -11,18 +11,22 @@
     >
       <details v-if="row.role === 'thinking'" class="ai-chat-thinking">
         <summary>思考过程</summary>
-        <NovelMarkdown :source="row.content" compact />
+        <NovelMarkdown :source="displayContent(row)" compact />
       </details>
       <template v-else>
         <div class="ai-chat-bubble__meta">{{ roleLabel(row.role) }}</div>
-        <NovelMarkdown class="ai-chat-bubble__text" :source="row.content" compact />
+        <NovelMarkdown class="ai-chat-bubble__text" :source="displayContent(row)" compact />
       </template>
     </div>
-    <div v-if="thinkingLive" class="ai-chat-bubble is-thinking is-pending">
+    <div v-if="thinkingLive && (streamingThinking || !streamingReply)" class="ai-chat-bubble is-thinking is-pending">
       <details class="ai-chat-thinking" open>
         <summary>{{ streamingThinking ? '思考中…' : '正在构思…' }}</summary>
         <pre v-if="streamingThinking" class="ai-chat-thinking__live">{{ streamingThinking }}</pre>
       </details>
+    </div>
+    <div v-if="streamingReply" class="ai-chat-bubble is-assistant is-pending">
+      <div class="ai-chat-bubble__meta">林间写手</div>
+      <NovelMarkdown class="ai-chat-bubble__text" :source="streamingReply" compact />
     </div>
   </div>
 </template>
@@ -30,15 +34,21 @@
 <script setup>
 import { nextTick, ref, watch } from 'vue';
 import NovelMarkdown from '../markdown/NovelMarkdown.vue';
+import { displayMessageContent } from '../../../utils/aiReplyText.js';
 
 const props = defineProps({
   messages: { type: Array, default: () => [] },
   sending: { type: Boolean, default: false },
   streamingThinking: { type: String, default: '' },
+  streamingReply: { type: String, default: '' },
   thinkingLive: { type: Boolean, default: false },
 });
 
 const scroller = ref(null);
+
+function displayContent(row) {
+  return displayMessageContent(row);
+}
 
 function roleLabel(role) {
   if (role === 'user') return '你';
@@ -47,7 +57,7 @@ function roleLabel(role) {
 }
 
 watch(
-  () => [props.messages.length, props.streamingThinking, props.thinkingLive],
+  () => [props.messages.length, props.streamingThinking, props.streamingReply, props.thinkingLive],
   async () => {
     await nextTick();
     const el = scroller.value;

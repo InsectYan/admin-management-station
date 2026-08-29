@@ -18,7 +18,7 @@
         <li v-for="(node, index) in timeline" :key="node.id" class="novel-detail-timeline__item">
           <span class="novel-detail-timeline__index">{{ index + 1 }}</span>
           <div>
-            <div class="novel-detail-timeline__year">{{ displayText(node.year, '未标年代') }}</div>
+            <div class="novel-detail-timeline__year">{{ displayText(formatLooseDate(node.year), '未标年代') }}</div>
             <p class="novel-detail-timeline__event">
               <NovelMarkdown compact :source="node.event" empty-text="未填写" />
             </p>
@@ -33,6 +33,7 @@
 import { computed } from 'vue';
 import NovelMarkdown from '../markdown/NovelMarkdown.vue';
 import { displayText } from '../../../utils/novelDetail.js';
+import { formatLooseDate } from '../../../utils/formatDateTime.js';
 
 const props = defineProps({
   form: { type: Object, required: true },
