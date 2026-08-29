@@ -51,6 +51,18 @@ class AiSessionService extends require('egg').Service {
     return session;
   }
 
+  async destroy(id) {
+    const session = await this.get(id);
+    await this.app.model.transaction(async (t) => {
+      await this.ctx.model.NovelAiMessage.destroy({
+        where: { session_id: session.id },
+        transaction: t,
+      });
+      await session.destroy({ transaction: t });
+    });
+    return true;
+  }
+
   async listMessages(sessionId) {
     await this.get(sessionId);
     return this.ctx.model.NovelAiMessage.findAll({

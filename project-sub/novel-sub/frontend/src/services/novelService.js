@@ -1,4 +1,5 @@
 import { api, resolveApiBase } from './apiConfig.js';
+import { getMediaProfileId } from '../utils/mediaProfileSession.js';
 
 async function request(path, options = {}) {
   const res = await api({
@@ -43,4 +44,15 @@ export function fetchNovelSetting(id) {
 
 export function updateNovelSetting(id, patch) {
   return request(`/novels/${id}/setting`, { method: 'PUT', data: patch });
+}
+
+export function generateCover(payload = {}) {
+  return request('/ai/cover/generate', {
+    method: 'POST',
+    timeout: 180000,
+    data: {
+      ...payload,
+      media_profile: payload.media_profile || getMediaProfileId(),
+    },
+  });
 }

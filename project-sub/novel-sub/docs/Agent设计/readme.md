@@ -500,7 +500,7 @@ Agent 侧 Skill 表（run 记录）放 Skill `db/init.sql`，由 master `dbManag
 |---|------|
 | 4.1 | SSE 流式（平台已有 `status` / `delta`）进 Drawer |
 | 4.2 | `novel-review-skill` 一致性 |
-| 4.3 | 封面模型（独立出图，不塞进 writer） |
+| 4.3 | ~~封面模型（独立出图，不塞进 writer）~~ **已做**：`POST /api/ai/cover/generate` → Agent `/api/media/generate`，侧栏 `media_profile` |
 | 4.4 | 记忆：同书 session 避免人设漂移（`memoryConfig`） |
 
 ### 建议工期

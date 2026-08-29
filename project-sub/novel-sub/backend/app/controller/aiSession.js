@@ -50,6 +50,15 @@ class AiSessionController extends Controller {
     }
   }
 
+  async destroy() {
+    try {
+      await this.ctx.service.aiSession.destroy(this.ctx.params.id);
+      ok(this.ctx, null);
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async messages() {
     try {
       const rows = await this.ctx.service.aiSession.listMessages(this.ctx.params.id);
@@ -114,6 +123,15 @@ class AiSessionController extends Controller {
         throw err;
       }
       const data = await this.ctx.service.aiSession.applyMessage(this.ctx.params.id, message_id, paths);
+      ok(this.ctx, data);
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async dispatch() {
+    try {
+      const data = await this.ctx.service.aiDispatch.dispatch(this.ctx.request.body || {});
       ok(this.ctx, data);
     } catch (err) {
       fail(this.ctx, err);

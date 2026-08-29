@@ -27,6 +27,7 @@ module.exports = appInfo => {
         ctx.path === '/api/menus'
         || ctx.path === '/api/menus/root'
         || ctx.path === '/api/llm/profiles'
+        || ctx.path === '/api/media/profiles'
       )) {
         return true;
       }

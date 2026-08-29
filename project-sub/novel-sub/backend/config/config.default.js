@@ -45,5 +45,15 @@ module.exports = appInfo => {
     timeoutMs: Number(process.env.AGENT_PLATFORM_TIMEOUT_MS || 180000),
   };
 
+  config.bodyParser = {
+    jsonLimit: '16mb',
+    formLimit: '16mb',
+  };
+
+  config.static = {
+    prefix: '/public/',
+    dir: require('path').join(appInfo.baseDir, 'app/public'),
+  };
+
   return config;
 };

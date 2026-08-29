@@ -185,8 +185,57 @@ async function invokeSkillStream(ctx, { skill, action, payload, timeoutMs, onEve
   };
 }
 
+async function generateMedia(ctx, { kind, prompt, mediaProfile, size, timeoutMs }) {
+  const { config, base } = platformBase(ctx);
+  const url = `${base}/api/media/generate`;
+  const timeout = timeoutMs || config.timeoutMs || 180000;
+  const started = Date.now();
+
+  ctx.logger.info('[agentProxy] POST %s kind=%s profile=%s', url, kind, mediaProfile || '(default)');
+
+  let result;
+  try {
+    result = await ctx.curl(url, {
+      method: 'POST',
+      contentType: 'json',
+      dataType: 'json',
+      timeout,
+      data: {
+        kind: kind || 'image',
+        prompt,
+        media_profile: mediaProfile,
+        size,
+      },
+    });
+  } catch (err) {
+    const wrapped = new Error(`多模态生成失败：${err.message}`);
+    wrapped.status = 503;
+    wrapped.code = 'AGENT_UNREACHABLE';
+    wrapped.cause = err;
+    throw wrapped;
+  }
+
+  const elapsed = Date.now() - started;
+  ctx.logger.info('[agentProxy] media generate HTTP %s %sms', result.status, elapsed);
+
+  if (result.status >= 400) {
+    const msg = result.data?.error || result.data?.message || `Agent HTTP ${result.status}`;
+    const wrapped = new Error(msg);
+    wrapped.status = result.status >= 500 ? 502 : result.status;
+    wrapped.code = result.data?.code || 'MEDIA_GENERATE_FAILED';
+    wrapped.data = result.data;
+    throw wrapped;
+  }
+
+  return {
+    data: result.data,
+    elapsed,
+  };
+}
+
 module.exports = {
   invokeSkill,
   invokeSkillStream,
+  generateMedia,
   newTraceId,
 };

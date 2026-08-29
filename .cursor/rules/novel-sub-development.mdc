@@ -52,3 +52,12 @@ alwaysApply: false
 - 不要为「截断预览」先 `slice` 再解析（会切坏语法）；用 CSS `max-height` + 展开
 
 Agent `reply` 可用加粗、列表、短标题；不要用代码围栏包住整段回复。
+
+---
+
+## 4. 封面与非文本模型
+
+封面生成 **禁止**走 `novel-writer-skill` 或侧栏文本「AI 模型」。  
+必须使用主应用侧栏 **多模态** 当前选中的 `media_profile`（见 `media-model.mdc`），经 `POST /api/ai/cover/generate` → Agent `POST /api/media/generate`。  
+生成结果写入表单 `cover_url`，用户点保存后才 `PUT` 小说。
+

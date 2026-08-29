@@ -111,12 +111,20 @@ export function useNovelDetail() {
     router.push({ name: 'novel-list' });
   }
 
-  function goToWizard(step = currentTab.value) {
+  function goToWizard(step = currentTab.value, extra = {}) {
     if (!novelId.value) return;
     router.push({
       name: 'novel-create',
-      query: { id: String(novelId.value), step: String(step) },
+      query: { id: String(novelId.value), step: String(step), ...extra },
     });
+  }
+
+  function goToAiComplete() {
+    goToWizard(currentTab.value, { ai: '1' });
+  }
+
+  function goToPlan() {
+    goToWizard(currentTab.value, { ai: 'plan' });
   }
 
   watch(
@@ -161,5 +169,7 @@ export function useNovelDetail() {
     goNextTab,
     goBackToList,
     goToWizard,
+    goToAiComplete,
+    goToPlan,
   };
 }

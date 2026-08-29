@@ -25,6 +25,10 @@ export function updateAiSession(id, payload) {
   return request(`/ai/sessions/${id}`, { method: 'PATCH', data: payload });
 }
 
+export function deleteAiSession(id) {
+  return request(`/ai/sessions/${id}`, { method: 'DELETE' });
+}
+
 export function listAiMessages(sessionId) {
   return request(`/ai/sessions/${sessionId}/messages`);
 }
@@ -39,6 +43,14 @@ export function postAiTurn(sessionId, payload) {
 
 export function applyAiMessage(sessionId, payload) {
   return request(`/ai/sessions/${sessionId}/apply`, { method: 'POST', data: payload });
+}
+
+export function dispatchAiPlan(payload) {
+  return request('/ai/dispatch', {
+    method: 'POST',
+    data: payload,
+    timeout: 180000,
+  });
 }
 
 function parseSseBlock(block) {

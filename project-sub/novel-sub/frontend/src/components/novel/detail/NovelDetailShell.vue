@@ -13,6 +13,7 @@
           <el-breadcrumb-item v-if="tabTitle">{{ tabTitle }}</el-breadcrumb-item>
         </el-breadcrumb>
         <div class="novel-detail-shell__actions">
+          <el-button @click="$emit('plan')">补全全部缺口</el-button>
           <el-button :icon="EditPen" @click="$emit('edit')">继续创作</el-button>
         </div>
       </div>
@@ -74,7 +75,7 @@ const props = defineProps({
   tabTitle: { type: String, default: '' },
 });
 
-defineEmits(['back', 'edit']);
+defineEmits(['back', 'edit', 'plan']);
 
 const coverLetter = computed(() => coverFallback(props.title));
 const genreLabel = computed(() => formatGenreLabel({

@@ -2,7 +2,8 @@
   <el-dialog
     :model-value="visible"
     title="编辑小说"
-    width="640px"
+    width="720px"
+    class="novel-edit-dialog"
     destroy-on-close
     @close="$emit('close')"
   >
@@ -13,8 +14,8 @@
       <el-form-item label="作者" prop="author_name">
         <el-input v-model="form.author_name" />
       </el-form-item>
-      <el-form-item label="封面 URL" prop="cover_url">
-        <el-input v-model="form.cover_url" placeholder="可选" />
+      <el-form-item label="封面" prop="cover_url">
+        <CoverGenerateField :form="form" />
       </el-form-item>
       <el-row :gutter="12">
         <el-col :span="12">
@@ -80,6 +81,21 @@
         <el-input v-model="form.summary" type="textarea" :rows="4" maxlength="500" show-word-limit />
       </el-form-item>
     </el-form>
+    <AiFormDock
+      v-if="visible && novel?.id"
+      class="novel-edit-dialog__dock"
+      variant="bar"
+      embedded
+      :scenes="BASIC_AI_SCENES"
+      feature-key="basic"
+      session-title="快编基础信息"
+      storage-key="novel-ai-dock-edit-bar"
+      default-collapsed
+      apply-success="已写入编辑框，点保存才会改列表"
+      :novel-id="novel.id"
+      :form-snapshot="editSnapshot"
+      @apply="onApplyBasic"
+    />
     <template #footer>
       <el-button @click="$emit('close')">取消</el-button>
       <el-button type="primary" :loading="saving" @click="handleSubmit">保存</el-button>
@@ -88,9 +104,13 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { PROGRESS_OPTIONS } from '../../utils/novelMeta.js';
 import { useNovelEnums, applyGenrePath, genrePathFromNovel } from '../../composables/useNovelEnums.js';
+import AiFormDock from './ai/AiFormDock.vue';
+import CoverGenerateField from './CoverGenerateField.vue';
+import { BASIC_AI_SCENES } from '../../utils/aiScenes.js';
+import { applyBasicPatch } from '../../utils/aiApplyPatch.js';
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -116,6 +136,7 @@ const form = reactive({
   progress_status: 'ongoing',
   progress_percent: 0,
   summary: '',
+  creative_intent: '',
   status: 'draft',
 });
 
@@ -136,6 +157,7 @@ function resetForm(novel) {
     progress_status: novel?.progress_status || 'ongoing',
     progress_percent: novel?.progress_percent ?? 0,
     summary: novel?.summary || '',
+    creative_intent: novel?.creative_intent || '',
     status: novel?.status || 'draft',
   });
 }
@@ -146,6 +168,16 @@ watch(() => [props.visible, props.novel], () => {
     resetForm(props.novel);
   }
 }, { immediate: true });
+
+const editSnapshot = computed(() => ({
+  title: form.title,
+  creative_intent: form.creative_intent,
+  summary: form.summary,
+}));
+
+function onApplyBasic(patch) {
+  applyBasicPatch(form, patch);
+}
 
 async function handleSubmit() {
   if (!props.novel?.id) return;
@@ -159,6 +191,7 @@ async function handleSubmit() {
     progress_status: form.progress_status,
     progress_percent: form.progress_percent,
     summary: form.summary,
+    creative_intent: form.creative_intent,
     status: form.status,
     genre_category_id: categoryId || null,
     genre_subcategory_id: subcategoryId || null,
@@ -167,3 +200,9 @@ async function handleSubmit() {
   });
 }
 </script>
+
+<style scoped>
+.novel-edit-dialog__dock {
+  margin: 8px -4px -4px;
+}
+</style>

@@ -24,6 +24,7 @@
       :tab-title="tabMeta?.title"
       @back="goBackToList"
       @edit="goToWizard()"
+      @plan="goToPlan"
     >
       <template #tabs>
         <NovelDetailTabs
@@ -33,6 +34,11 @@
           @select="goToTab"
         />
       </template>
+
+      <div class="novel-detail-page__ai">
+        <el-button type="primary" plain @click="goToAiComplete">用 AI 补全</el-button>
+        <span class="novel-detail-page__ai-hint">跳到向导本模块，坞会展开，不自动发送</span>
+      </div>
 
       <div
         class="novel-detail-page__pane"
@@ -108,6 +114,8 @@ const {
   goNextTab,
   goBackToList,
   goToWizard,
+  goToAiComplete,
+  goToPlan,
 } = useNovelDetail();
 
 let touchStartX = 0;
@@ -136,6 +144,19 @@ function onTouchEnd(e) {
 
 .novel-detail-page__error {
   margin-bottom: 12px;
+}
+
+.novel-detail-page__ai {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.novel-detail-page__ai-hint {
+  font-size: 12px;
+  color: var(--novel-color-moon);
 }
 
 .novel-detail-page__pane {

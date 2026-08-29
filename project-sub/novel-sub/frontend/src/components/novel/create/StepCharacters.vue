@@ -2,9 +2,9 @@
   <div class="novel-step-characters">
     <CharacterLibrary
       :characters="characters"
-      :active-id="activeId"
+      :active-id="localActiveId"
       @add="$emit('add')"
-      @select="activeId = $event"
+      @select="selectCharacter"
     />
     <div class="novel-step-characters__editor">
       <CharacterCard
@@ -34,23 +34,38 @@ import CharacterRelationGraph from './CharacterRelationGraph.vue';
 const props = defineProps({
   characters: { type: Array, required: true },
   edges: { type: Array, required: true },
+  activeId: { type: String, default: '' },
 });
 
-defineEmits(['change', 'add', 'remove', 'update:edges']);
+const emit = defineEmits(['change', 'add', 'remove', 'update:edges', 'update:activeId']);
 
-const activeId = ref('');
+const localActiveId = ref(props.activeId || '');
 
-const activeCharacter = computed(() => props.characters.find((c) => c.id === activeId.value));
+const activeCharacter = computed(() => props.characters.find((c) => c.id === localActiveId.value));
+
+function selectCharacter(id) {
+  localActiveId.value = id;
+  emit('update:activeId', id);
+}
+
+watch(
+  () => props.activeId,
+  (id) => {
+    if (id && id !== localActiveId.value) localActiveId.value = id;
+  },
+);
 
 watch(
   () => props.characters,
   (list) => {
     if (!list.length) {
-      activeId.value = '';
+      localActiveId.value = '';
+      emit('update:activeId', '');
       return;
     }
-    if (!list.some((c) => c.id === activeId.value)) {
-      activeId.value = list[0].id;
+    if (!list.some((c) => c.id === localActiveId.value)) {
+      localActiveId.value = list[0].id;
+      emit('update:activeId', localActiveId.value);
     }
   },
   { immediate: true, deep: true },

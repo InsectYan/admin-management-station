@@ -124,3 +124,11 @@ Skill 在 agent 仓实现后，**同一任务**须在业务子应用侧完成：
 | fitness-sample-skill | `agent-management-sub/plugins/fitness-sample-skill/` |
 
 联调说明：`project-sub/testgen-sub/docs/设计-Agent联调配置.md`
+
+---
+
+## 7. 非文本模型（图片 / 视频）
+
+出图、出视频、图生图 **禁止**走文本 `llm_profile` 或在 BFF 内嵌厂商 SDK。  
+一律使用主应用侧栏「多模态」的 `media_profile`（`sessionStorage['ams-media-profile-id']`），由 `agent-management-master` 的 `POST /api/media/generate` 调用。详见 **`media-model.mdc`**。
+

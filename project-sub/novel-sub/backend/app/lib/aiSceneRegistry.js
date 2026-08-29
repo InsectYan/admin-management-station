@@ -4,6 +4,15 @@
 
 const BRAINSTORM = 'novel-brainstorm-skill';
 const WRITER = 'novel-writer-skill';
+const ORCHESTRATOR = 'novel-orchestrator-skill';
+const {
+  WORLD_FIELDS,
+  CHARACTER_LIST_FIELDS,
+  CHARACTER_SENTINEL,
+  OUTLINE_FIELDS,
+  CHAPTER_FIELDS,
+  PLAN_FIELDS,
+} = require('./aiPatchSanitize');
 
 function step(skill, action, extra = {}) {
   return { skill, action, ...extra };
@@ -16,6 +25,16 @@ const BASIC_LEAF = (focus, path) => ({
   ],
   feature_key: 'basic',
   default_target_fields: [path],
+});
+
+const WORLD_LEAF = (focus, path) => ({
+  pipeline: [
+    step(BRAINSTORM, 'ideate', { focus }),
+    step(WRITER, 'rewrite_field'),
+  ],
+  feature_key: 'world',
+  default_target_fields: [path],
+  require_novel_id: true,
 });
 
 const STRUCTURAL_SCENES = new Set([
@@ -38,6 +57,144 @@ const REGISTRY = {
   'basic.title': BASIC_LEAF('title', 'title'),
   'basic.intent': BASIC_LEAF('intent', 'creative_intent'),
   'basic.summary': BASIC_LEAF('summary', 'summary'),
+
+  world: {
+    pipeline: [
+      step(BRAINSTORM, 'ideate', { focus: 'world' }),
+      step(WRITER, 'fill_world'),
+    ],
+    feature_key: 'world',
+    default_target_fields: [...WORLD_FIELDS],
+    require_novel_id: true,
+  },
+  'world.era': WORLD_LEAF('era', 'era'),
+  'world.geography': WORLD_LEAF('geography', 'geography'),
+  'world.social': WORLD_LEAF('social', 'social_rules'),
+  'world.power': WORLD_LEAF('power', 'power_system'),
+  'world.tech': WORLD_LEAF('tech', 'technology'),
+  'world.history': WORLD_LEAF('history', 'history_notes'),
+  'world.timeline': WORLD_LEAF('timeline', 'timeline'),
+
+  characters: {
+    pipeline: [
+      step(BRAINSTORM, 'ideate', { focus: 'cast' }),
+      step(WRITER, 'fill_characters'),
+    ],
+    feature_key: 'characters',
+    default_target_fields: [...CHARACTER_LIST_FIELDS],
+    require_novel_id: true,
+  },
+  'characters.cast': {
+    pipeline: [
+      step(BRAINSTORM, 'ideate', { focus: 'cast' }),
+      step(WRITER, 'fill_characters'),
+    ],
+    feature_key: 'characters',
+    default_target_fields: ['characters'],
+    require_novel_id: true,
+  },
+  'characters.edges': {
+    pipeline: [
+      step(BRAINSTORM, 'ideate', { focus: 'cast' }),
+      step(WRITER, 'fill_characters'),
+    ],
+    feature_key: 'characters',
+    default_target_fields: ['character_edges'],
+    require_novel_id: true,
+  },
+  'characters.current': {
+    pipeline: [
+      step(BRAINSTORM, 'ideate', { focus: 'cast' }),
+      step(WRITER, 'rewrite_field'),
+    ],
+    feature_key: 'characters',
+    default_target_fields: [CHARACTER_SENTINEL],
+    require_novel_id: true,
+  },
+
+  outline: {
+    pipeline: [
+      step(BRAINSTORM, 'ideate', { focus: 'plot' }),
+      step(WRITER, 'fill_outline'),
+    ],
+    feature_key: 'outline',
+    default_target_fields: [...OUTLINE_FIELDS],
+    require_novel_id: true,
+  },
+  'outline.volumes': {
+    pipeline: [
+      step(BRAINSTORM, 'ideate', { focus: 'plot' }),
+      step(WRITER, 'fill_outline'),
+    ],
+    feature_key: 'outline',
+    default_target_fields: ['volumes'],
+    require_novel_id: true,
+  },
+  'outline.words': {
+    pipeline: [
+      step(BRAINSTORM, 'ideate', { focus: 'plot' }),
+      step(WRITER, 'fill_outline'),
+    ],
+    feature_key: 'outline',
+    default_target_fields: ['word_targets'],
+    require_novel_id: true,
+  },
+
+  content: {
+    pipeline: [step(WRITER, 'fill_chapters')],
+    feature_key: 'content',
+    default_target_fields: [...CHAPTER_FIELDS],
+    require_novel_id: true,
+  },
+  'content.chapters': {
+    pipeline: [step(WRITER, 'fill_chapters')],
+    feature_key: 'content',
+    default_target_fields: ['chapters'],
+    require_novel_id: true,
+  },
+  'content.faction': {
+    pipeline: [step(WRITER, 'fill_chapters')],
+    feature_key: 'content',
+    default_target_fields: ['faction'],
+    require_novel_id: true,
+  },
+  'content.outline_ref': {
+    pipeline: [step(WRITER, 'fill_chapters')],
+    feature_key: 'content',
+    default_target_fields: ['outline_ref'],
+    require_novel_id: true,
+  },
+
+  orchestrate: {
+    pipeline: [step(ORCHESTRATOR, 'plan')],
+    feature_key: 'orchestrate',
+    default_target_fields: [...PLAN_FIELDS],
+  },
+  'orchestrate.basic': {
+    pipeline: [step(ORCHESTRATOR, 'plan')],
+    feature_key: 'orchestrate',
+    default_target_fields: [...PLAN_FIELDS],
+  },
+  'orchestrate.world': {
+    pipeline: [step(ORCHESTRATOR, 'plan')],
+    feature_key: 'orchestrate',
+    default_target_fields: [...PLAN_FIELDS],
+  },
+  'orchestrate.characters': {
+    pipeline: [step(ORCHESTRATOR, 'plan')],
+    feature_key: 'orchestrate',
+    default_target_fields: [...PLAN_FIELDS],
+  },
+  'orchestrate.outline': {
+    pipeline: [step(ORCHESTRATOR, 'plan')],
+    feature_key: 'orchestrate',
+    default_target_fields: [...PLAN_FIELDS],
+  },
+  'orchestrate.content': {
+    pipeline: [step(ORCHESTRATOR, 'plan')],
+    feature_key: 'orchestrate',
+    default_target_fields: [...PLAN_FIELDS],
+  },
 };
 
 function resolveScene(scene) {
@@ -75,4 +232,5 @@ module.exports = {
   invokePath,
   BRAINSTORM,
   WRITER,
+  ORCHESTRATOR,
 };

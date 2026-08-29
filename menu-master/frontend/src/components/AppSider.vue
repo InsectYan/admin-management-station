@@ -20,6 +20,10 @@
       :collapsed="collapsed"
       :menu-key="selectedKey"
     />
+    <MediaProfileSelector
+      :collapsed="collapsed"
+      :menu-key="selectedKey"
+    />
     <div v-if="loading" class="menu-status">
       <el-icon class="is-loading"><Loading /></el-icon>
       <span v-show="!collapsed">菜单加载中…</span>
@@ -82,6 +86,7 @@ import { Loading, Grid, Reading, Cpu, Fold, Expand } from '@element-plus/icons-v
 import { buildMenuPath } from '../qiankun/config.js';
 import { useNavCollapse } from '../composables/useNavCollapse.js';
 import LlmProfileSelector from './LlmProfileSelector.vue';
+import MediaProfileSelector from './MediaProfileSelector.vue';
 
 const props = defineProps({
   menus: { type: Array, default: () => [] },

@@ -5,11 +5,14 @@ const { invokeSkill, invokeSkillStream, newTraceId } = require('../lib/agentProx
 const {
   GENERATABLE_FIELDS,
   filterGeneratableFields,
+  fieldInSceneAllow,
   slimCatalog,
   sanitizePatch,
+  outlineWordWarning,
   unwrapSkill,
   digestHistory,
 } = require('../lib/aiPatchSanitize');
+const { coverageFromNovel } = require('../lib/aiPlan');
 
 function toPublicMessage(row) {
   const json = typeof row.toJSON === 'function' ? row.toJSON() : row;
@@ -52,17 +55,39 @@ class AiTurnService extends require('egg').Service {
       throw err;
     }
 
+    if (spec.require_novel_id && !session.novel_id) {
+      const err = new Error('请先保存基础信息');
+      err.status = 400;
+      err.code = 'NOVEL_REQUIRED';
+      throw err;
+    }
+
+    const sceneAllow = spec.default_target_fields || GENERATABLE_FIELDS;
     const requested = Array.isArray(body.target_fields) && body.target_fields.length
       ? body.target_fields
-      : spec.default_target_fields || GENERATABLE_FIELDS;
-    const targetFields = filterGeneratableFields(requested);
+      : sceneAllow;
+    const targetFields = filterGeneratableFields(
+      requested.filter((key) => fieldInSceneAllow(key, sceneAllow)),
+    );
     throwIfEmptyTargets(targetFields);
 
     const catalog = slimCatalog(await this.ctx.service.novelEnum.tree());
     const historyRows = await this.ctx.service.aiSession.listMessages(session.id);
     const boundContext = body.form_snapshot && typeof body.form_snapshot === 'object'
-      ? body.form_snapshot
-      : (session.bound_context_json || {});
+      ? { ...body.form_snapshot }
+      : { ...(session.bound_context_json || {}) };
+
+    if (spec.feature_key === 'orchestrate') {
+      let coverage = boundContext.coverage;
+      if (!coverage && session.novel_id) {
+        const novel = await this.ctx.service.novel.findById(session.novel_id);
+        const setting = novel ? await this.ctx.service.novel.getSetting(session.novel_id) : {};
+        coverage = coverageFromNovel(novel, setting || {});
+      }
+      boundContext.coverage = coverage || {
+        basic: false, world: false, characters: false, outline: false, content: false,
+      };
+    }
 
     return {
       session,
@@ -99,7 +124,9 @@ class AiTurnService extends require('egg').Service {
     const assistantRow = await this.ctx.service.aiSession.addMessage(session.id, {
       role: 'assistant',
       content: reply,
-      target_fields_json: writer.target_fields.length ? filterGeneratableFields(writer.target_fields) : targetFields,
+      target_fields_json: writer.target_fields.length
+        ? filterGeneratableFields(writer.target_fields).filter((key) => targetFields.includes(key))
+        : targetFields,
       patch_json: patch,
       scene: spec.scene,
       trace_id: traceId,
@@ -165,10 +192,21 @@ class AiTurnService extends require('egg').Service {
         brainstorm_thinking: brainstorm.thinking,
       },
     });
+    const notices = [];
     const writer = unwrapSkill(writerInvoked.data);
-    const patch = sanitizePatch(writer.patch, catalog, targetFields);
+    const patch = sanitizePatch(writer.patch, catalog, targetFields, notices, {
+      coverage: boundContext.coverage,
+    });
+    const lengthId = boundContext.basic?.length_id || boundContext.length_id;
+    const wordWarn = outlineWordWarning(patch.volumes, catalog, lengthId);
+    if (wordWarn) notices.push(wordWarn);
     const thinkingText = [brainstorm.thinking, writer.thinking].filter(Boolean).join('\n\n').trim();
-    const reply = writer.reply || brainstorm.reply || '已生成一稿，可应用到表单。';
+    const fallback = Array.isArray(patch.tasks) && patch.tasks.length
+      ? '已拆好开书计划，可执行下一步。'
+      : '已生成一稿，可应用到表单。';
+    const reply = [writer.reply || brainstorm.reply || fallback, ...notices]
+      .filter(Boolean)
+      .join('\n\n');
 
     return this.persistTurn({
       session, spec, message, targetFields, traceId, brainstorm, writer, patch, thinkingText, reply,
@@ -249,11 +287,22 @@ class AiTurnService extends require('egg').Service {
       },
       onEvent: (event, data) => forwardThinking(event, data, 'writer'),
     });
+    const notices = [];
     const writer = unwrapSkill(writerInvoked.data);
-    const patch = sanitizePatch(writer.patch, catalog, targetFields);
+    const patch = sanitizePatch(writer.patch, catalog, targetFields, notices, {
+      coverage: boundContext.coverage,
+    });
+    const lengthId = boundContext.basic?.length_id || boundContext.length_id;
+    const wordWarn = outlineWordWarning(patch.volumes, catalog, lengthId);
+    if (wordWarn) notices.push(wordWarn);
     const thinkingText = [brainstorm.thinking, writer.thinking].filter(Boolean).join('\n\n').trim()
       || salvageThinking('', streamed);
-    const reply = writer.reply || brainstorm.reply || '已生成一稿，可应用到表单。';
+    const fallback = Array.isArray(patch.tasks) && patch.tasks.length
+      ? '已拆好开书计划，可执行下一步。'
+      : '已生成一稿，可应用到表单。';
+    const reply = [writer.reply || brainstorm.reply || fallback, ...notices]
+      .filter(Boolean)
+      .join('\n\n');
 
     const result = await this.persistTurn({
       session, spec, message, targetFields, traceId, brainstorm, writer, patch, thinkingText, reply,

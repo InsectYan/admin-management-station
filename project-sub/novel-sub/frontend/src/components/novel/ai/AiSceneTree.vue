@@ -44,14 +44,29 @@
 <script setup>
 import {
   AlarmClock,
+  Avatar,
   ChatLineSquare,
+  Clock,
+  Coin,
   CollectionTag,
+  Cpu,
   Document,
   EditPen,
+  Flag,
+  FolderOpened,
+  Guide,
+  Histogram,
+  Location,
+  MagicStick,
+  MapLocation,
   Notebook,
+  OfficeBuilding,
   PriceTag,
+  Reading,
+  Share,
   Timer,
   User,
+  UserFilled,
 } from '@element-plus/icons-vue';
 
 defineProps({
@@ -64,14 +79,29 @@ defineEmits(['select']);
 
 const ICONS = {
   AlarmClock,
+  Avatar,
   ChatLineSquare,
+  Clock,
+  Coin,
   CollectionTag,
+  Cpu,
   Document,
   EditPen,
+  Flag,
+  FolderOpened,
+  Guide,
+  Histogram,
+  Location,
+  MagicStick,
+  MapLocation,
   Notebook,
+  OfficeBuilding,
   PriceTag,
+  Reading,
+  Share,
   Timer,
   User,
+  UserFilled,
 };
 
 function iconOf(name) {

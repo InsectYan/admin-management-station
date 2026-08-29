@@ -7,6 +7,7 @@
         <el-breadcrumb-item>列表页</el-breadcrumb-item>
       </el-breadcrumb>
       <el-button type="primary" :icon="Plus" @click="openCreate">新建小说</el-button>
+      <el-button :icon="MagicStick" @click="openAiBook">AI 开书</el-button>
     </template>
 
     <div class="novel-list-toolbar">
@@ -73,6 +74,7 @@
           description="暂无符合条件的小说，去新建一篇吧"
         >
           <el-button type="primary" @click="openCreate">新建小说</el-button>
+          <el-button @click="openAiBook">AI 开书</el-button>
         </el-empty>
 
         <div v-else class="novel-board-grid">
@@ -300,6 +302,7 @@
       @close="editVisible = false"
       @submit="handleSave"
     />
+    <AiOpenBookDialog v-model="aiBookVisible" />
   </PageShell>
 </template>
 
@@ -308,11 +311,12 @@ import {
   computed, onMounted, ref, watch,
 } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Plus } from '@element-plus/icons-vue';
+import { Plus, MagicStick } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import DataTablePanel from '../components/DataTablePanel.vue';
 import NovelEditDialog from '../components/novel/NovelEditDialog.vue';
+import AiOpenBookDialog from '../components/novel/ai/AiOpenBookDialog.vue';
 import {
   batchDeleteNovels,
   deleteNovel,
@@ -348,6 +352,7 @@ const saving = ref(false);
 
 const editVisible = ref(false);
 const editNovel = ref(null);
+const aiBookVisible = ref(false);
 
 const visibleColumns = ref(
   TABLE_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key),
@@ -482,6 +487,10 @@ function openDetail(row) {
 
 function openCreate() {
   router.push({ name: 'novel-create' });
+}
+
+function openAiBook() {
+  aiBookVisible.value = true;
 }
 
 function openCreateWizard(row) {

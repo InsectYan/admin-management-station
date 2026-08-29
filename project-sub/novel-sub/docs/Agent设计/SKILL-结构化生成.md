@@ -32,7 +32,7 @@ novel-writer-skill/
 
 | action | 对应组件 | patch 形状 |
 |--------|----------|------------|
-| `fill_basic` | 03 | `title`、`creative_intent`、`summary`、枚举 id 字段 |
+| `fill_basic` | 03 | `title`、`creative_intent`、`summary` |
 | `fill_world` | 04 | `createWorldForm()` + `timeline[]` |
 | `fill_characters` | 05 | `{ characters, character_edges }` |
 | `fill_outline` | 06 | `{ volumes }` |

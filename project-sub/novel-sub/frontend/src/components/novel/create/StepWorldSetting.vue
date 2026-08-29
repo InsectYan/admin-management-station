@@ -67,17 +67,37 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import WorldTimeline from './WorldTimeline.vue';
 import { createTimelineNode } from '../../../utils/novelCreateSchema.js';
 
 const props = defineProps({
   form: { type: Object, required: true },
+  focusPath: { type: String, default: '' },
 });
 
 const emit = defineEmits(['change']);
 
 const activePanels = ref(['era', 'geography', 'social', 'power']);
+
+const PANEL_BY_PATH = {
+  era: 'era',
+  geography: 'geography',
+  social_rules: 'social',
+  power_system: 'power',
+  technology: 'tech',
+  history_notes: 'history',
+};
+
+watch(
+  () => props.focusPath,
+  (path) => {
+    const panel = PANEL_BY_PATH[path];
+    if (panel && !activePanels.value.includes(panel)) {
+      activePanels.value = [...activePanels.value, panel];
+    }
+  },
+);
 
 function addTimelineNode(node) {
   props.form.timeline.push(node || createTimelineNode());

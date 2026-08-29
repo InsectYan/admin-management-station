@@ -19,8 +19,11 @@ module.exports = (app) => {
   router.get('/api/ai/sessions', controller.aiSession.index);
   router.post('/api/ai/sessions', controller.aiSession.create);
   router.patch('/api/ai/sessions/:id', controller.aiSession.update);
+  router.delete('/api/ai/sessions/:id', controller.aiSession.destroy);
   router.get('/api/ai/sessions/:id/messages', controller.aiSession.messages);
   router.post('/api/ai/sessions/:id/turns', controller.aiSession.turns);
   router.post('/api/ai/sessions/:id/turns/stream', controller.aiSession.turnsStream);
   router.post('/api/ai/sessions/:id/apply', controller.aiSession.apply);
+  router.post('/api/ai/dispatch', controller.aiSession.dispatch);
+  router.post('/api/ai/cover/generate', controller.aiCover.generate);
 };

@@ -23,6 +23,8 @@ module.exports = (app) => {
     app.model.NovelAiSession.hasMany(app.model.NovelAiMessage, {
       foreignKey: 'session_id',
       as: 'messages',
+      onDelete: 'CASCADE',
+      hooks: true,
     });
   };
 

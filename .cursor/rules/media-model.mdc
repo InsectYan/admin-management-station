@@ -1,0 +1,28 @@
+---
+description: 非文本（图片/视频）模型一律走侧栏「多模态」选中的 media_profile，禁止用文本 LLM
+alwaysApply: true
+---
+
+# 多模态模型（图片 / 视频）
+
+文本对话走侧栏 **AI 模型**（`llm_profile` / `ams-llm-profile-id`）。  
+出图、出视频、图生图、读图等 **非文本** 调用走侧栏 **多模态**（`media_profile` / `ams-media-profile-id`）。
+
+**禁止**用文本 catalog 或 `llm_profile` 调图片/视频厂商接口。封面生成、后续片头视频等同理。
+
+## 落点
+
+| 层 | 位置 |
+|----|------|
+| Catalog / 出图 | `agent-management-master/app/lib/media/` · `GET /api/media/profiles` · `POST /api/media/generate` |
+| 主应用选项 | `menu-master` 侧栏 `MediaProfileSelector`，代理 `GET /api/media/profiles` |
+| 子应用读取 | `sessionStorage['ams-media-profile-id']`（`getMediaProfileId()`），经本应用 BFF 转发，**禁止**前端直连 `:4001` |
+| 业务 BFF | 只 `agentProxy.generateMedia`，不内嵌厂商 SDK |
+
+## 请求约定
+
+```json
+{ "kind": "image", "prompt": "…", "media_profile": "<侧栏选中 id>" }
+```
+
+`kind` 必须是当前模型 `modalities` 之一（选项上可见：文生图 / 文生视频）。不支持则 400 `MEDIA_MODALITY_UNSUPPORTED`。

@@ -22,6 +22,7 @@ module.exports = (app) => {
     app.model.NovelAiMessage.belongsTo(app.model.NovelAiSession, {
       foreignKey: 'session_id',
       as: 'session',
+      onDelete: 'CASCADE',
     });
   };
 

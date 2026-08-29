@@ -143,41 +143,45 @@
           </el-col>
         </el-row>
 
-        <el-row :gutter="16">
-          <el-col :xs="24" :sm="12">
-            <el-form-item label="作者">
-              <el-input v-model="form.author_name" placeholder="可选" @input="$emit('change')" />
-            </el-form-item>
-          </el-col>
-          <el-col :xs="24" :sm="12">
-            <el-form-item label="封面 URL">
-              <el-input v-model="form.cover_url" placeholder="可选" @input="$emit('change')" />
-            </el-form-item>
-          </el-col>
-        </el-row>
+        <el-form-item label="作者">
+          <el-input v-model="form.author_name" placeholder="可选" @input="$emit('change')" />
+        </el-form-item>
+        <el-form-item label="封面">
+          <CoverGenerateField :form="form" @change="$emit('change')" />
+        </el-form-item>
       </el-form>
     </div>
 
     <aside class="novel-step-basic__preview novel-parchment-card">
       <h3 class="novel-parchment-card__title">核心立意预览</h3>
       <p class="novel-preview-title">{{ form.title || '尚未命名' }}</p>
+      <el-image
+        v-if="form.cover_url"
+        class="novel-preview-cover"
+        :src="form.cover_url"
+        fit="cover"
+      />
       <div class="novel-preview-tags">
         <el-tag v-if="genreLabel" size="small">{{ genreLabel }}</el-tag>
         <el-tag v-if="lengthLabel" size="small" type="warning" effect="plain">{{ lengthLabel }}</el-tag>
         <el-tag v-if="paceLabel" size="small" type="info" effect="plain">{{ paceLabel }}</el-tag>
       </div>
-      <NovelMarkdown
-        class="novel-preview-intent"
-        compact
-        :source="form.creative_intent"
-        empty-text="填写创作立意后在此预览…"
-      />
-      <NovelMarkdown
-        class="novel-preview-summary"
-        compact
-        :source="form.summary"
-        empty-text="简介将显示在这里…"
-      />
+      <div>
+        <NovelMarkdown
+          class="novel-preview-intent"
+          compact
+          :source="form.creative_intent"
+          empty-text="填写创作立意后在此预览…"
+        />
+      </div>
+      <div>
+        <NovelMarkdown
+          class="novel-preview-summary"
+          compact
+          :source="form.summary"
+          empty-text="简介将显示在这里…"
+        />
+      </div>
       <div v-if="themeLabels.length" class="novel-preview-audience">
         <span class="novel-preview-audience__label">题材</span>
         <el-tag v-for="name in themeLabels" :key="name" size="small" effect="plain">{{ name }}</el-tag>
@@ -193,6 +197,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import NovelMarkdown from '../markdown/NovelMarkdown.vue';
+import CoverGenerateField from '../CoverGenerateField.vue';
 import { useNovelEnums, applyGenrePath } from '../../../composables/useNovelEnums.js';
 
 const props = defineProps({
@@ -281,6 +286,14 @@ defineExpose({ validate });
   font-size: 20px;
   font-weight: 700;
   color: var(--novel-color-deep);
+}
+
+.novel-preview-cover {
+  width: 120px;
+  height: 168px;
+  margin: 0 0 12px;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .novel-preview-tags {
