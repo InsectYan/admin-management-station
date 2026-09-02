@@ -36,11 +36,28 @@ function parseSseBlock(block) {
   return { event, data };
 }
 
+function bindClientAbort(ctx, controller) {
+  const req = ctx.req;
+  const res = ctx.res;
+  if (!req && !res) return () => {};
+  const onClose = () => {
+    try { controller.abort(); } catch { /* ignore */ }
+  };
+  req?.on?.('close', onClose);
+  req?.on?.('aborted', onClose);
+  res?.on?.('close', onClose);
+  return () => {
+    req?.off?.('close', onClose);
+    req?.off?.('aborted', onClose);
+    res?.off?.('close', onClose);
+  };
+}
+
 async function invokeSkill(ctx, { skill, action, payload, timeoutMs }) {
   const { config, base } = platformBase(ctx);
   const url = `${base}/api/skills/${skill}/invoke`;
   const traceId = payload.trace_id || newTraceId();
-  const timeout = timeoutMs || config.timeoutMs || 180000;
+  const timeout = timeoutMs || config.timeoutMs || 600000;
   const started = Date.now();
 
   ctx.logger.info('[agentProxy] POST %s action=%s trace=%s', url, action, traceId);
@@ -90,10 +107,11 @@ async function invokeSkillStream(ctx, { skill, action, payload, timeoutMs, onEve
   const { config, base } = platformBase(ctx);
   const url = `${base}/api/skills/${skill}/invoke-stream`;
   const traceId = payload.trace_id || newTraceId();
-  const timeout = timeoutMs || config.timeoutMs || 180000;
+  const timeout = timeoutMs || config.timeoutMs || 600000;
   const started = Date.now();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
+  const unbindClient = bindClientAbort(ctx, controller);
 
   ctx.logger.info('[agentProxy] STREAM %s action=%s trace=%s', url, action, traceId);
 
@@ -112,8 +130,12 @@ async function invokeSkillStream(ctx, { skill, action, payload, timeoutMs, onEve
     });
   } catch (err) {
     clearTimeout(timer);
+    unbindClient();
     if (err?.name === 'AbortError') {
-      const wrapped = new Error(`Agent 流式调用超时（${timeout}ms）`);
+      const closed = ctx.req?.destroyed || ctx.req?.aborted;
+      const wrapped = new Error(closed
+        ? '客户端已断开，已停止 Agent 调用'
+        : `Agent 流式调用超时（${timeout}ms）`);
       wrapped.status = 504;
       wrapped.code = 'AGENT_STREAM_TIMEOUT';
       throw wrapped;
@@ -126,6 +148,7 @@ async function invokeSkillStream(ctx, { skill, action, payload, timeoutMs, onEve
 
   if (!res.ok || !res.body) {
     clearTimeout(timer);
+    unbindClient();
     const text = await res.text().catch(() => '');
     const wrapped = new Error(text || `Agent 流式 HTTP ${res.status}`);
     wrapped.status = res.status >= 500 ? 502 : res.status;
@@ -164,8 +187,20 @@ async function invokeSkillStream(ctx, { skill, action, payload, timeoutMs, onEve
       }
     }
     if (buffer.trim()) flush(buffer);
+  } catch (err) {
+    if (err?.name === 'AbortError') {
+      const closed = ctx.req?.destroyed || ctx.req?.aborted;
+      const wrapped = new Error(closed
+        ? '客户端已断开，已停止 Agent 调用'
+        : `Agent 流式调用超时（${timeout}ms）`);
+      wrapped.status = 504;
+      wrapped.code = 'AGENT_STREAM_TIMEOUT';
+      throw wrapped;
+    }
+    throw err;
   } finally {
     clearTimeout(timer);
+    unbindClient();
   }
 
   const elapsed = Date.now() - started;
@@ -188,7 +223,7 @@ async function invokeSkillStream(ctx, { skill, action, payload, timeoutMs, onEve
 async function generateMedia(ctx, { kind, prompt, mediaProfile, size, timeoutMs }) {
   const { config, base } = platformBase(ctx);
   const url = `${base}/api/media/generate`;
-  const timeout = timeoutMs || config.timeoutMs || 180000;
+  const timeout = timeoutMs || config.timeoutMs || 600000;
   const started = Date.now();
 
   ctx.logger.info('[agentProxy] POST %s kind=%s profile=%s', url, kind, mediaProfile || '(default)');

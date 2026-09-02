@@ -23,6 +23,12 @@ export function createAppRouter(basename) {
             meta: { title: '新建小说' },
           },
           {
+            path: 'novels/:id/qa',
+            name: 'novel-qa',
+            component: () => import('../views/NovelQaPage.vue'),
+            meta: { title: '验收核检' },
+          },
+          {
             path: 'novels/:id',
             name: 'novel-detail',
             component: () => import('../views/NovelDetailPage.vue'),

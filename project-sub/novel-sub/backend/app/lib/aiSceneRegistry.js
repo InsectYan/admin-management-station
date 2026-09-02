@@ -11,6 +11,8 @@ const {
   CHARACTER_SENTINEL,
   OUTLINE_FIELDS,
   CHAPTER_FIELDS,
+  FACTION_FIELDS,
+  CHAPTER_BODY_FIELDS,
   PLAN_FIELDS,
 } = require('./aiPatchSanitize');
 
@@ -74,6 +76,34 @@ const REGISTRY = {
   'world.tech': WORLD_LEAF('tech', 'technology'),
   'world.history': WORLD_LEAF('history', 'history_notes'),
   'world.timeline': WORLD_LEAF('timeline', 'timeline'),
+
+  factions: {
+    pipeline: [
+      step(BRAINSTORM, 'ideate', { focus: 'factions' }),
+      step(WRITER, 'fill_factions'),
+    ],
+    feature_key: 'factions',
+    default_target_fields: [...FACTION_FIELDS],
+    require_novel_id: true,
+  },
+  'factions.list': {
+    pipeline: [
+      step(BRAINSTORM, 'ideate', { focus: 'factions' }),
+      step(WRITER, 'fill_factions'),
+    ],
+    feature_key: 'factions',
+    default_target_fields: ['factions'],
+    require_novel_id: true,
+  },
+  'factions.current': {
+    pipeline: [
+      step(BRAINSTORM, 'ideate', { focus: 'factions' }),
+      step(WRITER, 'fill_factions'),
+    ],
+    feature_key: 'factions',
+    default_target_fields: ['factions'],
+    require_novel_id: true,
+  },
 
   characters: {
     pipeline: [
@@ -165,6 +195,19 @@ const REGISTRY = {
     require_novel_id: true,
   },
 
+  chapter: {
+    pipeline: [step(WRITER, 'fill_chapter_body')],
+    feature_key: 'chapter',
+    default_target_fields: [...CHAPTER_BODY_FIELDS],
+    require_novel_id: true,
+  },
+  'chapter.body': {
+    pipeline: [step(WRITER, 'fill_chapter_body')],
+    feature_key: 'chapter',
+    default_target_fields: ['body'],
+    require_novel_id: true,
+  },
+
   orchestrate: {
     pipeline: [step(ORCHESTRATOR, 'plan')],
     feature_key: 'orchestrate',
@@ -180,6 +223,11 @@ const REGISTRY = {
     feature_key: 'orchestrate',
     default_target_fields: [...PLAN_FIELDS],
   },
+  'orchestrate.factions': {
+    pipeline: [step(ORCHESTRATOR, 'plan')],
+    feature_key: 'orchestrate',
+    default_target_fields: [...PLAN_FIELDS],
+  },
   'orchestrate.characters': {
     pipeline: [step(ORCHESTRATOR, 'plan')],
     feature_key: 'orchestrate',
@@ -191,6 +239,11 @@ const REGISTRY = {
     default_target_fields: [...PLAN_FIELDS],
   },
   'orchestrate.content': {
+    pipeline: [step(ORCHESTRATOR, 'plan')],
+    feature_key: 'orchestrate',
+    default_target_fields: [...PLAN_FIELDS],
+  },
+  'orchestrate.bodies': {
     pipeline: [step(ORCHESTRATOR, 'plan')],
     feature_key: 'orchestrate',
     default_target_fields: [...PLAN_FIELDS],

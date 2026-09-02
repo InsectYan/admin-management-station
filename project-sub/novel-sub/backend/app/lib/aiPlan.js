@@ -22,19 +22,29 @@ const PLAN_STEPS = [
     label: '世界观',
   },
   {
+    id: 't_factions',
+    path: 'plan.factions',
+    step: 3,
+    feature_key: 'factions',
+    writer_action: 'fill_factions',
+    scene: 'factions',
+    depends_on: ['t_world'],
+    label: '门派组织',
+  },
+  {
     id: 't_characters',
     path: 'plan.characters',
-    step: 3,
+    step: 4,
     feature_key: 'characters',
     writer_action: 'fill_characters',
     scene: 'characters',
-    depends_on: ['t_world'],
+    depends_on: ['t_factions'],
     label: '人物',
   },
   {
     id: 't_outline',
     path: 'plan.outline',
-    step: 4,
+    step: 5,
     feature_key: 'outline',
     writer_action: 'fill_outline',
     scene: 'outline',
@@ -44,12 +54,23 @@ const PLAN_STEPS = [
   {
     id: 't_content',
     path: 'plan.content',
-    step: 5,
+    step: 6,
     feature_key: 'content',
     writer_action: 'fill_chapters',
     scene: 'content',
     depends_on: ['t_outline'],
-    label: '章节',
+    label: '章节目录',
+  },
+  {
+    id: 't_bodies',
+    path: 'plan.bodies',
+    step: 7,
+    feature_key: 'chapter',
+    coverage_key: 'bodies',
+    writer_action: 'fill_chapter_body',
+    scene: 'chapter.body',
+    depends_on: ['t_content'],
+    label: '单章正文',
   },
 ];
 
@@ -58,14 +79,17 @@ const PLAN_BY_ID = new Map(PLAN_STEPS.map((row) => [row.id, row]));
 const PLAN_STATUSES = new Set(['pending', 'skip', 'optional_rewrite', 'applied']);
 const DONE_STATUSES = new Set(['skip', 'applied']);
 
-function coverageFromNovel(novel, setting = {}) {
+function coverageFromNovel(novel, setting = {}, extras = {}) {
   const world = setting.world || {};
+  const factions = Array.isArray(setting.factions) ? setting.factions : [];
   return {
     basic: Boolean(String(novel?.title || '').trim()),
     world: Boolean(world.era || world.power_system || world.geography),
+    factions: factions.some((row) => row && String(row.name || '').trim()),
     characters: Array.isArray(setting.characters) && setting.characters.length > 0,
     outline: Array.isArray(setting.outline?.volumes) && setting.outline.volumes.length > 0,
     content: Array.isArray(setting.chapters) && setting.chapters.length > 0,
+    bodies: extras.bodiesComplete === true,
   };
 }
 
@@ -85,7 +109,7 @@ function sanitizeTasks(raw, coverage = {}) {
     const row = incoming.get(def.path) || {};
     let status = PLAN_STATUSES.has(row.status) ? row.status : 'pending';
     if (status === 'applied') status = 'pending';
-    const covered = Boolean(coverage[def.feature_key]);
+    const covered = Boolean(coverage[def.coverage_key || def.feature_key]);
     if (covered && status === 'pending') status = 'skip';
     if (!covered && status === 'skip') status = 'pending';
     return {
@@ -101,7 +125,11 @@ function sanitizeTasks(raw, coverage = {}) {
   });
 }
 
-function findTask(tasks, { task_id, task_path } = {}) {
+function isBodyTask(task) {
+  return task?.feature_key === 'chapter' || task?.path === 'plan.bodies';
+}
+
+function findTask(tasks, { task_id, task_path, scope } = {}) {
   const list = Array.isArray(tasks) ? tasks : [];
   if (task_id) {
     const hit = list.find((row) => row.id === task_id);
@@ -111,7 +139,11 @@ function findTask(tasks, { task_id, task_path } = {}) {
     const hit = list.find((row) => row.path === task_path);
     if (hit) return hit;
   }
-  return list.find((row) => row.status === 'pending') || null;
+  const pending = list.filter((row) => row.status === 'pending');
+  if (scope === 'settings') {
+    return pending.find((row) => !isBodyTask(row)) || null;
+  }
+  return pending[0] || null;
 }
 
 function assertDependencies(tasks, task) {
@@ -135,6 +167,25 @@ function markTaskStatus(tasks, taskId, status) {
   ));
 }
 
+function ensurePlanTasks(raw) {
+  const list = Array.isArray(raw) ? [...raw] : [];
+  const have = new Set(list.map((row) => row.path).filter(Boolean));
+  for (const def of PLAN_STEPS) {
+    if (have.has(def.path)) continue;
+    list.push({
+      id: def.id,
+      path: def.path,
+      step: def.step,
+      feature_key: def.feature_key,
+      writer_action: def.writer_action,
+      depends_on: [...def.depends_on],
+      reason: `待补${def.label}`,
+      status: 'pending',
+    });
+  }
+  return list;
+}
+
 module.exports = {
   PLAN_STEPS,
   PLAN_BY_PATH,
@@ -144,6 +195,8 @@ module.exports = {
   coverageFromNovel,
   sanitizeTasks,
   findTask,
+  isBodyTask,
   assertDependencies,
   markTaskStatus,
+  ensurePlanTasks,
 };

@@ -1,19 +1,27 @@
 import {
   CHARACTER_ROLE_OPTIONS,
   CHAPTER_FACTION_OPTIONS,
+  FACTION_KIND_OPTIONS,
+  FACTION_ALIGNMENT_OPTIONS,
+  WIZARD_STEPS,
   countOutlineWords,
   novelToBasicForm,
   settingToForms,
 } from './novelCreateSchema.js';
 import { progressLabel } from './novelMeta.js';
 
-export const DETAIL_TABS = [
-  { step: 1, key: 'basic', title: '基础信息' },
-  { step: 2, key: 'world', title: '世界观' },
-  { step: 3, key: 'characters', title: '人物图鉴' },
-  { step: 4, key: 'outline', title: '篇幅大纲' },
-  { step: 5, key: 'content', title: '内容组织' },
-];
+export const DETAIL_SETTING_TABS = WIZARD_STEPS.map((item) => ({
+  step: item.step,
+  key: item.key,
+  title: item.title.replace(/设定$/, ''),
+}));
+
+export const DETAIL_STUDIO_TAB = { step: 7, key: 'chapter', title: '单章开发' };
+export const DETAIL_READER_TAB = { step: 8, key: 'reader', title: '全书预览' };
+
+export const DETAIL_TABS = [...DETAIL_SETTING_TABS, DETAIL_STUDIO_TAB, DETAIL_READER_TAB];
+
+export const DETAIL_TAB_MAX = DETAIL_TABS.length;
 
 export const SUMMARY_PREVIEW_LEN = 200;
 
@@ -23,6 +31,14 @@ export function roleLabel(role) {
 
 export function factionLabel(faction) {
   return CHAPTER_FACTION_OPTIONS.find((f) => f.value === faction)?.label || faction || '-';
+}
+
+export function factionKindLabel(kind) {
+  return FACTION_KIND_OPTIONS.find((f) => f.value === kind)?.label || kind || '-';
+}
+
+export function factionAlignmentLabel(alignment) {
+  return FACTION_ALIGNMENT_OPTIONS.find((f) => f.value === alignment)?.label || alignment || '-';
 }
 
 export function roleTagType(role) {
@@ -76,7 +92,9 @@ export function characterRoleStats(characters = []) {
   return stats;
 }
 
-export function tabFilled(tabKey, { basic, worldForm, characters, outlineForm, contentForm }) {
+export function tabFilled(tabKey, {
+  basic, worldForm, characters, outlineForm, contentForm, factions,
+}) {
   switch (tabKey) {
     case 'basic':
       return Boolean(basic?.title);
@@ -86,11 +104,17 @@ export function tabFilled(tabKey, { basic, worldForm, characters, outlineForm, c
         || worldForm?.geography
         || worldForm?.timeline?.length,
       );
+    case 'factions':
+      return Boolean(factions?.length);
     case 'characters':
       return Boolean(characters?.length);
     case 'outline':
       return Boolean(outlineForm?.volumes?.length);
     case 'content':
+      return Boolean(contentForm?.chapters?.length);
+    case 'chapter':
+      return Boolean(contentForm?.chapters?.length);
+    case 'reader':
       return Boolean(contentForm?.chapters?.length);
     default:
       return false;
@@ -98,14 +122,16 @@ export function tabFilled(tabKey, { basic, worldForm, characters, outlineForm, c
 }
 
 export function buildProgressMeta({ basic, outlineForm, contentForm }) {
-  const wordTarget = countOutlineWords(outlineForm || { volumes: [] });
-  const chapterCount = contentForm?.chapters?.length || 0;
+  const wordTarget = Number(basic?.word_target) || countOutlineWords(outlineForm || { volumes: [] });
+  const chapterCount = Number(basic?.chapter_total) || contentForm?.chapters?.length || 0;
   const outlineChapters = countOutlineChapters(outlineForm);
   return {
     percent: Number(basic?.progress_percent) || 0,
     status: basic?.progress_status || 'ongoing',
     statusLabel: progressLabel(basic?.progress_status),
+    wordCount: Number(basic?.word_count) || 0,
     wordTarget,
+    chapterWritten: Number(basic?.chapter_written) || 0,
     chapterCount,
     outlineChapters,
   };

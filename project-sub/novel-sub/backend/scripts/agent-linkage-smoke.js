@@ -39,6 +39,67 @@ async function fetchJson(url, opts = {}) {
   }
 }
 
+function checkPlanStructure() {
+  try {
+    const { PLAN_STEPS, coverageFromNovel, sanitizeTasks, ensurePlanTasks, findTask } = require('../app/lib/aiPlan');
+    const bodies = PLAN_STEPS.find((row) => row.path === 'plan.bodies');
+    if (!bodies || bodies.feature_key !== 'chapter' || !bodies.depends_on.includes('t_content')) {
+      fail('PLAN_STEPS missing plan.bodies after t_content');
+      return;
+    }
+    const empty = coverageFromNovel(
+      { title: 't' },
+      { world: { era: 'x' }, factions: [], characters: [{ name: 'a' }] },
+    );
+    if (empty.factions !== false) {
+      fail('coverage factions empty should be false');
+      return;
+    }
+    if (empty.bodies !== false) {
+      fail('coverage bodies default false');
+      return;
+    }
+    const tasks = sanitizeTasks([], {
+      basic: true,
+      world: true,
+      factions: true,
+      characters: true,
+      outline: true,
+      content: true,
+      bodies: false,
+    });
+    const bodyTask = tasks.find((row) => row.path === 'plan.bodies');
+    if (!bodyTask || bodyTask.status !== 'pending') {
+      fail('sanitize t_bodies should stay pending when bodies incomplete');
+      return;
+    }
+    const ensured = ensurePlanTasks([{ path: 'plan.basic', id: 't_basic', status: 'applied', depends_on: [] }]);
+    if (ensured.length !== PLAN_STEPS.length || !ensured.find((row) => row.path === 'plan.bodies')) {
+      fail('ensurePlanTasks should insert plan.bodies');
+      return;
+    }
+    const mixed = [
+      { id: 't_content', path: 'plan.content', feature_key: 'content', status: 'applied' },
+      { id: 't_bodies', path: 'plan.bodies', feature_key: 'chapter', status: 'pending' },
+    ];
+    if (findTask(mixed, { scope: 'settings' })) {
+      fail('scope=settings must not pick plan.bodies');
+      return;
+    }
+    const nextWorld = findTask([
+      { id: 't_world', path: 'plan.world', feature_key: 'world', status: 'pending' },
+      { id: 't_bodies', path: 'plan.bodies', feature_key: 'chapter', status: 'pending' },
+    ], { scope: 'settings' });
+    if (nextWorld?.path !== 'plan.world') {
+      fail('scope=settings should pick next setting task');
+      return;
+    }
+    ok('plan.bodies + coverage factions/bodies + settings scope');
+  } catch (err) {
+    fail('plan structure', err.message);
+  }
+}
+
 async function checkNovelHealth() {
   try {
     const { status, body } = await fetchJson(`${novelBase}/api/health`);
@@ -195,6 +256,74 @@ async function checkCharacterScene() {
   }
 }
 
+async function checkFactionScene() {
+  try {
+    const created = await fetchJson(`${novelBase}/api/ai/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feature_key: 'factions', title: 'smoke-factions' }),
+    });
+    if (created.status >= 400 || created.body?.code !== 0) {
+      fail('POST factions session', created.body?.message || `HTTP ${created.status}`);
+      return;
+    }
+    const sessionId = created.body.data?.id;
+    const turns = await fetchJson(`${novelBase}/api/ai/sessions/${sessionId}/turns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: '补两家门派',
+        scene: 'factions.list',
+        target_fields: ['factions'],
+      }),
+    });
+    const code = turns.body?.error_code;
+    if (code === 'NOVEL_REQUIRED' || (turns.status === 400 && /保存基础信息/.test(turns.body?.message || ''))) {
+      ok('factions.list gated by novel_id');
+    } else if (code === 'SCENE_NOT_IMPLEMENTED') {
+      fail('factions.list still 501');
+    } else {
+      fail('factions.list expected NOVEL_REQUIRED', turns.body?.message || `HTTP ${turns.status}`);
+    }
+  } catch (err) {
+    fail('factions scene', err.message);
+  }
+}
+
+async function checkChapterBodyScene() {
+  try {
+    const created = await fetchJson(`${novelBase}/api/ai/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feature_key: 'chapter', title: 'smoke-chapter' }),
+    });
+    if (created.status >= 400 || created.body?.code !== 0) {
+      fail('POST chapter session', created.body?.message || `HTTP ${created.status}`);
+      return;
+    }
+    const sessionId = created.body.data?.id;
+    const turns = await fetchJson(`${novelBase}/api/ai/sessions/${sessionId}/turns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: '写这一章开头',
+        scene: 'chapter.body',
+        target_fields: ['body'],
+      }),
+    });
+    const code = turns.body?.error_code;
+    if (code === 'NOVEL_REQUIRED' || (turns.status === 400 && /保存基础信息/.test(turns.body?.message || ''))) {
+      ok('chapter.body gated by novel_id');
+    } else if (code === 'SCENE_NOT_IMPLEMENTED') {
+      fail('chapter.body still 501');
+    } else {
+      fail('chapter.body expected NOVEL_REQUIRED', turns.body?.message || `HTTP ${turns.status}`);
+    }
+  } catch (err) {
+    fail('chapter scene', err.message);
+  }
+}
+
 async function checkContentScene() {
   try {
     const created = await fetchJson(`${novelBase}/api/ai/sessions`, {
@@ -290,6 +419,20 @@ async function checkOrchestrateScene() {
     } else {
       fail('orchestrate expected MESSAGE_REQUIRED', turns.body?.message || `HTTP ${turns.status}`);
     }
+
+    const bodiesScene = await fetchJson(`${novelBase}/api/ai/sessions/${sessionId}/turns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: '', scene: 'orchestrate.bodies' }),
+    });
+    const bodiesCode = bodiesScene.body?.error_code;
+    if (bodiesCode === 'SCENE_NOT_IMPLEMENTED') {
+      fail('orchestrate.bodies still 501');
+    } else if (bodiesCode === 'MESSAGE_REQUIRED' || (bodiesScene.status === 400 && /输入/.test(bodiesScene.body?.message || ''))) {
+      ok('orchestrate.bodies scene open');
+    } else {
+      fail('orchestrate.bodies expected MESSAGE_REQUIRED', bodiesScene.body?.message || `HTTP ${bodiesScene.status}`);
+    }
   } catch (err) {
     fail('orchestrate scene', err.message);
   }
@@ -331,6 +474,20 @@ async function checkDispatchGate() {
       ok('dispatch characters blocked until world applied');
     } else {
       fail('dispatch expected PLAN_REQUIRED', disp.body?.message || `HTTP ${disp.status}`);
+    }
+
+    const bodies = await fetchJson(`${novelBase}/api/ai/dispatch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_session_id: sessionId, task_path: 'plan.bodies' }),
+    });
+    const bodiesCode = bodies.body?.error_code;
+    if (bodiesCode === 'PLAN_REQUIRED' || (bodies.status === 400 && /开书计划/.test(bodies.body?.message || ''))) {
+      ok('dispatch plan.bodies gated by plan');
+    } else if (bodiesCode === 'DEPENDENCY_BLOCKED') {
+      ok('dispatch plan.bodies blocked until chapters applied');
+    } else {
+      fail('dispatch plan.bodies expected PLAN_REQUIRED', bodies.body?.message || `HTTP ${bodies.status}`);
     }
   } catch (err) {
     fail('dispatch gate', err.message);
@@ -375,18 +532,39 @@ async function checkCoverGenerateGate() {
   }
 }
 
+async function checkChapterRoutes() {
+  try {
+    const empty = await fetchJson(`${novelBase}/api/novels/0/chapters/empty`);
+    if (empty.status === 404) ok('GET chapters/empty 404 for missing novel');
+    else fail('chapters/empty expected 404', empty.body?.message || `HTTP ${empty.status}`);
+  } catch (err) {
+    fail('chapters/empty', err.message);
+  }
+  try {
+    const reader = await fetchJson(`${novelBase}/api/novels/0/reader`);
+    if (reader.status === 404) ok('GET reader 404 for missing novel');
+    else fail('reader expected 404', reader.body?.message || `HTTP ${reader.status}`);
+  } catch (err) {
+    fail('reader', err.message);
+  }
+}
+
 async function main() {
   console.log('novel Agent linkage smoke');
+  checkPlanStructure();
   await checkNovelHealth();
   await checkAgentHealth();
   await checkPlugins();
   await checkTurns();
   await checkWorldScene();
+  await checkFactionScene();
   await checkCharacterScene();
+  await checkChapterBodyScene();
   await checkOutlineScene();
   await checkContentScene();
   await checkOrchestrateScene();
   await checkDispatchGate();
+  await checkChapterRoutes();
   await checkMediaProfiles();
   await checkCoverGenerateGate();
   if (failed) {

@@ -46,6 +46,29 @@ export function updateNovelSetting(id, patch) {
   return request(`/novels/${id}/setting`, { method: 'PUT', data: patch });
 }
 
+export function fetchChapterMeta(id) {
+  return request(`/novels/${id}/chapters`);
+}
+
+export function fetchEmptyChapters(id) {
+  return request(`/novels/${id}/chapters/empty`);
+}
+
+export function fetchNovelReader(id) {
+  return request(`/novels/${id}/reader`);
+}
+
+export function fetchChapterBody(id, chapterId) {
+  return request(`/novels/${id}/chapters/${encodeURIComponent(chapterId)}`);
+}
+
+export function saveChapterBody(id, chapterId, body) {
+  return request(`/novels/${id}/chapters/${encodeURIComponent(chapterId)}`, {
+    method: 'PUT',
+    data: { body },
+  });
+}
+
 export function generateCover(payload = {}) {
   return request('/ai/cover/generate', {
     method: 'POST',
@@ -54,5 +77,24 @@ export function generateCover(payload = {}) {
       ...payload,
       media_profile: payload.media_profile || getMediaProfileId(),
     },
+  });
+}
+
+export function fetchNovelQa(id) {
+  return request(`/novels/${id}/qa`);
+}
+
+export function runNovelReview(payload = {}) {
+  return request('/ai/review', {
+    method: 'POST',
+    data: payload,
+    timeout: 180000,
+  });
+}
+
+export function ignoreNovelQaFinding(id, findingId) {
+  return request(`/novels/${id}/qa/ignore`, {
+    method: 'POST',
+    data: { finding_id: findingId },
   });
 }

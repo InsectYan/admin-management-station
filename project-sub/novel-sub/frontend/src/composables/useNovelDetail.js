@@ -9,6 +9,7 @@ import {
 } from '../utils/novelCreateSchema.js';
 import {
   DETAIL_TABS,
+  DETAIL_TAB_MAX,
   parseNovelDetail,
   buildProgressMeta,
   tabFilled,
@@ -22,10 +23,12 @@ export function useNovelDetail() {
   const loading = ref(false);
   const loadError = ref('');
   const novelId = computed(() => Number(route.params.id) || null);
-  const currentTab = ref(Math.min(5, Math.max(1, Number(route.query.tab) || 1)));
+  const currentTab = ref(Math.min(DETAIL_TAB_MAX, Math.max(1, Number(route.query.tab) || 1)));
+  const currentChapterId = ref(String(route.query.chapter || ''));
 
   const basic = reactive(createBasicInfoForm());
   const worldForm = reactive(createWorldForm());
+  const factions = ref([]);
   const characters = ref([]);
   const characterEdges = ref([]);
   const outlineForm = reactive(createOutlineForm());
@@ -45,14 +48,22 @@ export function useNovelDetail() {
   }));
 
   const filledMap = computed(() => {
-    const snapshot = { basic, worldForm, characters: characters.value, outlineForm, contentForm };
+    const snapshot = {
+      basic, worldForm, factions: factions.value, characters: characters.value, outlineForm, contentForm,
+    };
     return Object.fromEntries(DETAIL_TABS.map((t) => [t.key, tabFilled(t.key, snapshot)]));
   });
 
   function applyNovel(novel) {
     const parsed = parseNovelDetail(novel);
     Object.assign(basic, parsed.basic);
+    basic.progress_percent = Number(novel.progress_percent) || 0;
+    basic.word_count = Number(novel.word_count) || 0;
+    basic.word_target = Number(novel.word_target) || 0;
+    basic.chapter_written = Number(novel.chapter_written) || 0;
+    basic.chapter_total = Number(novel.chapter_total) || 0;
     Object.assign(worldForm, parsed.worldForm);
+    factions.value = parsed.factions || [];
     characters.value = parsed.characters;
     characterEdges.value = parsed.characterEdges;
     outlineForm.volumes = parsed.outlineForm.volumes;
@@ -85,13 +96,18 @@ export function useNovelDetail() {
   }
 
   function syncQuery(extra = {}) {
-    router.replace({
-      query: {
-        ...route.query,
-        tab: String(currentTab.value),
-        ...extra,
-      },
-    });
+    const query = {
+      ...route.query,
+      tab: String(currentTab.value),
+      ...extra,
+    };
+    if (currentTab.value === 7 && currentChapterId.value) {
+      query.chapter = currentChapterId.value;
+    } else {
+      delete query.chapter;
+    }
+    if (currentTab.value !== 7) delete query.queue;
+    router.replace({ query });
   }
 
   function goToTab(step) {
@@ -114,10 +130,47 @@ export function useNovelDetail() {
 
   function goToWizard(step = currentTab.value, extra = {}) {
     if (!novelId.value) return;
+    const wizardStep = step >= 7 ? 6 : step;
     router.push({
       name: 'novel-create',
-      query: { id: String(novelId.value), step: String(step), ...extra },
+      query: {
+        id: String(novelId.value),
+        step: String(wizardStep),
+        from: 'detail',
+        detailTab: String(currentTab.value),
+        ...(currentTab.value === 7 && currentChapterId.value
+          ? { detailChapter: currentChapterId.value }
+          : {}),
+        ...extra,
+      },
     });
+  }
+
+  function goToStudioChapter(id) {
+    currentChapterId.value = id || '';
+    currentTab.value = 7;
+    syncQuery();
+  }
+
+  function goToReader() {
+    currentTab.value = 8;
+    syncQuery();
+  }
+
+  function goToQa() {
+    if (!novelId.value) return;
+    router.push({ name: 'novel-qa', params: { id: String(novelId.value) } });
+  }
+
+  const startQueue = computed(() => (
+    currentTab.value === 7 && String(route.query.queue || '') === '1'
+  ));
+
+  function clearQueueQuery() {
+    if (!route.query.queue) return;
+    const query = { ...route.query };
+    delete query.queue;
+    router.replace({ query });
   }
 
   function goToAiComplete() {
@@ -126,6 +179,15 @@ export function useNovelDetail() {
 
   function goToPlan() {
     goToWizard(currentTab.value, { ai: 'plan' });
+  }
+
+  function goToPlanAutorun() {
+    goToWizard(currentTab.value, { ai: 'plan', autorun: 'settings' });
+  }
+
+  function onChapterChange(id) {
+    currentChapterId.value = id || '';
+    if (currentTab.value === 7) syncQuery();
   }
 
   watch(
@@ -139,8 +201,16 @@ export function useNovelDetail() {
   watch(
     () => route.query.tab,
     (tab) => {
-      const n = Math.min(5, Math.max(1, Number(tab) || 1));
+      const n = Math.min(DETAIL_TAB_MAX, Math.max(1, Number(tab) || 1));
       if (n !== currentTab.value) currentTab.value = n;
+    },
+  );
+
+  watch(
+    () => route.query.chapter,
+    (chapter) => {
+      const next = String(chapter || '');
+      if (next !== currentChapterId.value) currentChapterId.value = next;
     },
   );
 
@@ -157,7 +227,9 @@ export function useNovelDetail() {
     tabMeta,
     basic,
     worldForm,
+    factions,
     characters,
+    currentChapterId,
     characterEdges,
     outlineForm,
     contentForm,
@@ -172,5 +244,13 @@ export function useNovelDetail() {
     goToWizard,
     goToAiComplete,
     goToPlan,
+    goToPlanAutorun,
+    onChapterChange,
+    goToStudioChapter,
+    goToReader,
+    goToQa,
+    startQueue,
+    clearQueueQuery,
+    loadNovel,
   };
 }

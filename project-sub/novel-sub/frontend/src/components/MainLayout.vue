@@ -31,7 +31,7 @@ const route = useRoute();
 const sceneClass = computed(() => {
   if (route.name === 'novel-list') return 'novel-scene novel-scene--meadow';
   if (route.name === 'novel-create') return 'novel-scene novel-scene--grove';
-  if (route.name === 'novel-detail') return 'novel-scene novel-scene--lake';
+  if (route.name === 'novel-detail' || route.name === 'novel-qa') return 'novel-scene novel-scene--lake';
   return '';
 });
 </script>

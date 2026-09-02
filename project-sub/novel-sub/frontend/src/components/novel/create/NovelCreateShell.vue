@@ -3,13 +3,16 @@
     <header class="novel-create-shell__header">
       <div class="novel-create-shell__header-inner">
         <el-button link class="novel-create-shell__back" @click="$emit('back')">
-          ← 返回列表
+          ← {{ backLabel }}
         </el-button>
         <el-breadcrumb separator="/">
           <el-breadcrumb-item>
-            <a href="#" @click.prevent="$emit('back')">小说中心</a>
+            <a href="#" @click.prevent="$emit('home')">小说中心</a>
           </el-breadcrumb-item>
-          <el-breadcrumb-item>新建小说</el-breadcrumb-item>
+          <el-breadcrumb-item v-if="fromDetail">
+            <a href="#" @click.prevent="$emit('back')">详情页</a>
+          </el-breadcrumb-item>
+          <el-breadcrumb-item>{{ fromDetail ? '编辑设定' : '新建小说' }}</el-breadcrumb-item>
           <el-breadcrumb-item v-if="stepTitle">{{ stepTitle }}</el-breadcrumb-item>
         </el-breadcrumb>
       </div>
@@ -37,9 +40,11 @@
 <script setup>
 defineProps({
   stepTitle: { type: String, default: '' },
+  fromDetail: { type: Boolean, default: false },
+  backLabel: { type: String, default: '返回列表' },
 });
 
-defineEmits(['back']);
+defineEmits(['back', 'home']);
 </script>
 
 <style scoped>

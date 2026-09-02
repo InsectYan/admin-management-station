@@ -72,8 +72,8 @@
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="完成度 (%)" prop="progress_percent">
-            <el-input-number v-model="form.progress_percent" :min="0" :max="100" style="width: 100%" />
+          <el-form-item label="完成度">
+            <el-input :model-value="`${form.progress_percent || 0}%（按正文派生）`" disabled />
           </el-form-item>
         </el-col>
       </el-row>
@@ -189,7 +189,6 @@ async function handleSubmit() {
     author_name: form.author_name,
     cover_url: form.cover_url,
     progress_status: form.progress_status,
-    progress_percent: form.progress_percent,
     summary: form.summary,
     creative_intent: form.creative_intent,
     status: form.status,

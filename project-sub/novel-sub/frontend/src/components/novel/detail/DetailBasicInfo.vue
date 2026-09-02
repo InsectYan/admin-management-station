@@ -79,7 +79,7 @@
       <dl class="novel-detail-fields">
         <div class="novel-detail-fields__row">
           <dt>进度</dt>
-          <dd>{{ progressLabel(form.progress_status) }} · {{ form.progress_percent || 0 }}%</dd>
+          <dd>{{ progressLabel(form.progress_status) }} · {{ form.progress_percent || 0 }}%（按正文派生）</dd>
         </div>
         <div class="novel-detail-fields__row">
           <dt>创建时间</dt>

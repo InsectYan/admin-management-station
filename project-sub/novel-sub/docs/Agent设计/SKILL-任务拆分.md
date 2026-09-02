@@ -35,7 +35,7 @@ novel-orchestrator-skill/
 | `plan` | `intent`、`coverage`（各步是否已有内容）、`enum_catalog` 短 | `tasks[]`、`rationale`、`thinking` |
 | `replan` | 旧 tasks + 失败/跳过原因 | 新 `tasks[]` |
 
-`coverage` 由 BFF 算，例如 `{ basic: true, world: false, ... }`，Skill 不要自己猜库。
+`coverage` 由 BFF 算，例如 `{ basic: true, world: false, factions: false, characters: false, outline: false, content: false, bodies: false }`，Skill 不要自己猜库。
 
 ### 2.3 task
 
@@ -54,7 +54,9 @@ novel-orchestrator-skill/
 
 `status`：`pending` | `skip`（该步已有内容）| `optional_rewrite`。默认 skip 已有内容，除非用户 intent 明确「全部重来」。
 
-依赖必须：basic → world → characters → outline → content。
+依赖必须：basic → world → factions → characters → outline → content → bodies。
+
+`plan.bodies` 表示「按目录写正文」；dispatch **一次只写一空章**，返回 `chapter_id` + 详情 tab=7，不把全书标成 applied。
 
 ### 2.4 回调
 
@@ -65,5 +67,6 @@ novel-orchestrator-skill/
 ## 3. 验收
 
 - [ ] 已有 world 时对应 task 为 `skip`
+- [ ] 新计划含 `plan.bodies`，依赖 `t_content`
 - [ ] 输出不含 `characters[]` 全文
 - [ ] `GET /api/plugins` 可见

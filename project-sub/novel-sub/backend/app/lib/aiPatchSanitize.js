@@ -21,6 +21,10 @@ const OUTLINE_FIELDS = ['volumes', 'word_targets'];
 const CHAPTER_FIELDS = ['chapters'];
 const CHAPTER_SCENE_FIELDS = ['chapters', 'faction', 'outline_ref'];
 const CHAPTER_FACTIONS = new Set(['hero', 'villain', 'neutral']);
+const FACTION_FIELDS = ['factions'];
+const FACTION_KINDS = new Set(['sect', 'clan', 'nation', 'force', 'other']);
+const FACTION_ALIGNMENTS = new Set(['righteous', 'evil', 'neutral']);
+const CHAPTER_BODY_FIELDS = ['body'];
 const PLAN_FIELDS = ['tasks'];
 const CHAR_NESTED_RE = /^characters\[([^\]]+)\]\.(name|role|personality|background|goal|relations)$/;
 const GENERATABLE_FIELDS = [
@@ -29,6 +33,8 @@ const GENERATABLE_FIELDS = [
   ...CHARACTER_LIST_FIELDS,
   ...OUTLINE_FIELDS,
   ...CHAPTER_SCENE_FIELDS,
+  ...FACTION_FIELDS,
+  ...CHAPTER_BODY_FIELDS,
   ...PLAN_FIELDS,
 ];
 
@@ -103,6 +109,7 @@ function sanitizeCharacter(row) {
   const out = { name };
   if (row.id) out.id = String(row.id).trim().slice(0, 64);
   out.role = CHARACTER_ROLES.has(row.role) ? row.role : 'support';
+  if (row.faction_id) out.faction_id = String(row.faction_id).trim().slice(0, 64);
   for (const key of ['personality', 'background', 'goal', 'relations']) {
     if (row[key] === undefined || row[key] === null) continue;
     const text = clipText(row[key], 2000);
@@ -251,6 +258,40 @@ function sanitizeChapters(raw, allow, notices) {
   return list.length ? list : undefined;
 }
 
+function sanitizeFaction(row, notices) {
+  if (!row || typeof row !== 'object') return null;
+  const name = clipText(row.name, 40);
+  if (!name) return null;
+  const out = { name };
+  if (row.id) out.id = String(row.id).trim().slice(0, 64);
+  if (row.kind && !FACTION_KINDS.has(row.kind)) notices.kind += 1;
+  out.kind = FACTION_KINDS.has(row.kind) ? row.kind : 'sect';
+  if (row.alignment && !FACTION_ALIGNMENTS.has(row.alignment)) notices.alignment += 1;
+  out.alignment = FACTION_ALIGNMENTS.has(row.alignment) ? row.alignment : 'neutral';
+  for (const key of ['description', 'rules', 'headquarters']) {
+    const text = clipText(row[key], key === 'headquarters' ? 80 : 2000);
+    if (text) out[key] = text;
+  }
+  if (Array.isArray(row.member_ids)) {
+    out.member_ids = row.member_ids.map((id) => String(id || '').trim().slice(0, 64)).filter(Boolean).slice(0, 20);
+  }
+  return out;
+}
+
+function sanitizeFactions(raw, notices) {
+  if (!Array.isArray(raw)) return undefined;
+  const drop = { kind: 0, alignment: 0 };
+  const list = [];
+  for (const row of raw) {
+    const item = sanitizeFaction(row, drop);
+    if (item) list.push(item);
+    if (list.length >= 20) break;
+  }
+  if (drop.kind) notices.push(`已丢掉 ${drop.kind} 个非法组织类型`);
+  if (drop.alignment) notices.push(`已丢掉 ${drop.alignment} 个非法组织立场`);
+  return list.length ? list : undefined;
+}
+
 function outlineWordWarning(volumes, catalog, lengthId) {
   if (!Array.isArray(volumes) || !volumes.length || lengthId == null || lengthId === '') return '';
   const hit = (catalog?.lengths || []).find((item) => String(item.id) === String(lengthId));
@@ -334,6 +375,16 @@ function sanitizePatch(raw, _catalog, allowedFields, notices = [], options = {})
   if (allowChapters) {
     const chapters = sanitizeChapters(source.chapters, allow, notices);
     if (chapters) out.chapters = chapters;
+  }
+
+  if (allow.has('factions') && source.factions !== undefined) {
+    const factions = sanitizeFactions(source.factions, notices);
+    if (factions) out.factions = factions;
+  }
+
+  if (allow.has('body') && source.body !== undefined && source.body !== null) {
+    const text = String(source.body).trim();
+    if (text) out.body = text.slice(0, 200000);
   }
 
   if (allow.has('tasks')) {
@@ -528,6 +579,8 @@ module.exports = {
   CHAPTER_FIELDS,
   CHAPTER_SCENE_FIELDS,
   CHAPTER_FACTIONS,
+  FACTION_FIELDS,
+  CHAPTER_BODY_FIELDS,
   PLAN_FIELDS,
   GENERATABLE_FIELDS,
   isCharacterNestedPath,

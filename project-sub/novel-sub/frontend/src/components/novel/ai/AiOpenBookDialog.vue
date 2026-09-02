@@ -8,7 +8,7 @@
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <p class="ai-open-book-dialog__lead">
-      用一句话说类型、读者和核心冲突。林间策只拆计划，正文仍在向导各步里写。
+      用一句话说类型、读者和核心冲突。林间策只拆计划；「执行下一步」进向导确认，「连续执行设定」自动补到章节目录并逐步展示，正文仍到单章开发再写。
     </p>
     <div class="ai-open-book-dialog__dock">
       <AiFormDock
@@ -17,9 +17,11 @@
         session-title="开书计划"
         embedded
         apply-label="执行下一步"
+        autorun-label="连续执行设定"
         apply-success=""
         :form-snapshot="snapshot"
         @apply="onApply"
+        @autorun="onAutorun"
       />
     </div>
   </el-dialog>
@@ -31,6 +33,7 @@ import { ElMessage } from 'element-plus';
 import AiFormDock from './AiFormDock.vue';
 import { ORCHESTRATE_AI_SCENES } from '../../../utils/aiScenes.js';
 import { dispatchAiPlan } from '../../../services/aiService.js';
+import { routeAfterDispatch } from '../../../utils/aiDispatchNav.js';
 
 defineProps({
   modelValue: { type: Boolean, default: false },
@@ -38,7 +41,17 @@ defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 const router = useRouter();
-const snapshot = { coverage: { basic: false, world: false, characters: false, outline: false, content: false } };
+const snapshot = {
+  coverage: {
+    basic: false,
+    world: false,
+    factions: false,
+    characters: false,
+    outline: false,
+    content: false,
+    bodies: false,
+  },
+};
 
 async function onApply(patch, _paths, meta = {}) {
   const tasks = Array.isArray(patch?.tasks) ? patch.tasks : [];
@@ -56,20 +69,33 @@ async function onApply(patch, _paths, meta = {}) {
       plan_session_id: sessionId,
       task_path: meta.taskPath || undefined,
     });
-    ElMessage.success('已执行，正在打开向导');
+    const dest = routeAfterDispatch(result);
+    if (!dest) {
+      ElMessage.error('执行成功但缺少小说 ID');
+      return;
+    }
+    ElMessage.success(result.tab === 7 ? '已执行，正在打开单章开发' : '已执行，正在打开向导');
     emit('update:modelValue', false);
-    router.push({
-      name: 'novel-create',
-      query: {
-        id: String(result.novel_id),
-        step: String(result.step || 1),
-        ai: '1',
-        plan_session: String(result.plan_session_id),
-      },
-    });
+    router.push(dest);
   } catch (err) {
     ElMessage.error(err.message || '执行失败');
   }
+}
+
+function onAutorun(meta = {}) {
+  if (!meta.sessionId) {
+    ElMessage.error('没有计划会话');
+    return;
+  }
+  emit('update:modelValue', false);
+  router.push({
+    name: 'novel-create',
+    query: {
+      ai: 'plan',
+      plan_session: String(meta.sessionId),
+      autorun: 'settings',
+    },
+  });
 }
 </script>
 

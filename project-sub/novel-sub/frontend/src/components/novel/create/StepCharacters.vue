@@ -10,6 +10,7 @@
       <CharacterCard
         v-if="activeCharacter"
         :character="activeCharacter"
+        :factions="factions"
         @change="$emit('change')"
         @remove="$emit('remove', activeCharacter.id)"
       />
@@ -34,6 +35,7 @@ import CharacterRelationGraph from './CharacterRelationGraph.vue';
 const props = defineProps({
   characters: { type: Array, required: true },
   edges: { type: Array, required: true },
+  factions: { type: Array, default: () => [] },
   activeId: { type: String, default: '' },
 });
 

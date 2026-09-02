@@ -116,19 +116,45 @@
                   {{ progressLabel(item.progress_status) }}
                 </el-tag>
                 <el-progress
-                  v-if="item.progress_status === 'ongoing'"
                   :percentage="item.progress_percent || 0"
                   :stroke-width="6"
                   :show-text="false"
                   style="flex: 1; margin-left: 8px"
                 />
               </div>
+              <p class="novel-card__stats">
+                {{ (item.word_count || 0).toLocaleString() }} 字 · {{ item.chapter_written || 0 }}/{{ item.chapter_total || 0 }} 章
+                <template v-if="item.health_score != null">
+                  · 健康度
+                  <el-tag size="small" :type="healthTagType(item.health_status)" effect="plain">
+                    {{ item.health_score }}
+                  </el-tag>
+                </template>
+              </p>
               <el-tooltip v-if="item.summary" :content="item.summary" placement="top">
                 <p class="novel-card__summary">{{ item.summary }}</p>
               </el-tooltip>
             </div>
             <div class="novel-card__actions">
               <el-button size="small" type="primary" plain @click.stop="openDetail(item)">查看详情</el-button>
+              <el-button size="small" plain @click.stop="openQa(item)">验收</el-button>
+              <el-button
+                v-if="rowHasChapters(item)"
+                size="small"
+                type="primary"
+                plain
+                @click.stop="openWriteBody(item)"
+              >
+                去写正文
+              </el-button>
+              <el-button
+                v-if="rowHasEmptyChapters(item)"
+                size="small"
+                plain
+                @click.stop="openQueue(item)"
+              >
+                续写
+              </el-button>
               <el-button size="small" plain @click.stop="openCreateWizard(item)">继续创作</el-button>
             </div>
           </div>
@@ -241,6 +267,24 @@
               width="90"
             />
             <el-table-column
+              v-if="visibleColumns.includes('health_score')"
+              prop="health_score"
+              label="健康度"
+              width="110"
+            >
+              <template #default="{ row }">
+                <el-tag
+                  v-if="row.health_score != null"
+                  size="small"
+                  :type="healthTagType(row.health_status)"
+                  effect="light"
+                >
+                  {{ row.health_score }} · {{ healthStatusLabel(row.health_status) }}
+                </el-tag>
+                <span v-else class="is-muted">未核检</span>
+              </template>
+            </el-table-column>
+            <el-table-column
               v-if="visibleColumns.includes('progress_status')"
               prop="progress_status"
               label="进度"
@@ -256,13 +300,27 @@
                     {{ progressLabel(row.progress_status) }}
                   </el-tag>
                   <el-progress
-                    v-if="row.progress_status === 'ongoing'"
                     :percentage="row.progress_percent || 0"
                     :stroke-width="6"
                     style="width: 60px"
                   />
                 </div>
               </template>
+            </el-table-column>
+            <el-table-column
+              v-if="visibleColumns.includes('word_count')"
+              prop="word_count"
+              label="字数"
+              width="110"
+            >
+              <template #default="{ row }">{{ (row.word_count || 0).toLocaleString() }}</template>
+            </el-table-column>
+            <el-table-column
+              v-if="visibleColumns.includes('chapters')"
+              label="章节"
+              width="90"
+            >
+              <template #default="{ row }">{{ row.chapter_written || 0 }}/{{ row.chapter_total || 0 }}</template>
             </el-table-column>
             <el-table-column
               v-if="visibleColumns.includes('updated_at')"
@@ -282,9 +340,12 @@
             >
               <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
             </el-table-column>
-            <el-table-column label="操作" width="240" fixed="right">
+            <el-table-column label="操作" width="400" fixed="right">
               <template #default="{ row }">
                 <el-button link type="primary" @click="openDetail(row)">详情</el-button>
+                <el-button link type="primary" @click="openQa(row)">验收</el-button>
+                <el-button v-if="rowHasChapters(row)" link type="primary" @click="openWriteBody(row)">去写正文</el-button>
+                <el-button v-if="rowHasEmptyChapters(row)" link type="primary" @click="openQueue(row)">续写</el-button>
                 <el-button link type="primary" @click="openCreateWizard(row)">继续创作</el-button>
                 <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
                 <el-popconfirm title="确定删除该小说？" @confirm="handleDelete(row.id)">
@@ -335,8 +396,10 @@ import {
   formatGenreLabel,
   progressLabel,
 } from '../utils/novelMeta.js';
+import { healthStatusLabel, healthTagType } from '../utils/novelQa.js';
 import { formatDateTime } from '../utils/formatDateTime.js';
 import { useNovelEnums } from '../composables/useNovelEnums.js';
+import { firstChapterId, hasChapters } from '../utils/chapterTree.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -488,6 +551,45 @@ function loadMoreBoard() {
 
 function openDetail(row) {
   router.push({ name: 'novel-detail', params: { id: String(row.id) } });
+}
+
+function openQa(row) {
+  router.push({ name: 'novel-qa', params: { id: String(row.id) } });
+}
+
+function rowHasChapters(row) {
+  return Number(row?.chapter_total) > 0 || hasChapters(row?.setting_json?.chapters);
+}
+
+function rowHasEmptyChapters(row) {
+  const total = Number(row?.chapter_total) || 0;
+  const written = Number(row?.chapter_written) || 0;
+  return total > 0 && written < total;
+}
+
+function openWriteBody(row) {
+  if (!rowHasChapters(row)) {
+    ElMessage.info('请先完成章节目录');
+    return;
+  }
+  const first = firstChapterId(row.setting_json?.chapters);
+  router.push({
+    name: 'novel-detail',
+    params: { id: String(row.id) },
+    query: { tab: '7', ...(first ? { chapter: first } : {}) },
+  });
+}
+
+function openQueue(row) {
+  if (!rowHasEmptyChapters(row)) {
+    ElMessage.info('没有未写章节');
+    return;
+  }
+  router.push({
+    name: 'novel-detail',
+    params: { id: String(row.id) },
+    query: { tab: '7', queue: '1' },
+  });
 }
 
 function openCreate() {
@@ -690,6 +792,12 @@ onMounted(() => {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.novel-card__stats {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--novel-color-moon, #7a8a80);
 }
 
 .novel-card__actions {

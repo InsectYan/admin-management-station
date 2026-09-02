@@ -16,6 +16,13 @@ const {
   digestHistory,
 } = require('../lib/aiPatchSanitize');
 const { coverageFromNovel } = require('../lib/aiPlan');
+const {
+  hydrateBoundContext,
+  mergeNovelIntoBoundContext,
+  pickLengthId,
+  slimCatalogForAgent,
+  collectContextLabels,
+} = require('../lib/aiBoundContext');
 
 function toPublicMessage(row) {
   return withFormattedTimes(row);
@@ -77,19 +84,30 @@ class AiTurnService extends require('egg').Service {
 
     const catalog = slimCatalog(await this.ctx.service.novelEnum.tree());
     const historyRows = await this.ctx.service.aiSession.listMessages(session.id);
-    const boundContext = body.form_snapshot && typeof body.form_snapshot === 'object'
+    let boundContext = body.form_snapshot && typeof body.form_snapshot === 'object'
       ? { ...body.form_snapshot }
       : { ...(session.bound_context_json || {}) };
+
+    if (session.novel_id) {
+      const novel = await this.ctx.service.novel.findById(session.novel_id);
+      if (novel) boundContext = mergeNovelIntoBoundContext(boundContext, novel);
+    }
+
+    const lengthId = pickLengthId(boundContext);
+    boundContext = hydrateBoundContext(boundContext, catalog);
 
     if (spec.feature_key === 'orchestrate') {
       let coverage = boundContext.coverage;
       if (!coverage && session.novel_id) {
         const novel = await this.ctx.service.novel.findById(session.novel_id);
         const setting = novel ? await this.ctx.service.novel.getSetting(session.novel_id) : {};
-        coverage = coverageFromNovel(novel, setting || {});
+        const meta = novel ? await this.ctx.service.novel.listChapterMeta(session.novel_id) : [];
+        const bodiesComplete = Array.isArray(meta) && meta.length > 0
+          && meta.every((row) => Number(row.word_count) > 0);
+        coverage = coverageFromNovel(novel, setting || {}, { bodiesComplete });
       }
       boundContext.coverage = coverage || {
-        basic: false, world: false, characters: false, outline: false, content: false,
+        basic: false, world: false, factions: false, characters: false, outline: false, content: false, bodies: false,
       };
     }
 
@@ -99,14 +117,17 @@ class AiTurnService extends require('egg').Service {
       message,
       targetFields,
       catalog,
+      agentCatalog: slimCatalogForAgent(catalog),
       history: digestHistory(historyRows),
       boundContext,
-      timeoutMs: this.ctx.app.config.agentPlatform?.timeoutMs || 180000,
+      lengthId,
+      contextLabels: collectContextLabels(boundContext),
+      timeoutMs: this.ctx.app.config.agentPlatform?.timeoutMs || 600000,
       traceId: newTraceId(),
     };
   }
 
-  async persistTurn({ session, spec, message, targetFields, traceId, brainstorm, writer, patch, thinkingText, reply }) {
+  async persistTurn({ session, spec, message, targetFields, traceId, brainstorm, writer, patch, thinkingText, reply, contextLabels }) {
     const userRow = await this.ctx.service.aiSession.addMessage(session.id, {
       role: 'user',
       content: message,
@@ -116,10 +137,12 @@ class AiTurnService extends require('egg').Service {
     });
 
     let thinkingRow = null;
-    if (thinkingText) {
+    const labels = Array.isArray(contextLabels) ? contextLabels.filter(Boolean) : [];
+    if (thinkingText || labels.length) {
       thinkingRow = await this.ctx.service.aiSession.addMessage(session.id, {
         role: 'thinking',
-        content: thinkingText,
+        content: thinkingText || '',
+        patch_json: labels.length ? { context_labels: labels } : {},
         scene: spec.scene,
         trace_id: traceId,
       });
@@ -151,7 +174,7 @@ class AiTurnService extends require('egg').Service {
 
   async run(sessionId, body = {}) {
     const ctx = await this.prepare(sessionId, body);
-    const { session, spec, message, targetFields, catalog, history, boundContext, timeoutMs, traceId } = ctx;
+    const { session, spec, message, targetFields, catalog, agentCatalog, history, boundContext, lengthId, contextLabels, timeoutMs, traceId } = ctx;
 
     let brainstorm = { reply: '', thinking: '', sparks: [] };
     const writerStep = spec.pipeline.find((step) => step.skill === 'novel-writer-skill')
@@ -171,7 +194,7 @@ class AiTurnService extends require('egg').Service {
           focus: brainstormStep.focus || 'auto',
           target_fields: targetFields,
           bound_context: boundContext,
-          catalog,
+          catalog: agentCatalog,
           history,
         },
       });
@@ -189,7 +212,7 @@ class AiTurnService extends require('egg').Service {
         scene: spec.scene,
         target_fields: targetFields,
         bound_context: boundContext,
-        catalog,
+        catalog: agentCatalog,
         history,
         sparks: brainstorm.sparks,
         brainstorm_reply: brainstorm.reply,
@@ -201,7 +224,6 @@ class AiTurnService extends require('egg').Service {
     const patch = sanitizePatch(writer.patch, catalog, targetFields, notices, {
       coverage: boundContext.coverage,
     });
-    const lengthId = boundContext.basic?.length_id || boundContext.length_id;
     const wordWarn = outlineWordWarning(patch.volumes, catalog, lengthId);
     if (wordWarn) notices.push(wordWarn);
     const thinkingText = [brainstorm.thinking, writer.thinking].filter(Boolean).join('\n\n').trim();
@@ -213,13 +235,13 @@ class AiTurnService extends require('egg').Service {
       .join('\n\n');
 
     return this.persistTurn({
-      session, spec, message, targetFields, traceId, brainstorm, writer, patch, thinkingText, reply,
+      session, spec, message, targetFields, traceId, brainstorm, writer, patch, thinkingText, reply, contextLabels,
     });
   }
 
   async runStream(sessionId, body, emit) {
     const ctx = await this.prepare(sessionId, body);
-    const { session, spec, message, targetFields, catalog, history, boundContext, timeoutMs, traceId } = ctx;
+    const { session, spec, message, targetFields, catalog, agentCatalog, history, boundContext, lengthId, contextLabels, timeoutMs, traceId } = ctx;
 
     emit('status', { phase: 'start', label: '开始构思…' });
 
@@ -262,7 +284,7 @@ class AiTurnService extends require('egg').Service {
           focus: brainstormStep.focus || 'auto',
           target_fields: targetFields,
           bound_context: boundContext,
-          catalog,
+          catalog: agentCatalog,
           history,
         },
         onEvent: (event, data) => forwardThinking(event, data, 'brainstorm'),
@@ -283,7 +305,7 @@ class AiTurnService extends require('egg').Service {
         scene: spec.scene,
         target_fields: targetFields,
         bound_context: boundContext,
-        catalog,
+        catalog: agentCatalog,
         history,
         sparks: brainstorm.sparks,
         brainstorm_reply: brainstorm.reply,
@@ -296,7 +318,6 @@ class AiTurnService extends require('egg').Service {
     const patch = sanitizePatch(writer.patch, catalog, targetFields, notices, {
       coverage: boundContext.coverage,
     });
-    const lengthId = boundContext.basic?.length_id || boundContext.length_id;
     const wordWarn = outlineWordWarning(patch.volumes, catalog, lengthId);
     if (wordWarn) notices.push(wordWarn);
     const thinkingText = [brainstorm.thinking, writer.thinking].filter(Boolean).join('\n\n').trim()
@@ -309,7 +330,7 @@ class AiTurnService extends require('egg').Service {
       .join('\n\n');
 
     const result = await this.persistTurn({
-      session, spec, message, targetFields, traceId, brainstorm, writer, patch, thinkingText, reply,
+      session, spec, message, targetFields, traceId, brainstorm, writer, patch, thinkingText, reply, contextLabels,
     });
     emit('done', result);
     return result;

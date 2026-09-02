@@ -37,6 +37,8 @@ novel-writer-skill/
 | `fill_characters` | 05 | `{ characters, character_edges }` |
 | `fill_outline` | 06 | `{ volumes }` |
 | `fill_chapters` | 07 | `{ chapters }` 无 order |
+| `fill_factions` | 10 | `{ factions }` |
+| `fill_chapter_body` | 11 | `{ body }`；须衔接 `prev_chapter.ending`，靠近 `word_target`，不得复述上一章，不得剧透 `next_outline` 以外的后文 |
 | `rewrite_field` | 任意 | `{ [path]: value }` 仅含 target |
 | `chat_to_fields` | 坞通用 | 根据 message + target 选上述之一；BFF 也可自己选 action |
 

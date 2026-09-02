@@ -77,6 +77,88 @@ class NovelController extends Controller {
     }
     this.ctx.body = { code: 0, message: 'ok', data: setting };
   }
+
+  async listChapterMeta() {
+    try {
+      const list = await this.ctx.service.novel.listChapterMeta(this.ctx.params.id);
+      if (list === null) {
+        this.ctx.status = 404;
+        this.ctx.body = { code: 404, message: '小说不存在' };
+        return;
+      }
+      this.ctx.body = { code: 0, message: 'ok', data: { list } };
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: err.status || 500, message: err.message, error_code: err.code };
+    }
+  }
+
+  async listEmptyChapters() {
+    try {
+      const list = await this.ctx.service.novel.listEmptyChapters(this.ctx.params.id);
+      if (list === null) {
+        this.ctx.status = 404;
+        this.ctx.body = { code: 404, message: '小说不存在' };
+        return;
+      }
+      this.ctx.body = { code: 0, message: 'ok', data: { list } };
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: err.status || 500, message: err.message, error_code: err.code };
+    }
+  }
+
+  async reader() {
+    try {
+      const data = await this.ctx.service.novel.getReader(this.ctx.params.id);
+      if (data === null) {
+        this.ctx.status = 404;
+        this.ctx.body = { code: 404, message: '小说不存在' };
+        return;
+      }
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: err.status || 500, message: err.message, error_code: err.code };
+    }
+  }
+
+  async showChapterBody() {
+    try {
+      const data = await this.ctx.service.novel.getChapterBody(
+        this.ctx.params.id,
+        this.ctx.params.chapterId,
+      );
+      if (data === null) {
+        this.ctx.status = 404;
+        this.ctx.body = { code: 404, message: '小说不存在' };
+        return;
+      }
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: err.status || 500, message: err.message, error_code: err.code };
+    }
+  }
+
+  async updateChapterBody() {
+    try {
+      const data = await this.ctx.service.novel.upsertChapterBody(
+        this.ctx.params.id,
+        this.ctx.params.chapterId,
+        this.ctx.request.body?.body,
+      );
+      if (data === null) {
+        this.ctx.status = 404;
+        this.ctx.body = { code: 404, message: '小说不存在' };
+        return;
+      }
+      this.ctx.body = { code: 0, message: 'ok', data };
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: err.status || 500, message: err.message, error_code: err.code };
+    }
+  }
 }
 
 module.exports = NovelController;

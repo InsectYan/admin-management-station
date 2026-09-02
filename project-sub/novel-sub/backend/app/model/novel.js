@@ -55,6 +55,10 @@ module.exports = (app) => {
       otherKey: 'theme_id',
       as: 'themes',
     });
+    app.model.Novel.hasMany(app.model.NovelChapterBody, {
+      foreignKey: 'novel_id',
+      as: 'chapterBodies',
+    });
   };
 
   return Novel;

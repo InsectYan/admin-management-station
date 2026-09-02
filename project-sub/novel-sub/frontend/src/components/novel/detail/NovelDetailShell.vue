@@ -13,8 +13,10 @@
           <el-breadcrumb-item v-if="tabTitle">{{ tabTitle }}</el-breadcrumb-item>
         </el-breadcrumb>
         <div class="novel-detail-shell__actions">
+          <el-button @click="$emit('qa')">验收核检</el-button>
           <el-button @click="$emit('plan')">补全全部缺口</el-button>
-          <el-button :icon="EditPen" @click="$emit('edit')">继续创作</el-button>
+          <el-button @click="$emit('autorun')">连续执行设定</el-button>
+          <el-button type="primary" :icon="EditPen" @click="$emit('edit')">编辑设定</el-button>
         </div>
       </div>
       <div class="novel-detail-hero">
@@ -49,7 +51,10 @@
       <aside class="novel-detail-shell__nav">
         <slot name="tabs" />
       </aside>
-      <div class="novel-detail-shell__content novel-fade-in">
+      <div
+        class="novel-detail-shell__content novel-fade-in"
+        :class="{ 'is-fill': fillPane }"
+      >
         <slot />
       </div>
     </div>
@@ -73,9 +78,10 @@ const props = defineProps({
   coverUrl: { type: String, default: '' },
   progressStatus: { type: String, default: '' },
   tabTitle: { type: String, default: '' },
+  fillPane: { type: Boolean, default: false },
 });
 
-defineEmits(['back', 'edit', 'plan']);
+defineEmits(['back', 'edit', 'plan', 'autorun', 'qa']);
 
 const coverLetter = computed(() => coverFallback(props.title));
 const genreLabel = computed(() => formatGenreLabel({
@@ -117,6 +123,8 @@ const statusType = computed(() => (props.progressStatus === 'completed' ? 'succe
 
 .novel-detail-shell__actions {
   margin-left: auto;
+  display: flex;
+  gap: 8px;
 }
 
 .novel-detail-hero {
@@ -196,6 +204,12 @@ const statusType = computed(() => (props.progressStatus === 'completed' ? 'succe
   min-width: 0;
   min-height: 0;
   overflow: auto;
+}
+
+.novel-detail-shell__content.is-fill {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 @media (max-width: 768px) {

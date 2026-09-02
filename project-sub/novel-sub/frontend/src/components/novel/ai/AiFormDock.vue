@@ -1,11 +1,15 @@
 <template>
   <aside
     class="ai-form-dock"
-    :class="{
-      'is-collapsed': collapsed,
-      'is-embedded': embedded,
-      'is-bar': variant === 'bar',
-    }"
+    :class="[
+      $attrs.class,
+      {
+        'is-collapsed': collapsed,
+        'is-embedded': embedded,
+        'is-bar': variant === 'bar',
+        'is-locked': locked,
+      },
+    ]"
   >
     <header class="ai-form-dock__header">
       <button type="button" class="ai-form-dock__mascot" :title="collapsed ? '展开 AI 坞' : '折叠'" @click="toggleCollapsed">
@@ -20,7 +24,7 @@
       </button>
       <div v-if="!collapsed || variant === 'bar'" class="ai-form-dock__header-text">
         <strong>林间写手</strong>
-        <span>{{ collapsed && variant === 'bar' ? '点开补全书名或简介' : (selectedNode?.title || sessionTitle || '林间写手') }}</span>
+        <span>{{ collapsed && variant === 'bar' ? `点开${sessionTitle || '林间写手'}` : (selectedNode?.title || sessionTitle || '林间写手') }}</span>
       </div>
       <el-button
         v-if="collapsed && variant === 'bar'"
@@ -86,11 +90,13 @@
         :streaming-thinking="streamingThinking"
         :streaming-reply="streamingReply"
         :thinking-live="thinkingLive"
+        :context-labels="liveContextLabels"
       />
 
       <p v-if="contextHint && !collapsed && !locked" class="ai-form-dock__hint">{{ contextHint }}</p>
 
-      <p v-if="locked && !collapsed" class="ai-form-dock__lock">请先保存基础信息</p>
+      <p v-if="locked && !collapsed" class="ai-form-dock__lock">{{ resolvedLockHint }}</p>
+      <p v-else-if="writeLocked && !collapsed" class="ai-form-dock__hint">{{ writeLockHint }}</p>
 
       <p v-if="error" class="ai-form-dock__error">{{ error }}</p>
 
@@ -99,7 +105,7 @@
           v-model="input"
           type="textarea"
           :rows="2"
-          :placeholder="locked ? '请先保存基础信息' : placeholder"
+          :placeholder="locked ? resolvedLockHint : placeholder"
           :disabled="sending || locked"
           @keydown.enter.exact.prevent="send"
         />
@@ -109,7 +115,14 @@
       </div>
 
       <div class="ai-form-dock__apply">
-        <el-button type="primary" plain :disabled="locked || !canApply" @click="onApply">{{ applyLabel }}</el-button>
+        <el-button type="primary" plain :disabled="locked || writeLocked || !canApply" @click="onApply">{{ applyLabel }}</el-button>
+        <el-button
+          v-if="autorunLabel"
+          type="primary"
+          :disabled="locked || !canApply || autorunActive"
+          :loading="autorunActive"
+          @click="onAutorun"
+        >{{ autorunLabel }}</el-button>
         <el-button link :disabled="locked || !pendingMessage" @click="discardPending">丢弃本轮</el-button>
       </div>
     </template>
@@ -118,11 +131,14 @@
 
 <script setup>
 import { computed, nextTick, ref, toRef, watch } from 'vue';
+
+defineOptions({ inheritAttrs: false });
 import { ElMessage } from 'element-plus';
 import AiSceneTree from './AiSceneTree.vue';
 import AiChatThread from './AiChatThread.vue';
 import { useAiDock } from '../../../composables/useAiDock.js';
 import { decoratePlanScenes } from '../../../utils/aiScenes.js';
+import { collectContextLabels } from '../../../utils/aiChatDisplay.js';
 
 const props = defineProps({
   scenes: { type: Array, default: () => [] },
@@ -130,9 +146,16 @@ const props = defineProps({
   novelId: { type: [Number, String], default: null },
   formSnapshot: { type: Object, default: () => ({}) },
   requireNovelId: { type: Boolean, default: false },
+  alwaysInteractive: { type: Boolean, default: false },
+  sessionLocked: { type: Boolean, default: false },
+  lockHint: { type: String, default: '' },
+  writeLocked: { type: Boolean, default: false },
+  writeLockHint: { type: String, default: '' },
   sessionTitle: { type: String, default: '' },
   contextHint: { type: String, default: '' },
   applyLabel: { type: String, default: '应用到表单' },
+  autorunLabel: { type: String, default: '' },
+  autorunActive: { type: Boolean, default: false },
   applySuccess: { type: String, default: '已写入表单，保存草稿后才会入库' },
   embedded: { type: Boolean, default: false },
   variant: { type: String, default: 'rail' },
@@ -141,7 +164,7 @@ const props = defineProps({
   defaultCollapsed: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['apply', 'focus']);
+const emit = defineEmits(['apply', 'focus', 'autorun']);
 
 const namingOpen = ref(false);
 const naming = ref(false);
@@ -189,6 +212,7 @@ const {
   sending,
   error,
   locked,
+  writeLocked,
   input,
   selectedId,
   selectedNode,
@@ -204,6 +228,7 @@ const {
   removeSession,
   switchSession,
   send,
+  sendText,
   applyPending,
   discardPending,
 } = useAiDock({
@@ -212,26 +237,55 @@ const {
   novelId: toRef(props, 'novelId'),
   formSnapshot: toRef(props, 'formSnapshot'),
   requireNovelId: toRef(props, 'requireNovelId'),
+  alwaysInteractive: toRef(props, 'alwaysInteractive'),
+  sessionLocked: toRef(props, 'sessionLocked'),
+  lockHint: toRef(props, 'lockHint'),
+  writeLocked: toRef(props, 'writeLocked'),
   sessionTitle: toRef(props, 'sessionTitle'),
   startExpanded: toRef(props, 'startExpanded'),
   storageKey: toRef(props, 'storageKey'),
   defaultCollapsed: toRef(props, 'defaultCollapsed'),
 });
 
+const resolvedLockHint = computed(() => {
+  if (props.lockHint) return props.lockHint;
+  if (props.sessionLocked) return '打开「编辑」后才能对话、新开会话或应用到本章';
+  if (props.alwaysInteractive) return '';
+  if (props.requireNovelId && (props.novelId == null || props.novelId === '')) {
+    return '请先保存基础信息';
+  }
+  return '当前不可用';
+});
+
+const writeLockHint = computed(() => (
+  props.writeLockHint || '打开「编辑」后才能把结果写入本章'
+));
+
 const displayScenes = computed(() => {
   if (props.featureKey !== 'orchestrate') return props.scenes;
   return decoratePlanScenes(props.scenes, pendingMessage.value?.patch_json?.tasks);
 });
+
+const liveContextLabels = computed(() => collectContextLabels(props.formSnapshot));
 
 watch(selectedNode, (node) => {
   emit('focus', node?.path || null);
 }, { immediate: true });
 
 function onSelectScene(id) {
+  if (locked.value) return;
   selectScene(id, { expand: true });
 }
 
 async function onApply() {
+  if (locked.value) {
+    ElMessage.info(resolvedLockHint.value);
+    return;
+  }
+  if (writeLocked.value) {
+    ElMessage.info(writeLockHint.value);
+    return;
+  }
   if (props.featureKey === 'orchestrate') {
     const patch = pendingMessage.value?.patch_json;
     if (patch && Object.keys(patch).length) {
@@ -257,6 +311,37 @@ async function onApply() {
     ElMessage.info('这一轮没有可应用的字段');
   }
 }
+
+function onAutorun() {
+  if (locked.value) {
+    ElMessage.info(resolvedLockHint.value);
+    return;
+  }
+  if (props.autorunActive) return;
+  const patch = pendingMessage.value?.patch_json;
+  if (!patch || !Array.isArray(patch.tasks) || !patch.tasks.length) {
+    ElMessage.info('请先发送一句话生成开书计划');
+    return;
+  }
+  if (!sessionId.value) {
+    ElMessage.error('没有计划会话');
+    return;
+  }
+  emit('autorun', {
+    sessionId: sessionId.value,
+    taskPath: selectedNode.value?.taskPath || '',
+    scene: selectedNode.value?.scene || '',
+  });
+}
+
+defineExpose({
+  sendText,
+  applyPending,
+  canApply,
+  sending,
+  pendingMessage,
+  sessionId,
+});
 </script>
 
 <style scoped>
@@ -398,8 +483,14 @@ async function onApply() {
 .ai-form-dock__apply {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 8px;
   flex-shrink: 0;
+}
+
+.ai-form-dock.is-locked .ai-form-dock__sessions,
+.ai-form-dock.is-locked .ai-form-dock__composer,
+.ai-form-dock.is-locked .ai-form-dock__apply {
+  opacity: 0.65;
 }
 </style>

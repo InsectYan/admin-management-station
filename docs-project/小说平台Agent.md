@@ -1,7 +1,8 @@
 # 小说平台 Agent 产品说明
 
-> **状态**：首批已落地（会话 / turns / 创建步 1 竖栏坞）；orchestrator 与世界观及以后仍为设计稿  
-> **详细设计 / 组件 / 开发计划**：[`project-sub/novel-sub/docs/Agent设计/readme.md`](../project-sub/novel-sub/docs/Agent设计/readme.md)  
+> **状态**：设定向导、单章开发、P0 正文入口与 P1 续写/进度/全书预览导出已落地。P1-5 连续执行设定、P2 体检与版本见 [开发计划.md](./开发计划.md)  
+> **详细设计 / 组件**：[`project-sub/novel-sub/docs/Agent设计/readme.md`](../project-sub/novel-sub/docs/Agent设计/readme.md)  
+> **下一阶段开发方案（自动成书）**：[开发计划.md](./开发计划.md)  
 > **规范依据**：[`agent-management-master`](../../agent-management-master/README.md) · AMS [`agent-skill-development.mdc`](../.cursor/rules/agent-skill-development.mdc)
 
 本文件是小说创作平台的 **Agent 产品入口**。页面与表单已落地（列表 / 五步创建 / 详情），智能能力按「**总任务拆分 + 领域生成**」接入，不在 `novel-sub` 内嵌 LLM。
@@ -40,6 +41,12 @@
 | 页面 | 入口 | 走哪条链路 |
 |------|------|------------|
 | 列表 | 「AI 开书」 | orchestrator `plan` → 建草稿 → 进入向导 + 计划坞 |
+| 列表 | 「去写正文」 | 详情单章开发 `?tab=7`（需已有章节目录） |
+| 创建向导末步 | 「开始写正文」 | 详情单章开发第一章 |
+| 详情单章 | 「写下一空章」 | writer `fill_chapter_body` → 确认 → PUT 空章 |
+| 详情 / 列表 | 「续写未完成章节」 | 前端串行空章队列；每章独立 turns + PUT |
+| 详情 | 「全书预览」tab=8 | `GET /reader` Markdown；导出 TXT / MD |
+| 开书计划 | 「执行下一步」`plan.bodies` | dispatch 第一个空章，打开详情 tab=7 |
 | 创建五步 | 步骤条旁「生成本步」+ 字段旁「AI」 | writer 对应 action；或 plan 中的当前 task |
 | 列表编辑弹窗 | 简介 / 题材「AI」 | writer `fill_basic` / `rewrite_field` |
 | 详情 | 「补全设定」「设定体检」 | orchestrator 补缺口；review 为 P2 |

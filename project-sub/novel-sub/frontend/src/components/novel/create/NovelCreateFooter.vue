@@ -1,12 +1,15 @@
 <template>
   <footer class="novel-create-footer">
     <div class="novel-create-footer__left">
-      <el-button class="novel-wood-button" :loading="saving" @click="$emit('save-draft')">
+      <el-button class="novel-wood-button" :loading="saving && !autorunActive" :disabled="autorunActive" @click="$emit('save-draft')">
         保存草稿
+      </el-button>
+      <el-button v-if="autorunActive" class="novel-wood-button" @click="$emit('cancel-autorun')">
+        取消连续执行
       </el-button>
     </div>
     <div class="novel-create-footer__right">
-      <el-button class="novel-wood-button" :disabled="isFirstStep" @click="$emit('prev')">
+      <el-button class="novel-wood-button" :disabled="isFirstStep || autorunActive" @click="$emit('prev')">
         上一步
       </el-button>
       <el-button
@@ -14,19 +17,30 @@
         class="novel-wood-button"
         type="primary"
         :loading="saving"
+        :disabled="autorunActive"
         @click="$emit('next')"
       >
         下一步
       </el-button>
-      <el-button
-        v-else
-        class="novel-wood-button"
-        type="primary"
-        :loading="saving"
-        @click="$emit('finish')"
-      >
-        完成并返回列表
-      </el-button>
+      <template v-else>
+        <el-button
+          class="novel-wood-button"
+          type="primary"
+          :loading="saving"
+          :disabled="!canStartWriting || autorunActive"
+          @click="$emit('start-writing')"
+        >
+          开始写正文
+        </el-button>
+        <el-button
+          class="novel-wood-button"
+          :loading="saving"
+          :disabled="autorunActive"
+          @click="$emit('finish')"
+        >
+          {{ finishLabel }}
+        </el-button>
+      </template>
     </div>
   </footer>
 </template>
@@ -36,9 +50,12 @@ defineProps({
   saving: { type: Boolean, default: false },
   isFirstStep: { type: Boolean, default: true },
   isLastStep: { type: Boolean, default: false },
+  canStartWriting: { type: Boolean, default: false },
+  finishLabel: { type: String, default: '完成并返回列表' },
+  autorunActive: { type: Boolean, default: false },
 });
 
-defineEmits(['save-draft', 'prev', 'next', 'finish']);
+defineEmits(['save-draft', 'prev', 'next', 'finish', 'start-writing', 'cancel-autorun']);
 </script>
 
 <style scoped>

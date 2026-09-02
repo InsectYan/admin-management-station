@@ -1,47 +1,28 @@
 <template>
   <div class="ai-scene-tree" :class="{ 'is-collapsed': collapsed }">
-    <div
-      v-for="node in scenes"
+    <button
+      v-for="node in leafScenes"
       :key="node.id"
-      class="ai-scene-tree__group"
+      type="button"
+      class="ai-scene-card"
+      :class="{
+        'is-active': selectedId === node.id,
+        'is-disabled': node.selectable === false,
+      }"
+      :disabled="node.selectable === false"
+      :title="node.selectable === false ? (node.disabledHint || '请在表单中手动选择') : node.title"
+      @click="node.selectable !== false && $emit('select', node.id)"
     >
-      <button
-        type="button"
-        class="ai-scene-card ai-scene-card--parent"
-        :class="{ 'is-active': selectedId === node.id }"
-        :title="node.title"
-        @click="$emit('select', node.id)"
-      >
-        <el-icon :size="collapsed ? 20 : 18">
-          <component :is="iconOf(node.icon)" />
-        </el-icon>
-        <span v-if="!collapsed" class="ai-scene-card__title">{{ node.title }}</span>
-      </button>
-      <div v-if="node.children?.length" class="ai-scene-tree__children">
-        <button
-          v-for="child in node.children"
-          :key="child.id"
-          type="button"
-          class="ai-scene-card ai-scene-card--child"
-          :class="{
-            'is-active': selectedId === child.id,
-            'is-disabled': child.selectable === false,
-          }"
-          :disabled="child.selectable === false"
-          :title="child.selectable === false ? (child.disabledHint || '请在表单中手动选择') : child.title"
-          @click="child.selectable !== false && $emit('select', child.id)"
-        >
-          <el-icon :size="18">
-            <component :is="iconOf(child.icon)" />
-          </el-icon>
-          <span v-if="!collapsed" class="ai-scene-card__title">{{ child.title }}</span>
-        </button>
-      </div>
-    </div>
+      <el-icon :size="collapsed ? 20 : 18">
+        <component :is="iconOf(node.icon)" />
+      </el-icon>
+      <span v-if="!collapsed" class="ai-scene-card__title">{{ node.title }}</span>
+    </button>
   </div>
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import {
   AlarmClock,
   Avatar,
@@ -69,10 +50,22 @@ import {
   UserFilled,
 } from '@element-plus/icons-vue';
 
-defineProps({
+const props = defineProps({
   scenes: { type: Array, default: () => [] },
   selectedId: { type: String, default: '' },
   collapsed: { type: Boolean, default: false },
+});
+
+const leafScenes = computed(() => {
+  const leaves = [];
+  for (const node of props.scenes || []) {
+    if (node.children?.length) {
+      leaves.push(...node.children);
+    } else {
+      leaves.push(node);
+    }
+  }
+  return leaves;
 });
 
 defineEmits(['select']);
@@ -112,31 +105,24 @@ function iconOf(name) {
 <style scoped>
 .ai-scene-tree {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 6px;
+  flex-shrink: 0;
   min-height: 0;
-  overflow-y: auto;
-  padding: 4px 2px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0 8px;
+  scrollbar-width: thin;
 }
 
 .ai-scene-tree.is-collapsed {
-  align-items: center;
-}
-
-.ai-scene-tree__group {
-  display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.ai-scene-tree__children {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-
-.ai-scene-tree.is-collapsed .ai-scene-tree__children {
-  grid-template-columns: 1fr;
+  align-items: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 4px 2px;
 }
 
 .ai-scene-card {
@@ -145,6 +131,7 @@ function iconOf(name) {
   align-items: center;
   justify-content: center;
   gap: 4px;
+  flex: 0 0 auto;
   border: var(--novel-border-subtle);
   background: var(--novel-color-glass);
   color: var(--novel-color-text);
@@ -152,18 +139,12 @@ function iconOf(name) {
   padding: 8px 6px;
   cursor: pointer;
   min-height: 52px;
+  min-width: 72px;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.ai-scene-card--parent {
-  flex-direction: row;
-  justify-content: flex-start;
-  gap: 8px;
-  padding: 8px 10px;
-}
-
-.ai-scene-tree.is-collapsed .ai-scene-card--parent {
-  justify-content: center;
+.ai-scene-tree.is-collapsed .ai-scene-card {
+  min-width: 0;
   padding: 8px;
 }
 
@@ -175,11 +156,6 @@ function iconOf(name) {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
-}
-
-.ai-scene-card--parent .ai-scene-card__title {
-  text-align: left;
-  font-weight: 600;
 }
 
 .ai-scene-card:hover {

@@ -8,30 +8,72 @@
   --el-button-hover-border-color: rgba(47, 138, 91, 0.36);
   --el-button-hover-text-color: var(--novel-color-deep);
   --el-button-active-bg-color: rgba(255, 255, 255, 0.78);
+  --el-button-active-text-color: var(--novel-color-deep);
+  --el-button-disabled-bg-color: rgba(255, 255, 255, 0.28);
+  --el-button-disabled-text-color: var(--novel-color-text-muted);
+  --el-button-disabled-border-color: rgba(47, 138, 91, 0.12);
+  --el-button-outline-color: rgba(47, 138, 91, 0.28);
   border-radius: var(--novel-radius-sm);
   backdrop-filter: blur(var(--novel-backdrop-blur));
   background-color: var(--el-button-bg-color) !important;
   background-image: none;
   border-color: var(--el-button-border-color);
-  color: var(--el-button-text-color);
+  color: var(--novel-color-deep) !important;
   transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
 
-.novel-sub-root .el-button:hover {
+.novel-sub-root .el-button:hover,
+.novel-sub-root .el-button:focus,
+.novel-sub-root .el-button:focus-visible,
+.novel-sub-root .el-button:active {
+  color: var(--novel-color-deep) !important;
   box-shadow: var(--novel-shadow-soft);
 }
 
-.novel-sub-root .el-button--primary {
+.novel-sub-root .el-button.is-disabled,
+.novel-sub-root .el-button.is-disabled:hover,
+.novel-sub-root .el-button.is-disabled:focus {
+  color: var(--novel-color-text-muted) !important;
+  box-shadow: none;
+}
+
+.novel-sub-root .el-button .el-icon,
+.novel-sub-root .el-button span {
+  color: inherit;
+}
+
+.novel-sub-root .el-button--primary,
+.novel-sub-root .el-button--success,
+.novel-sub-root .el-button--warning,
+.novel-sub-root .el-button--info {
   --el-button-bg-color: rgba(47, 138, 91, 0.22);
   --el-button-border-color: rgba(47, 138, 91, 0.42);
-  --el-button-text-color: #1f3d2c;
+  --el-button-text-color: var(--novel-color-deep);
   --el-button-hover-bg-color: rgba(47, 138, 91, 0.34);
   --el-button-hover-border-color: rgba(47, 138, 91, 0.55);
-  --el-button-hover-text-color: #1f3d2c;
+  --el-button-hover-text-color: var(--novel-color-deep);
   --el-button-active-bg-color: rgba(47, 138, 91, 0.42);
+  --el-button-active-text-color: var(--novel-color-deep);
+  --el-button-disabled-bg-color: rgba(47, 138, 91, 0.1);
+  --el-button-disabled-text-color: var(--novel-color-text-muted);
+  --el-button-disabled-border-color: rgba(47, 138, 91, 0.16);
   background-color: rgba(47, 138, 91, 0.22) !important;
   background-image: none;
-  color: #1f3d2c;
+  color: var(--novel-color-deep) !important;
+}
+
+.novel-sub-root .el-button--warning {
+  --el-button-bg-color: rgba(184, 149, 58, 0.2);
+  --el-button-border-color: rgba(184, 149, 58, 0.4);
+  --el-button-hover-bg-color: rgba(184, 149, 58, 0.3);
+  background-color: rgba(184, 149, 58, 0.2) !important;
+}
+
+.novel-sub-root .el-button--info {
+  --el-button-bg-color: rgba(109, 138, 130, 0.16);
+  --el-button-border-color: rgba(109, 138, 130, 0.36);
+  --el-button-hover-bg-color: rgba(109, 138, 130, 0.26);
+  background-color: rgba(109, 138, 130, 0.16) !important;
 }
 
 .novel-sub-root .el-button--primary.is-plain,
@@ -41,43 +83,69 @@
   --el-button-border-color: rgba(47, 138, 91, 0.28);
   --el-button-hover-bg-color: rgba(47, 138, 91, 0.16);
   --el-button-hover-text-color: var(--novel-color-primary);
-  background: rgba(47, 138, 91, 0.08);
-  color: var(--novel-color-primary);
+  background: rgba(47, 138, 91, 0.08) !important;
+  color: var(--novel-color-primary) !important;
 }
 
-.novel-sub-root .el-button.is-link {
+.novel-sub-root .el-button.is-link,
+.novel-sub-root .el-button.is-text {
   backdrop-filter: none;
   background-color: transparent !important;
   background-image: none;
   border-color: transparent;
   box-shadow: none;
+  color: var(--novel-color-primary) !important;
 }
 
-.novel-sub-root .el-button--danger {
-  --el-button-bg-color: rgba(184, 92, 92, 0.82);
-  --el-button-border-color: rgba(184, 92, 92, 0.4);
-  --el-button-text-color: #fff;
+.novel-sub-root .el-button.is-link:hover,
+.novel-sub-root .el-button.is-text:hover,
+.novel-sub-root .el-button.is-link:focus,
+.novel-sub-root .el-button.is-text:focus {
+  color: var(--novel-color-primary-hover) !important;
+  box-shadow: none;
+}
+
+.novel-sub-root .el-button.is-link.is-disabled,
+.novel-sub-root .el-button.is-text.is-disabled {
+  color: var(--novel-color-text-muted) !important;
+}
+
+.novel-sub-root .el-button.is-link.el-button--danger,
+.novel-sub-root .el-button.is-text.el-button--danger {
+  color: var(--novel-color-danger) !important;
+}
+
+.novel-sub-root .el-button--danger:not(.is-link):not(.is-text):not(.is-plain) {
+  --el-button-bg-color: rgba(184, 92, 92, 0.16);
+  --el-button-border-color: rgba(184, 92, 92, 0.36);
+  --el-button-text-color: var(--novel-color-danger);
+  --el-button-hover-bg-color: rgba(184, 92, 92, 0.24);
+  --el-button-hover-text-color: var(--novel-color-danger);
+  --el-button-disabled-text-color: rgba(184, 92, 92, 0.45);
+  background-color: rgba(184, 92, 92, 0.16) !important;
+  color: var(--novel-color-danger) !important;
 }
 
 .novel-sub-root .el-button--danger.is-plain {
   --el-button-bg-color: rgba(184, 92, 92, 0.08);
   --el-button-text-color: var(--novel-color-danger);
   --el-button-border-color: rgba(184, 92, 92, 0.28);
-  background: rgba(184, 92, 92, 0.08);
-  color: var(--novel-color-danger);
+  --el-button-hover-text-color: var(--novel-color-danger);
+  background: rgba(184, 92, 92, 0.08) !important;
+  color: var(--novel-color-danger) !important;
 }
 
 .novel-sub-root .novel-wood-button.el-button {
   border: var(--novel-border-default);
   background: var(--novel-color-glass);
-  color: var(--novel-color-deep);
+  color: var(--novel-color-deep) !important;
 }
 
 .novel-sub-root .novel-wood-button.el-button--primary {
   background-color: rgba(47, 138, 91, 0.22);
   background-image: none;
   border-color: rgba(47, 138, 91, 0.42);
-  color: var(--novel-color-deep);
+  color: var(--novel-color-deep) !important;
 }
 
 .novel-sub-root .novel-wood-button.el-button:active {
@@ -133,6 +201,13 @@
 .novel-sub-root .el-pagination {
   --el-pagination-button-bg-color: var(--novel-color-glass);
   --el-pagination-hover-color: var(--novel-color-primary);
+  --el-pagination-button-color: var(--novel-color-deep);
+}
+
+.novel-sub-root .el-pagination button,
+.novel-sub-root .el-pagination .btn-prev,
+.novel-sub-root .el-pagination .btn-next {
+  color: var(--novel-color-deep);
 }
 
 .novel-sub-root .el-pagination.is-background .el-pager li {
@@ -181,9 +256,26 @@
 }
 
 html.novel-sub-standalone .el-overlay .el-dialog,
-html.novel-sub-standalone .el-overlay .el-drawer {
+html.novel-sub-standalone .el-overlay .el-drawer,
+html.novel-sub-standalone .el-overlay .el-message-box {
   background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(16px);
   border: 1px solid rgba(47, 138, 91, 0.12);
   border-radius: 10px;
+}
+
+html.novel-sub-standalone .el-overlay .el-button {
+  --el-button-text-color: #1f3d2c;
+  --el-button-hover-text-color: #1f3d2c;
+  --el-button-disabled-text-color: #8a968e;
+  color: #1f3d2c !important;
+}
+
+html.novel-sub-standalone .el-overlay .el-button.is-link,
+html.novel-sub-standalone .el-overlay .el-button--primary.is-plain {
+  color: #2f8a5b !important;
+}
+
+html.novel-sub-standalone .el-overlay .el-button--danger:not(.is-link) {
+  color: #b85c5c !important;
 }

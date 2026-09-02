@@ -15,6 +15,11 @@ module.exports = (app) => {
   router.delete('/api/novels/:id', controller.novel.destroy);
   router.get('/api/novels/:id/setting', controller.novel.getSetting);
   router.put('/api/novels/:id/setting', controller.novel.updateSetting);
+  router.get('/api/novels/:id/chapters', controller.novel.listChapterMeta);
+  router.get('/api/novels/:id/chapters/empty', controller.novel.listEmptyChapters);
+  router.get('/api/novels/:id/reader', controller.novel.reader);
+  router.get('/api/novels/:id/chapters/:chapterId', controller.novel.showChapterBody);
+  router.put('/api/novels/:id/chapters/:chapterId', controller.novel.updateChapterBody);
 
   router.get('/api/ai/sessions', controller.aiSession.index);
   router.post('/api/ai/sessions', controller.aiSession.create);
@@ -26,4 +31,9 @@ module.exports = (app) => {
   router.post('/api/ai/sessions/:id/apply', controller.aiSession.apply);
   router.post('/api/ai/dispatch', controller.aiSession.dispatch);
   router.post('/api/ai/cover/generate', controller.aiCover.generate);
+
+  router.get('/api/ai/review/modules', controller.aiReview.modules);
+  router.post('/api/ai/review', controller.aiReview.create);
+  router.get('/api/novels/:id/qa', controller.aiReview.show);
+  router.post('/api/novels/:id/qa/ignore', controller.aiReview.ignore);
 };

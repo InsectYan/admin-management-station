@@ -76,3 +76,10 @@ Agent `reply` 可用加粗、列表、短标题；不要用代码围栏包住整
 `created_at` / `updated_at` 走上述格式，不要直接展示 ISO。  
 世界观时间轴的「开元三年」等纪元原文保留；只有写成公历日期时才规范化。
 
+---
+
+## 6. 给 Agent 的枚举必须是中文名
+
+从第二步起，`bound_context.basic` / `form_snapshot` 里的类型、题材、篇幅、读者、更新节奏传**名称**（如 `轻小说 / 日式轻小说`、`治愈`），不要传 `genre_path`、`theme_ids`、`length_id` 等数字 id。  
+BFF `aiBoundContext` 会在 invoke 前解析；前端快照用 `basicContextForAgent`。
+

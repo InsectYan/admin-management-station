@@ -1,10 +1,13 @@
 export const WIZARD_STEPS = [
   { step: 1, key: 'basic', title: '基础信息' },
   { step: 2, key: 'world', title: '世界观设定' },
-  { step: 3, key: 'characters', title: '人物设定' },
-  { step: 4, key: 'outline', title: '篇幅大纲' },
-  { step: 5, key: 'content', title: '内容组织' },
+  { step: 3, key: 'factions', title: '门派组织' },
+  { step: 4, key: 'characters', title: '人物设定' },
+  { step: 5, key: 'outline', title: '篇幅大纲' },
+  { step: 6, key: 'content', title: '章节目录', hint: '编排章节标题、顺序与场次倾向，不含门派设定' },
 ];
+
+export const WIZARD_STEP_MAX = WIZARD_STEPS.length;
 
 export function createBasicInfoForm() {
   return {
@@ -130,6 +133,7 @@ export function createCharacter(data = {}) {
     background: data.background || '',
     goal: data.goal || '',
     relations: data.relations || '',
+    faction_id: data.faction_id || '',
   };
 }
 
@@ -181,6 +185,33 @@ export function createOutlineForm() {
   return { volumes: [] };
 }
 
+export const FACTION_KIND_OPTIONS = [
+  { value: 'sect', label: '门派' },
+  { value: 'clan', label: '家族' },
+  { value: 'nation', label: '国家' },
+  { value: 'force', label: '势力' },
+  { value: 'other', label: '其他' },
+];
+
+export const FACTION_ALIGNMENT_OPTIONS = [
+  { value: 'righteous', label: '正' },
+  { value: 'evil', label: '邪' },
+  { value: 'neutral', label: '中立' },
+];
+
+export function createFaction(data = {}) {
+  return {
+    id: data.id || createUid('f'),
+    name: data.name || '',
+    kind: data.kind || 'sect',
+    alignment: data.alignment || 'neutral',
+    description: data.description || '',
+    rules: data.rules || '',
+    headquarters: data.headquarters || '',
+    member_ids: Array.isArray(data.member_ids) ? [...data.member_ids] : [],
+  };
+}
+
 export function createChapterItem(data = {}) {
   return {
     id: data.id || createUid('ch'),
@@ -223,12 +254,16 @@ export function settingToForms(setting = {}) {
     contentForm: {
       chapters: (s.chapters || []).map((ch, idx) => createChapterItem({ ...ch, order: ch.order ?? idx + 1 })),
     },
+    factions: (s.factions || []).map(createFaction),
   };
 }
 
-export function buildSettingPatch({ worldForm, characters, characterEdges, outlineForm, contentForm }) {
+export function buildSettingPatch({
+  worldForm, characters, characterEdges, outlineForm, contentForm, factions,
+}) {
   return {
     world: worldForm ? { ...worldForm } : undefined,
+    factions: factions ? [...factions] : undefined,
     characters: characters ? [...characters] : undefined,
     character_edges: characterEdges ? [...characterEdges] : undefined,
     outline: outlineForm ? { volumes: outlineForm.volumes || [] } : undefined,
@@ -241,13 +276,15 @@ export function buildStepSettingPatch(step, forms) {
     case 2:
       return { world: { ...forms.worldForm } };
     case 3:
+      return { factions: [...(forms.factions || [])] };
+    case 4:
       return {
         characters: [...forms.characters],
         character_edges: [...(forms.characterEdges || [])],
       };
-    case 4:
-      return { outline: { volumes: forms.outlineForm.volumes || [] } };
     case 5:
+      return { outline: { volumes: forms.outlineForm.volumes || [] } };
+    case 6:
       return { chapters: [...(forms.contentForm.chapters || [])] };
     default:
       return {};

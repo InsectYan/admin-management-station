@@ -20,6 +20,22 @@
       <el-form-item label="姓名">
         <el-input v-model="character.name" placeholder="角色名称" @input="$emit('change')" />
       </el-form-item>
+      <el-form-item v-if="factions.length" label="所属组织">
+        <el-select
+          v-model="character.faction_id"
+          clearable
+          placeholder="可选"
+          style="width: 100%"
+          @change="$emit('change')"
+        >
+          <el-option
+            v-for="item in factions"
+            :key="item.id"
+            :label="item.name || '未命名组织'"
+            :value="item.id"
+          />
+        </el-select>
+      </el-form-item>
       <el-form-item label="性格">
         <el-input v-model="character.personality" type="textarea" :rows="2" @input="$emit('change')" />
       </el-form-item>
@@ -47,6 +63,7 @@ import { CHARACTER_ROLE_OPTIONS } from '../../../utils/novelCreateSchema.js';
 
 defineProps({
   character: { type: Object, required: true },
+  factions: { type: Array, default: () => [] },
 });
 
 defineEmits(['change', 'remove']);

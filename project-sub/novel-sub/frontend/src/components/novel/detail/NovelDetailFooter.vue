@@ -13,13 +13,13 @@
       />
     </div>
     <div class="novel-detail-footer__stats">
-      <span>章节 {{ progress.chapterCount }}{{ progress.outlineChapters ? ` / ${progress.outlineChapters}` : '' }}</span>
+      <span>已写 {{ progress.chapterWritten || 0 }}/{{ progress.chapterCount || 0 }} 章</span>
+      <span>{{ (progress.wordCount || 0).toLocaleString() }} 字</span>
       <span v-if="progress.wordTarget">规划 {{ progress.wordTarget.toLocaleString() }} 字</span>
     </div>
     <div class="novel-detail-footer__actions">
       <el-button :disabled="currentTab <= 1" @click="$emit('prev')">上一模块</el-button>
-      <el-button v-if="currentTab < 5" type="primary" @click="$emit('next')">下一模块</el-button>
-      <el-button v-else type="primary" @click="$emit('edit')">继续创作</el-button>
+      <el-button :disabled="currentTab >= tabCount" type="primary" @click="$emit('next')">下一模块</el-button>
     </div>
   </footer>
 </template>
@@ -28,9 +28,10 @@
 defineProps({
   progress: { type: Object, required: true },
   currentTab: { type: Number, required: true },
+  tabCount: { type: Number, default: 7 },
 });
 
-defineEmits(['prev', 'next', 'edit']);
+defineEmits(['prev', 'next']);
 </script>
 
 <style scoped>

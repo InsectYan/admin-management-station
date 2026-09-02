@@ -85,6 +85,7 @@ export const WORLD_AI_SCENES = [
     icon: 'MapLocation',
     scene: 'world',
     placeholder: '按立意补一套力量体系，并给 4 个历史节点…',
+    // 父级只作未选中时的整步生成，不单独出 Tab（表单没有「世界观」总览字段）
     children: [
       {
         id: 'era',
@@ -145,6 +146,40 @@ export const WORLD_AI_SCENES = [
     ],
   },
 ];
+
+export function buildFactionScenes(activeFaction) {
+  const children = [
+    {
+      id: 'list',
+      title: '组织列表',
+      icon: 'OfficeBuilding',
+      scene: 'factions.list',
+      path: 'factions',
+      placeholder: '按世界观补几家门派或家族…',
+    },
+  ];
+  if (activeFaction?.id) {
+    const label = activeFaction.name || '当前组织';
+    children.push({
+      id: 'current',
+      title: label,
+      icon: 'Flag',
+      scene: 'factions.current',
+      path: 'factions',
+      placeholder: `补全「${label}」的来历与规矩…`,
+    });
+  }
+  return [
+    {
+      id: 'factions',
+      title: '门派组织',
+      icon: 'OfficeBuilding',
+      scene: 'factions',
+      placeholder: '按世界观补门派、家族或国家，并标正邪…',
+      children,
+    },
+  ];
+}
 
 export const CHARACTER_FIELD_KEYS = ['name', 'role', 'personality', 'background', 'goal', 'relations'];
 
@@ -221,7 +256,7 @@ export const OUTLINE_AI_SCENES = [
 export const CONTENT_AI_SCENES = [
   {
     id: 'content',
-    title: '内容组织',
+    title: '章节目录',
     icon: 'CollectionTag',
     scene: 'content',
     placeholder: '按大纲小节生成章节标题，并标正反派场次…',
@@ -236,11 +271,31 @@ export const CONTENT_AI_SCENES = [
       },
       {
         id: 'faction',
-        title: '阵营标注',
+        title: '场次倾向',
         icon: 'Flag',
         scene: 'content.faction',
         path: 'faction',
-        placeholder: '给现有章节标正派/反派/中立…',
+        placeholder: '给现有章节标正派/反派/中立场次…',
+      },
+    ],
+  },
+];
+
+export const CHAPTER_AI_SCENES = [
+  {
+    id: 'chapter',
+    title: '单章正文',
+    icon: 'EditPen',
+    scene: 'chapter',
+    placeholder: '按本章标题和大纲写这一章正文…',
+    children: [
+      {
+        id: 'body',
+        title: '本章正文',
+        icon: 'Document',
+        scene: 'chapter.body',
+        path: 'body',
+        placeholder: '只写当前这一章，不要带出全书…',
       },
     ],
   },
@@ -273,13 +328,22 @@ export const ORCHESTRATE_AI_SCENES = [
         placeholder: '计划里什么时候补世界观…',
       },
       {
+        id: 'plan-factions',
+        title: '门派组织',
+        icon: 'OfficeBuilding',
+        scene: 'orchestrate.factions',
+        path: 'tasks',
+        taskPath: 'plan.factions',
+        placeholder: '世界观完成后再拆门派…',
+      },
+      {
         id: 'plan-characters',
         title: '人物',
         icon: 'User',
         scene: 'orchestrate.characters',
         path: 'tasks',
         taskPath: 'plan.characters',
-        placeholder: '世界观完成后再拆人物…',
+        placeholder: '门派齐了再拆人物…',
       },
       {
         id: 'plan-outline',
@@ -298,6 +362,15 @@ export const ORCHESTRATE_AI_SCENES = [
         path: 'tasks',
         taskPath: 'plan.content',
         placeholder: '大纲齐了再拆章节…',
+      },
+      {
+        id: 'plan-bodies',
+        title: '正文',
+        icon: 'EditPen',
+        scene: 'orchestrate.bodies',
+        path: 'tasks',
+        taskPath: 'plan.bodies',
+        placeholder: '目录齐了再写第一章正文…',
       },
     ],
   },

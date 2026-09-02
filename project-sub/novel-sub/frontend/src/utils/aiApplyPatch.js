@@ -2,6 +2,7 @@ import {
   createChapterItem,
   createCharacter,
   createCharacterEdge,
+  createFaction,
   createOutlineGroup,
   createOutlineSection,
   createOutlineVolume,
@@ -71,6 +72,7 @@ export function applyCharacterPatch(characters, edges, patch = {}, options = {})
       ));
       if (existing) {
         if (incoming.role) existing.role = incoming.role;
+        if (incoming.faction_id !== undefined) existing.faction_id = String(incoming.faction_id || '');
         for (const key of ['name', 'personality', 'background', 'goal', 'relations']) {
           if (incoming[key] !== undefined) existing[key] = String(incoming[key]);
         }
@@ -109,6 +111,47 @@ export function applyCharacterPatch(characters, edges, patch = {}, options = {})
       target,
       relation,
       label: row.label || '',
+    }));
+  }
+}
+
+export function applyFactionPatch(factions, patch = {}, options = {}) {
+  if (!Array.isArray(factions) || !patch || typeof patch !== 'object') return;
+  const incoming = Array.isArray(patch.factions) ? patch.factions : [];
+  if (!incoming.length) return;
+  const characters = Array.isArray(options.characters) ? options.characters : [];
+  const resolveMember = (ref) => {
+    const token = String(ref || '').trim();
+    if (!token) return '';
+    const byId = characters.find((row) => row.id === token);
+    if (byId) return byId.id;
+    const byName = characters.find((row) => row.name === token);
+    return byName?.id || token;
+  };
+
+  for (const row of incoming) {
+    const name = String(row?.name || '').trim();
+    if (!name && !row?.id) continue;
+    const hit = factions.find((item) => (
+      (row.id && item.id === row.id) || (name && item.name === name)
+    ));
+    const memberIds = Array.isArray(row.member_ids)
+      ? row.member_ids.map(resolveMember).filter(Boolean)
+      : undefined;
+    if (hit) {
+      if (row.name) hit.name = name;
+      if (row.kind) hit.kind = row.kind;
+      if (row.alignment) hit.alignment = row.alignment;
+      for (const key of ['description', 'rules', 'headquarters']) {
+        if (row[key] !== undefined) hit[key] = String(row[key]);
+      }
+      if (memberIds) hit.member_ids = memberIds;
+      continue;
+    }
+    factions.push(createFaction({
+      ...row,
+      name,
+      member_ids: memberIds || [],
     }));
   }
 }

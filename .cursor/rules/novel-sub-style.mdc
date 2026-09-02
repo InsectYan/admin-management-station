@@ -97,7 +97,7 @@ frontend/src/styles/
 
 | 类型 | 命名 / 位置 | 风格要点 |
 |------|-------------|----------|
-| 按钮 | `el-button`（可兼 `novel-wood-button`） | 玻璃底、细绿边；主按钮半透明叶绿 + 白字 |
+| 按钮 | `el-button`（可兼 `novel-wood-button`） | 玻璃底、细绿边；主按钮叶绿雾 + 深绿字（禁止玻璃底配白字） |
 | 表单 | `novel-magic-form` | 玻璃面 + 细实线绿框；label 用正文色 |
 | 表格 | `DataTablePanel` | 雾绿表头、透明行底 |
 | 卡片 | `novel-card` | 玻璃面 + 细边；封面临时底用 `--novel-gradient-cover` |

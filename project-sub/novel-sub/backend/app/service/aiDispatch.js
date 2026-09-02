@@ -1,6 +1,6 @@
 'use strict';
 
-const { PLAN_BY_PATH, findTask, assertDependencies, markTaskStatus } = require('../lib/aiPlan');
+const { PLAN_BY_PATH, findTask, isBodyTask, assertDependencies, markTaskStatus, ensurePlanTasks } = require('../lib/aiPlan');
 
 class AiDispatchService extends require('egg').Service {
   async lastPlan(session) {
@@ -61,9 +61,19 @@ class AiDispatchService extends require('egg').Service {
     }
 
     const planMessage = await this.lastPlan(planSession);
-    const tasks = planMessage.patch_json.tasks;
-    const task = findTask(tasks, { task_id: body.task_id, task_path: body.task_path });
-    if (!task) {
+    const tasks = ensurePlanTasks(planMessage.patch_json.tasks);
+    const scope = body.scope === 'settings' ? 'settings' : '';
+    let novelId = body.novel_id || planSession.novel_id || null;
+    const task = findTask(tasks, { task_id: body.task_id, task_path: body.task_path, scope });
+    if (!task || (scope === 'settings' && isBodyTask(task))) {
+      if (scope === 'settings') {
+        return {
+          done: true,
+          novel_id: novelId,
+          tasks,
+          plan_session_id: planSession.id,
+        };
+      }
       const err = new Error('计划里没有可执行的任务');
       err.status = 400;
       err.code = 'TASK_NOT_FOUND';
@@ -85,7 +95,6 @@ class AiDispatchService extends require('egg').Service {
       throw err;
     }
 
-    let novelId = body.novel_id || planSession.novel_id || null;
     if (def.feature_key !== 'basic' && !novelId) {
       const err = new Error('请先保存基础信息');
       err.status = 400;
@@ -97,10 +106,25 @@ class AiDispatchService extends require('egg').Service {
     const snapshot = body.form_snapshot && typeof body.form_snapshot === 'object'
       ? body.form_snapshot
       : {};
+    let chapterId = null;
+    let formSnapshot = snapshot;
+    let keepPending = false;
+    if (def.feature_key === 'chapter') {
+      const empty = await this.ctx.service.novel.firstEmptyChapter(novelId);
+      if (!empty) {
+        const err = new Error('没有未写章节');
+        err.status = 409;
+        err.code = 'NO_EMPTY_CHAPTER';
+        throw err;
+      }
+      chapterId = empty.chapter_id;
+      formSnapshot = await this.ctx.service.novel.buildChapterAgentSnapshot(novelId, chapterId, snapshot);
+      keepPending = true;
+    }
     const turn = await this.ctx.service.aiTurn.run(targetSession.id, {
       message: body.message || task.reason || `执行${def.label}`,
       scene: def.scene,
-      form_snapshot: snapshot,
+      form_snapshot: formSnapshot,
     });
 
     if (def.feature_key === 'basic' && !novelId) {
@@ -122,19 +146,25 @@ class AiDispatchService extends require('egg').Service {
       }
     }
 
-    const nextTasks = markTaskStatus(tasks, task.id, 'applied');
-    await planMessage.update({ patch_json: { ...planMessage.patch_json, tasks: nextTasks } });
+    const nextStatus = keepPending ? 'pending' : 'applied';
+    const nextTasks = markTaskStatus(tasks, task.id, nextStatus);
+    if (nextStatus === 'applied') {
+      await planMessage.update({ patch_json: { ...planMessage.patch_json, tasks: nextTasks } });
+    }
 
     return {
       novel_id: novelId,
       step: def.step,
+      tab: def.feature_key === 'chapter' ? 7 : undefined,
+      chapter_id: chapterId,
       feature_key: def.feature_key,
-      task: { ...task, status: 'applied' },
+      task: { ...task, status: nextStatus },
       tasks: nextTasks,
       target_session_id: targetSession.id,
       plan_session_id: planSession.id,
       turn: {
         session_id: turn.session_id,
+        message_id: (turn.messages || []).slice().reverse().find((row) => row.role === 'assistant')?.id || null,
         reply: turn.reply,
         patch: turn.patch,
       },

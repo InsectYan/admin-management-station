@@ -11,6 +11,7 @@ import {
 } from '../services/aiService.js';
 import { collectPaths, findSceneNode, isSelectableScene } from '../utils/aiScenes.js';
 import { peelSkillEnvelope, salvagePatchFromContent } from '../utils/aiReplyText.js';
+import { localizeThinking } from '../utils/aiChatDisplay.js';
 
 const COLLAPSED_KEY = 'novel-ai-dock-collapsed';
 
@@ -19,6 +20,8 @@ export function useAiDock(options) {
   const featureKeyOf = () => toValue(options.featureKey) || 'basic';
   const novelIdOf = () => toValue(options.novelId) || null;
   const requireNovelIdOf = () => Boolean(toValue(options.requireNovelId));
+  const alwaysInteractiveOf = () => Boolean(toValue(options.alwaysInteractive));
+  const sessionLockedOf = () => Boolean(toValue(options.sessionLocked));
   const storageKeyOf = () => toValue(options.storageKey) || COLLAPSED_KEY;
   const startExpandedOf = () => Boolean(toValue(options.startExpanded));
   const sessionTitleOf = () => {
@@ -27,14 +30,31 @@ export function useAiDock(options) {
     const TITLES = {
       basic: '基础信息',
       world: '世界观',
+      factions: '门派组织',
       characters: '人物',
       outline: '大纲',
-      content: '内容组织',
+      content: '章节目录',
+      chapter: '单章正文',
       orchestrate: '开书计划',
     };
     return custom || TITLES[featureKeyOf()] || '基础信息';
   };
-  const locked = computed(() => requireNovelIdOf() && !novelIdOf());
+  const hasNovelId = () => {
+    const id = toValue(options.novelId);
+    return id != null && id !== '';
+  };
+  const locked = computed(() => {
+    if (sessionLockedOf()) return true;
+    if (alwaysInteractiveOf()) return false;
+    return requireNovelIdOf() && !hasNovelId();
+  });
+  function lockReason() {
+    const custom = toValue(options.lockHint);
+    if (custom) return custom;
+    if (sessionLockedOf()) return '打开「编辑」后才能对话';
+    return '请先保存基础信息';
+  }
+  const writeLocked = computed(() => Boolean(toValue(options.writeLocked)));
   const snapshotOf = () => {
     const raw = toValue(options.formSnapshot);
     return raw && typeof raw === 'object' ? { ...raw } : {};
@@ -63,18 +83,24 @@ export function useAiDock(options) {
   watch(
     () => scenesOf(),
     (scenes) => {
-      if (!scenes?.length) return;
+      if (!selectedId.value) return;
       if (!findSceneNode(scenes, selectedId.value)) {
-        selectedId.value = scenes[0].id;
+        selectedId.value = '';
       }
     },
     { immediate: true },
   );
 
   const selectedNode = computed(() => findSceneNode(scenesOf(), selectedId.value));
-  const targetFields = computed(() => collectPaths(selectedNode.value));
-  const scene = computed(() => selectedNode.value?.scene || featureKeyOf());
-  const placeholder = computed(() => selectedNode.value?.placeholder || '想让林间写手帮点什么？');
+  const rootScene = computed(() => scenesOf()[0] || null);
+  const activeNode = computed(() => selectedNode.value || rootScene.value);
+  const targetFields = computed(() => collectPaths(activeNode.value));
+  const scene = computed(() => activeNode.value?.scene || featureKeyOf());
+  const placeholder = computed(() => (
+    selectedNode.value?.placeholder
+    || rootScene.value?.placeholder
+    || '想让林间写手帮点什么？不选模块则按本步全部可填字段生成。'
+  ));
   const pendingMessage = computed(() => (
     messages.value.find((row) => row.id === pendingAssistantId.value) || null
   ));
@@ -94,11 +120,14 @@ export function useAiDock(options) {
   function selectScene(id, { expand = false } = {}) {
     const node = findSceneNode(scenesOf(), id);
     if (node && !isSelectableScene(node)) return;
-    selectedId.value = id;
-    if (expand && collapsed.value) {
+    const opening = expand && collapsed.value;
+    if (opening) {
+      selectedId.value = id;
       collapsed.value = false;
       localStorage.setItem(storageKeyOf(), '0');
+      return;
     }
+    selectedId.value = selectedId.value === id ? '' : id;
   }
 
   async function refreshSessions() {
@@ -135,7 +164,7 @@ export function useAiDock(options) {
 
   async function createSession(title) {
     if (locked.value) {
-      ElMessage.info('请先保存基础信息');
+      ElMessage.info(lockReason());
       return;
     }
     const name = String(title || '').trim() || `会话 ${sessions.value.length + 1}`;
@@ -188,17 +217,18 @@ export function useAiDock(options) {
     ElMessage.success('会话已删除');
   }
 
-  async function send() {
-    const text = input.value.trim();
-    if (!text || sending.value) return;
+  async function sendText(text) {
+    const trimmed = String(text || '').trim();
+    if (!trimmed || sending.value) return false;
     if (locked.value) {
-      ElMessage.info('请先保存基础信息');
-      return;
+      ElMessage.info(lockReason());
+      return false;
     }
     if (selectedNode.value && !isSelectableScene(selectedNode.value) && !selectedNode.value.children?.length) {
       ElMessage.info(selectedNode.value.disabledHint || '该字段请在表单中手动选择');
-      return;
+      return false;
     }
+    if (collapsed.value) collapsed.value = false;
     if (!sessionId.value) await ensureSession();
     sending.value = true;
     error.value = '';
@@ -207,10 +237,10 @@ export function useAiDock(options) {
     streamingThinking.value = '';
     streamingReply.value = '';
     const tempId = `tmp-user-${Date.now()}`;
-    messages.value = [...messages.value, { id: tempId, role: 'user', content: text }];
+    messages.value = [...messages.value, { id: tempId, role: 'user', content: trimmed }];
     try {
       await streamAiTurn(sessionId.value, {
-        message: text,
+        message: trimmed,
         scene: scene.value,
         target_fields: targetFields.value,
         form_snapshot: snapshotOf(),
@@ -218,14 +248,14 @@ export function useAiDock(options) {
         onThinking: (payload) => {
           if (payload?.text) {
             const peeled = peelSkillEnvelope(payload.text);
-            streamingThinking.value = peeled.thinking;
+            streamingThinking.value = localizeThinking(peeled.thinking);
             streamingReply.value = peeled.reply;
             if (!peeled.thinking && !peeled.reply) {
-              streamingThinking.value = payload.text;
+              streamingThinking.value = localizeThinking(payload.text);
             }
             return;
           }
-          if (payload?.label) streamingThinking.value = payload.label;
+          if (payload?.label) streamingThinking.value = localizeThinking(payload.label);
         },
         onDone: (data) => {
           thinkingLive.value = false;
@@ -240,15 +270,21 @@ export function useAiDock(options) {
         },
       });
     } catch (err) {
-      if (err?.name === 'AbortError') return;
+      if (err?.name === 'AbortError') return false;
       error.value = err.message || '生成失败';
       ElMessage.error(error.value);
+      return false;
     } finally {
       thinkingLive.value = false;
       streamingThinking.value = '';
       streamingReply.value = '';
       sending.value = false;
     }
+    return true;
+  }
+
+  async function send() {
+    return sendText(input.value);
   }
 
   async function applyPending() {
@@ -327,6 +363,7 @@ export function useAiDock(options) {
     loading,
     error,
     locked,
+    writeLocked,
     input,
     selectedId,
     selectedNode,
@@ -343,6 +380,7 @@ export function useAiDock(options) {
     removeSession,
     switchSession,
     send,
+    sendText,
     applyPending,
     discardPending,
   };

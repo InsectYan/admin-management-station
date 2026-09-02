@@ -1,5 +1,8 @@
 <template>
   <div class="novel-detail-content">
+    <p class="novel-detail-content__hint">
+      章节标题、顺序与正反派场次。门派组织见「门派组织」模块；正文请到「单章开发」。
+    </p>
     <section v-if="chapters.length" class="novel-detail-factions">
       <div class="novel-detail-faction novel-detail-faction--hero">
         <h4>正派阵营</h4>
@@ -54,6 +57,12 @@ const stats = computed(() => factionStats(chapters.value));
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.novel-detail-content__hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--novel-color-moon);
 }
 
 .novel-detail-factions {

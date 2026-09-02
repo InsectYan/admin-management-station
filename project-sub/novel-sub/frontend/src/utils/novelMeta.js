@@ -40,7 +40,10 @@ export const TABLE_COLUMNS = [
   { key: 'title', label: '小说名称', defaultVisible: true, minWidth: 200 },
   { key: 'genre', label: '小说类型', defaultVisible: true, width: 140 },
   { key: 'novel_type', label: '篇幅', defaultVisible: true, width: 90 },
-  { key: 'progress_status', label: '进度', defaultVisible: true, width: 120 },
+  { key: 'health_score', label: '健康度', defaultVisible: true, width: 110 },
+  { key: 'progress_status', label: '进度', defaultVisible: true, width: 140 },
+  { key: 'word_count', label: '字数', defaultVisible: true, width: 110 },
+  { key: 'chapters', label: '章节', defaultVisible: true, width: 90 },
   { key: 'updated_at', label: '更新时间', defaultVisible: true, width: 180, sortable: true },
   { key: 'created_at', label: '创建时间', defaultVisible: false, width: 180, sortable: true },
 ];
