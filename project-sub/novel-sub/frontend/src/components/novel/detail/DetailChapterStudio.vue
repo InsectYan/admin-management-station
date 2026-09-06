@@ -242,7 +242,7 @@ const REF_MIN_WIDTH = 280;
 const BODY_MIN_WIDTH = 280;
 const GRID_GAP = 12;
 const TREE_WIDTH_KEY = 'novel-chapter-tree-width';
-const WRITE_NEXT_PROMPT = '按本章标题和大纲写这一章正文，衔接上一章结尾，控制在目标字数附近。不要复述上一章，也不要剧透下一章钩子以外的后文。';
+const WRITE_NEXT_PROMPT = '按本章标题和大纲写这一章正文，衔接上一章结尾，控制在目标字数附近。严格遵循本书「小说概要」与立意中的基调与主线（例如生活向/搞笑则少打斗、重日常互动）。不要复述上一章，也不要剧透下一章钩子以外的后文。';
 const studioRef = ref(null);
 const dockRef = ref(null);
 const autoApplyAndSave = ref(true);
@@ -1024,13 +1024,13 @@ watch(
 }
 
 .novel-chapter-studio__qa.is-fail {
-  border-color: rgba(176, 72, 72, 0.35);
-  background: rgba(176, 72, 72, 0.06);
+  border-color: rgba(245, 108, 108, 0.45);
+  background: rgba(245, 108, 108, 0.1);
 }
 
 .novel-chapter-studio__qa.is-warn {
-  border-color: rgba(184, 149, 58, 0.4);
-  background: rgba(184, 149, 58, 0.08);
+  border-color: rgba(230, 162, 60, 0.5);
+  background: rgba(230, 162, 60, 0.12);
 }
 
 .novel-chapter-studio__qa-head {

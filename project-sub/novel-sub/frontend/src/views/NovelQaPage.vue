@@ -68,6 +68,8 @@
             <NovelMarkdown :source="novel?.creative_intent" empty-text="未填写立意" />
             <h4>简介</h4>
             <NovelMarkdown :source="novel?.summary" empty-text="未填写简介" />
+            <h4>小说概要</h4>
+            <NovelMarkdown :source="novel?.story_overview" empty-text="未填写概要。建议写全书背景与主线长文。" />
           </section>
           <section v-else-if="activeModule === 'world'">
             <article v-for="block in worldBlocks" :key="block.title" class="novel-qa-preview-block">
@@ -513,8 +515,8 @@ onMounted(loadAll);
 }
 
 .novel-qa-pill.is-pass { border-color: rgba(47, 138, 91, 0.45); }
-.novel-qa-pill.is-warn { border-color: rgba(184, 149, 58, 0.55); }
-.novel-qa-pill.is-fail { border-color: rgba(176, 72, 72, 0.55); }
+.novel-qa-pill.is-warn { border-color: rgba(230, 162, 60, 0.65); background: rgba(253, 246, 236, 0.9); }
+.novel-qa-pill.is-fail { border-color: rgba(245, 108, 108, 0.65); background: rgba(254, 240, 240, 0.9); }
 
 .novel-qa-page__body {
   flex: 1;

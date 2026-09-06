@@ -60,7 +60,8 @@ body { background: url(...); }
 | 页面底 | `#F3F8F4` | 内容区 |
 | 玻璃面 | `rgba(255,255,255,.42~.82)` | 按钮、卡片、输入、侧栏 |
 | 深墨 | `#1F3D2C` | 标题 |
-| 雾青 | `#6D8A82` | 次要状态 |
+| 警告 | `--novel-color-warning` | `#E6A23C` | 明亮琥珀警告 |
+| 危险 | `--novel-color-danger` | `#F56C6C` | 明亮危险红 |
 
 **形状与装饰**：
 - 圆角 `10px`（小控件 `6px`）
@@ -112,13 +113,34 @@ frontend/src/styles/
 1. Primary / Success 映射到 `--novel-color-primary`（清新绿），不是金。
 2. 默认按钮玻璃透明；`plain` 更淡。
 3. 表格页继续使用 `DataTablePanel`。
-4. Tag：success 半透明绿底。
+4. Tag / Button **语义态不可被主色一刀切**：
+   - 默认 / `info`：追随森林风（绿或雾青）
+   - `success`：成功绿
+   - `warning`：明亮琥珀 `#E6A23C`（实色按钮用白字）
+   - `danger` / error：明亮危险红 `#F56C6C`（实色按钮用白字）
+5. 核检、进度、健康度、表单校验等凡表达「通过 / 警告 / 失败」的控件，必须用对应 `type`，禁止一律 `primary` 或无 type 绿标。
+6. 禁止用半透明低对比把 warning/danger 做成暗沉感；语义态要「一眼可辨」。
 
 ---
 
+## 5.1 补充：常态风格 vs 语义状态（全站）
+
+**常态渲染**（布局、卡片、默认按钮、默认 tag、输入框、导航）追随清新森林风。
+
+**状态渲染**（含但不限于 `el-button` / `el-tag` / `el-alert` / 进度角标 / 核检 findings）必须走语义色，不得被森林主色覆盖：
+
+| 语义 | EP type / 场景 | 色意 |
+|------|----------------|------|
+| 信息 / 中性 | `info`、默认说明 | 雾青或默认森林弱样式 |
+| 成功 / 通过 | `success`、pass | 清新绿 |
+| 警告 / 需关注 | `warning`、warn | 明亮琥珀 `#E6A23C` |
+| 错误 / 失败 | `danger`、error / fail | 明亮危险红 `#F56C6C` |
+
+验收核检、列表健康度、写章门禁条等优先遵守本条。
+
 ## 6. AntV 图表
 
-- 色板 `['#2F8A5B', '#6D8A82', '#B8953A', '#5BA87C']`。
+- 色板 `['#2F8A5B', '#6D8A82', '#E6A23C', '#5BA87C']`。
 - 图表容器类名 `novel-antv-forest`；背景用雾面，不要羊皮纸黄。
 
 ---
@@ -146,6 +168,7 @@ frontend/src/styles/
 - [ ] 新样式均在 `.novel-sub-root` 子树或 `novel-*` 类下
 - [ ] 未新增裸 `html/body/.el-*` 全局规则
 - [ ] 色/圆角/阴影来自 CSS 变量或 `style.md` 令牌表
+- [ ] 状态控件（warning/danger/success）未用主色绿一刀切；语义色可辨
 - [ ] 切换主应用菜单至 testgen 等子应用后，novel 样式无残留
 - [ ] 嵌入态（5100 主应用）与独立 dev（5101）均视觉一致且布局不双滚动
 

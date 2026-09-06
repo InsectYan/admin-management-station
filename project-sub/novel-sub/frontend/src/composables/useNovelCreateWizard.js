@@ -209,6 +209,7 @@ export function useNovelCreateWizard() {
       title: basicForm.title,
       creative_intent: basicForm.creative_intent,
       summary: basicForm.summary,
+      story_overview: basicForm.story_overview,
       world: { ...worldForm },
       factions: factions.value,
       characters: characters.value,

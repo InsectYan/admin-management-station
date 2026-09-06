@@ -6,7 +6,7 @@
  */
 
 const QA_MODULES = [
-  { key: 'basic', label: '立意与简介', group: 'setting' },
+  { key: 'basic', label: '立意与概要', group: 'setting' },
   { key: 'world', label: '世界观与背景', group: 'setting' },
   { key: 'factions', label: '门派组织', group: 'setting' },
   { key: 'characters', label: '人物与关系', group: 'setting' },
@@ -89,13 +89,25 @@ function checkBasic(novel, setting) {
   if (!nonEmpty(novel?.summary)) {
     findings.push(finding({
       module: 'basic', code: 'missing_summary', severity: 'warning',
-      message: '缺少作品简介', suggestion: '补一段带卖点的简介',
+      message: '缺少作品简介', suggestion: '补一段带卖点的短简介（列表用）',
     }));
   } else if (String(novel.summary).trim().length < 40) {
     findings.push(finding({
       module: 'basic', code: 'summary_too_short', severity: 'info',
       message: '简介偏短，卖点可能不够清晰',
       evidence: String(novel.summary).slice(0, 80),
+    }));
+  }
+  if (!nonEmpty(novel?.story_overview)) {
+    findings.push(finding({
+      module: 'basic', code: 'missing_story_overview', severity: 'warning',
+      message: '缺少小说概要', suggestion: '补数百～数千字全书背景与主线，供世界观/大纲/正文对照',
+    }));
+  } else if (String(novel.story_overview).trim().length < 200) {
+    findings.push(finding({
+      module: 'basic', code: 'story_overview_thin', severity: 'info',
+      message: '小说概要偏短，后续设定可能缺少主线锚点',
+      evidence: String(novel.story_overview).slice(0, 120),
     }));
   }
   if (!novel?.genre_category_id && !nonEmpty(novel?.genre)) {

@@ -55,6 +55,22 @@
           </dd>
         </div>
         <div class="novel-detail-fields__row">
+          <dt>小说概要</dt>
+          <dd>
+            <div class="novel-detail-summary" :class="{ 'is-collapsed': needOverviewToggle && !overviewExpanded }">
+              <NovelMarkdown :source="form.story_overview" empty-text="未填写。建议写数百～数千字全书走向，供设定与正文对照。" />
+            </div>
+            <el-button
+              v-if="needOverviewToggle"
+              link
+              type="primary"
+              @click="overviewExpanded = !overviewExpanded"
+            >
+              {{ overviewExpanded ? '收起' : '展开全文' }}
+            </el-button>
+          </dd>
+        </div>
+        <div class="novel-detail-fields__row">
           <dt>目标读者</dt>
           <dd>
             <el-tag v-if="audienceText" size="small" effect="plain">{{ audienceText }}</el-tag>
@@ -107,6 +123,7 @@ const props = defineProps({
 });
 
 const expanded = ref(false);
+const overviewExpanded = ref(false);
 
 const genreLabel = computed(() => formatGenreLabel(props.form));
 const themeNames = computed(() => (props.form.themes || []).map((t) => t.name).filter(Boolean));
@@ -117,6 +134,7 @@ const audienceText = computed(() => {
 });
 
 const needToggle = computed(() => (props.form.summary || '').length > SUMMARY_PREVIEW_LEN);
+const needOverviewToggle = computed(() => (props.form.story_overview || '').length > SUMMARY_PREVIEW_LEN);
 
 </script>
 

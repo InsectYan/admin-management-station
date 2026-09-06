@@ -95,9 +95,22 @@
             :rows="4"
             maxlength="500"
             show-word-limit
-            placeholder="简要介绍故事背景与主线"
+            placeholder="短简介：列表与封面用，突出卖点即可（不必写完全书走向）"
             @input="$emit('change')"
           />
+        </el-form-item>
+
+        <el-form-item label="小说概要">
+          <el-input
+            v-model="form.story_overview"
+            type="textarea"
+            :rows="10"
+            maxlength="8000"
+            show-word-limit
+            placeholder="全书故事长文：背景、主线走向、基调（如生活搞笑少打斗）、关键转折。世界观/人物/大纲/正文都会优先对照这份概要来写。"
+            @input="$emit('change')"
+          />
+          <p class="novel-step-basic__hint">建议数百～数千字。与「简介」不同：概要是创作真源，简介是对外短文案。</p>
         </el-form-item>
 
         <el-row :gutter="16">
@@ -178,6 +191,14 @@
           compact
           :source="form.summary"
           empty-text="简介将显示在这里…"
+        />
+      </div>
+      <div class="novel-preview-overview">
+        <span class="novel-preview-overview__label">小说概要</span>
+        <NovelMarkdown
+          compact
+          :source="form.story_overview"
+          empty-text="填写概要后，世界观/大纲/正文会优先对照它…"
         />
       </div>
       <div v-if="themeLabels.length" class="novel-preview-themeLabels">
@@ -316,6 +337,33 @@ defineExpose({ validate });
   color: var(--novel-color-text-secondary);
   line-height: 1.6;
   font-size: 14px;
+}
+
+.novel-preview-overview {
+  margin: 0 0 16px;
+  max-height: 220px;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(47, 138, 91, 0.14);
+  color: var(--novel-color-text);
+  line-height: 1.6;
+  font-size: 13px;
+}
+
+.novel-preview-overview__label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--novel-color-moon);
+}
+
+.novel-step-basic__hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--novel-color-text-muted, #8a968e);
+  line-height: 1.5;
 }
 
 .novel-preview-themeLabels {

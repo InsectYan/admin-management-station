@@ -196,6 +196,7 @@ class AiReviewService extends Service {
             title: novel.title,
             creative_intent: novel.creative_intent,
             summary: novel.summary,
+            story_overview: novel.story_overview,
             genre: novel.genre,
             novel_type: novel.novel_type,
           },

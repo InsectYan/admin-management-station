@@ -30,6 +30,17 @@
   box-shadow: var(--novel-shadow-soft);
 }
 
+.novel-sub-root .el-button--warning:not(.is-link):not(.is-text):hover,
+.novel-sub-root .el-button--warning:not(.is-link):not(.is-text):focus,
+.novel-sub-root .el-button--warning:not(.is-link):not(.is-text):focus-visible,
+.novel-sub-root .el-button--warning:not(.is-link):not(.is-text):active,
+.novel-sub-root .el-button--danger:not(.is-link):not(.is-text):not(.is-plain):hover,
+.novel-sub-root .el-button--danger:not(.is-link):not(.is-text):not(.is-plain):focus,
+.novel-sub-root .el-button--danger:not(.is-link):not(.is-text):not(.is-plain):focus-visible,
+.novel-sub-root .el-button--danger:not(.is-link):not(.is-text):not(.is-plain):active {
+  color: #ffffff !important;
+}
+
 .novel-sub-root .el-button.is-disabled,
 .novel-sub-root .el-button.is-disabled:hover,
 .novel-sub-root .el-button.is-disabled:focus {
@@ -43,9 +54,7 @@
 }
 
 .novel-sub-root .el-button--primary,
-.novel-sub-root .el-button--success,
-.novel-sub-root .el-button--warning,
-.novel-sub-root .el-button--info {
+.novel-sub-root .el-button--success {
   --el-button-bg-color: rgba(47, 138, 91, 0.22);
   --el-button-border-color: rgba(47, 138, 91, 0.42);
   --el-button-text-color: var(--novel-color-deep);
@@ -62,18 +71,54 @@
   color: var(--novel-color-deep) !important;
 }
 
-.novel-sub-root .el-button--warning {
-  --el-button-bg-color: rgba(184, 149, 58, 0.2);
-  --el-button-border-color: rgba(184, 149, 58, 0.4);
-  --el-button-hover-bg-color: rgba(184, 149, 58, 0.3);
-  background-color: rgba(184, 149, 58, 0.2) !important;
+/* warning / danger：实色明亮语义，避免半透明暗沉 */
+.novel-sub-root .el-button--warning:not(.is-link):not(.is-text) {
+  --el-button-bg-color: var(--novel-color-warning);
+  --el-button-border-color: var(--novel-color-warning);
+  --el-button-text-color: #ffffff;
+  --el-button-hover-bg-color: var(--novel-color-warning-hover);
+  --el-button-hover-border-color: var(--novel-color-warning-hover);
+  --el-button-hover-text-color: #ffffff;
+  --el-button-active-bg-color: #cf9236;
+  --el-button-active-text-color: #ffffff;
+  --el-button-disabled-bg-color: #f3d19e;
+  --el-button-disabled-text-color: #ffffff;
+  --el-button-disabled-border-color: #f3d19e;
+  background-color: var(--novel-color-warning) !important;
+  background-image: none;
+  border-color: var(--novel-color-warning) !important;
+  color: #ffffff !important;
+}
+
+.novel-sub-root .el-button--warning.is-plain {
+  --el-button-bg-color: #fdf6ec;
+  --el-button-border-color: #f3d19e;
+  --el-button-text-color: var(--novel-color-warning);
+  --el-button-hover-bg-color: var(--novel-color-warning);
+  --el-button-hover-border-color: var(--novel-color-warning);
+  --el-button-hover-text-color: #ffffff;
+  background-color: #fdf6ec !important;
+  border-color: #f3d19e !important;
+  color: var(--novel-color-warning) !important;
+}
+
+.novel-sub-root .el-button--warning.is-plain:hover,
+.novel-sub-root .el-button--warning.is-plain:focus {
+  background-color: var(--novel-color-warning) !important;
+  border-color: var(--novel-color-warning) !important;
+  color: #ffffff !important;
 }
 
 .novel-sub-root .el-button--info {
   --el-button-bg-color: rgba(109, 138, 130, 0.16);
   --el-button-border-color: rgba(109, 138, 130, 0.36);
+  --el-button-text-color: var(--novel-color-deep);
   --el-button-hover-bg-color: rgba(109, 138, 130, 0.26);
+  --el-button-hover-border-color: rgba(109, 138, 130, 0.48);
+  --el-button-hover-text-color: var(--novel-color-deep);
   background-color: rgba(109, 138, 130, 0.16) !important;
+  background-image: none;
+  color: var(--novel-color-deep) !important;
 }
 
 .novel-sub-root .el-button--primary.is-plain,
@@ -110,29 +155,61 @@
   color: var(--novel-color-text-muted) !important;
 }
 
+.novel-sub-root .el-button.is-link.el-button--warning,
+.novel-sub-root .el-button.is-text.el-button--warning {
+  color: var(--novel-color-warning) !important;
+}
+
+.novel-sub-root .el-button.is-link.el-button--warning:hover,
+.novel-sub-root .el-button.is-text.el-button--warning:hover {
+  color: var(--novel-color-warning-hover) !important;
+}
+
 .novel-sub-root .el-button.is-link.el-button--danger,
 .novel-sub-root .el-button.is-text.el-button--danger {
   color: var(--novel-color-danger) !important;
 }
 
+.novel-sub-root .el-button.is-link.el-button--danger:hover,
+.novel-sub-root .el-button.is-text.el-button--danger:hover {
+  color: var(--novel-color-danger-hover) !important;
+}
+
 .novel-sub-root .el-button--danger:not(.is-link):not(.is-text):not(.is-plain) {
-  --el-button-bg-color: rgba(184, 92, 92, 0.16);
-  --el-button-border-color: rgba(184, 92, 92, 0.36);
-  --el-button-text-color: var(--novel-color-danger);
-  --el-button-hover-bg-color: rgba(184, 92, 92, 0.24);
-  --el-button-hover-text-color: var(--novel-color-danger);
-  --el-button-disabled-text-color: rgba(184, 92, 92, 0.45);
-  background-color: rgba(184, 92, 92, 0.16) !important;
-  color: var(--novel-color-danger) !important;
+  --el-button-bg-color: var(--novel-color-danger);
+  --el-button-border-color: var(--novel-color-danger);
+  --el-button-text-color: #ffffff;
+  --el-button-hover-bg-color: var(--novel-color-danger-hover);
+  --el-button-hover-border-color: var(--novel-color-danger-hover);
+  --el-button-hover-text-color: #ffffff;
+  --el-button-active-bg-color: #dd6161;
+  --el-button-active-text-color: #ffffff;
+  --el-button-disabled-bg-color: #fab6b6;
+  --el-button-disabled-text-color: #ffffff;
+  --el-button-disabled-border-color: #fab6b6;
+  background-color: var(--novel-color-danger) !important;
+  background-image: none;
+  border-color: var(--novel-color-danger) !important;
+  color: #ffffff !important;
 }
 
 .novel-sub-root .el-button--danger.is-plain {
-  --el-button-bg-color: rgba(184, 92, 92, 0.08);
+  --el-button-bg-color: #fef0f0;
   --el-button-text-color: var(--novel-color-danger);
-  --el-button-border-color: rgba(184, 92, 92, 0.28);
-  --el-button-hover-text-color: var(--novel-color-danger);
-  background: rgba(184, 92, 92, 0.08) !important;
+  --el-button-border-color: #fbc4c4;
+  --el-button-hover-bg-color: var(--novel-color-danger);
+  --el-button-hover-border-color: var(--novel-color-danger);
+  --el-button-hover-text-color: #ffffff;
+  background-color: #fef0f0 !important;
+  border-color: #fbc4c4 !important;
   color: var(--novel-color-danger) !important;
+}
+
+.novel-sub-root .el-button--danger.is-plain:hover,
+.novel-sub-root .el-button--danger.is-plain:focus {
+  background-color: var(--novel-color-danger) !important;
+  border-color: var(--novel-color-danger) !important;
+  color: #ffffff !important;
 }
 
 .novel-sub-root .novel-wood-button.el-button {
@@ -196,6 +273,38 @@
   --el-tag-border-color: rgba(47, 138, 91, 0.18);
   --el-tag-text-color: var(--novel-color-primary);
   background: var(--el-tag-bg-color);
+}
+
+.novel-sub-root .el-tag--info {
+  --el-tag-bg-color: rgba(109, 138, 130, 0.14);
+  --el-tag-border-color: rgba(109, 138, 130, 0.28);
+  --el-tag-text-color: var(--novel-color-moon);
+  background: var(--el-tag-bg-color);
+  color: var(--el-tag-text-color);
+}
+
+.novel-sub-root .el-tag--success {
+  --el-tag-bg-color: rgba(47, 138, 91, 0.14);
+  --el-tag-border-color: rgba(47, 138, 91, 0.32);
+  --el-tag-text-color: var(--novel-color-success);
+  background: var(--el-tag-bg-color);
+  color: var(--el-tag-text-color);
+}
+
+.novel-sub-root .el-tag--warning {
+  --el-tag-bg-color: #fdf6ec;
+  --el-tag-border-color: #f3d19e;
+  --el-tag-text-color: var(--novel-color-warning);
+  background: var(--el-tag-bg-color);
+  color: var(--el-tag-text-color);
+}
+
+.novel-sub-root .el-tag--danger {
+  --el-tag-bg-color: #fef0f0;
+  --el-tag-border-color: #fbc4c4;
+  --el-tag-text-color: var(--novel-color-danger);
+  background: var(--el-tag-bg-color);
+  color: var(--el-tag-text-color);
 }
 
 .novel-sub-root .el-pagination {
@@ -276,6 +385,24 @@ html.novel-sub-standalone .el-overlay .el-button--primary.is-plain {
   color: #2f8a5b !important;
 }
 
+html.novel-sub-standalone .el-overlay .el-button--warning:not(.is-link):not(.is-text) {
+  background-color: #e6a23c !important;
+  border-color: #e6a23c !important;
+  color: #ffffff !important;
+}
+
 html.novel-sub-standalone .el-overlay .el-button--danger:not(.is-link) {
-  color: #b85c5c !important;
+  background-color: #f56c6c !important;
+  border-color: #f56c6c !important;
+  color: #ffffff !important;
+}
+
+html.novel-sub-standalone .el-overlay .el-button.is-link.el-button--warning,
+html.novel-sub-standalone .el-overlay .el-button.is-text.el-button--warning {
+  color: #e6a23c !important;
+}
+
+html.novel-sub-standalone .el-overlay .el-button.is-link.el-button--danger,
+html.novel-sub-standalone .el-overlay .el-button.is-text.el-button--danger {
+  color: #f56c6c !important;
 }

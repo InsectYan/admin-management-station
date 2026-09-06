@@ -133,6 +133,7 @@ class AiDispatchService extends require('egg').Service {
         title,
         creative_intent: turn.patch?.creative_intent || '',
         summary: turn.patch?.summary || '',
+        story_overview: turn.patch?.story_overview || '',
         status: 'draft',
       });
       novelId = created.id;
@@ -141,7 +142,7 @@ class AiDispatchService extends require('egg').Service {
       if (turn.messages) {
         const assistant = [...turn.messages].reverse().find((row) => row.role === 'assistant');
         if (assistant?.id) {
-          await this.ctx.service.aiSession.applyMessage(targetSession.id, assistant.id, ['title', 'creative_intent', 'summary']);
+          await this.ctx.service.aiSession.applyMessage(targetSession.id, assistant.id, ['title', 'creative_intent', 'summary', 'story_overview']);
         }
       }
     }

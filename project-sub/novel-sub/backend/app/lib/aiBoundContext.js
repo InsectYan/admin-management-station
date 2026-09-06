@@ -57,6 +57,7 @@ function novelToBasicSource(novel = {}) {
     title: novel.title || '',
     creative_intent: novel.creative_intent || '',
     summary: novel.summary || '',
+    story_overview: novel.story_overview || '',
     genre: novel.genre || '',
     genre_subcategory: novel.genre_subcategory || '',
     themes: themeNamesFrom(novel.themes),
@@ -169,6 +170,7 @@ function collectContextLabels(bound = {}) {
   addLabel(labels, !isEmpty(basic.title || bound.title), '小说名称');
   addLabel(labels, !isEmpty(basic.creative_intent || bound.creative_intent), '小说立意');
   addLabel(labels, !isEmpty(basic.summary || bound.summary), '小说简介');
+  addLabel(labels, !isEmpty(basic.story_overview || bound.story_overview), '小说概要');
   addLabel(labels, !isEmpty(basic.genre || basic.genre_label || basic.genre_subcategory || bound.genre), '小说类型');
   addLabel(labels, !isEmpty(basic.themes || bound.themes), '题材');
   addLabel(labels, !isEmpty(basic.novel_type || basic.length || bound.novel_type), '篇幅');

@@ -13,6 +13,7 @@ module.exports = (app) => {
     progress_percent: { type: SMALLINT, defaultValue: 0 },
     summary: { type: TEXT, allowNull: true },
     creative_intent: { type: TEXT, allowNull: true },
+    story_overview: { type: TEXT, allowNull: true },
     target_audience: { type: STRING(200), allowNull: true },
     update_cadence: { type: STRING(50), allowNull: true },
     setting_json: { type: JSONB, defaultValue: {} },

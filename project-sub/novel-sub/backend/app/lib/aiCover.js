@@ -17,6 +17,7 @@ function buildCoverPrompt(body) {
   if (custom) return custom;
   const title = String(body.title || '').trim();
   const intent = String(body.creative_intent || body.summary || '').trim();
+  const overview = String(body.story_overview || '').trim().slice(0, 280);
   if (!title) {
     throw fail(400, 'COVER_CONTEXT_REQUIRED', '请先填写书名，或提供自定义提示词');
   }
@@ -24,6 +25,7 @@ function buildCoverPrompt(body) {
     '竖版小说封面插画，电影级光影，无文字、无水印、无字母、无标题。',
     `书名意象：${title}。`,
     intent ? `故事气质：${intent}` : '',
+    overview ? `情节氛围（摘自概要）：${overview}` : '',
     '构图适合书店陈列，留出上方书名区，风格统一。',
   ].filter(Boolean).join('');
 }

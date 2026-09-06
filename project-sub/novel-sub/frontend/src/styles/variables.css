@@ -6,8 +6,11 @@
   --novel-color-primary-hover: #3a9d6a;
   --novel-color-primary-muted: rgba(47, 138, 91, 0.1);
   --novel-color-success: #2f8a5b;
-  --novel-color-warning: #b8953a;
-  --novel-color-danger: #b85c5c;
+  /* 语义态：偏明亮，便于 warning / danger 一眼可辨 */
+  --novel-color-warning: #e6a23c;
+  --novel-color-warning-hover: #ebb563;
+  --novel-color-danger: #f56c6c;
+  --novel-color-danger-hover: #f78989;
   --novel-color-moon: #6d8a82;
   --novel-color-accent: #2f8a5b;
   --novel-color-forest: #2f8a5b;
@@ -70,6 +73,18 @@
   --el-color-success: var(--novel-color-success);
   --el-color-warning: var(--novel-color-warning);
   --el-color-danger: var(--novel-color-danger);
+  --el-color-warning-light-3: #ebb563;
+  --el-color-warning-light-5: #f3d19e;
+  --el-color-warning-light-7: #f8e3c5;
+  --el-color-warning-light-8: #faecd8;
+  --el-color-warning-light-9: #fdf6ec;
+  --el-color-warning-dark-2: #cf9236;
+  --el-color-danger-light-3: #f89898;
+  --el-color-danger-light-5: #fab6b6;
+  --el-color-danger-light-7: #fcd3d3;
+  --el-color-danger-light-8: #fde2e2;
+  --el-color-danger-light-9: #fef0f0;
+  --el-color-danger-dark-2: #dd6161;
   --el-color-info: var(--novel-color-moon);
   --el-border-radius-base: var(--novel-radius-sm);
   --el-font-size-base: 14px;

@@ -54,11 +54,12 @@ const REGISTRY = {
       step(WRITER, 'fill_basic'),
     ],
     feature_key: 'basic',
-    default_target_fields: ['title', 'creative_intent', 'summary'],
+    default_target_fields: ['title', 'creative_intent', 'summary', 'story_overview'],
   },
   'basic.title': BASIC_LEAF('title', 'title'),
   'basic.intent': BASIC_LEAF('intent', 'creative_intent'),
   'basic.summary': BASIC_LEAF('summary', 'summary'),
+  'basic.overview': BASIC_LEAF('overview', 'story_overview'),
 
   world: {
     pipeline: [

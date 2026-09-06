@@ -7,6 +7,7 @@ const PATCH_TEXT_FIELDS = [
   ['title', '小说名称'],
   ['creative_intent', '小说立意'],
   ['summary', '小说简介'],
+  ['story_overview', '小说概要'],
   ['era', '时代背景'],
   ['geography', '地理环境'],
   ['social_rules', '社会规则'],
@@ -52,6 +53,7 @@ export function collectContextLabels(bound = {}) {
   addLabel(labels, hasValue(basic.title || bound.title), '小说名称');
   addLabel(labels, hasValue(basic.creative_intent || bound.creative_intent), '小说立意');
   addLabel(labels, hasValue(basic.summary || bound.summary), '小说简介');
+  addLabel(labels, hasValue(basic.story_overview || bound.story_overview), '小说概要');
   addLabel(labels, hasValue(basic.genre || basic.genre_label || basic.genre_subcategory || bound.genre), '小说类型');
   addLabel(labels, hasValue(basic.themes || bound.themes), '题材');
   addLabel(labels, hasValue(basic.novel_type || basic.length || bound.novel_type), '篇幅');

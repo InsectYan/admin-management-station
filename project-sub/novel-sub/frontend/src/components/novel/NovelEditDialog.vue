@@ -78,7 +78,17 @@
         </el-col>
       </el-row>
       <el-form-item label="简介" prop="summary">
-        <el-input v-model="form.summary" type="textarea" :rows="4" maxlength="500" show-word-limit />
+        <el-input v-model="form.summary" type="textarea" :rows="3" maxlength="500" show-word-limit />
+      </el-form-item>
+      <el-form-item label="小说概要" prop="story_overview">
+        <el-input
+          v-model="form.story_overview"
+          type="textarea"
+          :rows="8"
+          maxlength="8000"
+          show-word-limit
+          placeholder="全书故事长文：背景、主线、基调与关键转折"
+        />
       </el-form-item>
     </el-form>
     <AiFormDock
@@ -136,6 +146,7 @@ const form = reactive({
   progress_status: 'ongoing',
   progress_percent: 0,
   summary: '',
+  story_overview: '',
   creative_intent: '',
   status: 'draft',
 });
@@ -157,6 +168,7 @@ function resetForm(novel) {
     progress_status: novel?.progress_status || 'ongoing',
     progress_percent: novel?.progress_percent ?? 0,
     summary: novel?.summary || '',
+    story_overview: novel?.story_overview || '',
     creative_intent: novel?.creative_intent || '',
     status: novel?.status || 'draft',
   });
@@ -173,6 +185,7 @@ const editSnapshot = computed(() => ({
   title: form.title,
   creative_intent: form.creative_intent,
   summary: form.summary,
+  story_overview: form.story_overview,
 }));
 
 function onApplyBasic(patch) {
@@ -190,6 +203,7 @@ async function handleSubmit() {
     cover_url: form.cover_url,
     progress_status: form.progress_status,
     summary: form.summary,
+    story_overview: form.story_overview,
     creative_intent: form.creative_intent,
     status: form.status,
     genre_category_id: categoryId || null,

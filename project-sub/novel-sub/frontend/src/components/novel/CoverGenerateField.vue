@@ -50,6 +50,7 @@ async function onGenerate() {
       title: props.form.title,
       creative_intent: props.form.creative_intent,
       summary: props.form.summary,
+      story_overview: props.form.story_overview,
       prompt: props.form.cover_prompt,
     });
     props.form.cover_url = data.cover_url;

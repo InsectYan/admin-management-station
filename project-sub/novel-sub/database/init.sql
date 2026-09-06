@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS novels (
   progress_percent SMALLINT DEFAULT 0,
   summary TEXT,
   creative_intent TEXT,
+  story_overview TEXT,
   target_audience VARCHAR(200),
   update_cadence VARCHAR(50),
   setting_json JSONB DEFAULT '{}',

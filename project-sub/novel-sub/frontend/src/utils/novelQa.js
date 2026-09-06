@@ -1,5 +1,5 @@
 export const QA_MODULE_META = [
-  { key: 'basic', label: '立意与简介', hint: '书名、立意、简介、类型基调' },
+  { key: 'basic', label: '立意与概要', hint: '书名、立意、短简介、小说概要、类型基调' },
   { key: 'world', label: '世界观与背景', hint: '纪元、地理、力量体系、社会史' },
   { key: 'factions', label: '门派组织', hint: '势力是否齐全、命名是否冲突' },
   { key: 'characters', label: '人物与关系', hint: '主角、门派归属、关系边' },

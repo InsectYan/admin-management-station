@@ -96,7 +96,7 @@ const stats = computed(() => factionStats(chapters.value));
 }
 
 .novel-detail-faction--villain {
-  border-left: 3px solid var(--novel-color-danger, #b85c5c);
+  border-left: 3px solid var(--novel-color-danger, #f56c6c);
 }
 
 .novel-detail-faction--neutral {
@@ -127,7 +127,7 @@ const stats = computed(() => factionStats(chapters.value));
 }
 
 .novel-detail-chapter--villain {
-  border-left: 3px solid var(--novel-color-danger, #b85c5c);
+  border-left: 3px solid var(--novel-color-danger, #f56c6c);
 }
 
 .novel-detail-chapter--neutral {

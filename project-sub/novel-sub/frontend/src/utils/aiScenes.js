@@ -27,7 +27,15 @@ export const BASIC_AI_SCENES = [
         icon: 'Document',
         scene: 'basic.summary',
         path: 'summary',
-        placeholder: '写一段简介…',
+        placeholder: '写一段短简介（列表用）…',
+      },
+      {
+        id: 'overview',
+        title: '小说概要',
+        icon: 'Notebook',
+        scene: 'basic.overview',
+        path: 'story_overview',
+        placeholder: '写全书故事概要：背景、主线、基调与关键转折…',
       },
       {
         id: 'genre',

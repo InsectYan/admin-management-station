@@ -2,7 +2,7 @@
 
 const { sanitizeTasks } = require('./aiPlan');
 
-const BASIC_FIELDS = ['title', 'creative_intent', 'summary'];
+const BASIC_FIELDS = ['title', 'creative_intent', 'summary', 'story_overview'];
 const WORLD_TEXT_FIELDS = [
   'era',
   'geography',

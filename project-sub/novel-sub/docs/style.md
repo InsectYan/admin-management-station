@@ -33,13 +33,23 @@
 | 主色悬停 | `--novel-color-primary-hover` | `#3A9D6A` | hover |
 | 主色浅底 | `--novel-color-primary-muted` | `rgba(47,138,91,.10)` | 标签底、选中行、弱强调块 |
 | 成功 | `--novel-color-success` | `#2F8A5B` | 与主色对齐 |
-| 警告 | `--novel-color-warning` | `#B8953A` | 仅告警/待处理（稀疏） |
-| 危险 | `--novel-color-danger` | `#B85C5C` | 删除、错误 |
+| 警告 | `--novel-color-warning` | `#E6A23C` | 明亮琥珀；告警按钮/Tag |
+| 危险 | `--novel-color-danger` | `#F56C6C` | 明亮危险红；删除/错误 |
 | 信息/雾青 | `--novel-color-moon` | `#6D8A82` | 次要状态、时间轴 |
 
 **点缀琥珀金** `#B8953A`：只允许出现在「完成勾选 / 稀有徽章」等 1～2 处，**禁止**做边框色、禁止铺渐变。
 
 **已删除**：魔法紫 `#4B0082`、森林饱和绿 `#228B22`、羊皮纸黄 `#F5DEB3` 作大面积底。
+
+### 1.1.1 常态风格 vs 语义状态（补充，全站适用）
+
+- **常态 UI**（页面骨架、默认按钮、默认 Tag、卡片、导航）：追随清新森林风。
+- **状态 UI**（`success` / `warning` / `danger` / `info`，以及核检通过/警告/失败、健康度、Alert）：必须用语义色。
+  - `info` / 中性说明 → 可跟森林弱样式或雾青
+   - `warning` → 明亮琥珀 `#E6A23C`（实色按钮白字），禁止刷成主色绿或半透明暗沉
+   - `danger` / error → 明亮危险红 `#F56C6C`（实色按钮白字），禁止刷成主色绿或半透明暗沉
+  - `success` / 通过 → 成功绿（可与主色同系）
+- 全局 EP 覆写时：**不得**用一条 `.el-tag` / `.el-button--*` 规则把所有 type 盖成 primary。
 
 ### 1.2 表面与文字
 
