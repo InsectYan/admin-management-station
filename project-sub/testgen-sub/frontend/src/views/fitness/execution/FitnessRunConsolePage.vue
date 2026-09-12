@@ -360,7 +360,7 @@ import {
   streamExplainFtRun,
 } from '@/services/fitnessService.js';
 import { downloadJson } from '@/utils/fitnessExport.js';
-import { getLlmProfileId } from '@/utils/llmProfileSession.js';
+import { getLlmMaxTokens, getLlmProfileId } from '@/utils/llmProfileSession.js';
 import { buildItemDetailRoute, buildRunConsoleRoute } from '@/utils/itemListQuery.js';
 import { buildRunFailurePanels, truncateLogText } from '@/utils/runResultDetail.js';
 import {
@@ -599,10 +599,12 @@ async function loadExplain() {
   explainThinkingLines.value = [ '开始调用 AI…' ];
   try {
     const llm_profile = getLlmProfileId();
+    const max_tokens = getLlmMaxTokens();
     await streamExplainFtRun(
       route.params.runId,
       {
         ...(llm_profile ? { llm_profile } : {}),
+        ...(max_tokens ? { max_tokens } : {}),
         focus: 'failed',
       },
       {

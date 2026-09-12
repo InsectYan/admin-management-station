@@ -32,6 +32,11 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/subapps\/testgen-app\/?/, '/'),
         },
+        '/subapps/ops-app': {
+          target: env.VITE_SUBAPP_OPS_PROXY || 'http://127.0.0.1:5103',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/subapps\/ops-app\/?/, '/'),
+        },
       },
     },
     build: {

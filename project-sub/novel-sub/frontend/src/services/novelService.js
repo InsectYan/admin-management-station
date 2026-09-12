@@ -1,5 +1,6 @@
 import { api, resolveApiBase } from './apiConfig.js';
 import { getMediaProfileId } from '../utils/mediaProfileSession.js';
+import { withLlmSession } from '../utils/llmProfileSession.js';
 
 async function request(path, options = {}) {
   const res = await api({
@@ -87,7 +88,7 @@ export function fetchNovelQa(id) {
 export function runNovelReview(payload = {}) {
   return request('/ai/review', {
     method: 'POST',
-    data: payload,
+    data: withLlmSession(payload),
     timeout: 180000,
   });
 }

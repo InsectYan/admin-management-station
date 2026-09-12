@@ -16,7 +16,9 @@ alwaysApply: false
 | app_key | 应用根 | deploy 目录 | 命令 |
 |---------|--------|-------------|------|
 | `main` | `menu-master/` | `menu-master/deploy/` | **`ams-main`** |
+| `novel` | `project-sub/novel-sub/` | `project-sub/novel-sub/deploy/` | **`ams-novel`** |
 | `testgen` | `project-sub/testgen-sub/` | `project-sub/testgen-sub/deploy/` | **`ams-testgen`** |
+| `ops` | `project-sub/ops-sub/` | `project-sub/ops-sub/deploy/` | **`ams-ops`** |
 
 首次：`cd {app}/deploy && npm link`  
 未 link：`node {app}/deploy/scripts/run.mjs <命令>`

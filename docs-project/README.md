@@ -10,6 +10,7 @@
 cd menu-master/deploy && npm link && ams-main local
 cd project-sub/novel-sub/deploy && npm link && ams-novel local
 cd project-sub/testgen-sub/deploy && npm link && ams-testgen local
+cd project-sub/ops-sub/deploy && npm link && ams-ops local
 ```
 
 | CLI | 说明 |
@@ -17,6 +18,7 @@ cd project-sub/testgen-sub/deploy && npm link && ams-testgen local
 | **`ams-main`** | 主应用：Postgres + 同步子应用 + API + 前端 |
 | **`ams-novel`** | 小说子应用：Postgres + API + 前端 |
 | **`ams-testgen`** | AI 测试平台：Postgres + API + 前端 |
+| **`ams-ops`** | 运维管理平台：Postgres + API + 前端 |
 
 | 容器 | 地址 | 说明 |
 |------|------|------|
@@ -26,6 +28,9 @@ cd project-sub/testgen-sub/deploy && npm link && ams-testgen local
 | `ams-novel-frontend` | http://localhost:5101 / Docker 8081 | 小说 UI |
 | `ams-novel-postgres` | localhost:**5301** | `novel_db` |
 | `ams-api-novel` | http://localhost:5201 | 小说 BFF |
+| `ams-ops-frontend` | http://localhost:5103 | 运维 UI |
+| `ams-ops-postgres` | localhost:**5303** | `ops_db` |
+| `ams-api-ops` | http://localhost:5203 | 运维 BFF |
 
 详见 [部署与Docker方案.md](./部署与Docker方案.md) · [应用端口与命名注册表.md](./应用端口与命名注册表.md)
 
@@ -45,6 +50,7 @@ menu-master/                    ← 完整主应用
 project-sub/
   novel-sub/                    ← 小说子应用
   testgen-sub/                  ← AI 测试平台子应用
+  ops-sub/                      ← 运维管理平台子应用
 ```
 
 两应用各自自带 Postgres，缓存默认 **memory**，**不共享**根级 infra。

@@ -1,0 +1,408 @@
+/* Element Plus 覆写 — 祖先限定 .ops-sub-root；浮层在 standalone 下单独限定 */
+
+.ops-sub-root .el-button {
+  --el-button-bg-color: var(--ops-color-glass);
+  --el-button-border-color: rgba(47, 138, 91, 0.22);
+  --el-button-text-color: var(--ops-color-deep);
+  --el-button-hover-bg-color: var(--ops-color-glass-hover);
+  --el-button-hover-border-color: rgba(47, 138, 91, 0.36);
+  --el-button-hover-text-color: var(--ops-color-deep);
+  --el-button-active-bg-color: rgba(255, 255, 255, 0.78);
+  --el-button-active-text-color: var(--ops-color-deep);
+  --el-button-disabled-bg-color: rgba(255, 255, 255, 0.28);
+  --el-button-disabled-text-color: var(--ops-color-text-muted);
+  --el-button-disabled-border-color: rgba(47, 138, 91, 0.12);
+  --el-button-outline-color: rgba(47, 138, 91, 0.28);
+  border-radius: var(--ops-radius-sm);
+  backdrop-filter: blur(var(--ops-backdrop-blur));
+  background-color: var(--el-button-bg-color) !important;
+  background-image: none;
+  border-color: var(--el-button-border-color);
+  color: var(--ops-color-deep) !important;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.ops-sub-root .el-button:hover,
+.ops-sub-root .el-button:focus,
+.ops-sub-root .el-button:focus-visible,
+.ops-sub-root .el-button:active {
+  color: var(--ops-color-deep) !important;
+  box-shadow: var(--ops-shadow-soft);
+}
+
+.ops-sub-root .el-button--warning:not(.is-link):not(.is-text):hover,
+.ops-sub-root .el-button--warning:not(.is-link):not(.is-text):focus,
+.ops-sub-root .el-button--warning:not(.is-link):not(.is-text):focus-visible,
+.ops-sub-root .el-button--warning:not(.is-link):not(.is-text):active,
+.ops-sub-root .el-button--danger:not(.is-link):not(.is-text):not(.is-plain):hover,
+.ops-sub-root .el-button--danger:not(.is-link):not(.is-text):not(.is-plain):focus,
+.ops-sub-root .el-button--danger:not(.is-link):not(.is-text):not(.is-plain):focus-visible,
+.ops-sub-root .el-button--danger:not(.is-link):not(.is-text):not(.is-plain):active {
+  color: #ffffff !important;
+}
+
+.ops-sub-root .el-button.is-disabled,
+.ops-sub-root .el-button.is-disabled:hover,
+.ops-sub-root .el-button.is-disabled:focus {
+  color: var(--ops-color-text-muted) !important;
+  box-shadow: none;
+}
+
+.ops-sub-root .el-button .el-icon,
+.ops-sub-root .el-button span {
+  color: inherit;
+}
+
+.ops-sub-root .el-button--primary,
+.ops-sub-root .el-button--success {
+  --el-button-bg-color: rgba(47, 138, 91, 0.22);
+  --el-button-border-color: rgba(47, 138, 91, 0.42);
+  --el-button-text-color: var(--ops-color-deep);
+  --el-button-hover-bg-color: rgba(47, 138, 91, 0.34);
+  --el-button-hover-border-color: rgba(47, 138, 91, 0.55);
+  --el-button-hover-text-color: var(--ops-color-deep);
+  --el-button-active-bg-color: rgba(47, 138, 91, 0.42);
+  --el-button-active-text-color: var(--ops-color-deep);
+  --el-button-disabled-bg-color: rgba(47, 138, 91, 0.1);
+  --el-button-disabled-text-color: var(--ops-color-text-muted);
+  --el-button-disabled-border-color: rgba(47, 138, 91, 0.16);
+  background-color: rgba(47, 138, 91, 0.22) !important;
+  background-image: none;
+  color: var(--ops-color-deep) !important;
+}
+
+/* warning / danger：实色明亮语义，避免半透明暗沉 */
+.ops-sub-root .el-button--warning:not(.is-link):not(.is-text) {
+  --el-button-bg-color: var(--ops-color-warning);
+  --el-button-border-color: var(--ops-color-warning);
+  --el-button-text-color: #ffffff;
+  --el-button-hover-bg-color: var(--ops-color-warning-hover);
+  --el-button-hover-border-color: var(--ops-color-warning-hover);
+  --el-button-hover-text-color: #ffffff;
+  --el-button-active-bg-color: #cf9236;
+  --el-button-active-text-color: #ffffff;
+  --el-button-disabled-bg-color: #f3d19e;
+  --el-button-disabled-text-color: #ffffff;
+  --el-button-disabled-border-color: #f3d19e;
+  background-color: var(--ops-color-warning) !important;
+  background-image: none;
+  border-color: var(--ops-color-warning) !important;
+  color: #ffffff !important;
+}
+
+.ops-sub-root .el-button--warning.is-plain {
+  --el-button-bg-color: #fdf6ec;
+  --el-button-border-color: #f3d19e;
+  --el-button-text-color: var(--ops-color-warning);
+  --el-button-hover-bg-color: var(--ops-color-warning);
+  --el-button-hover-border-color: var(--ops-color-warning);
+  --el-button-hover-text-color: #ffffff;
+  background-color: #fdf6ec !important;
+  border-color: #f3d19e !important;
+  color: var(--ops-color-warning) !important;
+}
+
+.ops-sub-root .el-button--warning.is-plain:hover,
+.ops-sub-root .el-button--warning.is-plain:focus {
+  background-color: var(--ops-color-warning) !important;
+  border-color: var(--ops-color-warning) !important;
+  color: #ffffff !important;
+}
+
+.ops-sub-root .el-button--info {
+  --el-button-bg-color: rgba(109, 138, 130, 0.16);
+  --el-button-border-color: rgba(109, 138, 130, 0.36);
+  --el-button-text-color: var(--ops-color-deep);
+  --el-button-hover-bg-color: rgba(109, 138, 130, 0.26);
+  --el-button-hover-border-color: rgba(109, 138, 130, 0.48);
+  --el-button-hover-text-color: var(--ops-color-deep);
+  background-color: rgba(109, 138, 130, 0.16) !important;
+  background-image: none;
+  color: var(--ops-color-deep) !important;
+}
+
+.ops-sub-root .el-button--primary.is-plain,
+.ops-sub-root .el-button--success.is-plain {
+  --el-button-bg-color: rgba(47, 138, 91, 0.08);
+  --el-button-text-color: var(--ops-color-primary);
+  --el-button-border-color: rgba(47, 138, 91, 0.28);
+  --el-button-hover-bg-color: rgba(47, 138, 91, 0.16);
+  --el-button-hover-text-color: var(--ops-color-primary);
+  background: rgba(47, 138, 91, 0.08) !important;
+  color: var(--ops-color-primary) !important;
+}
+
+.ops-sub-root .el-button.is-link,
+.ops-sub-root .el-button.is-text {
+  backdrop-filter: none;
+  background-color: transparent !important;
+  background-image: none;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--ops-color-primary) !important;
+}
+
+.ops-sub-root .el-button.is-link:hover,
+.ops-sub-root .el-button.is-text:hover,
+.ops-sub-root .el-button.is-link:focus,
+.ops-sub-root .el-button.is-text:focus {
+  color: var(--ops-color-primary-hover) !important;
+  box-shadow: none;
+}
+
+.ops-sub-root .el-button.is-link.is-disabled,
+.ops-sub-root .el-button.is-text.is-disabled {
+  color: var(--ops-color-text-muted) !important;
+}
+
+.ops-sub-root .el-button.is-link.el-button--warning,
+.ops-sub-root .el-button.is-text.el-button--warning {
+  color: var(--ops-color-warning) !important;
+}
+
+.ops-sub-root .el-button.is-link.el-button--warning:hover,
+.ops-sub-root .el-button.is-text.el-button--warning:hover {
+  color: var(--ops-color-warning-hover) !important;
+}
+
+.ops-sub-root .el-button.is-link.el-button--danger,
+.ops-sub-root .el-button.is-text.el-button--danger {
+  color: var(--ops-color-danger) !important;
+}
+
+.ops-sub-root .el-button.is-link.el-button--danger:hover,
+.ops-sub-root .el-button.is-text.el-button--danger:hover {
+  color: var(--ops-color-danger-hover) !important;
+}
+
+.ops-sub-root .el-button--danger:not(.is-link):not(.is-text):not(.is-plain) {
+  --el-button-bg-color: var(--ops-color-danger);
+  --el-button-border-color: var(--ops-color-danger);
+  --el-button-text-color: #ffffff;
+  --el-button-hover-bg-color: var(--ops-color-danger-hover);
+  --el-button-hover-border-color: var(--ops-color-danger-hover);
+  --el-button-hover-text-color: #ffffff;
+  --el-button-active-bg-color: #dd6161;
+  --el-button-active-text-color: #ffffff;
+  --el-button-disabled-bg-color: #fab6b6;
+  --el-button-disabled-text-color: #ffffff;
+  --el-button-disabled-border-color: #fab6b6;
+  background-color: var(--ops-color-danger) !important;
+  background-image: none;
+  border-color: var(--ops-color-danger) !important;
+  color: #ffffff !important;
+}
+
+.ops-sub-root .el-button--danger.is-plain {
+  --el-button-bg-color: #fef0f0;
+  --el-button-text-color: var(--ops-color-danger);
+  --el-button-border-color: #fbc4c4;
+  --el-button-hover-bg-color: var(--ops-color-danger);
+  --el-button-hover-border-color: var(--ops-color-danger);
+  --el-button-hover-text-color: #ffffff;
+  background-color: #fef0f0 !important;
+  border-color: #fbc4c4 !important;
+  color: var(--ops-color-danger) !important;
+}
+
+.ops-sub-root .el-button--danger.is-plain:hover,
+.ops-sub-root .el-button--danger.is-plain:focus {
+  background-color: var(--ops-color-danger) !important;
+  border-color: var(--ops-color-danger) !important;
+  color: #ffffff !important;
+}
+
+.ops-sub-root .ops-wood-button.el-button {
+  border: var(--ops-border-default);
+  background: var(--ops-color-glass);
+  color: var(--ops-color-deep) !important;
+}
+
+.ops-sub-root .ops-wood-button.el-button--primary {
+  background-color: rgba(47, 138, 91, 0.22);
+  background-image: none;
+  border-color: rgba(47, 138, 91, 0.42);
+  color: var(--ops-color-deep) !important;
+}
+
+.ops-sub-root .ops-wood-button.el-button:active {
+  transform: translateY(1px);
+}
+
+.ops-sub-root .el-input__wrapper,
+.ops-sub-root .el-select__wrapper,
+.ops-sub-root .el-textarea__inner {
+  border: var(--ops-border-default);
+  border-radius: var(--ops-radius-sm);
+  background: var(--ops-color-surface-elevated);
+  box-shadow: none;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.ops-sub-root .el-input__wrapper.is-focus,
+.ops-sub-root .el-select__wrapper.is-focused {
+  box-shadow: var(--ops-shadow-focus);
+  border-color: rgba(47, 138, 91, 0.4);
+}
+
+.ops-sub-root .el-textarea__inner:focus {
+  box-shadow: var(--ops-shadow-focus);
+}
+
+.ops-sub-root .el-form-item__label {
+  color: var(--ops-color-text);
+  font-weight: 500;
+}
+
+.ops-sub-root .el-table {
+  --el-table-header-bg-color: rgba(240, 247, 242, 0.72);
+  --el-table-tr-bg-color: rgba(255, 255, 255, 0.42);
+  --el-table-row-hover-bg-color: rgba(47, 138, 91, 0.06);
+  --el-table-border-color: rgba(47, 138, 91, 0.1);
+  --el-table-header-text-color: var(--ops-color-deep);
+  --el-table-text-color: var(--ops-color-text);
+  background: transparent;
+}
+
+.ops-sub-root .el-table th.el-table__cell {
+  font-weight: 600;
+}
+
+.ops-sub-root .el-tag {
+  --el-tag-bg-color: var(--ops-color-primary-muted);
+  --el-tag-border-color: rgba(47, 138, 91, 0.18);
+  --el-tag-text-color: var(--ops-color-primary);
+  background: var(--el-tag-bg-color);
+}
+
+.ops-sub-root .el-tag--info {
+  --el-tag-bg-color: rgba(109, 138, 130, 0.14);
+  --el-tag-border-color: rgba(109, 138, 130, 0.28);
+  --el-tag-text-color: var(--ops-color-moon);
+  background: var(--el-tag-bg-color);
+  color: var(--el-tag-text-color);
+}
+
+.ops-sub-root .el-tag--success {
+  --el-tag-bg-color: rgba(47, 138, 91, 0.14);
+  --el-tag-border-color: rgba(47, 138, 91, 0.32);
+  --el-tag-text-color: var(--ops-color-success);
+  background: var(--el-tag-bg-color);
+  color: var(--el-tag-text-color);
+}
+
+.ops-sub-root .el-tag--warning {
+  --el-tag-bg-color: #fdf6ec;
+  --el-tag-border-color: #f3d19e;
+  --el-tag-text-color: var(--ops-color-warning);
+  background: var(--el-tag-bg-color);
+  color: var(--el-tag-text-color);
+}
+
+.ops-sub-root .el-tag--danger {
+  --el-tag-bg-color: #fef0f0;
+  --el-tag-border-color: #fbc4c4;
+  --el-tag-text-color: var(--ops-color-danger);
+  background: var(--el-tag-bg-color);
+  color: var(--el-tag-text-color);
+}
+
+.ops-sub-root .el-pagination {
+  --el-pagination-button-bg-color: var(--ops-color-glass);
+  --el-pagination-hover-color: var(--ops-color-primary);
+  --el-pagination-button-color: var(--ops-color-deep);
+}
+
+.ops-sub-root .el-pagination button,
+.ops-sub-root .el-pagination .btn-prev,
+.ops-sub-root .el-pagination .btn-next {
+  color: var(--ops-color-deep);
+}
+
+.ops-sub-root .el-pagination.is-background .el-pager li {
+  background: var(--ops-color-glass);
+  backdrop-filter: blur(8px);
+}
+
+.ops-sub-root .el-pagination.is-background .el-pager li.is-active {
+  background: rgba(47, 138, 91, 0.28);
+  color: var(--ops-color-deep);
+}
+
+.ops-sub-root .el-segmented {
+  --el-segmented-bg-color: rgba(47, 138, 91, 0.06);
+  --el-segmented-item-selected-bg-color: rgba(255, 255, 255, 0.78);
+  --el-segmented-item-selected-color: var(--ops-color-primary);
+  background: rgba(47, 138, 91, 0.06);
+}
+
+.ops-sub-root .el-progress-bar__inner {
+  background-color: var(--ops-color-primary);
+}
+
+.ops-sub-root .el-empty__description {
+  color: var(--ops-color-text-muted);
+}
+
+.ops-sub-root .ops-parchment-card,
+.ops-sub-root .ops-magic-form,
+.ops-sub-root .ops-world-card {
+  background: var(--ops-color-surface);
+  border: var(--ops-border-subtle);
+  border-radius: var(--ops-radius-base);
+  backdrop-filter: blur(var(--ops-backdrop-blur));
+  box-shadow: var(--ops-shadow-soft);
+}
+
+.ops-sub-root .el-breadcrumb__inner,
+.ops-sub-root .el-breadcrumb__inner a {
+  color: var(--ops-color-text-secondary);
+  font-weight: 500;
+}
+
+.ops-sub-root .el-breadcrumb__item:last-child .el-breadcrumb__inner {
+  color: var(--ops-color-deep);
+}
+
+html.ops-sub-standalone .el-overlay .el-dialog,
+html.ops-sub-standalone .el-overlay .el-drawer,
+html.ops-sub-standalone .el-overlay .el-message-box {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(47, 138, 91, 0.12);
+  border-radius: 10px;
+}
+
+html.ops-sub-standalone .el-overlay .el-button {
+  --el-button-text-color: #1f3d2c;
+  --el-button-hover-text-color: #1f3d2c;
+  --el-button-disabled-text-color: #8a968e;
+  color: #1f3d2c !important;
+}
+
+html.ops-sub-standalone .el-overlay .el-button.is-link,
+html.ops-sub-standalone .el-overlay .el-button--primary.is-plain {
+  color: #2f8a5b !important;
+}
+
+html.ops-sub-standalone .el-overlay .el-button--warning:not(.is-link):not(.is-text) {
+  background-color: #e6a23c !important;
+  border-color: #e6a23c !important;
+  color: #ffffff !important;
+}
+
+html.ops-sub-standalone .el-overlay .el-button--danger:not(.is-link) {
+  background-color: #f56c6c !important;
+  border-color: #f56c6c !important;
+  color: #ffffff !important;
+}
+
+html.ops-sub-standalone .el-overlay .el-button.is-link.el-button--warning,
+html.ops-sub-standalone .el-overlay .el-button.is-text.el-button--warning {
+  color: #e6a23c !important;
+}
+
+html.ops-sub-standalone .el-overlay .el-button.is-link.el-button--danger,
+html.ops-sub-standalone .el-overlay .el-button.is-text.el-button--danger {
+  color: #f56c6c !important;
+}

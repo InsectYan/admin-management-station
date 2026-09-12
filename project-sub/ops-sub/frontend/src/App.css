@@ -1,0 +1,83 @@
+html.ops-sub-standalone,
+html.ops-sub-standalone body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+html.ops-sub-standalone #app {
+  height: 100%;
+  overflow: hidden;
+}
+
+.ops-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+  box-sizing: border-box;
+  background: transparent;
+  border-radius: 0;
+  padding: 16px 20px 20px;
+  margin: 0;
+  box-shadow: none;
+}
+
+.ops-sub-layout.embedded .ops-page {
+  box-shadow: none;
+}
+
+.ops-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(243, 248, 244, 0.72);
+  backdrop-filter: blur(var(--ops-backdrop-blur, 12px));
+  padding-bottom: 8px;
+}
+
+.ops-page-title {
+  margin: 0 !important;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ops-color-deep, #1f3d2c);
+}
+
+.ops-page-extra {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ops-page-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.ops-page--table {
+  display: flex;
+  flex-direction: column;
+}
+
+.ops-page--table .ops-data-table-panel {
+  flex: 1;
+  min-height: 0;
+}
+
+.ops-sub-content.el-main {
+  --el-main-padding: 0;
+  padding: 0 !important;
+}

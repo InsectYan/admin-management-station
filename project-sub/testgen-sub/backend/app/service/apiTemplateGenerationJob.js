@@ -20,6 +20,7 @@ class ApiTemplateGenerationJobService extends Service {
       project_name,
       options = {},
       llm_profile,
+      max_tokens,
     } = payload;
 
     if (!project_code) {
@@ -74,6 +75,7 @@ class ApiTemplateGenerationJobService extends Service {
       document_content: resolvedContent,
       document_title: resolvedTitle,
       llm_profile,
+      max_tokens,
     };
 
     const job = await this.ctx.model.ApiTemplateGenerationJob.create({
@@ -90,6 +92,7 @@ class ApiTemplateGenerationJobService extends Service {
         overall_percent: 0,
         generated_templates: [],
         llm_profile_id: llm_profile || '',
+        max_tokens: Number(max_tokens) > 0 ? Number(max_tokens) : undefined,
         updated_at: new Date().toISOString(),
       },
       import_status: 'pending',
@@ -117,6 +120,7 @@ class ApiTemplateGenerationJobService extends Service {
       options = {},
       document_content,
       llm_profile,
+      max_tokens,
     } = payload;
 
     const job = await this.ctx.model.ApiTemplateGenerationJob.findByPk(jobId);
@@ -155,6 +159,7 @@ class ApiTemplateGenerationJobService extends Service {
         options,
         job_id: jobId,
         llm_profile,
+        ...(Number(max_tokens) > 0 ? { max_tokens: Number(max_tokens) } : {}),
         trace: { job_id: jobId },
       });
 
@@ -302,6 +307,7 @@ class ApiTemplateGenerationJobService extends Service {
       options: row.options,
       document_content: doc?.content,
       llm_profile: options.llm_profile,
+      max_tokens: options.max_tokens || row.agent_context?.max_tokens,
     };
 
     await row.update({

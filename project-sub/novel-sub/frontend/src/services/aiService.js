@@ -1,4 +1,5 @@
 import { api, resolveApiBase } from './apiConfig.js';
+import { withLlmSession } from '../utils/llmProfileSession.js';
 
 async function request(path, options = {}) {
   const res = await api({
@@ -36,7 +37,7 @@ export function listAiMessages(sessionId) {
 export function postAiTurn(sessionId, payload) {
   return request(`/ai/sessions/${sessionId}/turns`, {
     method: 'POST',
-    data: payload,
+    data: withLlmSession(payload),
     timeout: 180000,
   });
 }
@@ -48,7 +49,7 @@ export function applyAiMessage(sessionId, payload) {
 export function dispatchAiPlan(payload) {
   return request('/ai/dispatch', {
     method: 'POST',
-    data: payload,
+    data: withLlmSession(payload),
     timeout: 180000,
   });
 }
@@ -77,7 +78,7 @@ export async function streamAiTurn(sessionId, payload, handlers = {}) {
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(withLlmSession(payload)),
     signal,
   });
   if (!res.ok || !res.body) {

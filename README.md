@@ -13,6 +13,7 @@
 | 主应用 | [`menu-master/`](menu-master/) | `ams-main` | 菜单 + Qiankun 基座 · `:5200` · PG `:5432` |
 | 小说子应用 | [`project-sub/novel-sub/`](project-sub/novel-sub/) | `ams-novel` | 前端 + BFF · `:5201` · PG `:5301` |
 | AI 测试平台 | [`project-sub/testgen-sub/`](project-sub/testgen-sub/) | `ams-testgen` | 前端 + BFF · `:5202` · PG `:5302` |
+| 运维子应用 | [`project-sub/ops-sub/`](project-sub/ops-sub/) | `ams-ops` | 前端 + BFF · `:5203` · PG `:5303` |
 
 每个应用 `deploy/docker-compose.yml` **自带 Postgres**；缓存默认 **memory**（见 `cache-local.mdc`），不共享根级 infra。
 
@@ -28,6 +29,7 @@ cd menu-master/deploy && npm link && ams-main local
 # 子应用（按需启动）
 cd project-sub/novel-sub/deploy && npm link && ams-novel local
 cd project-sub/testgen-sub/deploy && npm link && ams-testgen local
+cd project-sub/ops-sub/deploy && npm link && ams-ops local
 ```
 
 端口详情：[docs-project/应用端口与命名注册表.md](docs-project/应用端口与命名注册表.md)

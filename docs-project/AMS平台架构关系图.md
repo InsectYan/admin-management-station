@@ -26,6 +26,7 @@ flowchart TB
     AMS --> PS["project-sub/"]:::sub
     PS --> Novel["novel-sub<br/>:5101/:5201"]:::sub
     PS --> Testgen["testgen-sub ★<br/>:5102/:5202"]:::highlight
+    PS --> Ops["ops-sub<br/>:5103/:5203"]:::sub
     AMS --> Docs["docs-project/"]:::main
     AMS --> Skills["skills/ Cursor 开发流程"]:::main
 
@@ -71,8 +72,10 @@ flowchart TB
         subgraph SubApps["project-sub/"]
             Novel["novel-sub<br/>:5101/:5201"]:::sub
             Testgen["testgen-sub<br/>:5102/:5202"]:::sub
+            Ops["ops-sub<br/>:5103/:5203"]:::sub
             NovelDB[("novel_db")]:::db
             TestgenDB[("testgen_db")]:::db
+            OpsDB[("ops_db")]:::db
         end
     end
 
@@ -84,9 +87,11 @@ flowchart TB
     UI --> MF
     MF -->|"/media/novel/*"| Novel
     MF -->|"/media/testgen/*"| Testgen
+    MF -->|"/media/ops/*"| Ops
     MF --> MainBFF --> MainDB
     Novel --> NovelDB
     Testgen --> TestgenDB
+    Ops --> OpsDB
     Testgen -->|"agentProxy"| AM --> Plugins
     Plugins -->|"internal API + Token"| Testgen
 
@@ -235,6 +240,7 @@ flowchart LR
 |------|-----|:----:|:----:|-----|--------|
 | novel-sub | `ams-novel` | 5101 | 5201 | 5301 / novel_db | 小说 CRUD |
 | testgen-sub | `ams-testgen` | 5102 | 5202 | 5302 / testgen_db | 用例生成 + Fitness |
+| ops-sub | `ams-ops` | 5103 | 5203 | 5303 / ops_db | 运维项目梳理 + 流程图 |
 
 **自包含原则**：各应用自带 `deploy/docker-compose.yml`、独立 Postgres、独立 BFF；**不共享** frontend/backend 源码包。
 

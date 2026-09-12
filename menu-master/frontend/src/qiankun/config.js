@@ -1,6 +1,7 @@
 const SUBAPP_ENTRY_MAP = {
   'novel-app': import.meta.env.VITE_SUBAPP_NOVEL_ENTRY,
   'testgen-app': import.meta.env.VITE_SUBAPP_TESTGEN_ENTRY,
+  'ops-app': import.meta.env.VITE_SUBAPP_OPS_ENTRY,
 };
 
 function normalizeEntry(entry) {

@@ -1,11 +1,10 @@
 import { api, resolveApiBase } from './apiConfig.js';
-import { getLlmProfileId } from '../utils/llmProfileSession.js';
+import { withLlmSession } from '../utils/llmProfileSession.js';
 
 const base = () => resolveApiBase();
 
 function withLlmProfile(body) {
-  const llm_profile = getLlmProfileId();
-  return llm_profile ? { ...body, llm_profile } : body;
+  return withLlmSession(body);
 }
 
 export async function startApiTemplateGeneration(payload) {

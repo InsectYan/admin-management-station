@@ -229,6 +229,11 @@ async function syncSchemaOnStartup(app) {
       await runPostSeedMigrations(sequelize, dbDir, logger);
     } catch (err) {
       logger.warn('[SchemaSync] Post-seed migrations warning: %s', err.message);
+      try {
+        await sequelize.query('ROLLBACK');
+      } catch (_) {
+        /* 连接可能不在事务中 */
+      }
     }
   } else {
     logger.warn('[SchemaSync] database/init.sql not found under %s', app.baseDir);

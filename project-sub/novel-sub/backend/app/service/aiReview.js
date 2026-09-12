@@ -3,6 +3,7 @@
 const Service = require('egg').Service;
 const { formatDateTime } = require('../lib/formatDateTime');
 const { invokeSkill, newTraceId } = require('../lib/agentProxy');
+const { pickLlmSession } = require('../lib/llmSession');
 const {
   QA_MODULES,
   MODULE_KEYS,
@@ -114,7 +115,7 @@ class AiReviewService extends Service {
     }
   }
 
-  async review({ novelId, action = 'check_consistency', module, chapterId, useLlm = false, persist = true }) {
+  async review({ novelId, action = 'check_consistency', module, chapterId, useLlm = false, persist = true, llmSession = {} }) {
     const allowed = new Set(['check_consistency', 'validate_module', 'validate_chapter']);
     if (!allowed.has(action)) {
       const err = new Error('无效的核检 action');
@@ -215,6 +216,7 @@ class AiReviewService extends Service {
             : null,
         },
         deterministic_findings: report.findings,
+        ...llmSession,
       });
       if (Array.isArray(llmFindings)) {
         report = this.mergeLlmFindings(report, llmFindings, ignoredIds);

@@ -424,6 +424,7 @@ class FitnessExecutionService extends require('egg').Service {
         run_id: Number(runId),
         item_id: runData.item_id,
         llm_profile: options.llm_profile,
+        ...(Number(options.max_tokens) > 0 ? { max_tokens: Number(options.max_tokens) } : {}),
         focus,
         observations,
         run_context: runContext,

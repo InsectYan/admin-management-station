@@ -33,11 +33,12 @@ watch(rootMenus, roots => {
   margin: 0 0 8px;
   font-size: 18px;
   font-weight: 600;
+  color: #1f3d2c;
 }
 
 .welcome-desc {
   margin: 0;
-  color: #909399;
+  color: #5c6b62;
   font-size: 14px;
 }
 </style>

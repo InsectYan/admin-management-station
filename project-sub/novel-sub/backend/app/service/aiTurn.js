@@ -3,6 +3,7 @@
 const { withFormattedTimes } = require('../lib/formatDateTime');
 const { resolveScene } = require('../lib/aiSceneRegistry');
 const { invokeSkill, invokeSkillStream, newTraceId } = require('../lib/agentProxy');
+const { pickLlmSession } = require('../lib/llmSession');
 const {
   GENERATABLE_FIELDS,
   filterGeneratableFields,
@@ -124,6 +125,7 @@ class AiTurnService extends require('egg').Service {
       contextLabels: collectContextLabels(boundContext),
       timeoutMs: this.ctx.app.config.agentPlatform?.timeoutMs || 600000,
       traceId: newTraceId(),
+      llmSession: pickLlmSession(body),
     };
   }
 
@@ -174,7 +176,7 @@ class AiTurnService extends require('egg').Service {
 
   async run(sessionId, body = {}) {
     const ctx = await this.prepare(sessionId, body);
-    const { session, spec, message, targetFields, catalog, agentCatalog, history, boundContext, lengthId, contextLabels, timeoutMs, traceId } = ctx;
+    const { session, spec, message, targetFields, catalog, agentCatalog, history, boundContext, lengthId, contextLabels, timeoutMs, traceId, llmSession } = ctx;
 
     let brainstorm = { reply: '', thinking: '', sparks: [] };
     const writerStep = spec.pipeline.find((step) => step.skill === 'novel-writer-skill')
@@ -196,6 +198,7 @@ class AiTurnService extends require('egg').Service {
           bound_context: boundContext,
           catalog: agentCatalog,
           history,
+          ...llmSession,
         },
       });
       brainstorm = unwrapSkill(invoked.data);
@@ -217,6 +220,7 @@ class AiTurnService extends require('egg').Service {
         sparks: brainstorm.sparks,
         brainstorm_reply: brainstorm.reply,
         brainstorm_thinking: brainstorm.thinking,
+        ...llmSession,
       },
     });
     const notices = [];
@@ -241,7 +245,7 @@ class AiTurnService extends require('egg').Service {
 
   async runStream(sessionId, body, emit) {
     const ctx = await this.prepare(sessionId, body);
-    const { session, spec, message, targetFields, catalog, agentCatalog, history, boundContext, lengthId, contextLabels, timeoutMs, traceId } = ctx;
+    const { session, spec, message, targetFields, catalog, agentCatalog, history, boundContext, lengthId, contextLabels, timeoutMs, traceId, llmSession } = ctx;
 
     emit('status', { phase: 'start', label: '开始构思…' });
 
@@ -286,6 +290,7 @@ class AiTurnService extends require('egg').Service {
           bound_context: boundContext,
           catalog: agentCatalog,
           history,
+          ...llmSession,
         },
         onEvent: (event, data) => forwardThinking(event, data, 'brainstorm'),
       });
@@ -310,6 +315,7 @@ class AiTurnService extends require('egg').Service {
         sparks: brainstorm.sparks,
         brainstorm_reply: brainstorm.reply,
         brainstorm_thinking: brainstorm.thinking,
+        ...llmSession,
       },
       onEvent: (event, data) => forwardThinking(event, data, 'writer'),
     });

@@ -1,5 +1,6 @@
 <template>
   <el-aside :width="asideWidth" :class="['app-sider', { collapsed }]">
+    <AppVineDecor />
     <div class="app-brand">
       <span v-show="!collapsed" class="app-brand-text">私人管理平台</span>
       <el-tooltip
@@ -38,9 +39,9 @@
     />
     <el-menu
       v-else
-      background-color="#545c64"
-      text-color="#fff"
-      active-text-color="#ffd04b"
+      background-color="transparent"
+      text-color="#2c4336"
+      active-text-color="#2f8a5b"
       :collapse="collapsed"
       :collapse-transition="false"
       :default-active="selectedKey"
@@ -82,11 +83,12 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Loading, Grid, Reading, Cpu, Fold, Expand } from '@element-plus/icons-vue';
+import { Loading, Grid, Reading, Cpu, Monitor, Fold, Expand } from '@element-plus/icons-vue';
 import { buildMenuPath } from '../qiankun/config.js';
 import { useNavCollapse } from '../composables/useNavCollapse.js';
 import LlmProfileSelector from './LlmProfileSelector.vue';
 import MediaProfileSelector from './MediaProfileSelector.vue';
+import AppVineDecor from './AppVineDecor.vue';
 
 const props = defineProps({
   menus: { type: Array, default: () => [] },
@@ -103,6 +105,7 @@ const asideWidth = computed(() => (collapsed.value ? '64px' : '240px'));
 const ICON_MAP = {
   'icon-novel': Reading,
   'icon-testgen': Cpu,
+  'icon-ops': Monitor,
 };
 
 function resolveIcon(iconName) {
@@ -164,13 +167,21 @@ function handleSelect(key) {
 
 <style scoped>
 .app-sider {
-  background: #545c64;
+  position: relative;
+  background:
+    linear-gradient(180deg, #eef6f0 0%, #e4f0e8 100%);
   height: 100vh;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
   transition: width 0.25s ease;
   overflow: hidden;
+  box-shadow: inset -1px 0 0 rgba(47, 138, 91, 0.12);
+}
+
+.app-sider > *:not(.app-vine) {
+  position: relative;
+  z-index: 1;
 }
 
 .app-sider :deep(.el-menu) {
@@ -178,6 +189,16 @@ function handleSelect(key) {
   min-height: 0;
   overflow-y: auto;
   border-right: none;
+  background: transparent;
+}
+
+.app-sider :deep(.el-menu-item.is-active) {
+  background: rgba(47, 138, 91, 0.12) !important;
+}
+
+.app-sider :deep(.el-menu-item:hover),
+.app-sider :deep(.el-sub-menu__title:hover) {
+  background: rgba(47, 138, 91, 0.08) !important;
 }
 
 .app-brand {
@@ -188,8 +209,8 @@ function handleSelect(key) {
   gap: 8px;
   padding: 0 12px;
   padding-left: 20px;
-  color: #fff;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: #1f3d2c;
+  border-bottom: 1px solid rgba(47, 138, 91, 0.14);
 }
 
 .app-sider.collapsed .menu-status {
@@ -198,11 +219,11 @@ function handleSelect(key) {
 }
 
 .collapse-trigger {
-  color: rgba(255, 255, 255, 0.85);
+  color: #5c6b62;
   font-size: 18px;
 }
 
 .collapse-trigger:hover {
-  color: #ffd04b;
+  color: #2f8a5b;
 }
 </style>

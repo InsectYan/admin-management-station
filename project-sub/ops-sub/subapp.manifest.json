@@ -1,0 +1,13 @@
+{
+  "app_key": "ops",
+  "microapp_name": "ops-app",
+  "display_name": "运维管理平台",
+  "route_prefix": "ops",
+  "entry_dev": "http://localhost:5103",
+  "entry_prod": "/subapps/ops-app/",
+  "vite_port": 5103,
+  "api_port": 5203,
+  "menu_order": 3,
+  "icon": "icon-ops",
+  "entry_env": "SUBAPP_OPS_ENTRY"
+}

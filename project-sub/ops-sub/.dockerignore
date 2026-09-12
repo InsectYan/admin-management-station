@@ -1,0 +1,15 @@
+# Docker build context is the whole ops-sub/ folder.
+# Keep it to source + lockfiles; never send logs or node_modules.
+**/node_modules
+**/dist
+**/logs
+**/run
+**/.git
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+**/coverage
+**/.vite
+**/.cache
+deploy/node_modules

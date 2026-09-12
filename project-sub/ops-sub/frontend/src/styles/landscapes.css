@@ -1,0 +1,31 @@
+/* 分页面自然景观勾勒 — 贴在内容区底部，随视口停留，不随正文滚动 */
+
+.ops-sub-content.ops-scene {
+  background-color: var(--ops-color-bg, #f3f8f4);
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  background-size: min(100%, 1440px) auto;
+  background-attachment: scroll;
+}
+
+.ops-sub-content.ops-scene--meadow {
+  background-image: url('../assets/decorations/scene-meadow.svg');
+}
+
+.ops-sub-content.ops-scene--grove {
+  background-image: url('../assets/decorations/scene-grove.svg');
+}
+
+.ops-sub-content.ops-scene--lake {
+  background-image: url('../assets/decorations/scene-lake.svg');
+}
+
+.ops-sub-content.ops-scene.embedded {
+  background-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ops-sub-content.ops-scene {
+    background-size: min(100%, 1440px) auto;
+  }
+}

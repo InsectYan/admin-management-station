@@ -1,0 +1,91 @@
+/* 清新森林风设计令牌 — 仅作用于 .ops-sub-root 子树 */
+
+.ops-sub-root {
+  /* 主色：清新叶绿（非琥珀金、非饱和森林绿） */
+  --ops-color-primary: #2f8a5b;
+  --ops-color-primary-hover: #3a9d6a;
+  --ops-color-primary-muted: rgba(47, 138, 91, 0.1);
+  --ops-color-success: #2f8a5b;
+  /* 语义态：偏明亮，便于 warning / danger 一眼可辨 */
+  --ops-color-warning: #e6a23c;
+  --ops-color-warning-hover: #ebb563;
+  --ops-color-danger: #f56c6c;
+  --ops-color-danger-hover: #f78989;
+  --ops-color-moon: #6d8a82;
+  --ops-color-accent: #2f8a5b;
+  --ops-color-forest: #2f8a5b;
+
+  /* 表面：浅底 + 半透明玻璃，让景观勾勒透出来 */
+  --ops-color-bg: #f3f8f4;
+  --ops-color-surface: rgba(255, 255, 255, 0.62);
+  --ops-color-surface-elevated: rgba(255, 255, 255, 0.82);
+  --ops-color-mist: rgba(240, 247, 242, 0.72);
+  --ops-color-parchment: var(--ops-color-surface);
+  --ops-color-glass: rgba(255, 255, 255, 0.42);
+  --ops-color-glass-hover: rgba(255, 255, 255, 0.68);
+  --ops-backdrop-blur: 12px;
+
+  --ops-color-deep: #1f3d2c;
+  --ops-color-text: #2c4336;
+  --ops-color-text-secondary: #5c6b62;
+  --ops-color-text-muted: #8a968e;
+
+  --ops-radius-base: 10px;
+  --ops-radius-sm: 6px;
+
+  --ops-border-subtle: 1px solid rgba(47, 138, 91, 0.12);
+  --ops-border-default: 1px solid rgba(47, 138, 91, 0.2);
+  --ops-border-strong: 1px solid rgba(47, 138, 91, 0.32);
+  --ops-border-gold: var(--ops-border-default);
+
+  --ops-shadow-soft: 0 1px 2px rgba(31, 61, 44, 0.04), 0 8px 24px rgba(47, 138, 91, 0.06);
+  --ops-shadow-focus: 0 0 0 3px rgba(47, 138, 91, 0.16);
+  --ops-shadow-glow: var(--ops-shadow-soft);
+
+  --ops-gradient-hero: linear-gradient(
+    165deg,
+    rgba(232, 244, 236, 0.9) 0%,
+    rgba(243, 248, 244, 0.55) 48%,
+    rgba(255, 255, 255, 0.35) 100%
+  );
+  --ops-gradient-steps: linear-gradient(
+    90deg,
+    rgba(47, 138, 91, 0.07),
+    rgba(109, 138, 130, 0.05)
+  );
+  --ops-gradient-header: var(--ops-gradient-hero);
+  --ops-gradient-magic: var(--ops-gradient-steps);
+  --ops-gradient-btn: linear-gradient(180deg, rgba(58, 157, 106, 0.9), rgba(47, 138, 91, 0.82));
+  --ops-gradient-cover: linear-gradient(
+    160deg,
+    rgba(232, 244, 236, 0.55) 0%,
+    rgba(47, 138, 91, 0.12) 100%
+  );
+
+  /* Element Plus 色板映射 */
+  --el-color-primary: var(--ops-color-primary);
+  --el-color-primary-light-3: #5ba87c;
+  --el-color-primary-light-5: #86c09e;
+  --el-color-primary-light-7: #b3d8c4;
+  --el-color-primary-light-8: #cce6d6;
+  --el-color-primary-light-9: #e6f4ec;
+  --el-color-primary-dark-2: #26734c;
+  --el-color-success: var(--ops-color-success);
+  --el-color-warning: var(--ops-color-warning);
+  --el-color-danger: var(--ops-color-danger);
+  --el-color-warning-light-3: #ebb563;
+  --el-color-warning-light-5: #f3d19e;
+  --el-color-warning-light-7: #f8e3c5;
+  --el-color-warning-light-8: #faecd8;
+  --el-color-warning-light-9: #fdf6ec;
+  --el-color-warning-dark-2: #cf9236;
+  --el-color-danger-light-3: #f89898;
+  --el-color-danger-light-5: #fab6b6;
+  --el-color-danger-light-7: #fcd3d3;
+  --el-color-danger-light-8: #fde2e2;
+  --el-color-danger-light-9: #fef0f0;
+  --el-color-danger-dark-2: #dd6161;
+  --el-color-info: var(--ops-color-moon);
+  --el-border-radius-base: var(--ops-radius-sm);
+  --el-font-size-base: 14px;
+}

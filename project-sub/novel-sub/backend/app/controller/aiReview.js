@@ -2,6 +2,7 @@
 
 const Controller = require('egg').Controller;
 const { QA_MODULES } = require('../lib/novelQa');
+const { pickLlmSession } = require('../lib/llmSession');
 
 class AiReviewController extends Controller {
   async create() {
@@ -31,6 +32,7 @@ class AiReviewController extends Controller {
         chapterId: body.chapter_id,
         useLlm: Boolean(body.use_llm),
         persist: body.persist !== false,
+        llmSession: pickLlmSession(body),
       });
       this.ctx.body = { code: 0, message: 'ok', data };
     } catch (err) {

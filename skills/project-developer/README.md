@@ -15,6 +15,7 @@
 |---------|------|-----------|----------|
 | `novel` | [novel-sub/](novel-sub/) | `novel-sub/` | `docs-project/小说管理页面子应用设计.MD` |
 | `testgen` | [testgen-sub/](testgen-sub/) | `testgen-sub/` | `agent-management-sub/design-docs/testgen/README.md` |
+| `ops` | [ops-sub/](ops-sub/) | `project-sub/ops-sub/` | `project-sub/ops-sub/docs/` · 需求大纲 `需求设计文档/运维初始版大纲.md` |
 | `main` | （待增） | `menu-master/` | `docs-project/私人管理平台主应用设计.md` |
 
 新增子应用业务 skill：复制 `novel-sub/` 为模板，改 `app_key`、设计文档路径、端口表。

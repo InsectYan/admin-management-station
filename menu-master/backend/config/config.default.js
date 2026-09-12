@@ -74,6 +74,7 @@ module.exports = appInfo => {
   config.subappEntryEnv = {
     'novel-app': 'SUBAPP_NOVEL_ENTRY',
     'testgen-app': 'SUBAPP_TESTGEN_ENTRY',
+    'ops-app': 'SUBAPP_OPS_ENTRY',
   };
 
   config.agentPlatform = {

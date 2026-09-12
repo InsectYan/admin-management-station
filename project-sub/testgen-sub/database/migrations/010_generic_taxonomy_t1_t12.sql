@@ -128,8 +128,31 @@ DELETE FROM test_category_major_template WHERE category_major_id !~ '^T[0-9]+$';
 DELETE FROM test_category_major WHERE category_major_id !~ '^T[0-9]+$';
 DELETE FROM test_dimension WHERE dimension_id NOT IN ('S', 'B', 'Q', 'R');
 
+-- 映射依赖 config_template_enum；启动同步会剥掉表 init.sql 的 INSERT，须在此补齐父行
+INSERT INTO test_scheme_enum (scheme_id, name, description, sort_order) VALUES
+  ('TS-01-DET', '确定性单次', '接口、HTTP 码、探针、单次 gate', 1),
+  ('TS-02-BND', '边界/等价类矩阵', '入参边界、状态机转移、多端载荷', 2),
+  ('TS-03-REP', '同用例重复抽样', 'Agent 意图、策略、Pass^k', 3),
+  ('TS-04-SET', '固定样本集批量', 'Golden Eval、咨询 skill 回归、对抗集', 4),
+  ('TS-07-NEG', '异常/对抗专项', '注入、医学越界、恶意 tool', 7),
+  ('TS-08-OBS', '可观测稽核', 'journey、日志 19 项、SLS 字段', 8),
+  ('TS-09-LOAD', '压测/容量', '并发、队列硬顶、多实例幂等', 9)
+ON CONFLICT (scheme_id) DO NOTHING;
+
+INSERT INTO config_template_enum (template_code, name, description, scheme_id, panel_key, table_name, agent_skill, agent_action, sort_order) VALUES
+  ('TPL-DET', '确定性单次', 'HTTP/CLI 单次请求与精确断言', 'TS-01-DET', 'det', 'tpl_config_det', 'fitness-config-skill', 'generate_det', 1),
+  ('TPL-BND', '边界矩阵', '入参边界与状态机矩阵逐行执行', 'TS-02-BND', 'bnd', 'tpl_config_bnd', 'fitness-config-skill', 'generate_bnd', 2),
+  ('TPL-REP', '重复抽样', '同用例重复 N 次 Pass^k 判定', 'TS-03-REP', 'rep', 'tpl_config_rep', 'fitness-config-skill', 'generate_rep', 3),
+  ('TPL-SET', '固定样本集', 'Golden/Eval 样本集批量执行', 'TS-04-SET', 'set', 'tpl_config_set', 'fitness-sample-skill', 'from_example', 4),
+  ('TPL-NEG', '对抗专项', '注入/越界对抗阻断率', 'TS-07-NEG', 'neg', 'tpl_config_neg', 'fitness-config-skill', 'generate_neg', 7),
+  ('TPL-OBS', '可观测稽核', 'journey/日志字段存在性', 'TS-08-OBS', 'obs', 'tpl_config_obs', 'fitness-config-skill', 'generate_obs', 8),
+  ('TPL-LOAD', '压测容量', 'VU/持续时间与 SLO 判定', 'TS-09-LOAD', 'load', 'tpl_config_load', 'fitness-config-skill', 'generate_load', 9)
+ON CONFLICT (template_code) DO NOTHING;
+
 -- 模板映射（T3 混合不挂）
-INSERT INTO test_category_major_template (category_major_id, template_code, note) VALUES
+INSERT INTO test_category_major_template (category_major_id, template_code, note)
+SELECT v.category_major_id, v.template_code, v.note
+FROM (VALUES
   ('T1', 'TPL-DET', '契约与结构'),
   ('T2', 'TPL-BND', '权限与能力边界'),
   ('T4', 'TPL-SET', '决策与规则质量'),
@@ -141,6 +164,8 @@ INSERT INTO test_category_major_template (category_major_id, template_code, note
   ('T10', 'TPL-REP', '体验与呈现'),
   ('T11', 'TPL-OBS', '可观测与排障'),
   ('T12', 'TPL-SET', '评测与回归')
+) AS v(category_major_id, template_code, note)
+WHERE EXISTS (SELECT 1 FROM config_template_enum e WHERE e.template_code = v.template_code)
 ON CONFLICT (category_major_id) DO UPDATE SET template_code = EXCLUDED.template_code;
 
 UPDATE test_category_major m SET item_count = COALESCE((

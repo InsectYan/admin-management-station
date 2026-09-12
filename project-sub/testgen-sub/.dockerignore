@@ -1,0 +1,15 @@
+**/node_modules
+**/dist
+**/logs
+**/run
+**/.git
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+**/coverage
+**/.vite
+**/.cache
+deploy/node_modules
+workspaces
+data

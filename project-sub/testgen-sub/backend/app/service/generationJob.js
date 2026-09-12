@@ -236,6 +236,7 @@ class GenerationJobService extends Service {
       options = {},
       fitness_context,
       llm_profile,
+      max_tokens,
     } = payload;
 
     if (fitness_context && typeof fitness_context === 'object') {
@@ -322,6 +323,7 @@ class GenerationJobService extends Service {
       document_title: resolvedTitle,
       document_type: resolvedType,
       llm_profile,
+      max_tokens,
     };
 
     const job = await this.ctx.model.GenerationJob.create({
@@ -347,6 +349,7 @@ class GenerationJobService extends Service {
         })),
         overall_percent: 0,
         llm_profile_id: llm_profile || '',
+        max_tokens: Number(max_tokens) > 0 ? Number(max_tokens) : undefined,
         updated_at: new Date().toISOString(),
       },
       started_at: null,
@@ -378,6 +381,7 @@ class GenerationJobService extends Service {
       project_name,
       options = {},
       llm_profile,
+      max_tokens,
     } = payload;
 
     let resolvedContent = document_content || null;
@@ -496,6 +500,7 @@ class GenerationJobService extends Service {
         hint: options.hint,
       },
       llm_profile: profileId,
+      ...(Number(max_tokens) > 0 ? { max_tokens: Number(max_tokens) } : {}),
       trace: { action: 'estimate' },
     }, estimateTimeoutMs);
 
@@ -650,12 +655,16 @@ class GenerationJobService extends Service {
       options = {},
       document_content,
       llm_profile,
+      max_tokens,
     } = payload;
 
     const job = await this.ctx.model.GenerationJob.findByPk(jobId);
     if (!job || job.status === 'cancelled' || job.status === 'paused') return;
 
     const effectiveLlmProfile = llm_profile || job.agent_context?.llm_profile_id || null;
+    const effectiveMaxTokens = Number(max_tokens) > 0
+      ? Number(max_tokens)
+      : (Number(job.agent_context?.max_tokens) > 0 ? Number(job.agent_context.max_tokens) : undefined);
 
     const scheme_targets = options.scheme_targets || job.options?.scheme_targets || [];
     const targetStates = scheme_targets.map(t => ({ ...t, status: 'pending', produced: 0 }));
@@ -775,6 +784,7 @@ class GenerationJobService extends Service {
               template_code: target.template_code,
               job_id: jobId,
               llm_profile: effectiveLlmProfile,
+              ...(effectiveMaxTokens ? { max_tokens: effectiveMaxTokens } : {}),
               trace: { job_id: jobId },
             });
           } catch (invokeErr) {
@@ -1103,6 +1113,7 @@ class GenerationJobService extends Service {
       project_name: row.project_name,
       options: row.options,
       llm_profile: options.llm_profile,
+      max_tokens: options.max_tokens || row.agent_context?.max_tokens,
     };
 
     await row.update({

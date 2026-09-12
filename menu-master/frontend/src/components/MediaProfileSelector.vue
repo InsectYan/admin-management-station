@@ -15,7 +15,7 @@
       :disabled="loading || !profiles.length"
       :class="['media-profile-select', { collapsed }]"
       size="small"
-      popper-class="media-profile-popper"
+        popper-class="media-profile-popper app-sider-popper"
       @change="onProfileChange"
     >
       <el-option
@@ -135,7 +135,7 @@ watch(
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(47, 138, 91, 0.14);
 }
 
 .media-profile-bar.collapsed {
@@ -146,13 +146,14 @@ watch(
 
 .media-profile-label {
   flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.75);
+  width: 68px;
+  color: #5c6b62;
   font-size: 12px;
   white-space: nowrap;
 }
 
 .media-profile-icon {
-  color: rgba(255, 255, 255, 0.85);
+  color: #2f8a5b;
   font-size: 18px;
 }
 
@@ -166,13 +167,13 @@ watch(
 }
 
 .media-profile-select :deep(.el-select__wrapper) {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.78);
   box-shadow: none;
 }
 
 .media-profile-select :deep(.el-select__placeholder),
 .media-profile-select :deep(.el-select__selected-item) {
-  color: #fff;
+  color: #2c4336;
   font-size: 12px;
 }
 

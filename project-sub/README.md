@@ -8,6 +8,7 @@
 |------|---------|-----|----------|
 | `novel-sub/` | `novel` | `ams-novel` | `subapp.manifest.json` |
 | `testgen-sub/` | `testgen` | `ams-testgen` | `subapp.manifest.json` |
+| `ops-sub/` | `ops` | `ams-ops` | `subapp.manifest.json` |
 
 ## 新增子应用
 
