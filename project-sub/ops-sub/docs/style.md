@@ -6,7 +6,8 @@
 
 | 页面 | 路由 | 景观 |
 |------|------|------|
-| 项目列表 | `ops-list` | `ops-scene--meadow` |
-| 项目详情 | `ops-detail` | `ops-scene--lake` |
+| 项目信息列表 | `ops-list` | `ops-scene--meadow` |
+| 新建项目 | `ops-create` | `ops-scene--grove` |
+| 项目详情 / 编辑 | `ops-detail` / `ops-edit` | `ops-scene--lake` |
 
 AntV 容器类名：`ops-antv-forest`。色板 `['#2F8A5B', '#6D8A82', '#E6A23C', '#5BA87C']`。

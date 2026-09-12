@@ -36,3 +36,11 @@ export function importProject(body) {
 export function exportProject(id) {
   return request(`/projects/${id}/export`, { method: 'get' });
 }
+
+export function generateProjectConfig(body) {
+  return request('/projects/generate', { method: 'post', data: body, timeout: 600000 });
+}
+
+export function generateAndApplyProject(id, body) {
+  return request(`/projects/${id}/generate`, { method: 'post', data: body, timeout: 600000 });
+}

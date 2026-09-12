@@ -1,9 +1,9 @@
 <template>
-  <PageShell title="运维项目" :table-layout="viewMode === 'table'">
+  <PageShell title="项目信息" :table-layout="viewMode === 'table'">
     <template #extra>
       <el-breadcrumb separator="/">
         <el-breadcrumb-item>首页</el-breadcrumb-item>
-        <el-breadcrumb-item>运维项目</el-breadcrumb-item>
+        <el-breadcrumb-item>项目信息</el-breadcrumb-item>
         <el-breadcrumb-item>列表</el-breadcrumb-item>
       </el-breadcrumb>
       <el-button @click="handleExportTemplate">导出模板</el-button>
@@ -14,7 +14,7 @@
       >
         <el-button>导入 JSON</el-button>
       </el-upload>
-      <el-button type="primary" :icon="Plus" @click="createDialogRef?.open()">新建项目</el-button>
+      <el-button type="primary" :icon="Plus" @click="goCreate">新建</el-button>
     </template>
 
     <div class="ops-list-toolbar">
@@ -80,7 +80,7 @@
           description="暂无项目。可先导出模板，梳理目录/路由/流程图后再导入。"
         >
           <el-button @click="handleExportTemplate">导出模板</el-button>
-          <el-button type="primary" @click="createDialogRef?.open()">新建项目</el-button>
+          <el-button type="primary" @click="goCreate">新建</el-button>
         </el-empty>
         <div v-else class="ops-board-grid">
           <div
@@ -109,8 +109,9 @@
               <p class="ops-card__time">更新于 {{ formatDateTime(item.updated_at) }}</p>
             </div>
             <div class="ops-card__actions">
-              <el-button size="small" type="primary" plain @click.stop="openDetail(item)">查看详情</el-button>
-              <el-button size="small" plain @click.stop="handleExportRow(item)">导出配置</el-button>
+              <el-button size="small" type="primary" plain @click.stop="openDetail(item)">详情</el-button>
+              <el-button size="small" plain @click.stop="openEdit(item)">编辑</el-button>
+              <el-button size="small" plain @click.stop="handleExportRow(item)">导出</el-button>
             </div>
           </div>
         </div>
@@ -154,9 +155,10 @@
             <el-table-column prop="updated_at" label="更新时间" width="170" sortable="custom">
               <template #default="{ row }">{{ formatDateTime(row.updated_at) }}</template>
             </el-table-column>
-            <el-table-column label="操作" width="220" fixed="right">
+            <el-table-column label="操作" width="260" fixed="right">
               <template #default="{ row }">
                 <el-button link type="primary" @click="openDetail(row)">详情</el-button>
+                <el-button link @click="openEdit(row)">编辑</el-button>
                 <el-button link @click="handleExportRow(row)">导出</el-button>
                 <el-popconfirm title="确定删除该项目？" @confirm="handleDelete(row)">
                   <template #reference>
@@ -170,7 +172,6 @@
       </DataTablePanel>
     </template>
 
-    <OpsCreateDialog ref="createDialogRef" @created="onCreated" />
   </PageShell>
 </template>
 
@@ -181,7 +182,6 @@ import { Plus } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import DataTablePanel from '../components/DataTablePanel.vue';
-import OpsCreateDialog from '../components/ops/OpsCreateDialog.vue';
 import {
   deleteProject,
   exportProject,
@@ -204,7 +204,6 @@ import {
 
 const route = useRoute();
 const router = useRouter();
-const createDialogRef = ref(null);
 const viewMode = ref('board');
 const viewOptions = [
   { label: '看板', value: 'board' },
@@ -300,8 +299,12 @@ function openDetail(item) {
   router.push({ name: 'ops-detail', params: { id: String(item.id) } });
 }
 
-function onCreated(item) {
-  router.push({ name: 'ops-detail', params: { id: String(item.id) } });
+function openEdit(item) {
+  router.push({ name: 'ops-edit', params: { id: String(item.id) } });
+}
+
+function goCreate() {
+  router.push({ name: 'ops-create' });
 }
 
 async function handleExportTemplate() {

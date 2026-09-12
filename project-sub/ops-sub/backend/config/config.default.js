@@ -40,6 +40,12 @@ module.exports = appInfo => {
     },
   };
 
+  config.agentPlatform = {
+    baseUrl: process.env.AGENT_PLATFORM_URL || 'http://127.0.0.1:4001',
+    timeoutMs: Number(process.env.AGENT_PLATFORM_TIMEOUT_MS || 600000),
+    skill: process.env.OPS_PROJECT_SKILL || 'ops-project-skill',
+  };
+
   config.bodyParser = {
     jsonLimit: '16mb',
     formLimit: '16mb',

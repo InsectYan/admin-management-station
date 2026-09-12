@@ -5,32 +5,35 @@
         <el-option
           v-for="flow in flows"
           :key="flow.key"
-          :label="flow.name"
+          :label="flow.key === 'overview' ? `总览 · ${flow.name}` : flow.name"
           :value="flow.key"
         />
       </el-select>
-      <el-button size="small" @click="addFlow">新增流程</el-button>
-      <el-button size="small" :disabled="!current" @click="renameFlow">重命名</el-button>
-      <el-button size="small" type="danger" plain :disabled="flows.length <= 1" @click="removeFlow">
-        删除流程
-      </el-button>
-      <el-divider direction="vertical" />
-      <el-select v-model="draftType" size="small" style="width: 120px">
-        <el-option
-          v-for="item in NODE_TYPE_OPTIONS"
-          :key="item.value"
-          :label="item.label"
-          :value="item.value"
-        />
-      </el-select>
-      <el-button size="small" type="primary" :disabled="!current" @click="addNode">添加节点</el-button>
-      <span class="ops-flow__hint">拖拽节点调整位置；从锚点拉出连线表示上下游。</span>
+      <template v-if="!readonly">
+        <el-button size="small" @click="addFlow">新增流程</el-button>
+        <el-button size="small" :disabled="!current" @click="renameFlow">重命名</el-button>
+        <el-button size="small" type="danger" plain :disabled="flows.length <= 1" @click="removeFlow">
+          删除流程
+        </el-button>
+        <el-divider direction="vertical" />
+        <el-select v-model="draftType" size="small" style="width: 120px">
+          <el-option
+            v-for="item in NODE_TYPE_OPTIONS"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
+        <el-button size="small" type="primary" :disabled="!current" @click="addNode">添加节点</el-button>
+      </template>
+      <span class="ops-flow__hint">{{ readonly ? '可拖动节点查看布局，不会保存；可切换总览或各页面分流程。' : '拖拽节点调整位置；从锚点拉出连线表示上下游。' }}</span>
     </div>
 
     <div v-if="current" class="ops-flow__body">
       <OpsFlowGraph
         :nodes="current.nodes"
         :edges="current.edges"
+        :readonly="readonly"
         @select-node="selected = $event"
         @move-node="onMoveNode"
         @connect-edge="onConnectEdge"
@@ -40,10 +43,10 @@
         <template v-if="selectedNode">
           <el-form label-position="top" size="small">
             <el-form-item label="名称">
-              <el-input v-model="selectedNode.name" />
+              <el-input v-model="selectedNode.name" :disabled="readonly" />
             </el-form-item>
             <el-form-item label="类型">
-              <el-select v-model="selectedNode.type">
+              <el-select v-model="selectedNode.type" :disabled="readonly">
                 <el-option
                   v-for="item in NODE_TYPE_OPTIONS"
                   :key="item.value"
@@ -53,9 +56,9 @@
               </el-select>
             </el-form-item>
             <el-form-item label="说明">
-              <el-input v-model="selectedNode.description" type="textarea" :rows="4" />
+              <el-input v-model="selectedNode.description" type="textarea" :rows="4" :disabled="readonly" />
             </el-form-item>
-            <el-button type="danger" plain size="small" @click="removeSelectedNode">删除节点</el-button>
+            <el-button v-if="!readonly" type="danger" plain size="small" @click="removeSelectedNode">删除节点</el-button>
           </el-form>
         </template>
         <p v-else class="ops-flow__empty">点击画布中的节点查看上下游说明</p>
@@ -63,7 +66,7 @@
         <h4>连线</h4>
         <div v-for="edge in current.edges" :key="edge.id" class="ops-flow__edge">
           <span>{{ edgeName(edge) }}</span>
-          <el-select v-model="edge.type" size="small" style="width: 96px">
+          <el-select v-model="edge.type" size="small" style="width: 96px" :disabled="readonly">
             <el-option
               v-for="item in EDGE_TYPE_OPTIONS"
               :key="item.value"
@@ -71,8 +74,8 @@
               :value="item.value"
             />
           </el-select>
-          <el-input v-model="edge.label" size="small" placeholder="标签" style="width: 88px" />
-          <el-button link type="danger" @click="removeEdge(edge.id)">删</el-button>
+          <el-input v-model="edge.label" size="small" placeholder="标签" style="width: 88px" :disabled="readonly" />
+          <el-button v-if="!readonly" link type="danger" @click="removeEdge(edge.id)">删</el-button>
         </div>
       </aside>
     </div>
@@ -92,13 +95,23 @@ import {
 
 const props = defineProps({
   flows: { type: Array, required: true },
+  readonly: { type: Boolean, default: false },
+  activeKey: { type: String, default: '' },
 });
 
-const emit = defineEmits(['update:flows']);
+const emit = defineEmits(['update:flows', 'update:activeKey']);
 
-const activeKey = ref('');
+const innerKey = ref('');
 const selected = ref(null);
 const draftType = ref('page');
+
+const activeKey = computed({
+  get: () => props.activeKey || innerKey.value,
+  set: (value) => {
+    innerKey.value = value;
+    emit('update:activeKey', value);
+  },
+});
 
 const current = computed(() => props.flows.find((flow) => flow.key === activeKey.value) || props.flows[0] || null);
 
@@ -106,6 +119,14 @@ const selectedNode = computed(() => {
   if (!current.value || !selected.value) return null;
   return current.value.nodes.find((node) => node.id === selected.value.id) || null;
 });
+
+watch(
+  () => props.activeKey,
+  (value) => {
+    if (value) innerKey.value = value;
+  },
+  { immediate: true },
+);
 
 watch(
   () => props.flows.map((flow) => flow.key).join(','),
@@ -159,7 +180,7 @@ function onMoveNode({ id, x, y }) {
 }
 
 function onConnectEdge(edge) {
-  if (!current.value) return;
+  if (props.readonly || !current.value) return;
   const exists = current.value.edges.some(
     (item) => item.source === edge.source && item.target === edge.target,
   );

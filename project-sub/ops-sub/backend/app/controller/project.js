@@ -79,6 +79,24 @@ class ProjectController extends Controller {
       this.fail(err);
     }
   }
+
+  async generate() {
+    try {
+      const data = await this.ctx.service.project.generateConfig(this.ctx.request.body);
+      this.success(data);
+    } catch (err) {
+      this.fail(err);
+    }
+  }
+
+  async generateApply() {
+    try {
+      const data = await this.ctx.service.project.generateAndApply(this.ctx.params.id, this.ctx.request.body);
+      this.success(data);
+    } catch (err) {
+      this.fail(err);
+    }
+  }
 }
 
 module.exports = ProjectController;

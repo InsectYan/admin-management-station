@@ -39,6 +39,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
       PORT: ${OPS_PORT:-5203}
       POSTGRES_DB: ${OPS_POSTGRES_DB:-ops_db}
+      AGENT_PLATFORM_URL: ${AGENT_PLATFORM_URL:-http://host.docker.internal:4001}
+      AGENT_PLATFORM_TIMEOUT_MS: ${AGENT_PLATFORM_TIMEOUT_MS:-600000}
+      OPS_PROJECT_SKILL: ${OPS_PROJECT_SKILL:-ops-project-skill}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${OPS_PORT:-5203}:${OPS_PORT:-5203}"
     depends_on:

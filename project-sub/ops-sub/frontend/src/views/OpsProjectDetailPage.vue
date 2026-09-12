@@ -19,21 +19,47 @@
       :tab-title="currentTab?.label"
       :saving="saving"
       :fill-pane="tab === 4"
+      :readonly="readonly"
       @back="goBack"
       @save="save"
       @export="handleExport"
+      @edit="goEdit"
     >
       <template #tabs>
         <OpsDetailTabs :active="tab" :items="tabs" @change="goToTab" />
       </template>
-      <DetailBasicInfo v-if="tab === 1" :form="form" />
-      <DetailDirectory v-else-if="tab === 2" v-model="form.directory_tree" />
+      <DetailBasicInfo v-if="tab === 1" :form="form" :readonly="readonly">
+        <OpsGeneratePanel
+          v-if="!readonly"
+          :source-path="form.source_path"
+          :basic="form"
+          :project-id="form.id"
+          apply-after
+          @applied="applyProject"
+        />
+      </DetailBasicInfo>
+      <DetailDirectory
+        v-else-if="tab === 2"
+        v-model="form.directory_tree"
+        :readonly="readonly"
+        :flows="form.flows"
+        @enter-flow="openFlow"
+      />
       <DetailRoutes
         v-else-if="tab === 3"
         v-model="form.routes"
         :disabled="form.project_type === 'backend' || form.project_type === 'agent'"
+        :readonly="readonly"
+        :flows="form.flows"
+        @enter-flow="openFlow"
       />
-      <DetailFlowChart v-else-if="tab === 4" v-model:flows="form.flows" />
+      <DetailFlowChart
+        v-else-if="tab === 4"
+        v-model:flows="form.flows"
+        :readonly="readonly"
+        :active-key="activeFlowKey"
+        @update:active-key="activeFlowKey = $event"
+      />
     </OpsDetailShell>
   </div>
 </template>
@@ -48,14 +74,16 @@ import DetailBasicInfo from '../components/ops/DetailBasicInfo.vue';
 import DetailDirectory from '../components/ops/DetailDirectory.vue';
 import DetailRoutes from '../components/ops/DetailRoutes.vue';
 import DetailFlowChart from '../components/ops/DetailFlowChart.vue';
+import OpsGeneratePanel from '../components/ops/OpsGeneratePanel.vue';
 import { exportProject, fetchProject, updateProject } from '../services/opsService.js';
-import { downloadJson } from '../utils/opsMeta.js';
+import { downloadJson, ensureOverviewFlow } from '../utils/opsMeta.js';
 
 const route = useRoute();
 const router = useRouter();
 const loadError = ref('');
 const saving = ref(false);
 const tab = ref(1);
+const activeFlowKey = ref('overview');
 const form = reactive({
   id: null,
   name: '',
@@ -63,12 +91,15 @@ const form = reactive({
   status: 'draft',
   description: '',
   repo_url: '',
+  source_path: '',
   directory_tree: [],
   routes: [],
   flows: [],
   created_at: '',
   updated_at: '',
 });
+
+const readonly = computed(() => route.name !== 'ops-edit');
 
 const tabs = computed(() => [
   { id: 1, label: '基础信息' },
@@ -83,6 +114,7 @@ function withKeys(nodes, prefix) {
   return (nodes || []).map((node, index) => ({
     ...node,
     __key: node.__key || `${prefix}-${index}-${node.name || 'item'}`,
+    flow_key: node.flow_key || '',
     children: withKeys(node.children, `${prefix}-${index}`),
     meta: node.meta || { title: '', auth: false },
   }));
@@ -95,9 +127,10 @@ function applyProject(data) {
   form.status = data.status || 'draft';
   form.description = data.description || '';
   form.repo_url = data.repo_url || '';
+  form.source_path = data.source_path || '';
   form.directory_tree = withKeys(data.directory_tree, 'dir');
   form.routes = withKeys(data.routes, 'route');
-  form.flows = data.flows?.length ? data.flows : [];
+  form.flows = ensureOverviewFlow(data.flows?.length ? data.flows : []);
   form.created_at = data.created_at;
   form.updated_at = data.updated_at;
 }
@@ -116,9 +149,23 @@ function goBack() {
   router.push({ name: 'ops-list' });
 }
 
+function goEdit() {
+  router.push({
+    name: 'ops-edit',
+    params: { id: String(form.id) },
+    query: { tab: String(tab.value), flow: activeFlowKey.value },
+  });
+}
+
 function goToTab(next) {
   tab.value = next;
   router.replace({ query: { ...route.query, tab: String(next) } });
+}
+
+function openFlow(flowKey) {
+  activeFlowKey.value = flowKey || 'overview';
+  tab.value = 4;
+  router.replace({ query: { ...route.query, tab: '4', flow: activeFlowKey.value } });
 }
 
 async function save() {
@@ -130,6 +177,7 @@ async function save() {
       status: form.status,
       description: form.description,
       repo_url: form.repo_url,
+      source_path: form.source_path,
       directory_tree: form.directory_tree,
       routes: form.routes,
       flows: form.flows,
@@ -154,9 +202,10 @@ async function handleExport() {
 }
 
 watch(
-  () => route.params.id,
+  () => [ route.params.id, route.name ],
   () => {
     tab.value = Number(route.query.tab) || 1;
+    activeFlowKey.value = String(route.query.flow || 'overview');
     load();
   },
   { immediate: true },

@@ -32,7 +32,7 @@
     >
       <el-menu-item index="/projects">
         <el-icon><Monitor /></el-icon>
-        <span>项目列表</span>
+        <span>项目信息</span>
       </el-menu-item>
     </el-menu>
   </el-aside>
@@ -48,7 +48,7 @@
   >
     <el-menu-item index="/projects">
       <el-icon><Monitor /></el-icon>
-      <span>项目列表</span>
+      <span>项目信息</span>
     </el-menu-item>
   </el-menu>
 </template>

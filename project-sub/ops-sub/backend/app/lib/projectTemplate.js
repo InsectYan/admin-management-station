@@ -21,10 +21,11 @@ const FIELD_GUIDE = {
   type: '项目类型：frontend | backend | fullstack | agent',
   description: '项目职责与范围说明',
   repo_url: 'Git 仓库地址，可留空',
+  source_path: '本地项目路径（必填才能生成配置；Agent 按此扫描）',
   status: 'draft（梳理中）| active（在维护）| archived（已归档）',
-  directory_tree: '目录树数组。每项：name, type(dir|file), description, children[]',
-  routes: '仅前端 / 全栈填写。每项：path, name, component, meta, children[]',
-  flows: '功能流程图数组。每项含 key/name/description/nodes/edges',
+  directory_tree: '目录树。flow_key 只绑该节点真正参与的那一条流程；支撑目录留空，禁止绑 overview 冒充万能入口',
+  routes: '前端/全栈路由。每条路由只绑一条 flow_key，进入流程只能打开对应分流程',
+  flows: '必须含 key=overview 总览（仅索引）。分流程按能力成组，同能力多页共用一条',
   'flows[].nodes': '节点：id, name, type(start|page|api|action|decision|end), description, x, y',
   'flows[].edges': '连线：id, source, target, label, type(next|success|fail|branch)',
 };
@@ -34,6 +35,7 @@ function emptyDirectoryNode() {
     name: '',
     type: 'dir',
     description: '',
+    flow_key: '',
     children: [],
   };
 }
@@ -44,18 +46,20 @@ function emptyRoute() {
     name: '',
     component: '',
     meta: { title: '', auth: false },
+    flow_key: '',
     children: [],
   };
 }
 
-function emptyFlow() {
+function emptyOverviewFlow() {
   return {
-    key: 'main',
-    name: '主功能流程',
-    description: '按真实用户路径填写节点，用连线表达上下游与成功/失败分支',
+    key: 'overview',
+    name: '项目总览',
+    description: '概览整个项目的页面与模块关系',
+    ref_path: '',
     nodes: [
       { id: 'start', name: '开始', type: 'start', description: '', x: 80, y: 160 },
-      { id: 'n1', name: '功能入口', type: 'page', description: '请改成真实页面或入口', x: 280, y: 160 },
+      { id: 'n1', name: '功能入口', type: 'page', description: '从目录或路由进入对应分流程', x: 280, y: 160 },
       { id: 'end', name: '结束', type: 'end', description: '', x: 500, y: 160 },
     ],
     edges: [
@@ -63,6 +67,10 @@ function emptyFlow() {
       { id: 'e2', source: 'n1', target: 'end', label: '完成', type: 'success' },
     ],
   };
+}
+
+function emptyFlow() {
+  return emptyOverviewFlow();
 }
 
 function buildEmptyTemplate() {
@@ -74,6 +82,7 @@ function buildEmptyTemplate() {
     type: 'frontend',
     description: '',
     repo_url: '',
+    source_path: '',
     status: 'draft',
     directory_tree: [
       {
@@ -122,6 +131,7 @@ function normalizeTree(nodes) {
       name: String(node.name || `unnamed-${index + 1}`),
       type,
       description: String(node.description || ''),
+      flow_key: String(node.flow_key || ''),
       children: type === 'dir' ? normalizeTree(node.children) : [],
     };
   });
@@ -139,6 +149,7 @@ function normalizeRoutes(nodes) {
         title: String(meta.title || ''),
         auth: Boolean(meta.auth),
       },
+      flow_key: String(node.flow_key || ''),
       children: normalizeRoutes(node.children),
     };
   });
@@ -178,11 +189,16 @@ function normalizeFlows(flows) {
       key: String(flow.key || `flow-${index + 1}`),
       name: String(flow.name || `功能流程 ${index + 1}`),
       description: String(flow.description || ''),
+      ref_path: String(flow.ref_path || ''),
       nodes: normalizeNodes(flow.nodes),
       edges: normalizeEdges(flow.edges),
     };
   });
-  return list.length ? list : [ emptyFlow() ];
+  if (!list.length) return [ emptyOverviewFlow() ];
+  if (!list.some(flow => flow.key === 'overview')) {
+    list.unshift(emptyOverviewFlow());
+  }
+  return list;
 }
 
 function normalizeProjectPayload(raw) {
@@ -200,6 +216,7 @@ function normalizeProjectPayload(raw) {
     project_type: type,
     description: String(body.description || ''),
     repo_url: String(body.repo_url || ''),
+    source_path: String(body.source_path || ''),
     status,
     directory_tree: normalizeTree(body.directory_tree),
     routes: (type === 'backend' || type === 'agent') ? [] : normalizeRoutes(body.routes),
@@ -227,6 +244,7 @@ function serializeExport(row) {
     type: row.project_type,
     description: row.description || '',
     repo_url: row.repo_url || '',
+    source_path: row.source_path || '',
     status: row.status,
     directory_tree: row.directory_tree || [],
     routes: row.routes || [],
@@ -243,6 +261,7 @@ function demoProjects() {
       type: 'frontend',
       description: 'novel-sub 前端：列表、创建向导、详情与 AntV 关系图。用于演示运维梳理模板。',
       repo_url: '',
+      source_path: 'admin-management-station/project-sub/novel-sub/frontend',
       status: 'active',
       directory_tree: [
         {
@@ -266,11 +285,31 @@ function demoProjects() {
         },
       ],
       routes: [
-        { path: '/novels', name: 'novel-list', component: 'NovelListPage', meta: { title: '小说列表', auth: false }, children: [] },
-        { path: '/novels/create', name: 'novel-create', component: 'NovelCreatePage', meta: { title: '新建小说', auth: false }, children: [] },
-        { path: '/novels/:id', name: 'novel-detail', component: 'NovelDetailPage', meta: { title: '小说详情', auth: false }, children: [] },
+        { path: '/novels', name: 'novel-list', component: 'NovelListPage', meta: { title: '小说列表', auth: false }, flow_key: 'novel-list', children: [] },
+        { path: '/novels/create', name: 'novel-create', component: 'NovelCreatePage', meta: { title: '新建小说', auth: false }, flow_key: 'create-novel', children: [] },
+        { path: '/novels/:id', name: 'novel-detail', component: 'NovelDetailPage', meta: { title: '小说详情', auth: false }, flow_key: 'novel-detail', children: [] },
       ],
       flows: [
+        {
+          key: 'overview',
+          name: '项目总览',
+          description: '列表、创建向导、详情之间的整体关系',
+          ref_path: '',
+          nodes: [
+            { id: 'start', name: '开始', type: 'start', description: '', x: 60, y: 180 },
+            { id: 'list', name: '小说列表', type: 'page', description: '看板 / 表格', x: 240, y: 180 },
+            { id: 'create', name: '新建小说', type: 'page', description: '五步向导', x: 440, y: 80 },
+            { id: 'detail', name: '小说详情', type: 'page', description: '设定与关系图', x: 440, y: 280 },
+            { id: 'end', name: '结束', type: 'end', description: '', x: 660, y: 180 },
+          ],
+          edges: [
+            { id: 'e1', source: 'start', target: 'list', label: '', type: 'next' },
+            { id: 'e2', source: 'list', target: 'create', label: '新建', type: 'next' },
+            { id: 'e3', source: 'list', target: 'detail', label: '打开', type: 'next' },
+            { id: 'e4', source: 'create', target: 'end', label: '完成', type: 'success' },
+            { id: 'e5', source: 'detail', target: 'end', label: '', type: 'success' },
+          ],
+        },
         {
           key: 'create-novel',
           name: '创建小说',
@@ -292,6 +331,36 @@ function demoProjects() {
             { id: 'e6', source: 'decide', target: 'wizard', label: '继续编辑', type: 'branch' },
           ],
         },
+        {
+          key: 'novel-list',
+          name: '小说列表',
+          description: '看板 / 表格浏览与筛选',
+          ref_path: '/novels',
+          nodes: [
+            { id: 'start', name: '开始', type: 'start', description: '', x: 80, y: 160 },
+            { id: 'list', name: '小说列表', type: 'page', description: '双视图', x: 280, y: 160 },
+            { id: 'end', name: '结束', type: 'end', description: '', x: 500, y: 160 },
+          ],
+          edges: [
+            { id: 'e1', source: 'start', target: 'list', label: '进入', type: 'next' },
+            { id: 'e2', source: 'list', target: 'end', label: '', type: 'success' },
+          ],
+        },
+        {
+          key: 'novel-detail',
+          name: '小说详情',
+          description: '查看与编辑设定',
+          ref_path: '/novels/:id',
+          nodes: [
+            { id: 'start', name: '开始', type: 'start', description: '', x: 80, y: 160 },
+            { id: 'detail', name: '小说详情', type: 'page', description: '', x: 280, y: 160 },
+            { id: 'end', name: '结束', type: 'end', description: '', x: 500, y: 160 },
+          ],
+          edges: [
+            { id: 'e1', source: 'start', target: 'detail', label: '打开', type: 'next' },
+            { id: 'e2', source: 'detail', target: 'end', label: '', type: 'success' },
+          ],
+        },
       ],
     },
     {
@@ -299,6 +368,7 @@ function demoProjects() {
       type: 'backend',
       description: 'novel-sub Egg.js BFF：小说 CRUD、枚举、Schema 启动同步。不含 Agent 执行。',
       repo_url: '',
+      source_path: 'admin-management-station/project-sub/novel-sub/backend',
       status: 'active',
       directory_tree: [
         {
@@ -360,6 +430,7 @@ module.exports = {
   emptyDirectoryNode,
   emptyRoute,
   emptyFlow,
+  emptyOverviewFlow,
   buildEmptyTemplate,
   normalizeProjectPayload,
   parseImportDocument,

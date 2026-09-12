@@ -13,6 +13,7 @@ import { Graph } from '@antv/x6';
 const props = defineProps({
   nodes: { type: Array, default: () => [] },
   edges: { type: Array, default: () => [] },
+  readonly: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['select-node', 'move-node', 'connect-edge']);
@@ -168,6 +169,13 @@ onMounted(() => {
     },
     panning: true,
     mousewheel: { enabled: true, modifiers: [ 'ctrl', 'meta' ] },
+    interacting() {
+      return {
+        nodeMovable: true,
+        edgeMovable: !props.readonly,
+        magnetConnectable: !props.readonly,
+      };
+    },
     connecting: {
       snap: true,
       allowBlank: false,

@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS ops_projects (
   project_type    VARCHAR(32)  NOT NULL DEFAULT 'frontend',
   description     TEXT,
   repo_url        VARCHAR(500),
+  source_path     VARCHAR(1000),
   status          VARCHAR(32)  NOT NULL DEFAULT 'draft',
   directory_tree  JSONB        NOT NULL DEFAULT '[]'::jsonb,
   routes          JSONB        NOT NULL DEFAULT '[]'::jsonb,

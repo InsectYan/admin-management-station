@@ -9,6 +9,7 @@ module.exports = app => {
     project_type: { type: STRING(32), allowNull: false, defaultValue: 'frontend' },
     description: { type: TEXT, allowNull: true },
     repo_url: { type: STRING(500), allowNull: true },
+    source_path: { type: STRING(1000), allowNull: true },
     status: { type: STRING(32), allowNull: false, defaultValue: 'draft' },
     directory_tree: { type: JSONB, allowNull: false, defaultValue: [] },
     routes: { type: JSONB, allowNull: false, defaultValue: [] },

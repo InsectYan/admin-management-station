@@ -3,7 +3,7 @@ name: ops-sub-developer
 description: >-
   在 ops-sub（app_key=ops）上按运维规划迭代：项目列表、JSON 模板导入导出、
   详情目录树 / 路由 / AntV X6 功能流程图。样式对齐小说平台森林风。
-  未涉及 Agent 时不要改 agent-management-master。
+  配置生成 Skill 只改 agent-management-master/plugins/ops-project-skill/。
   当用户在 ops-sub 目录开发、引用运维大纲时使用。
 ---
 
@@ -25,9 +25,10 @@ description: >-
 
 ## 本期范围
 
-- 项目管理：列表、导入、导出配置、**导出模板**
-- 详情：基础信息、目录树、路由（前端/全栈）、AntV X6 流程图
-- **不做**：pi Agent 部署、用户审批（走主应用菜单）
+- 项目信息：列表、导入、导出、新建基础信息、详情只读 / 编辑
+- 目录与路由均可进入功能流程（总览 + 分页面）
+- 配置生成：`ops-project-skill`（路径见下，持续优化只改该目录）
+- **不做**：pi Agent 部署执行、用户审批（走主应用菜单）
 
 ## 关键路径
 
@@ -35,5 +36,7 @@ description: >-
 |----|------|
 | 模板契约 | `backend/app/lib/projectTemplate.js` |
 | 列表页 | `frontend/src/views/OpsProjectListPage.vue` |
+| 新建 / 详情 | `OpsProjectCreatePage.vue` · `OpsProjectDetailPage.vue` |
 | 详情 + 图 | `frontend/src/components/ops/DetailFlowChart.vue` · `OpsFlowGraph.vue` |
+| **配置生成 Skill** | 仓库 `agent-management-master/plugins/ops-project-skill/` |
 | 样式 | `frontend/src/styles/` · `.cursor/rules/ops-sub-style.mdc` |

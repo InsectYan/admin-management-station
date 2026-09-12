@@ -7,14 +7,15 @@
         </el-button>
         <el-breadcrumb separator="/">
           <el-breadcrumb-item>
-            <a href="#" @click.prevent="$emit('back')">运维项目</a>
+            <a href="#" @click.prevent="$emit('back')">项目信息</a>
           </el-breadcrumb-item>
-          <el-breadcrumb-item>详情</el-breadcrumb-item>
+          <el-breadcrumb-item>{{ readonly ? '详情' : '编辑' }}</el-breadcrumb-item>
           <el-breadcrumb-item v-if="tabTitle">{{ tabTitle }}</el-breadcrumb-item>
         </el-breadcrumb>
         <div class="ops-detail-shell__actions">
           <el-button @click="$emit('export')">导出配置</el-button>
-          <el-button type="primary" :loading="saving" @click="$emit('save')">保存</el-button>
+          <el-button v-if="readonly" type="primary" @click="$emit('edit')">编辑</el-button>
+          <el-button v-else type="primary" :loading="saving" @click="$emit('save')">保存</el-button>
         </div>
       </div>
       <div class="ops-detail-hero">
@@ -57,9 +58,10 @@ const props = defineProps({
   tabTitle: { type: String, default: '' },
   saving: { type: Boolean, default: false },
   fillPane: { type: Boolean, default: false },
+  readonly: { type: Boolean, default: false },
 });
 
-defineEmits(['back', 'save', 'export']);
+defineEmits(['back', 'save', 'export', 'edit']);
 
 const coverLetter = computed(() => coverFallback(props.title));
 const typeLabelText = computed(() => typeLabel(props.projectType));

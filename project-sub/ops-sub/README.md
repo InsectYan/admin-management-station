@@ -2,7 +2,9 @@
 
 `app_key=ops` · 自包含子应用（frontend + backend + database + deploy）
 
-样式与页面方案对齐小说平台（清新森林风、PageShell / DataTablePanel、详情 Shell + Tab）。本期**不接入 Agent**：部署执行与 pi Agent 联调列为后续。
+样式与页面方案对齐小说平台（清新森林风、PageShell / DataTablePanel、详情 Shell + Tab）。配置生成接入 Agent Skill **`ops-project-skill`**，源码只维护在：
+
+`agent-management-master/plugins/ops-project-skill/`
 
 ## 端口
 
@@ -47,8 +49,10 @@ cd menu-master/deploy && ams-main local     # 自动 sync-subapps
 
 | 路径 | 说明 |
 |------|------|
-| `/projects` | 项目列表（看板 / 表格）；导出模板、导入 JSON、导出配置 |
-| `/projects/:id?tab=1..4` | 详情：基础信息 / 目录结构 / 路由 / 功能流程图（AntV X6） |
+| `/projects` | 项目信息列表（看板 / 表格）；导出模板、导入 JSON、新建 |
+| `/projects/new` | 新建：基础信息 + 生成配置 + 导入项目库 |
+| `/projects/:id` | 详情只读 |
+| `/projects/:id/edit?tab=1..4` | 编辑：目录 / 路由 / 流程图；可重新生成 |
 
 ## API 摘要
 
@@ -58,6 +62,8 @@ cd menu-master/deploy && ams-main local     # 自动 sync-subapps
 | GET | `/api/projects` | 列表（name / type / status / 分页 / 排序） |
 | GET | `/api/projects/template` | 空白 JSON 模板（含 `_guide` 字段说明） |
 | POST | `/api/projects/import` | 按模板导入创建项目 |
+| POST | `/api/projects/generate` | 调用 ops-project-skill 生成配置（不落库） |
+| POST | `/api/projects/:id/generate` | 重新生成并写入项目 |
 | GET | `/api/projects/:id/export` | 导出完整项目配置 |
 | POST | `/api/projects` | 新建 |
 | GET | `/api/projects/:id` | 详情 |

@@ -97,11 +97,12 @@ export function downloadJson(filename, data) {
   window.setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
-export function emptyFlow() {
+export function emptyOverviewFlow() {
   return {
-    key: `flow-${Date.now()}`,
-    name: '新功能流程',
-    description: '',
+    key: 'overview',
+    name: '项目总览',
+    description: '概览整个项目的页面与模块关系',
+    ref_path: '',
     nodes: [
       { id: 'start', name: '开始', type: 'start', description: '', x: 80, y: 160 },
       { id: 'n1', name: '功能入口', type: 'page', description: '', x: 280, y: 160 },
@@ -112,4 +113,37 @@ export function emptyFlow() {
       { id: 'e2', source: 'n1', target: 'end', label: '完成', type: 'success' },
     ],
   };
+}
+
+export function emptyFlow() {
+  return {
+    key: `flow-${Date.now()}`,
+    name: '新功能流程',
+    description: '',
+    ref_path: '',
+    nodes: [
+      { id: 'start', name: '开始', type: 'start', description: '', x: 80, y: 160 },
+      { id: 'n1', name: '功能入口', type: 'page', description: '', x: 280, y: 160 },
+      { id: 'end', name: '结束', type: 'end', description: '', x: 500, y: 160 },
+    ],
+    edges: [
+      { id: 'e1', source: 'start', target: 'n1', label: '', type: 'next' },
+      { id: 'e2', source: 'n1', target: 'end', label: '完成', type: 'success' },
+    ],
+  };
+}
+
+export function ensureOverviewFlow(flows) {
+  const list = Array.isArray(flows) ? [...flows] : [];
+  if (!list.some((flow) => flow.key === 'overview')) {
+    list.unshift(emptyOverviewFlow());
+  }
+  return list;
+}
+
+export function flowsForTarget(flows, target = {}) {
+  const list = Array.isArray(flows) ? flows : [];
+  const bound = String(target.flow_key || '').trim();
+  if (!bound) return [];
+  return list.filter((flow) => flow.key === bound);
 }
