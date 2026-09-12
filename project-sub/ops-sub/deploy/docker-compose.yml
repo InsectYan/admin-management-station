@@ -1,0 +1,79 @@
+# ops-sub（app_key=ops）— 自包含
+# 启动：cd ops-sub/deploy && npm link && ams-ops local
+
+name: ams-ops
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    container_name: ams-ops-postgres
+    restart: unless-stopped
+    env_file:
+      - ./config/.env.local
+    environment:
+      POSTGRES_DB: ${OPS_POSTGRES_DB:-ops_db}
+    ports:
+      - "${OPS_POSTGRES_PORT:-5303}:5432"
+    volumes:
+      - ops_pgdata:/var/lib/postgresql/data
+      - ../database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${OPS_POSTGRES_DB:-ops_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api-ops:
+    build:
+      context: ..
+      dockerfile: deploy/config/Dockerfile.backend
+    container_name: ams-api-ops
+    restart: unless-stopped
+    env_file:
+      - ./config/.env.local
+    environment:
+      APP_KEY: ops
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      PORT: ${OPS_PORT:-5203}
+      POSTGRES_DB: ${OPS_POSTGRES_DB:-ops_db}
+    ports:
+      - "${OPS_PORT:-5203}:${OPS_PORT:-5203}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../backend/app:/app/app
+      - ../backend/config:/app/config
+      - ../database:/app/database:ro
+
+  ops-frontend:
+    build:
+      context: ..
+      dockerfile: deploy/config/Dockerfile.frontend
+    container_name: ams-ops-frontend
+    restart: unless-stopped
+    ports:
+      - "${OPS_VITE_PORT:-5103}:5103"
+    env_file:
+      - ./config/.env.local
+    environment:
+      VITE_API_BASE: http://localhost:5203/api
+      VITE_DEV_PORT: 5103
+    volumes:
+      - ../frontend/src:/app/src
+      - ../frontend/index.html:/app/index.html
+      - ../frontend/vite.config.js:/app/vite.config.js
+      - ../frontend/package.json:/app/package.json
+      - ../frontend/package-lock.json:/app/package-lock.json
+    depends_on:
+      - api-ops
+
+networks:
+  default:
+    name: ams-ops-net
+
+volumes:
+  ops_pgdata:
