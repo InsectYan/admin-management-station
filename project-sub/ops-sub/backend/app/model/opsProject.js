@@ -15,6 +15,7 @@ module.exports = app => {
     routes: { type: JSONB, allowNull: false, defaultValue: [] },
     flows: { type: JSONB, allowNull: false, defaultValue: [] },
     extra_json: { type: JSONB, allowNull: false, defaultValue: {} },
+    deploy_config: { type: JSONB, allowNull: false, defaultValue: {} },
   }, {
     tableName: 'ops_projects',
     underscored: true,

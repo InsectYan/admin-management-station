@@ -24,6 +24,8 @@
       @save="save"
       @export="handleExport"
       @edit="goEdit"
+      @deploy="goDeploy"
+      @jobs="goJobs"
     >
       <template #tabs>
         <OpsDetailTabs :active="tab" :items="tabs" @change="goToTab" />
@@ -48,7 +50,7 @@
       <DetailRoutes
         v-else-if="tab === 3"
         v-model="form.routes"
-        :disabled="form.project_type === 'backend' || form.project_type === 'agent'"
+        :disabled="false"
         :readonly="readonly"
         :flows="form.flows"
         @enter-flow="openFlow"
@@ -58,6 +60,8 @@
         v-model:flows="form.flows"
         :readonly="readonly"
         :active-key="activeFlowKey"
+        :project-name="form.name"
+        :project-id="form.id"
         @update:active-key="activeFlowKey = $event"
       />
     </OpsDetailShell>
@@ -104,7 +108,7 @@ const readonly = computed(() => route.name !== 'ops-edit');
 const tabs = computed(() => [
   { id: 1, label: '基础信息' },
   { id: 2, label: '目录结构' },
-  { id: 3, label: '路由信息', disabled: form.project_type === 'backend' || form.project_type === 'agent' },
+  { id: 3, label: form.project_type === 'frontend' || form.project_type === 'fullstack' ? '路由信息' : 'HTTP 接口' },
   { id: 4, label: '功能流程' },
 ]);
 
@@ -147,6 +151,14 @@ async function load() {
 
 function goBack() {
   router.push({ name: 'ops-list' });
+}
+
+function goDeploy() {
+  router.push({ name: 'ops-deploy', params: { id: String(form.id) } });
+}
+
+function goJobs() {
+  router.push({ name: 'ops-deploy-jobs' });
 }
 
 function goEdit() {

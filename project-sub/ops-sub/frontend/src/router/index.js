@@ -1,8 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import MainLayout from '../components/MainLayout.vue';
+import { getAccessToken, loginUrl } from '../lib/amsAuth.js';
 
 export function createAppRouter(basename) {
-  return createRouter({
+  const router = createRouter({
     history: createWebHistory(basename),
     routes: [
       {
@@ -10,6 +11,12 @@ export function createAppRouter(basename) {
         component: MainLayout,
         children: [
           { path: '', redirect: 'projects' },
+          {
+            path: 'deploy-jobs',
+            name: 'ops-deploy-jobs',
+            component: () => import('../views/OpsDeployJobsPage.vue'),
+            meta: { title: '部署任务' },
+          },
           {
             path: 'projects',
             name: 'ops-list',
@@ -29,6 +36,24 @@ export function createAppRouter(basename) {
             meta: { title: '编辑项目', mode: 'edit' },
           },
           {
+            path: 'projects/:id/deploy/:jobId',
+            name: 'ops-deploy-log',
+            component: () => import('../views/OpsDeployLogPage.vue'),
+            meta: { title: '部署日志' },
+          },
+          {
+            path: 'projects/:id/deploy-logs',
+            name: 'ops-deploy-history',
+            component: () => import('../views/OpsDeployHistoryPage.vue'),
+            meta: { title: '部署历史' },
+          },
+          {
+            path: 'projects/:id/deploy',
+            name: 'ops-deploy',
+            component: () => import('../views/OpsDeployPage.vue'),
+            meta: { title: '部署' },
+          },
+          {
             path: 'projects/:id',
             name: 'ops-detail',
             component: () => import('../views/OpsProjectDetailPage.vue'),
@@ -38,4 +63,12 @@ export function createAppRouter(basename) {
       },
     ],
   });
+
+  router.beforeEach((to) => {
+    if (getAccessToken()) return true;
+    if (import.meta.env.DEV && import.meta.env.VITE_OPS_AUTH_OPTIONAL === '1') return true;
+    window.location.assign(loginUrl(window.location.origin + basename + to.fullPath));
+    return false;
+  });
+  return router;
 }

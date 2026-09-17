@@ -29,9 +29,13 @@ import './MainLayout.css';
 const embedded = computed(() => isQiankunEmbedded());
 const route = useRoute();
 const sceneClass = computed(() => {
-  if (route.name === 'ops-list') return 'ops-scene ops-scene--meadow';
+  if (route.name === 'ops-list' || route.name === 'ops-deploy-history' || route.name === 'ops-deploy-jobs') {
+    return 'ops-scene ops-scene--meadow';
+  }
   if (route.name === 'ops-detail' || route.name === 'ops-edit') return 'ops-scene ops-scene--lake';
   if (route.name === 'ops-create') return 'ops-scene ops-scene--grove';
+  if (route.name === 'ops-deploy') return 'ops-scene ops-scene--dusk';
+  if (route.name === 'ops-deploy-log') return 'ops-scene ops-scene--night';
   return 'ops-scene ops-scene--grove';
 });
 </script>

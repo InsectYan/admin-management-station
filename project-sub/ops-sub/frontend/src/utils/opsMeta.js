@@ -20,6 +20,12 @@ export const NODE_TYPE_OPTIONS = [
   { value: 'end', label: '结束' },
 ];
 
+export const NODE_SEVERITY_OPTIONS = [
+  { value: '', label: '无' },
+  { value: 'warning', label: '警告（橙）' },
+  { value: 'risk', label: '风险（红）' },
+];
+
 export const EDGE_TYPE_OPTIONS = [
   { value: 'next', label: '下一步' },
   { value: 'success', label: '成功' },

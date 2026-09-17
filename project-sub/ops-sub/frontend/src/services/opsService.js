@@ -1,4 +1,5 @@
 import { api, resolveApiBase } from './apiConfig.js';
+import { getAccessToken } from '../lib/amsAuth.js';
 
 async function request(path, options = {}) {
   const res = await api({ url: `${resolveApiBase()}${path}`, ...options });
@@ -31,6 +32,21 @@ export function fetchProjectTemplate() {
 
 export function importProject(body) {
   return request('/projects/import', { method: 'post', data: body });
+}
+
+export function createImportJob(body) {
+  return request('/projects/import-jobs', { method: 'post', data: body });
+}
+
+export function fetchImportJob(jobId) {
+  return request(`/projects/import-jobs/${jobId}`, { method: 'get' });
+}
+
+export function importJobStreamUrl(jobId) {
+  const token = getAccessToken();
+  const query = new URLSearchParams();
+  if (token) query.set('access_token', token);
+  return `${resolveApiBase()}/projects/import-jobs/${jobId}/stream?${query}`;
 }
 
 export function exportProject(id) {

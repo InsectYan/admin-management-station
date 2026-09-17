@@ -120,6 +120,6 @@ onMounted(load);
 }
 .clickable-stat:hover :deep(.el-statistic__head),
 .clickable-stat:hover :deep(.el-statistic__content) {
-  color: #409eff;
+  color: var(--testgen-color-primary, #2f8a5b);
 }
 </style>

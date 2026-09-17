@@ -6,5 +6,7 @@ module.exports = app => {
 
   app.beforeStart(async () => {
     await syncSchemaOnStartup(app);
+    const ctx = app.createAnonymousContext();
+    await ctx.service.auth.ensureBootstrapAdmin();
   });
 };

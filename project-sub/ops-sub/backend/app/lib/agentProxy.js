@@ -68,7 +68,14 @@ async function invokeSkill(ctx, { skill, action, payload, timeoutMs }) {
   };
 }
 
+async function invokeDeploySkill(ctx, payload) {
+  const skill = process.env.OPS_DEPLOY_SKILL || ctx.app.config.agentPlatform.deploySkill || 'ops-deploy-skill';
+  const timeoutMs = Number(process.env.OPS_DEPLOY_SKILL_TIMEOUT_MS || 600000);
+  return invokeSkill(ctx, { skill, action: 'run', payload, timeoutMs });
+}
+
 module.exports = {
   invokeSkill,
+  invokeDeploySkill,
   newTraceId,
 };

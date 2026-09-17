@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper';
+import { getAccessToken, redirectToLogin } from '../lib/amsAuth.js';
 
 function normalizeBase(base) {
   return String(base || '').replace(/\/$/, '');
@@ -30,6 +31,15 @@ export function isQiankunEmbedded() {
 
 export const api = axios.create({ timeout: 60000 });
 
+api.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 api.interceptors.response.use(
   (res) => {
     const { code, message, data } = res.data ?? {};
@@ -39,6 +49,10 @@ api.interceptors.response.use(
     return { ...res, data: { ...res.data, data } };
   },
   (err) => {
+    if (err.response?.status === 401) {
+      redirectToLogin();
+      return Promise.reject(new Error(err.response.data?.message || '未登录'));
+    }
     if (err.response?.data?.message) {
       return Promise.reject(new Error(err.response.data.message));
     }

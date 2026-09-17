@@ -10,10 +10,12 @@
       <el-upload
         :show-file-list="false"
         accept=".json,application/json"
+        :disabled="importDlg.running"
         :before-upload="handleImport"
       >
-        <el-button>导入 JSON</el-button>
+        <el-button :disabled="importDlg.running">导入 JSON</el-button>
       </el-upload>
+      <el-button @click="goJobs">部署任务</el-button>
       <el-button type="primary" :icon="Plus" @click="goCreate">新建</el-button>
     </template>
 
@@ -111,6 +113,7 @@
             <div class="ops-card__actions">
               <el-button size="small" type="primary" plain @click.stop="openDetail(item)">详情</el-button>
               <el-button size="small" plain @click.stop="openEdit(item)">编辑</el-button>
+              <el-button size="small" plain @click.stop="openDeploy(item)">部署</el-button>
               <el-button size="small" plain @click.stop="handleExportRow(item)">导出</el-button>
             </div>
           </div>
@@ -155,10 +158,11 @@
             <el-table-column prop="updated_at" label="更新时间" width="170" sortable="custom">
               <template #default="{ row }">{{ formatDateTime(row.updated_at) }}</template>
             </el-table-column>
-            <el-table-column label="操作" width="260" fixed="right">
+            <el-table-column label="操作" width="320" fixed="right">
               <template #default="{ row }">
                 <el-button link type="primary" @click="openDetail(row)">详情</el-button>
                 <el-button link @click="openEdit(row)">编辑</el-button>
+                <el-button link @click="openDeploy(row)">部署</el-button>
                 <el-button link @click="handleExportRow(row)">导出</el-button>
                 <el-popconfirm title="确定删除该项目？" @confirm="handleDelete(row)">
                   <template #reference>
@@ -173,6 +177,24 @@
     </template>
 
   </PageShell>
+
+  <el-dialog
+    v-model="importDlg.visible"
+    title="导入项目配置"
+    width="480px"
+    :close-on-click-modal="!importDlg.running"
+    :close-on-press-escape="!importDlg.running"
+    :show-close="!importDlg.running"
+    destroy-on-close
+  >
+    <el-progress :percentage="importDlg.percent" :status="importDlg.error ? 'exception' : importDlg.done ? 'success' : undefined" />
+    <p class="ops-import-msg">{{ importDlg.message }}</p>
+    <el-alert v-if="importDlg.error" type="error" :title="importDlg.error" show-icon :closable="false" />
+    <p v-if="importDlg.done && importDlg.name" class="ops-import-done">
+      已创建：
+      <el-button link type="primary" @click="goImported">{{ importDlg.name }}</el-button>
+    </p>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -183,10 +205,12 @@ import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import DataTablePanel from '../components/DataTablePanel.vue';
 import {
+  createImportJob,
   deleteProject,
   exportProject,
   fetchProjectTemplate,
   fetchProjects,
+  importJobStreamUrl,
   importProject,
 } from '../services/opsService.js';
 import {
@@ -303,8 +327,16 @@ function openEdit(item) {
   router.push({ name: 'ops-edit', params: { id: String(item.id) } });
 }
 
+function openDeploy(item) {
+  router.push({ name: 'ops-deploy', params: { id: String(item.id) } });
+}
+
 function goCreate() {
   router.push({ name: 'ops-create' });
+}
+
+function goJobs() {
+  router.push({ name: 'ops-deploy-jobs' });
 }
 
 async function handleExportTemplate() {
@@ -330,18 +362,124 @@ async function handleExportRow(item) {
   }
 }
 
+const SMALL_IMPORT_BYTES = 256 * 1024;
+const importDlg = reactive({
+  visible: false,
+  running: false,
+  done: false,
+  percent: 0,
+  message: '',
+  error: '',
+  name: '',
+  projectId: null,
+});
+let importSource = null;
+
+function resetImportDlg() {
+  importSource?.close();
+  importSource = null;
+  Object.assign(importDlg, {
+    visible: true,
+    running: true,
+    done: false,
+    percent: 8,
+    message: '读取文件…',
+    error: '',
+    name: '',
+    projectId: null,
+  });
+}
+
+function finishImportOk(name, projectId) {
+  importDlg.running = false;
+  importDlg.done = true;
+  importDlg.percent = 100;
+  importDlg.message = '导入完成';
+  importDlg.name = name;
+  importDlg.projectId = projectId;
+  ElMessage.success(`已导入「${name}」`);
+  loadProjects();
+}
+
+function finishImportErr(message) {
+  importDlg.running = false;
+  importDlg.error = message || '导入失败，请检查 JSON 是否符合模板';
+  importDlg.message = '导入失败';
+}
+
+function goImported() {
+  if (!importDlg.projectId) return;
+  importDlg.visible = false;
+  router.push({ name: 'ops-detail', params: { id: String(importDlg.projectId) } });
+}
+
+async function importSmall(parsed) {
+  importDlg.percent = 25;
+  importDlg.message = '解析文档';
+  await new Promise((r) => setTimeout(r, 80));
+  importDlg.percent = 55;
+  importDlg.message = '校验模板';
+  await new Promise((r) => setTimeout(r, 80));
+  importDlg.percent = 85;
+  importDlg.message = '写入项目库';
+  const created = await importProject(parsed);
+  finishImportOk(created.name, created.id);
+}
+
+function importLarge(parsed) {
+  return createImportJob(parsed).then(({ job }) => new Promise((resolve, reject) => {
+    const url = importJobStreamUrl(job.id);
+    importSource = new EventSource(url);
+    importSource.addEventListener('phase', (ev) => {
+      try {
+        const data = JSON.parse(ev.data);
+        importDlg.percent = Number(data.percent) || importDlg.percent;
+        importDlg.message = data.message || data.phase || importDlg.message;
+      } catch { /* ignore */ }
+    });
+    importSource.addEventListener('done', (ev) => {
+      try {
+        const data = JSON.parse(ev.data);
+        finishImportOk(data.name, data.project_id);
+        resolve();
+      } catch (err) {
+        finishImportErr(err.message);
+        reject(err);
+      }
+      importSource?.close();
+      importSource = null;
+    });
+    importSource.addEventListener('fail', (ev) => {
+      let message = '导入失败';
+      try {
+        message = JSON.parse(ev.data)?.message || message;
+      } catch { /* ignore */ }
+      finishImportErr(message);
+      reject(new Error(message));
+      importSource?.close();
+      importSource = null;
+    });
+    importSource.addEventListener('end', () => {
+      importSource?.close();
+      importSource = null;
+      if (importDlg.running) finishImportErr('导入中断');
+    });
+  }));
+}
+
 function handleImport(file) {
+  resetImportDlg();
   const reader = new FileReader();
   reader.onload = async () => {
     try {
       const parsed = JSON.parse(String(reader.result || '{}'));
-      const created = await importProject(parsed);
-      ElMessage.success(`已导入「${created.name}」`);
-      await loadProjects();
+      if (file.size < SMALL_IMPORT_BYTES) await importSmall(parsed);
+      else await importLarge(parsed);
     } catch (err) {
-      ElMessage.error(err.message || '导入失败，请检查 JSON 是否符合模板');
+      finishImportErr(err.message || '导入失败，请检查 JSON 是否符合模板');
     }
   };
+  reader.onerror = () => finishImportErr('读取文件失败');
   reader.readAsText(file);
   return false;
 }
@@ -447,5 +585,11 @@ watch(() => route.query, () => {
   display: flex;
   gap: 8px;
   padding: 0 16px 14px;
+}
+
+.ops-import-msg,
+.ops-import-done {
+  margin: 12px 0 0;
+  color: var(--ops-color-text);
 }
 </style>

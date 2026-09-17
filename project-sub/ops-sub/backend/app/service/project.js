@@ -24,6 +24,7 @@ class ProjectService extends require('egg').Service {
       routes: payload.routes,
       flows: payload.flows,
       extra_json: payload.extra_json,
+      deploy_config: payload.deploy_config,
     };
   }
 
@@ -90,7 +91,18 @@ class ProjectService extends require('egg').Service {
       err.status = 404;
       throw err;
     }
-    await row.destroy();
+    const active = await this.ctx.model.OpsDeployJob.count({
+      where: { project_id: id, status: { [Op.in]: [ 'queued', 'running' ] } },
+    });
+    if (active) {
+      const err = new Error('有进行中的部署任务，无法删除项目');
+      err.status = 409;
+      throw err;
+    }
+    await this.ctx.model.transaction(async transaction => {
+      await this.ctx.model.OpsDeployJob.destroy({ where: { project_id: id }, transaction });
+      await row.destroy({ transaction });
+    });
     return { id: Number(id) };
   }
 
@@ -171,6 +183,7 @@ class ProjectService extends require('egg').Service {
         directory_tree: payload.directory_tree,
         routes: payload.routes,
         flows: payload.flows,
+        extra_json: payload.extra_json,
       },
       summary: extracted.summary,
       source: extracted.source,
@@ -199,9 +212,11 @@ class ProjectService extends require('egg').Service {
     });
     const saved = await this.update(id, {
       ...generated.document,
+      extra_json: generated.document.extra_json,
       name: row.name,
       type: generated.document.type || row.project_type,
       source_path: generated.document.source_path || row.source_path,
+      deploy_config: row.deploy_config,
     });
     return { ...generated, project: saved };
   }

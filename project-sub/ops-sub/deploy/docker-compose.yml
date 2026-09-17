@@ -27,6 +27,8 @@ services:
     build:
       context: ..
       dockerfile: deploy/config/Dockerfile.backend
+      args:
+        ALPINE_MIRROR: ${ALPINE_MIRROR:-https://mirrors.aliyun.com/alpine}
     container_name: ams-api-ops
     restart: unless-stopped
     env_file:
@@ -42,6 +44,10 @@ services:
       AGENT_PLATFORM_URL: ${AGENT_PLATFORM_URL:-http://host.docker.internal:4001}
       AGENT_PLATFORM_TIMEOUT_MS: ${AGENT_PLATFORM_TIMEOUT_MS:-600000}
       OPS_PROJECT_SKILL: ${OPS_PROJECT_SKILL:-ops-project-skill}
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_LOCAL_JWT}
+      HOST_PROJECTS_ROOT: ${HOST_PROJECTS_ROOT:-/host-projects}
+      MENU_MASTER_URL: ${MENU_MASTER_URL:-http://host.docker.internal:5200}
+      OPS_INTERNAL_KEY: ${OPS_INTERNAL_KEY:-CHANGE_ME_LOCAL_JWT}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -53,6 +59,7 @@ services:
       - ../backend/app:/app/app
       - ../backend/config:/app/config
       - ../database:/app/database:ro
+      - ${HOST_PROJECTS_MOUNT:-E:/AI Tools/projects}:/host-projects:ro
 
   ops-frontend:
     build:
@@ -67,6 +74,7 @@ services:
     environment:
       VITE_API_BASE: http://localhost:5203/api
       VITE_DEV_PORT: 5103
+      VITE_MAIN_ORIGIN: ${VITE_MAIN_ORIGIN:-http://localhost:5100}
     volumes:
       - ../frontend/src:/app/src
       - ../frontend/index.html:/app/index.html

@@ -1,0 +1,408 @@
+﻿/* Element Plus 覆写 — 祖先限定 .testgen-sub-root；浮层在 standalone 下单独限定 */
+
+.testgen-sub-root .el-button {
+  --el-button-bg-color: var(--testgen-color-glass);
+  --el-button-border-color: rgba(47, 138, 91, 0.22);
+  --el-button-text-color: var(--testgen-color-deep);
+  --el-button-hover-bg-color: var(--testgen-color-glass-hover);
+  --el-button-hover-border-color: rgba(47, 138, 91, 0.36);
+  --el-button-hover-text-color: var(--testgen-color-deep);
+  --el-button-active-bg-color: rgba(255, 255, 255, 0.78);
+  --el-button-active-text-color: var(--testgen-color-deep);
+  --el-button-disabled-bg-color: rgba(255, 255, 255, 0.28);
+  --el-button-disabled-text-color: var(--testgen-color-text-muted);
+  --el-button-disabled-border-color: rgba(47, 138, 91, 0.12);
+  --el-button-outline-color: rgba(47, 138, 91, 0.28);
+  border-radius: var(--testgen-radius-sm);
+  backdrop-filter: blur(var(--testgen-backdrop-blur));
+  background-color: var(--el-button-bg-color) !important;
+  background-image: none;
+  border-color: var(--el-button-border-color);
+  color: var(--testgen-color-deep) !important;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.testgen-sub-root .el-button:hover,
+.testgen-sub-root .el-button:focus,
+.testgen-sub-root .el-button:focus-visible,
+.testgen-sub-root .el-button:active {
+  color: var(--testgen-color-deep) !important;
+  box-shadow: var(--testgen-shadow-soft);
+}
+
+.testgen-sub-root .el-button--warning:not(.is-link):not(.is-text):hover,
+.testgen-sub-root .el-button--warning:not(.is-link):not(.is-text):focus,
+.testgen-sub-root .el-button--warning:not(.is-link):not(.is-text):focus-visible,
+.testgen-sub-root .el-button--warning:not(.is-link):not(.is-text):active,
+.testgen-sub-root .el-button--danger:not(.is-link):not(.is-text):not(.is-plain):hover,
+.testgen-sub-root .el-button--danger:not(.is-link):not(.is-text):not(.is-plain):focus,
+.testgen-sub-root .el-button--danger:not(.is-link):not(.is-text):not(.is-plain):focus-visible,
+.testgen-sub-root .el-button--danger:not(.is-link):not(.is-text):not(.is-plain):active {
+  color: #ffffff !important;
+}
+
+.testgen-sub-root .el-button.is-disabled,
+.testgen-sub-root .el-button.is-disabled:hover,
+.testgen-sub-root .el-button.is-disabled:focus {
+  color: var(--testgen-color-text-muted) !important;
+  box-shadow: none;
+}
+
+.testgen-sub-root .el-button .el-icon,
+.testgen-sub-root .el-button span {
+  color: inherit;
+}
+
+.testgen-sub-root .el-button--primary,
+.testgen-sub-root .el-button--success {
+  --el-button-bg-color: rgba(47, 138, 91, 0.22);
+  --el-button-border-color: rgba(47, 138, 91, 0.42);
+  --el-button-text-color: var(--testgen-color-deep);
+  --el-button-hover-bg-color: rgba(47, 138, 91, 0.34);
+  --el-button-hover-border-color: rgba(47, 138, 91, 0.55);
+  --el-button-hover-text-color: var(--testgen-color-deep);
+  --el-button-active-bg-color: rgba(47, 138, 91, 0.42);
+  --el-button-active-text-color: var(--testgen-color-deep);
+  --el-button-disabled-bg-color: rgba(47, 138, 91, 0.1);
+  --el-button-disabled-text-color: var(--testgen-color-text-muted);
+  --el-button-disabled-border-color: rgba(47, 138, 91, 0.16);
+  background-color: rgba(47, 138, 91, 0.22) !important;
+  background-image: none;
+  color: var(--testgen-color-deep) !important;
+}
+
+/* warning / danger：实色明亮语义，避免半透明暗沉 */
+.testgen-sub-root .el-button--warning:not(.is-link):not(.is-text) {
+  --el-button-bg-color: var(--testgen-color-warning);
+  --el-button-border-color: var(--testgen-color-warning);
+  --el-button-text-color: #ffffff;
+  --el-button-hover-bg-color: var(--testgen-color-warning-hover);
+  --el-button-hover-border-color: var(--testgen-color-warning-hover);
+  --el-button-hover-text-color: #ffffff;
+  --el-button-active-bg-color: #cf9236;
+  --el-button-active-text-color: #ffffff;
+  --el-button-disabled-bg-color: #f3d19e;
+  --el-button-disabled-text-color: #ffffff;
+  --el-button-disabled-border-color: #f3d19e;
+  background-color: var(--testgen-color-warning) !important;
+  background-image: none;
+  border-color: var(--testgen-color-warning) !important;
+  color: #ffffff !important;
+}
+
+.testgen-sub-root .el-button--warning.is-plain {
+  --el-button-bg-color: #fdf6ec;
+  --el-button-border-color: #f3d19e;
+  --el-button-text-color: var(--testgen-color-warning);
+  --el-button-hover-bg-color: var(--testgen-color-warning);
+  --el-button-hover-border-color: var(--testgen-color-warning);
+  --el-button-hover-text-color: #ffffff;
+  background-color: #fdf6ec !important;
+  border-color: #f3d19e !important;
+  color: var(--testgen-color-warning) !important;
+}
+
+.testgen-sub-root .el-button--warning.is-plain:hover,
+.testgen-sub-root .el-button--warning.is-plain:focus {
+  background-color: var(--testgen-color-warning) !important;
+  border-color: var(--testgen-color-warning) !important;
+  color: #ffffff !important;
+}
+
+.testgen-sub-root .el-button--info {
+  --el-button-bg-color: rgba(109, 138, 130, 0.16);
+  --el-button-border-color: rgba(109, 138, 130, 0.36);
+  --el-button-text-color: var(--testgen-color-deep);
+  --el-button-hover-bg-color: rgba(109, 138, 130, 0.26);
+  --el-button-hover-border-color: rgba(109, 138, 130, 0.48);
+  --el-button-hover-text-color: var(--testgen-color-deep);
+  background-color: rgba(109, 138, 130, 0.16) !important;
+  background-image: none;
+  color: var(--testgen-color-deep) !important;
+}
+
+.testgen-sub-root .el-button--primary.is-plain,
+.testgen-sub-root .el-button--success.is-plain {
+  --el-button-bg-color: rgba(47, 138, 91, 0.08);
+  --el-button-text-color: var(--testgen-color-primary);
+  --el-button-border-color: rgba(47, 138, 91, 0.28);
+  --el-button-hover-bg-color: rgba(47, 138, 91, 0.16);
+  --el-button-hover-text-color: var(--testgen-color-primary);
+  background: rgba(47, 138, 91, 0.08) !important;
+  color: var(--testgen-color-primary) !important;
+}
+
+.testgen-sub-root .el-button.is-link,
+.testgen-sub-root .el-button.is-text {
+  backdrop-filter: none;
+  background-color: transparent !important;
+  background-image: none;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--testgen-color-primary) !important;
+}
+
+.testgen-sub-root .el-button.is-link:hover,
+.testgen-sub-root .el-button.is-text:hover,
+.testgen-sub-root .el-button.is-link:focus,
+.testgen-sub-root .el-button.is-text:focus {
+  color: var(--testgen-color-primary-hover) !important;
+  box-shadow: none;
+}
+
+.testgen-sub-root .el-button.is-link.is-disabled,
+.testgen-sub-root .el-button.is-text.is-disabled {
+  color: var(--testgen-color-text-muted) !important;
+}
+
+.testgen-sub-root .el-button.is-link.el-button--warning,
+.testgen-sub-root .el-button.is-text.el-button--warning {
+  color: var(--testgen-color-warning) !important;
+}
+
+.testgen-sub-root .el-button.is-link.el-button--warning:hover,
+.testgen-sub-root .el-button.is-text.el-button--warning:hover {
+  color: var(--testgen-color-warning-hover) !important;
+}
+
+.testgen-sub-root .el-button.is-link.el-button--danger,
+.testgen-sub-root .el-button.is-text.el-button--danger {
+  color: var(--testgen-color-danger) !important;
+}
+
+.testgen-sub-root .el-button.is-link.el-button--danger:hover,
+.testgen-sub-root .el-button.is-text.el-button--danger:hover {
+  color: var(--testgen-color-danger-hover) !important;
+}
+
+.testgen-sub-root .el-button--danger:not(.is-link):not(.is-text):not(.is-plain) {
+  --el-button-bg-color: var(--testgen-color-danger);
+  --el-button-border-color: var(--testgen-color-danger);
+  --el-button-text-color: #ffffff;
+  --el-button-hover-bg-color: var(--testgen-color-danger-hover);
+  --el-button-hover-border-color: var(--testgen-color-danger-hover);
+  --el-button-hover-text-color: #ffffff;
+  --el-button-active-bg-color: #dd6161;
+  --el-button-active-text-color: #ffffff;
+  --el-button-disabled-bg-color: #fab6b6;
+  --el-button-disabled-text-color: #ffffff;
+  --el-button-disabled-border-color: #fab6b6;
+  background-color: var(--testgen-color-danger) !important;
+  background-image: none;
+  border-color: var(--testgen-color-danger) !important;
+  color: #ffffff !important;
+}
+
+.testgen-sub-root .el-button--danger.is-plain {
+  --el-button-bg-color: #fef0f0;
+  --el-button-text-color: var(--testgen-color-danger);
+  --el-button-border-color: #fbc4c4;
+  --el-button-hover-bg-color: var(--testgen-color-danger);
+  --el-button-hover-border-color: var(--testgen-color-danger);
+  --el-button-hover-text-color: #ffffff;
+  background-color: #fef0f0 !important;
+  border-color: #fbc4c4 !important;
+  color: var(--testgen-color-danger) !important;
+}
+
+.testgen-sub-root .el-button--danger.is-plain:hover,
+.testgen-sub-root .el-button--danger.is-plain:focus {
+  background-color: var(--testgen-color-danger) !important;
+  border-color: var(--testgen-color-danger) !important;
+  color: #ffffff !important;
+}
+
+.testgen-sub-root .testgen-wood-button.el-button {
+  border: var(--testgen-border-default);
+  background: var(--testgen-color-glass);
+  color: var(--testgen-color-deep) !important;
+}
+
+.testgen-sub-root .testgen-wood-button.el-button--primary {
+  background-color: rgba(47, 138, 91, 0.22);
+  background-image: none;
+  border-color: rgba(47, 138, 91, 0.42);
+  color: var(--testgen-color-deep) !important;
+}
+
+.testgen-sub-root .testgen-wood-button.el-button:active {
+  transform: translateY(1px);
+}
+
+.testgen-sub-root .el-input__wrapper,
+.testgen-sub-root .el-select__wrapper,
+.testgen-sub-root .el-textarea__inner {
+  border: var(--testgen-border-default);
+  border-radius: var(--testgen-radius-sm);
+  background: var(--testgen-color-surface-elevated);
+  box-shadow: none;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.testgen-sub-root .el-input__wrapper.is-focus,
+.testgen-sub-root .el-select__wrapper.is-focused {
+  box-shadow: var(--testgen-shadow-focus);
+  border-color: rgba(47, 138, 91, 0.4);
+}
+
+.testgen-sub-root .el-textarea__inner:focus {
+  box-shadow: var(--testgen-shadow-focus);
+}
+
+.testgen-sub-root .el-form-item__label {
+  color: var(--testgen-color-text);
+  font-weight: 500;
+}
+
+.testgen-sub-root .el-table {
+  --el-table-header-bg-color: rgba(240, 247, 242, 0.72);
+  --el-table-tr-bg-color: rgba(255, 255, 255, 0.42);
+  --el-table-row-hover-bg-color: rgba(47, 138, 91, 0.06);
+  --el-table-border-color: rgba(47, 138, 91, 0.1);
+  --el-table-header-text-color: var(--testgen-color-deep);
+  --el-table-text-color: var(--testgen-color-text);
+  background: transparent;
+}
+
+.testgen-sub-root .el-table th.el-table__cell {
+  font-weight: 600;
+}
+
+.testgen-sub-root .el-tag {
+  --el-tag-bg-color: var(--testgen-color-primary-muted);
+  --el-tag-border-color: rgba(47, 138, 91, 0.18);
+  --el-tag-text-color: var(--testgen-color-primary);
+  background: var(--el-tag-bg-color);
+}
+
+.testgen-sub-root .el-tag--info {
+  --el-tag-bg-color: rgba(109, 138, 130, 0.14);
+  --el-tag-border-color: rgba(109, 138, 130, 0.28);
+  --el-tag-text-color: var(--testgen-color-moon);
+  background: var(--el-tag-bg-color);
+  color: var(--el-tag-text-color);
+}
+
+.testgen-sub-root .el-tag--success {
+  --el-tag-bg-color: rgba(47, 138, 91, 0.14);
+  --el-tag-border-color: rgba(47, 138, 91, 0.32);
+  --el-tag-text-color: var(--testgen-color-success);
+  background: var(--el-tag-bg-color);
+  color: var(--el-tag-text-color);
+}
+
+.testgen-sub-root .el-tag--warning {
+  --el-tag-bg-color: #fdf6ec;
+  --el-tag-border-color: #f3d19e;
+  --el-tag-text-color: var(--testgen-color-warning);
+  background: var(--el-tag-bg-color);
+  color: var(--el-tag-text-color);
+}
+
+.testgen-sub-root .el-tag--danger {
+  --el-tag-bg-color: #fef0f0;
+  --el-tag-border-color: #fbc4c4;
+  --el-tag-text-color: var(--testgen-color-danger);
+  background: var(--el-tag-bg-color);
+  color: var(--el-tag-text-color);
+}
+
+.testgen-sub-root .el-pagination {
+  --el-pagination-button-bg-color: var(--testgen-color-glass);
+  --el-pagination-hover-color: var(--testgen-color-primary);
+  --el-pagination-button-color: var(--testgen-color-deep);
+}
+
+.testgen-sub-root .el-pagination button,
+.testgen-sub-root .el-pagination .btn-prev,
+.testgen-sub-root .el-pagination .btn-next {
+  color: var(--testgen-color-deep);
+}
+
+.testgen-sub-root .el-pagination.is-background .el-pager li {
+  background: var(--testgen-color-glass);
+  backdrop-filter: blur(8px);
+}
+
+.testgen-sub-root .el-pagination.is-background .el-pager li.is-active {
+  background: rgba(47, 138, 91, 0.28);
+  color: var(--testgen-color-deep);
+}
+
+.testgen-sub-root .el-segmented {
+  --el-segmented-bg-color: rgba(47, 138, 91, 0.06);
+  --el-segmented-item-selected-bg-color: rgba(255, 255, 255, 0.78);
+  --el-segmented-item-selected-color: var(--testgen-color-primary);
+  background: rgba(47, 138, 91, 0.06);
+}
+
+.testgen-sub-root .el-progress-bar__inner {
+  background-color: var(--testgen-color-primary);
+}
+
+.testgen-sub-root .el-empty__description {
+  color: var(--testgen-color-text-muted);
+}
+
+.testgen-sub-root .testgen-parchment-card,
+.testgen-sub-root .testgen-magic-form,
+.testgen-sub-root .testgen-world-card {
+  background: var(--testgen-color-surface);
+  border: var(--testgen-border-subtle);
+  border-radius: var(--testgen-radius-base);
+  backdrop-filter: blur(var(--testgen-backdrop-blur));
+  box-shadow: var(--testgen-shadow-soft);
+}
+
+.testgen-sub-root .el-breadcrumb__inner,
+.testgen-sub-root .el-breadcrumb__inner a {
+  color: var(--testgen-color-text-secondary);
+  font-weight: 500;
+}
+
+.testgen-sub-root .el-breadcrumb__item:last-child .el-breadcrumb__inner {
+  color: var(--testgen-color-deep);
+}
+
+html.testgen-sub-standalone .el-overlay .el-dialog,
+html.testgen-sub-standalone .el-overlay .el-drawer,
+html.testgen-sub-standalone .el-overlay .el-message-box {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(47, 138, 91, 0.12);
+  border-radius: 10px;
+}
+
+html.testgen-sub-standalone .el-overlay .el-button {
+  --el-button-text-color: #1f3d2c;
+  --el-button-hover-text-color: #1f3d2c;
+  --el-button-disabled-text-color: #8a968e;
+  color: #1f3d2c !important;
+}
+
+html.testgen-sub-standalone .el-overlay .el-button.is-link,
+html.testgen-sub-standalone .el-overlay .el-button--primary.is-plain {
+  color: #2f8a5b !important;
+}
+
+html.testgen-sub-standalone .el-overlay .el-button--warning:not(.is-link):not(.is-text) {
+  background-color: #e6a23c !important;
+  border-color: #e6a23c !important;
+  color: #ffffff !important;
+}
+
+html.testgen-sub-standalone .el-overlay .el-button--danger:not(.is-link) {
+  background-color: #f56c6c !important;
+  border-color: #f56c6c !important;
+  color: #ffffff !important;
+}
+
+html.testgen-sub-standalone .el-overlay .el-button.is-link.el-button--warning,
+html.testgen-sub-standalone .el-overlay .el-button.is-text.el-button--warning {
+  color: #e6a23c !important;
+}
+
+html.testgen-sub-standalone .el-overlay .el-button.is-link.el-button--danger,
+html.testgen-sub-standalone .el-overlay .el-button.is-text.el-button--danger {
+  color: #f56c6c !important;
+}

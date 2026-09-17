@@ -20,6 +20,17 @@
   background-image: url('../assets/decorations/scene-lake.svg');
 }
 
+.ops-sub-content.ops-scene--dusk {
+  background-image: url('../assets/decorations/scene-grove.svg');
+  filter: none;
+  background-color: #f6f1e8;
+}
+
+.ops-sub-content.ops-scene--night {
+  background-image: url('../assets/decorations/scene-lake.svg');
+  background-color: #eef3f0;
+}
+
 .ops-sub-content.ops-scene.embedded {
   background-color: transparent;
 }

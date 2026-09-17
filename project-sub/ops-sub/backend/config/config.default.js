@@ -5,7 +5,12 @@ module.exports = appInfo => {
 
   config.keys = appInfo.name + '_ops_sub';
 
-  config.middleware = [];
+  config.middleware = [ 'sessionAuth' ];
+
+  config.jwt = {
+    secret: process.env.JWT_SECRET || 'CHANGE_ME_LOCAL_JWT',
+    enable: false,
+  };
 
   config.security = {
     csrf: { enable: false },
@@ -14,6 +19,7 @@ module.exports = appInfo => {
   config.cors = {
     origin: '*',
     allowMethods: 'GET,HEAD,PUT,POST,DELETE,PATCH,OPTIONS',
+    allowHeaders: 'Content-Type,Authorization,X-Requested-With',
   };
 
   config.sequelize = {
@@ -44,11 +50,16 @@ module.exports = appInfo => {
     baseUrl: process.env.AGENT_PLATFORM_URL || 'http://127.0.0.1:4001',
     timeoutMs: Number(process.env.AGENT_PLATFORM_TIMEOUT_MS || 600000),
     skill: process.env.OPS_PROJECT_SKILL || 'ops-project-skill',
+    deploySkill: process.env.OPS_DEPLOY_SKILL || 'ops-deploy-skill',
   };
 
   config.bodyParser = {
     jsonLimit: '16mb',
     formLimit: '16mb',
+  };
+
+  config.menuMaster = {
+    baseUrl: process.env.MENU_MASTER_URL || 'http://127.0.0.1:5200',
   };
 
   return config;

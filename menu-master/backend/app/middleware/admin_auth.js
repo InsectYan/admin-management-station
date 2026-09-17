@@ -9,7 +9,7 @@ module.exports = () => {
         ctx.body = { code: 401, message: '未登录', data: null };
         return;
       }
-      const decoded = ctx.app.jwt.verify(token, ctx.app.config.jwt.secret);
+      const decoded = ctx.state.user || ctx.app.jwt.verify(token, ctx.app.config.jwt.secret);
       ctx.state.user = decoded;
     } catch (err) {
       ctx.status = 401;

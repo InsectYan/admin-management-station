@@ -9,6 +9,7 @@ import {
   onBeforeUnmount, onMounted, ref, watch,
 } from 'vue';
 import { Graph } from '@antv/x6';
+import { EDGE_COLORS, resolveNodeColor } from '../../utils/flowChartTheme.js';
 
 const props = defineProps({
   nodes: { type: Array, default: () => [] },
@@ -22,31 +23,16 @@ const containerRef = ref(null);
 let graph = null;
 let applying = false;
 
-const NODE_COLORS = {
-  start: { fill: 'rgba(109,138,130,.18)', stroke: '#6D8A82' },
-  end: { fill: 'rgba(109,138,130,.18)', stroke: '#6D8A82' },
-  page: { fill: 'rgba(47,138,91,.16)', stroke: '#2F8A5B' },
-  api: { fill: 'rgba(91,168,124,.18)', stroke: '#5BA87C' },
-  action: { fill: 'rgba(109,138,130,.14)', stroke: '#6D8A82' },
-  decision: { fill: 'rgba(230,162,60,.16)', stroke: '#E6A23C' },
-};
-
-const EDGE_COLORS = {
-  next: '#6D8A82',
-  success: '#2F8A5B',
-  fail: '#F56C6C',
-  branch: '#E6A23C',
-};
-
 function nodeShape(type) {
   return type === 'decision' ? 'polygon' : 'rect';
 }
 
 function toGraphNodes() {
   return props.nodes.map((node) => {
-    const color = NODE_COLORS[node.type] || NODE_COLORS.action;
+    const color = resolveNodeColor(node);
+    const alert = node.severity === 'risk' || node.severity === 'warning';
     const width = node.type === 'decision' ? 128 : 148;
-    const height = node.type === 'decision' ? 72 : 48;
+    const height = node.type === 'decision' ? 72 : (alert ? 52 : 48);
     return {
       id: node.id,
       shape: nodeShape(node.type),
@@ -59,13 +45,15 @@ function toGraphNodes() {
         body: {
           fill: color.fill,
           stroke: color.stroke,
-          strokeWidth: 1.5,
+          strokeWidth: alert ? 2.4 : 1.5,
           rx: node.type === 'decision' ? 0 : 8,
           ry: node.type === 'decision' ? 0 : 8,
           refPoints: node.type === 'decision' ? '0,10 10,0 20,10 10,20' : undefined,
         },
         label: {
-          fill: '#1F3D2C',
+          fill: node.severity === 'risk'
+            ? '#C45656'
+            : (node.severity === 'warning' ? '#B7791F' : '#1F3D2C'),
           fontSize: 12,
           fontWeight: 600,
         },
@@ -90,7 +78,10 @@ function toGraphNodes() {
 }
 
 function nodeTypeFallback(type) {
-  return ({ start: '开始', end: '结束', page: '页面', api: '接口', action: '动作', decision: '判断' })[type] || '节点';
+  return ({
+    start: '开始', end: '结束', page: '页面', api: '接口', action: '动作',
+    decision: '判断',
+  })[type] || '节点';
 }
 
 function toGraphEdges() {
@@ -210,13 +201,62 @@ onMounted(() => {
 
 watch(
   () => JSON.stringify({
-    nodes: props.nodes.map((n) => ({ id: n.id, name: n.name, type: n.type })),
+    nodes: props.nodes.map((n) => ({
+      id: n.id, name: n.name, type: n.type, severity: n.severity, risk_note: n.risk_note, x: n.x, y: n.y,
+    })),
     edges: props.edges.map((e) => ({
       id: e.id, source: e.source, target: e.target, label: e.label, type: e.type,
     })),
   }),
   () => renderGraph(),
 );
+
+function exportPng(filename) {
+  return new Promise((resolve, reject) => {
+    const svg = containerRef.value?.querySelector('svg');
+    if (!svg || !graph) {
+      reject(new Error('画布未就绪'));
+      return;
+    }
+    const bbox = graph.getContentBBox();
+    const pad = 24;
+    const w = Math.max(240, Math.ceil((bbox.width || 400) + pad * 2));
+    const h = Math.max(160, Math.ceil((bbox.height || 240) + pad * 2));
+    const clone = svg.cloneNode(true);
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    clone.setAttribute('width', String(w));
+    clone.setAttribute('height', String(h));
+    clone.setAttribute('viewBox', `${(bbox.x || 0) - pad} ${(bbox.y || 0) - pad} ${w} ${h}`);
+    const xml = new XMLSerializer().serializeToString(clone);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#f3f8f4';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error('导出失败'));
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename.endsWith('.png') ? filename : `${filename}.png`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 800);
+        resolve();
+      }, 'image/png', 0.9);
+    };
+    img.onerror = () => reject(new Error('导出失败'));
+    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
+  });
+}
+
+defineExpose({ exportPng });
 
 onBeforeUnmount(() => {
   graph?.dispose();

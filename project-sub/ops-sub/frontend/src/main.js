@@ -11,6 +11,7 @@ import { createAppRouter } from './router';
 import { setBasename } from './qiankun/config.js';
 import { bindStandaloneScope } from './lib/subappScope.js';
 import { createQiankunStyleKeeper } from './lib/qiankunStyleKeeper.js';
+import { consumeHandedToken } from './lib/amsAuth.js';
 import './App.css';
 import './styles/variables.css';
 import './styles/element-override.css';
@@ -27,6 +28,7 @@ const styleKeeper = createQiankunStyleKeeper({
 });
 
 function render(props = {}) {
+  consumeHandedToken();
   unbindStandaloneScope?.();
   unbindStandaloneScope = bindStandaloneScope();
   const container = props.container

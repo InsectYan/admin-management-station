@@ -64,6 +64,7 @@ Agent 能力由 `agent-management-sub/plugins/testgen-skill` 提供，不在本�
 |------|------|
 | **文档索引** | [docs/README.md](./docs/README.md) |
 | 架构与流程图 | [docs/测试平台架构关系图.md](./docs/测试平台架构关系图.md) |
+| 样式（森林风） | [docs/style.md](./docs/style.md) |
 | 评分与后续计划 | [docs/项目评分与后续计划.md](./docs/项目评分与后续计划.md) |
 | 配置模板设计 | [docs/设计-配置模板与52大类.md](./docs/设计-配置模板与52大类.md) |
 | Agent 协作设计 | [docs/设计-Agent协作与Skill嵌入.md](./docs/设计-Agent协作与Skill嵌入.md) |

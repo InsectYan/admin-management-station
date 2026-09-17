@@ -25,9 +25,9 @@
       :collapse="collapsed"
       :collapse-transition="false"
       :default-active="activePath"
-      background-color="#409eff"
-      text-color="#fff"
-      active-text-color="#ffd04b"
+      background-color="transparent"
+      text-color="#2c4336"
+      active-text-color="#2f8a5b"
       router
     >
       <NavMenuNodes :nodes="navMenus" />
@@ -38,9 +38,9 @@
     :class="['testgen-sub-nav', { embedded }]"
     mode="horizontal"
     :default-active="activePath"
-    background-color="#fff"
-    text-color="#303133"
-    active-text-color="#409eff"
+    background-color="transparent"
+    text-color="#2c4336"
+    active-text-color="#2f8a5b"
     router
   >
     <NavMenuNodes :nodes="navMenus" />

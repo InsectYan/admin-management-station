@@ -5,12 +5,15 @@
  * schema = ops-project/v1
  */
 
+const { normalizeDeployConfig } = require('./deployProducts');
+
 const SCHEMA_ID = 'ops-project/v1';
 const TEMPLATE_VERSION = '1.0.0';
 
 const PROJECT_TYPES = [ 'frontend', 'backend', 'fullstack', 'agent' ];
 const PROJECT_STATUSES = [ 'draft', 'active', 'archived' ];
 const NODE_TYPES = [ 'start', 'page', 'api', 'action', 'decision', 'end' ];
+const NODE_SEVERITIES = [ 'risk', 'warning' ];
 const EDGE_TYPES = [ 'next', 'success', 'fail', 'branch' ];
 const TREE_NODE_TYPES = [ 'dir', 'file' ];
 
@@ -20,14 +23,16 @@ const FIELD_GUIDE = {
   name: '项目名称（必填）',
   type: '项目类型：frontend | backend | fullstack | agent',
   description: '项目职责与范围说明',
-  repo_url: 'Git 仓库地址，可留空',
-  source_path: '本地项目路径（必填才能生成配置；Agent 按此扫描）',
+  repo_url: 'GitHub HTTPS 地址（GitHub 部署必填），例如 https://github.com/org/repo.git',
+  source_path: '本地部署时拷贝的宿主机路径；Agent 须能走到含 deploy/scripts/run.mjs 的仓库根，不要只指 .pi',
   status: 'draft（梳理中）| active（在维护）| archived（已归档）',
   directory_tree: '目录树。flow_key 只绑该节点真正参与的那一条流程；支撑目录留空，禁止绑 overview 冒充万能入口',
   routes: '前端/全栈路由。每条路由只绑一条 flow_key，进入流程只能打开对应分流程',
-  flows: '必须含 key=overview 总览（仅索引）。分流程按能力成组，同能力多页共用一条',
-  'flows[].nodes': '节点：id, name, type(start|page|api|action|decision|end), description, x, y',
+  flows: '必须含 key=overview（完整项目链路，每种分叉有节点和后续）。分流程按能力少拆、链画全，禁止为每种 type 再拆一张图',
+  'flows[].nodes': '节点：id, name, type(start|page|api|action|decision|end)=业务形态；severity(可选 risk|warning)是独立标注，任何类型都能标；description=节点特点；risk_note=为何风险/警告及会导致什么问题',
   'flows[].edges': '连线：id, source, target, label, type(next|success|fail|branch)',
+  extra_json: '排障反查表：message_types / shell_ops 或 api_ops / skills / errors / risks（风险仍须是图上红/橙节点）',
+  deploy_config: '部署产品配置。product=generic|agentrun|…；code_source=local|github；git_branch 默认 main；git_tag 为发布标签（GitHub 源会在部署时自动创建并推送，无需手工打 tag）。GitHub Token 存在登录用户个人信息',
 };
 
 function emptyDirectoryNode() {
@@ -158,11 +163,20 @@ function normalizeRoutes(nodes) {
 function normalizeNodes(nodes) {
   return asArray(nodes).map((raw, index) => {
     const node = asObject(raw);
+    const legacyAlert = node.type === 'risk' || node.type === 'warning' ? node.type : '';
+    const type = NODE_TYPES.includes(node.type) ? node.type : 'action';
+    const severity = NODE_SEVERITIES.includes(node.severity)
+      ? node.severity
+      : (legacyAlert || '');
+    const description = String(node.description || '');
+    const riskNote = String(node.risk_note || node.risk || '') || (legacyAlert ? description : '');
     return {
       id: String(node.id || `n${index + 1}`),
       name: String(node.name || `节点${index + 1}`),
-      type: NODE_TYPES.includes(node.type) ? node.type : 'action',
-      description: String(node.description || ''),
+      type: NODE_TYPES.includes(type) ? type : 'action',
+      severity,
+      description,
+      risk_note: riskNote,
       x: Number.isFinite(Number(node.x)) ? Number(node.x) : 120 + index * 160,
       y: Number.isFinite(Number(node.y)) ? Number(node.y) : 160,
     };
@@ -219,9 +233,10 @@ function normalizeProjectPayload(raw) {
     source_path: String(body.source_path || ''),
     status,
     directory_tree: normalizeTree(body.directory_tree),
-    routes: (type === 'backend' || type === 'agent') ? [] : normalizeRoutes(body.routes),
+    routes: normalizeRoutes(body.routes),
     flows: normalizeFlows(body.flows),
     extra_json: asObject(body.extra_json),
+    deploy_config: normalizeDeployConfig(body.deploy_config),
   };
 }
 
@@ -250,6 +265,7 @@ function serializeExport(row) {
     routes: row.routes || [],
     flows: row.flows || [],
     extra_json: row.extra_json || {},
+    deploy_config: row.deploy_config || {},
     exported_at: new Date().toISOString(),
   };
 }
@@ -299,12 +315,14 @@ function demoProjects() {
             { id: 'start', name: '开始', type: 'start', description: '', x: 60, y: 180 },
             { id: 'list', name: '小说列表', type: 'page', description: '看板 / 表格', x: 240, y: 180 },
             { id: 'create', name: '新建小说', type: 'page', description: '五步向导', x: 440, y: 80 },
+            { id: 'warn-auth', name: '需登录', type: 'action', severity: 'warning', description: '未开通账号不能进入创建向导的鉴权检查', risk_note: '未开通仍进创建向导会把草稿写到错误身份或匿名会话。', x: 440, y: 0 },
             { id: 'detail', name: '小说详情', type: 'page', description: '设定与关系图', x: 440, y: 280 },
             { id: 'end', name: '结束', type: 'end', description: '', x: 660, y: 180 },
           ],
           edges: [
             { id: 'e1', source: 'start', target: 'list', label: '', type: 'next' },
             { id: 'e2', source: 'list', target: 'create', label: '新建', type: 'next' },
+            { id: 'e2w', source: 'list', target: 'warn-auth', label: '注意', type: 'branch' },
             { id: 'e3', source: 'list', target: 'detail', label: '打开', type: 'next' },
             { id: 'e4', source: 'create', target: 'end', label: '完成', type: 'success' },
             { id: 'e5', source: 'detail', target: 'end', label: '', type: 'success' },
@@ -320,6 +338,7 @@ function demoProjects() {
             { id: 'wizard', name: '五步向导', type: 'page', description: '基础信息 → 世界观 → 人物 → 大纲 → 目录', x: 420, y: 180 },
             { id: 'save', name: '保存草稿 API', type: 'api', description: 'PUT /api/novels/:id', x: 620, y: 80 },
             { id: 'decide', name: '是否完成？', type: 'decision', description: '向导最后一步确认', x: 620, y: 280 },
+            { id: 'fail', name: '保存失败', type: 'action', severity: 'risk', description: '草稿未写入或校验失败', risk_note: '失败当完成会让列表以为小说已保存，实际库中没有草稿。', x: 840, y: 320 },
             { id: 'done', name: '回到列表', type: 'end', description: '', x: 840, y: 180 },
           ],
           edges: [
@@ -329,6 +348,7 @@ function demoProjects() {
             { id: 'e4', source: 'wizard', target: 'decide', label: '提交', type: 'next' },
             { id: 'e5', source: 'decide', target: 'done', label: '完成', type: 'success' },
             { id: 'e6', source: 'decide', target: 'wizard', label: '继续编辑', type: 'branch' },
+            { id: 'e7', source: 'decide', target: 'fail', label: '失败码', type: 'fail' },
           ],
         },
         {
@@ -425,6 +445,7 @@ module.exports = {
   PROJECT_TYPES,
   PROJECT_STATUSES,
   NODE_TYPES,
+  NODE_SEVERITIES,
   EDGE_TYPES,
   FIELD_GUIDE,
   emptyDirectoryNode,

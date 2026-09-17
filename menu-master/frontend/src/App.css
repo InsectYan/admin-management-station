@@ -71,6 +71,73 @@ body {
   font-size: 12px;
 }
 
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f8f4;
+}
+
+.auth-card {
+  width: 400px;
+  max-width: calc(100vw - 32px);
+  border: 1px solid rgba(47, 138, 91, 0.18) !important;
+  border-radius: 12px !important;
+}
+
+.auth-title {
+  margin: 0 0 4px;
+  font-size: 22px;
+  color: #1f3d2c;
+}
+
+.auth-sub {
+  margin: 0 0 20px;
+  color: #5c6b62;
+  font-size: 13px;
+}
+
+.auth-submit {
+  width: 100%;
+}
+
+.auth-foot {
+  margin: 16px 0 0;
+  text-align: center;
+  color: #5c6b62;
+  font-size: 13px;
+}
+
+.auth-foot a {
+  color: #2f8a5b;
+  text-decoration: none;
+}
+
+.app-user {
+  margin-top: auto;
+  padding: 12px 16px 16px;
+  border-top: 1px solid rgba(47, 138, 91, 0.14);
+}
+
+.app-user-name {
+  display: block;
+  margin-bottom: 8px;
+  color: #1f3d2c;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-sider.collapsed .app-user {
+  padding: 8px 6px 12px;
+}
+
+.app-sider.collapsed .app-user-name {
+  display: none;
+}
+
 .subapp-wrapper {
   height: 100%;
   width: 100%;
@@ -131,6 +198,85 @@ qiankun-head {
 .subapp-container .el-main {
   --el-main-padding: 0 !important;
   padding: 0 !important;
+}
+
+.admin-page {
+  height: 100%;
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 24px 28px 40px;
+  background: #f3f8f4;
+}
+
+.admin-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.admin-head h1 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  color: #1f3d2c;
+}
+
+.admin-head p,
+.settings-hint {
+  margin: 0;
+  color: #5c6b62;
+  font-size: 13px;
+}
+
+.admin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.admin-filters .el-input,
+.admin-filters .el-select {
+  width: 200px;
+}
+
+.admin-pager {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.settings-card {
+  max-width: 640px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(47, 138, 91, 0.16) !important;
+}
+
+.settings-card h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  color: #1f3d2c;
+}
+
+.mfa-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 480px;
+}
+
+.mfa-box code {
+  display: block;
+  padding: 8px 10px;
+  background: #eef6f0;
+  border-radius: 6px;
+  word-break: break-all;
+  font-size: 12px;
+}
+
+.mfa-url {
+  font-size: 11px;
 }
 
 .welcome-panel {

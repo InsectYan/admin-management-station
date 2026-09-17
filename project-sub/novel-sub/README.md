@@ -44,7 +44,8 @@ cd menu-master/deploy && ams-main local       # 自动 sync-subapps
 | `/novels`                           | 小说列表（看板 / 表格） |
 | `/novels/create`                    | 五步创作向导（新建）    |
 | `/novels/create?id={id}&step={1-6}` | 继续编辑草稿（六步向导） |
-| `/novels/:id?tab={1-7}`             | 小说详情；tab=7 为单章开发 |
+| `/novels/:id?tab={1-8}`             | 小说详情；tab=7 单章开发，tab=8 阅读 |
+| `/novels/:id/qa`                    | 验收核检（列表 / 详情进入，不占侧栏） |
 
 
 架构与 API 详见 `[docs/架构关系图.md](docs/架构关系图.md)`

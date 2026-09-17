@@ -39,3 +39,34 @@ CREATE INDEX IF NOT EXISTS idx_subapp_status ON subapp_registry(status);
 
 -- 子应用与一级菜单由 deploy/scripts/sync-subapps.mjs 从 project-sub/*/subapp.manifest.json 同步。
 -- 启动 ams-main local 时会自动执行；也可手动：ams-main sync:subapps
+
+CREATE TABLE IF NOT EXISTS platform_users (
+  id SERIAL PRIMARY KEY,
+  username VARCHAR(64) NOT NULL UNIQUE,
+  email VARCHAR(200) NOT NULL UNIQUE,
+  password_hash VARCHAR(200) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  role VARCHAR(20) NOT NULL DEFAULT 'operator',
+  mfa_secret VARCHAR(64),
+  mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  github_login VARCHAR(128),
+  github_token TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_platform_users_status ON platform_users(status);
+
+CREATE TABLE IF NOT EXISTS platform_audit_logs (
+  id SERIAL PRIMARY KEY,
+  actor_id INTEGER,
+  actor_username VARCHAR(64) NOT NULL,
+  action VARCHAR(64) NOT NULL,
+  target_user_id INTEGER,
+  target_username VARCHAR(64),
+  detail TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_platform_audit_logs_created ON platform_audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_platform_audit_logs_action ON platform_audit_logs(action);

@@ -42,7 +42,7 @@ function cellCount(station, role) {
 
 function heat(count) {
   const ratio = count / maxCount.value;
-  return `rgba(64, 158, 255, ${0.15 + ratio * 0.75})`;
+  return `rgba(47, 138, 91, ${0.15 + ratio * 0.75})`;
 }
 
 onMounted(async () => {

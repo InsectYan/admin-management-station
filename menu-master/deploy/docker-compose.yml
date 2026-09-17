@@ -43,6 +43,8 @@ services:
       SUBAPP_TESTGEN_ENTRY: ${SUBAPP_TESTGEN_ENTRY:-http://localhost:5102}
       SUBAPP_OPS_ENTRY: ${SUBAPP_OPS_ENTRY:-http://localhost:5103}
       AGENT_PLATFORM_URL: ${AGENT_PLATFORM_URL:-http://host.docker.internal:4001}
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_LOCAL_JWT}
+      OPS_INTERNAL_KEY: ${OPS_INTERNAL_KEY:-CHANGE_ME_LOCAL_JWT}
     ports:
       - "${MAIN_PORT:-5200}:${MAIN_PORT:-5200}"
     depends_on:

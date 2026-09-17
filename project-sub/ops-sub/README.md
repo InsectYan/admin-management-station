@@ -50,9 +50,13 @@ cd menu-master/deploy && ams-main local     # 自动 sync-subapps
 | 路径 | 说明 |
 |------|------|
 | `/projects` | 项目信息列表（看板 / 表格）；导出模板、导入 JSON、新建 |
+| `/deploy-jobs` | 跨项目部署任务总览 |
 | `/projects/new` | 新建：基础信息 + 生成配置 + 导入项目库 |
 | `/projects/:id` | 详情只读 |
 | `/projects/:id/edit?tab=1..4` | 编辑：目录 / 路由 / 流程图；可重新生成 |
+| `/projects/:id/deploy` | 部署操作 |
+| `/projects/:id/deploy/:jobId` | 部署黑窗口 |
+| `/projects/:id/deploy-logs` | 部署历史 |
 
 ## API 摘要
 
@@ -61,7 +65,8 @@ cd menu-master/deploy && ams-main local     # 自动 sync-subapps
 | GET | `/api/health` | 健康检查 |
 | GET | `/api/projects` | 列表（name / type / status / 分页 / 排序） |
 | GET | `/api/projects/template` | 空白 JSON 模板（含 `_guide` 字段说明） |
-| POST | `/api/projects/import` | 按模板导入创建项目 |
+| POST | `/api/projects/import` | 按模板导入创建项目（小文件同步） |
+| POST | `/api/projects/import-jobs` | 导入任务（大文件 + SSE） |
 | POST | `/api/projects/generate` | 调用 ops-project-skill 生成配置（不落库） |
 | POST | `/api/projects/:id/generate` | 重新生成并写入项目 |
 | GET | `/api/projects/:id/export` | 导出完整项目配置 |
@@ -69,6 +74,16 @@ cd menu-master/deploy && ams-main local     # 自动 sync-subapps
 | GET | `/api/projects/:id` | 详情 |
 | PUT | `/api/projects/:id` | 更新 |
 | DELETE | `/api/projects/:id` | 删除 |
+| GET | `/api/projects/:id/git-tags` | 远程 tag 列表 |
+| POST | `/api/projects/:id/deploy` | 创建部署任务 |
+| GET | `/api/projects/:id/deploy/jobs` | 项目部署列表 |
+| GET | `/api/deploy/jobs` | 跨项目任务列表 |
+| GET | `/api/deploy/jobs/summary` | 进行中 / 今日成功失败 |
+| GET | `/api/deploy/jobs/:jobId` | 任务详情 |
+| GET | `/api/deploy/jobs/:jobId/logs` | 日志增量 |
+| GET | `/api/deploy/jobs/:jobId/stream` | SSE |
+| POST | `/api/deploy/jobs/:jobId/retry` | 失败重试 |
+| POST | `/api/deploy/jobs/:jobId/abort` | 中止 |
 
 模板字段约定见 [`docs/项目配置模板.md`](docs/项目配置模板.md)。
 
@@ -87,6 +102,7 @@ cd menu-master/deploy && ams-main local     # 自动 sync-subapps
 
 | 文档 | 路径 |
 |------|------|
+| 未做项（设计） | `docs/design/readme.md` |
 | 架构与流程图 | `docs/架构关系图.md` |
 | 评分与后续计划 | `docs/项目评分与后续计划.md` |
 | 配置模板 | `docs/项目配置模板.md` |

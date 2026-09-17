@@ -82,7 +82,7 @@ const VIEW_MAP = {
   'station-role': 'v_metric_station_role_matrix',
 };
 
-const PIE_COLORS = [ '#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399' ];
+const PIE_COLORS = [ '#2f8a5b', '#6d8a82', '#e6a23c', '#f56c6c', '#8a968e' ];
 
 const route = useRoute();
 const loading = ref(false);
@@ -143,7 +143,7 @@ function heatColor(count) {
   const n = Number(count) || 0;
   const ratio = n / heatMax.value;
   const alpha = 0.15 + ratio * 0.75;
-  return `rgba(64, 158, 255, ${alpha.toFixed(2)})`;
+  return `rgba(47, 138, 91, ${alpha.toFixed(2)})`;
 }
 
 async function load() {

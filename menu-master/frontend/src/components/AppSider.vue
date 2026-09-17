@@ -77,15 +77,22 @@
         </el-menu-item>
       </template>
     </el-menu>
+    <div class="app-user">
+      <span v-show="!collapsed" class="app-user-name">{{ displayName }}</span>
+      <el-button link type="primary" @click="router.push('/settings')">设置</el-button>
+      <el-button link type="primary" @click="onLogout">退出</el-button>
+    </div>
   </el-aside>
 </template>
 
 <script setup>
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Loading, Grid, Reading, Cpu, Monitor, Fold, Expand } from '@element-plus/icons-vue';
+import { Loading, Grid, Reading, Cpu, Monitor, Fold, Expand, User, Document } from '@element-plus/icons-vue';
 import { buildMenuPath } from '../qiankun/config.js';
 import { useNavCollapse } from '../composables/useNavCollapse.js';
+import { clearSession, getCachedUser, isAdmin } from '../lib/amsAuth.js';
+import { logout } from '../services/authService.js';
 import LlmProfileSelector from './LlmProfileSelector.vue';
 import MediaProfileSelector from './MediaProfileSelector.vue';
 import AppVineDecor from './AppVineDecor.vue';
@@ -101,6 +108,18 @@ const router = useRouter();
 const { collapsed, toggleCollapsed } = useNavCollapse();
 
 const asideWidth = computed(() => (collapsed.value ? '64px' : '240px'));
+const cachedUser = computed(() => getCachedUser());
+const displayName = computed(() => cachedUser.value?.username || '已登录');
+const adminMenus = [
+  { key: '/users', icon: User, label: '用户管理' },
+  { key: '/audit', icon: Document, label: '审计日志' },
+];
+
+async function onLogout() {
+  await logout();
+  clearSession();
+  router.replace('/login');
+}
 
 const ICON_MAP = {
   'icon-novel': Reading,
@@ -156,8 +175,15 @@ function findOpenKeys(pathname, menus, keys = []) {
   return keys;
 }
 
-const menuItems = computed(() => toMenuItems(props.menus));
-const selectedKey = computed(() => findSelectedKey(route.path, props.menus));
+const menuItems = computed(() => {
+  const items = toMenuItems(props.menus);
+  if (isAdmin(cachedUser.value)) items.push(...adminMenus);
+  return items;
+});
+const selectedKey = computed(() => {
+  if ([ '/users', '/audit', '/settings' ].includes(route.path)) return route.path;
+  return findSelectedKey(route.path, props.menus);
+});
 const openKeys = computed(() => findOpenKeys(route.path, props.menus));
 
 function handleSelect(key) {

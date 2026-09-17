@@ -13,6 +13,10 @@ import { setBasename } from './qiankun/config.js';
 import { bindStandaloneScope } from './lib/subappScope.js';
 import { createQiankunStyleKeeper } from './lib/qiankunStyleKeeper.js';
 import './App.css';
+import './styles/variables.css';
+import './styles/element-override.css';
+import './styles/forest-motion.css';
+import './styles/landscapes.css';
 
 let app = null;
 let router = null;

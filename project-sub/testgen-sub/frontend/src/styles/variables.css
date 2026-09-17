@@ -1,0 +1,91 @@
+﻿/* 清新森林风设计令牌 — 仅作用于 .testgen-sub-root 子树 */
+
+.testgen-sub-root {
+  /* 主色：清新叶绿（非琥珀金、非饱和森林绿） */
+  --testgen-color-primary: #2f8a5b;
+  --testgen-color-primary-hover: #3a9d6a;
+  --testgen-color-primary-muted: rgba(47, 138, 91, 0.1);
+  --testgen-color-success: #2f8a5b;
+  /* 语义态：偏明亮，便于 warning / danger 一眼可辨 */
+  --testgen-color-warning: #e6a23c;
+  --testgen-color-warning-hover: #ebb563;
+  --testgen-color-danger: #f56c6c;
+  --testgen-color-danger-hover: #f78989;
+  --testgen-color-moon: #6d8a82;
+  --testgen-color-accent: #2f8a5b;
+  --testgen-color-forest: #2f8a5b;
+
+  /* 表面：浅底 + 半透明玻璃，让景观勾勒透出来 */
+  --testgen-color-bg: #f3f8f4;
+  --testgen-color-surface: rgba(255, 255, 255, 0.62);
+  --testgen-color-surface-elevated: rgba(255, 255, 255, 0.82);
+  --testgen-color-mist: rgba(240, 247, 242, 0.72);
+  --testgen-color-parchment: var(--testgen-color-surface);
+  --testgen-color-glass: rgba(255, 255, 255, 0.42);
+  --testgen-color-glass-hover: rgba(255, 255, 255, 0.68);
+  --testgen-backdrop-blur: 12px;
+
+  --testgen-color-deep: #1f3d2c;
+  --testgen-color-text: #2c4336;
+  --testgen-color-text-secondary: #5c6b62;
+  --testgen-color-text-muted: #8a968e;
+
+  --testgen-radius-base: 10px;
+  --testgen-radius-sm: 6px;
+
+  --testgen-border-subtle: 1px solid rgba(47, 138, 91, 0.12);
+  --testgen-border-default: 1px solid rgba(47, 138, 91, 0.2);
+  --testgen-border-strong: 1px solid rgba(47, 138, 91, 0.32);
+  --testgen-border-gold: var(--testgen-border-default);
+
+  --testgen-shadow-soft: 0 1px 2px rgba(31, 61, 44, 0.04), 0 8px 24px rgba(47, 138, 91, 0.06);
+  --testgen-shadow-focus: 0 0 0 3px rgba(47, 138, 91, 0.16);
+  --testgen-shadow-glow: var(--testgen-shadow-soft);
+
+  --testgen-gradient-hero: linear-gradient(
+    165deg,
+    rgba(232, 244, 236, 0.9) 0%,
+    rgba(243, 248, 244, 0.55) 48%,
+    rgba(255, 255, 255, 0.35) 100%
+  );
+  --testgen-gradient-steps: linear-gradient(
+    90deg,
+    rgba(47, 138, 91, 0.07),
+    rgba(109, 138, 130, 0.05)
+  );
+  --testgen-gradient-header: var(--testgen-gradient-hero);
+  --testgen-gradient-magic: var(--testgen-gradient-steps);
+  --testgen-gradient-btn: linear-gradient(180deg, rgba(58, 157, 106, 0.9), rgba(47, 138, 91, 0.82));
+  --testgen-gradient-cover: linear-gradient(
+    160deg,
+    rgba(232, 244, 236, 0.55) 0%,
+    rgba(47, 138, 91, 0.12) 100%
+  );
+
+  /* Element Plus 色板映射 */
+  --el-color-primary: var(--testgen-color-primary);
+  --el-color-primary-light-3: #5ba87c;
+  --el-color-primary-light-5: #86c09e;
+  --el-color-primary-light-7: #b3d8c4;
+  --el-color-primary-light-8: #cce6d6;
+  --el-color-primary-light-9: #e6f4ec;
+  --el-color-primary-dark-2: #26734c;
+  --el-color-success: var(--testgen-color-success);
+  --el-color-warning: var(--testgen-color-warning);
+  --el-color-danger: var(--testgen-color-danger);
+  --el-color-warning-light-3: #ebb563;
+  --el-color-warning-light-5: #f3d19e;
+  --el-color-warning-light-7: #f8e3c5;
+  --el-color-warning-light-8: #faecd8;
+  --el-color-warning-light-9: #fdf6ec;
+  --el-color-warning-dark-2: #cf9236;
+  --el-color-danger-light-3: #f89898;
+  --el-color-danger-light-5: #fab6b6;
+  --el-color-danger-light-7: #fcd3d3;
+  --el-color-danger-light-8: #fde2e2;
+  --el-color-danger-light-9: #fef0f0;
+  --el-color-danger-dark-2: #dd6161;
+  --el-color-info: var(--testgen-color-moon);
+  --el-border-radius-base: var(--testgen-radius-sm);
+  --el-font-size-base: 14px;
+}

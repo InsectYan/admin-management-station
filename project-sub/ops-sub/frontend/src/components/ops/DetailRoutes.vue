@@ -4,7 +4,7 @@
       v-if="disabled"
       type="info"
       :closable="false"
-      title="后端 / Agent 项目不展示路由。如需记录页面路径，请将类型改为前端或全栈。"
+      title="后端 / Agent 的 path 记录 HTTP 接口，可绑到对应流程。"
       class="ops-routes__alert"
     />
     <template v-else>

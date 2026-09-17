@@ -954,7 +954,7 @@ onMounted(() => {
 }
 .testgen-estimate-endpoints summary {
   cursor: pointer;
-  color: #409eff;
+  color: var(--testgen-color-primary, #2f8a5b);
 }
 .testgen-estimate-endpoints ul {
   margin: 6px 0 0;

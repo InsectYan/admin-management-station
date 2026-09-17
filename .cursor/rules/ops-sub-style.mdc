@@ -140,7 +140,7 @@ frontend/src/styles/
 
 ## 6. AntV 图表
 
-- 色板 `['#2F8A5B', '#6D8A82', '#E6A23C', '#5BA87C']`。
+- 流程图：节点 `type` 是业务形态；`severity=risk` 红描边、`severity=warning` 橙描边（任意类型都可标）。判断节点不要再用橙色以免和警告标注撞色。
 - 图表容器类名 `ops-antv-forest`；背景用雾面，不要羊皮纸黄。
 
 ---

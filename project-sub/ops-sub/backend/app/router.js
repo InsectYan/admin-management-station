@@ -3,11 +3,28 @@
 module.exports = app => {
   const { router, controller } = app;
   router.get('/api/health', controller.health.index);
+  router.get('/api/profile/github', controller.profile.github);
+  router.put('/api/profile/github-token', controller.profile.saveGithub);
   router.get('/api/projects/template', controller.project.template);
   router.post('/api/projects/import', controller.project.importFile);
+  router.post('/api/projects/import-jobs', controller.project.createImportJob);
+  router.get('/api/projects/import-jobs/:jobId/stream', controller.project.streamImport);
+  router.get('/api/projects/import-jobs/:jobId', controller.project.showImportJob);
   router.post('/api/projects/generate', controller.project.generate);
   router.post('/api/projects/:id/generate', controller.project.generateApply);
   router.get('/api/projects/:id/export', controller.project.exportFile);
+  router.get('/api/deploy/products', controller.deploy.products);
+  router.get('/api/projects/:id/git-tags', controller.deploy.gitTags);
+  router.post('/api/projects/:id/deploy', controller.deploy.create);
+  router.get('/api/projects/:id/deploy/jobs', controller.deploy.listByProject);
+  router.get('/api/deploy/jobs', controller.deploy.listAll);
+  router.get('/api/deploy/jobs/summary', controller.deploy.summary);
+  router.get('/api/deploy/jobs/:jobId/stream', controller.deploy.stream);
+  router.get('/api/deploy/jobs/:jobId/logs.txt', controller.deploy.logsText);
+  router.get('/api/deploy/jobs/:jobId/logs', controller.deploy.logs);
+  router.post('/api/deploy/jobs/:jobId/retry', controller.deploy.retry);
+  router.post('/api/deploy/jobs/:jobId/abort', controller.deploy.abort);
+  router.get('/api/deploy/jobs/:jobId', controller.deploy.show);
   router.get('/api/projects', controller.project.index);
   router.post('/api/projects', controller.project.create);
   router.get('/api/projects/:id', controller.project.show);
