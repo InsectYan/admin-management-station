@@ -11,6 +11,10 @@ const { normalizePackagePath, parseGithubHttps } = require('./gitSource');
 
 const UA = 'ops-sub-deploy';
 const API_VERSION = '2022-11-28';
+/** 超过该大小的单文件输出字节进度 */
+const LARGE_FILE_BYTES = 100 * 1024;
+/** 大文件进度日志最小间隔 */
+const LARGE_PROGRESS_STEP = 100 * 1024;
 
 function githubHeaders(token) {
   const headers = {
@@ -20,6 +24,13 @@ function githubHeaders(token) {
   };
   if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
+}
+
+function formatBytes(n) {
+  const v = Number(n) || 0;
+  if (v < 1024) return `${v} B`;
+  if (v < 1024 * 1024) return `${(v / 1024).toFixed(1)} KB`;
+  return `${(v / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 async function githubJson(url, token, { method = 'GET', body } = {}) {
@@ -104,7 +115,18 @@ function relPathUnderPackage(blobPath, packagePath) {
   return blobPath;
 }
 
-async function downloadRawFile({ owner, repo, commitSha, filePath, token }) {
+/**
+ * @param {{ knownSize?: number, onByteProgress?: (received: number, total: number) => (void|Promise<void>) }} [opts]
+ */
+async function downloadRawFile({
+  owner,
+  repo,
+  commitSha,
+  filePath,
+  token,
+  knownSize = 0,
+  onByteProgress,
+} = {}) {
   const url = `https://raw.githubusercontent.com/${owner}/${repo}/${commitSha}/${filePath.split('/').map(encodeURIComponent).join('/')}`;
   const res = await fetch(url, {
     headers: {
@@ -115,7 +137,37 @@ async function downloadRawFile({ owner, repo, commitSha, filePath, token }) {
   if (!res.ok) {
     throw new Error(`下载 ${filePath} 失败：HTTP ${res.status}`);
   }
-  return Buffer.from(await res.arrayBuffer());
+
+  const headerLen = Number(res.headers.get('content-length') || 0);
+  const totalHint = headerLen || Number(knownSize) || 0;
+  const trackLarge = totalHint >= LARGE_FILE_BYTES
+    || (typeof onByteProgress === 'function' && Number(knownSize) >= LARGE_FILE_BYTES);
+
+  if (!trackLarge || !res.body || typeof res.body.getReader !== 'function') {
+    return Buffer.from(await res.arrayBuffer());
+  }
+
+  const reader = res.body.getReader();
+  const chunks = [];
+  let received = 0;
+  let lastReported = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = Buffer.from(value);
+    chunks.push(chunk);
+    received += chunk.length;
+    const crossed = received - lastReported >= LARGE_PROGRESS_STEP;
+    const finishedHint = totalHint > 0 && received >= totalHint;
+    if (typeof onByteProgress === 'function' && (crossed || finishedHint)) {
+      lastReported = received;
+      await onByteProgress(received, totalHint);
+    }
+  }
+  if (typeof onByteProgress === 'function' && received > lastReported) {
+    await onByteProgress(received, totalHint || received);
+  }
+  return Buffer.concat(chunks);
 }
 
 async function mapPool(items, concurrency, worker) {
@@ -134,7 +186,6 @@ async function mapPool(items, concurrency, worker) {
 
 /**
  * 将 package_path 下的文件落到 destDir 根（已 hoist）。
- * @param {{ exclude?: (repoPath: string) => boolean }} [options]
  * @returns {{ sha: string, fileCount: number, packagePath: string }}
  */
 async function downloadGithubPathPackage({
@@ -159,11 +210,19 @@ async function downloadGithubPathPackage({
   if (!blobs.length) {
     throw new Error(`包路径下没有可下载文件：${pkg}`);
   }
+
+  const total = blobs.length;
+  const largeCount = blobs.filter(b => Number(b.size || 0) >= LARGE_FILE_BYTES).length;
   if (typeof onProgress === 'function') {
-    await onProgress(`包路径 ${pkg}：共 ${blobs.length} 个文件，开始下载`);
+    await onProgress(
+      `包路径 ${pkg}：共 ${total} 个文件`
+      + (largeCount ? `（其中 ${largeCount} 个 ≥ ${formatBytes(LARGE_FILE_BYTES)}）` : '')
+      + '，开始下载',
+    );
   }
 
   fs.mkdirSync(destDir, { recursive: true });
+  let done = 0;
   await mapPool(blobs, 8, async (blob) => {
     const rel = relPathUnderPackage(blob.path, pkg);
     if (!rel || rel.split(/[/\\]/).includes('..')) {
@@ -171,14 +230,32 @@ async function downloadGithubPathPackage({
     }
     const out = path.join(destDir, rel);
     fs.mkdirSync(path.dirname(out), { recursive: true });
+    const knownSize = Number(blob.size || 0);
+    const isLarge = knownSize >= LARGE_FILE_BYTES;
+    if (isLarge && typeof onProgress === 'function') {
+      await onProgress(`大文件开始 ${blob.path}（约 ${formatBytes(knownSize)}）`);
+    }
     const buf = await downloadRawFile({
       owner,
       repo,
       commitSha,
       filePath: blob.path,
       token,
+      knownSize,
+      onByteProgress: isLarge && typeof onProgress === 'function'
+        ? async (received, totalBytes) => {
+          const suffix = totalBytes
+            ? ` / ${formatBytes(totalBytes)}`
+            : '';
+          await onProgress(`大文件 ${blob.path}：已下载 ${formatBytes(received)}${suffix}`);
+        }
+        : undefined,
     });
     fs.writeFileSync(out, buf);
+    done += 1;
+    if (typeof onProgress === 'function') {
+      await onProgress(`进度 ${done}/${total}：${blob.path}（${formatBytes(buf.length)}）`);
+    }
   });
 
   return { sha: commitSha, fileCount: blobs.length, packagePath: pkg };
@@ -210,6 +287,13 @@ async function downloadGithubFile({
     commitSha,
     filePath: pkg,
     token,
+    knownSize: LARGE_FILE_BYTES,
+    onByteProgress: typeof onProgress === 'function'
+      ? async (received, totalBytes) => {
+        const suffix = totalBytes ? ` / ${formatBytes(totalBytes)}` : '';
+        await onProgress(`大文件 ${pkg}：已下载 ${formatBytes(received)}${suffix}`);
+      }
+      : undefined,
   });
   if (!buf.length || buf[0] !== 0x50 || buf[1] !== 0x4b) {
     throw new Error(`下载内容不是 zip 文件：${pkg}`);
@@ -266,4 +350,5 @@ module.exports = {
   resolveGithubZipFilePath,
   createLightweightTag,
   resolveCommitSha,
+  LARGE_FILE_BYTES,
 };
