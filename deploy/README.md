@@ -59,11 +59,8 @@ cd "$REPO/project-sub/testgen-sub/deploy"
 docker compose -f docker-compose.yml --env-file config/.env.local up -d --build
 
 # 运维 → :5103 / :5203 / :5303
-# 注意：仓库里的 .env.local 含 Windows 路径，ECS 必须覆盖挂载路径（见 §4）
 cd "$REPO/project-sub/ops-sub/deploy"
 POSTGRES_IMAGE=postgres:16-alpine \
-HOST_PROJECTS_MOUNT="$REPO" \
-OPS_DEPLOY_WORKDIR_HOST="$REPO/project-sub/ops-sub/.ops-deploy-work" \
   docker compose -f docker-compose.yml --env-file config/.env.local up -d --build
 ```
 
@@ -81,9 +78,7 @@ docker compose -f docker-compose.yml --env-file config/.env.local down -v   # �
 
 ```bash
 cd "$REPO/project-sub/ops-sub/deploy"
-HOST_PROJECTS_MOUNT="$REPO" \
-OPS_DEPLOY_WORKDIR_HOST="$REPO/project-sub/ops-sub/.ops-deploy-work" \
-  bash scripts/compose.sh up -d --build
+POSTGRES_IMAGE=postgres:16-alpine bash scripts/compose.sh up -d --build
 ```
 
 ### 2. 验收
@@ -114,13 +109,11 @@ POSTGRES_IMAGE=postgres:16-alpine \
   docker compose -f docker-compose.yml --env-file config/.env.local up -d --build
 ```
 
-运维同理（务必同时覆盖 Windows 挂载路径，见 §4）：
+运维同理：
 
 ```bash
 cd "$REPO/project-sub/ops-sub/deploy"
 POSTGRES_IMAGE=postgres:16-alpine \
-HOST_PROJECTS_MOUNT="$REPO" \
-OPS_DEPLOY_WORKDIR_HOST="$REPO/project-sub/ops-sub/.ops-deploy-work" \
   docker compose -f docker-compose.yml --env-file config/.env.local up -d --build
 ```
 
@@ -145,36 +138,25 @@ docker pull postgres:16-alpine
 
 ### 4. 运维平台：`invalid volume specification: 'E:/AI Tools/...'`
 
-`ops-sub/deploy/config/.env.local` 里是 **本机 Windows 路径**：
+**已修复（代码默认）**：`ops-sub/deploy` 的 `HOST_PROJECTS_MOUNT` / `OPS_DEPLOY_WORKDIR_HOST` 改为相对 `deploy/` 的路径（挂 monorepo 根与 `.ops-deploy-work`），**不要再把 `E:/...` 写进可提交的 `.env.local`**。
+
+ECS 上更新代码后直接：
 
 ```bash
-HOST_PROJECTS_MOUNT=E:/AI Tools/projects
-OPS_DEPLOY_WORKDIR_HOST=E:/AI Tools/projects/.../ops-sub/.ops-deploy-work
-```
-
-Linux Docker 不能挂 `E:/...`，会报 `invalid volume specification`。
-
-**单次启动覆盖（推荐）**：
-
-```bash
-REPO=/opt/project/admin-management-station   # 改成 ECS 上真实仓库根
-mkdir -p "$REPO/project-sub/ops-sub/.ops-deploy-work"
-
 cd "$REPO/project-sub/ops-sub/deploy"
 POSTGRES_IMAGE=postgres:16-alpine \
-HOST_PROJECTS_MOUNT="$REPO" \
-OPS_DEPLOY_WORKDIR_HOST="$REPO/project-sub/ops-sub/.ops-deploy-work" \
   docker compose -f docker-compose.yml --env-file config/.env.local up -d --build
 ```
 
-**或只改 ECS 上的 env（不提交）**，把上述两行改成 Linux 绝对路径，例如：
+Windows 本机若要挂盘符下更多目录（如整个 `E:/AI Tools/projects`），仅在本机 `.env.local` 覆盖：
 
 ```bash
-HOST_PROJECTS_MOUNT=/opt/project/admin-management-station
-OPS_DEPLOY_WORKDIR_HOST=/opt/project/admin-management-station/project-sub/ops-sub/.ops-deploy-work
+HOST_PROJECTS_MOUNT=E:/AI Tools/projects
 ```
 
-说明：`HOST_PROJECTS_MOUNT` 是宿主机上要挂进容器 `/host-projects` 的目录；部署时 `source_path` 应落在该目录下。若 ECS 上还要部署其它工程，可挂更上层（如 `/opt/project`），只要路径在 Linux 上真实存在。
+若 ECS 上仍报 `E:/...`，说明服务器还是旧 `.env.local`，打开 `config/.env.local` 删掉 Windows 绝对路径，或拉最新后再 up。
+
+部署时 `source_path` 须落在挂载进 `/host-projects` 的目录下（默认即 monorepo 内路径）。
 
 ### 5. 如何访问（浏览器）
 

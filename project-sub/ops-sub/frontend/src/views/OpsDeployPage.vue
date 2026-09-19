@@ -58,7 +58,7 @@
         </p>
         <el-form v-if="codeSource === 'local'" label-position="top" class="ops-github-form">
           <el-form-item label="本地 source_path">
-            <el-input v-model="project.source_path" placeholder="例如 E:/AI Tools/projects/fitness/fitness-agent" />
+            <el-input v-model="project.source_path" placeholder="容器内路径，如 /host-projects/project-sub/ops-sub 或 /host-projects/fitness-agent" />
           </el-form-item>
         </el-form>
         <template v-else>

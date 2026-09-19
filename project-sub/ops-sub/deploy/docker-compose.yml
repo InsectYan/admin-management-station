@@ -72,7 +72,8 @@ services:
       - ../backend/app:/app/app
       - ../backend/config:/app/config
       - ../database:/app/database:ro
-      - ${HOST_PROJECTS_MOUNT:-E:/AI Tools/projects}:/host-projects:ro
+      # 相对 deploy/：默认挂本 monorepo 根（../../..）。Windows 若要挂盘符外其它工程目录，在 .env.local 覆盖 HOST_PROJECTS_MOUNT
+      - ${HOST_PROJECTS_MOUNT:-../../..}:/host-projects:ro
       # 与宿主机执行器共享工作区（clone/pack 在容器，s deploy 可在宿主机）
       - ${OPS_DEPLOY_WORKDIR_HOST:-../.ops-deploy-work}:${OPS_DEPLOY_WORKDIR:-/tmp/ops-deploy}
 
