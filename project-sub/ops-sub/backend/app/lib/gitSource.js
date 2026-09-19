@@ -113,6 +113,27 @@ function resolveGitBranch(input) {
   return branch || 'main';
 }
 
+/**
+ * 仓库内相对包路径（AgentRun 只拉该目录）。空表示全仓。
+ * 禁止绝对路径与 ..，避免逃逸。
+ */
+function normalizePackagePath(input) {
+  let raw = String(input || '').trim().replace(/\\/g, '/');
+  raw = raw.replace(/^\.\/+/, '').replace(/\/+$/, '');
+  if (!raw || raw === '.') return '';
+  if (raw.startsWith('/') || /^[A-Za-z]:/.test(raw) || raw.split('/').includes('..')) {
+    const err = new Error('包路径须为仓库内相对路径，例如 fitness-agent 或 packages/agent');
+    err.status = 400;
+    throw err;
+  }
+  if (raw.length > 512) {
+    const err = new Error('包路径过长');
+    err.status = 400;
+    throw err;
+  }
+  return raw;
+}
+
 function parseSemverTag(name) {
   const raw = String(name || '').trim();
   const matched = raw.match(/^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/i);
@@ -159,6 +180,7 @@ module.exports = {
   sameGitSha,
   resolveCodeSource,
   resolveGitBranch,
+  normalizePackagePath,
   parseSemverTag,
   suggestNextReleaseTag,
 };

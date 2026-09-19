@@ -11,10 +11,11 @@ const { isAgentrun } = require('../lib/deployProducts');
 const agentrun = require('../lib/deployAgentrun');
 const { redactDeployLog } = require('../lib/deployLogRedact');
 const menuMaster = require('../lib/menuMaster');
-const { publicCloneUrl, cloneUrlWithToken, gitAuthEnv, withGitHttpCompat, classifyGithubGitError, resolveCodeSource, parseLsRemoteRefSha, sameGitSha, assertGitTagName } = require('../lib/gitSource');
+const { publicCloneUrl, cloneUrlWithToken, gitAuthEnv, withGitHttpCompat, classifyGithubGitError, resolveCodeSource, parseLsRemoteRefSha, sameGitSha, assertGitTagName, normalizePackagePath, parseGithubHttps } = require('../lib/gitSource');
 const { runOssPreflight, agentrunNetworkEnv } = require('../lib/deployOssPreflight');
 const { resolveDeployExecutor } = require('../lib/deployNetwork');
 const { execOnHost } = require('../lib/hostDeployClient');
+const { downloadGithubPathPackage, createLightweightTag } = require('../lib/githubPathPackage');
 
 const KEEP = 5;
 
@@ -95,12 +96,26 @@ class DeployRunnerService extends Service {
       return this.prepareGithubRepo(job, dir, remote, tag);
     }
     if (isAgentrun(product) || codeSource === 'local') {
-      const source = agentrun.resolveAgentrunSource(job.project);
-      if (!source) {
-        throw new Error('本地部署需要容器可见的 source_path（挂 HOST_PROJECTS_ROOT，且能走到含 deploy/scripts/run.mjs 的仓库根）');
+      const packagePath = normalizePackagePath(
+        job.params?.deploy_config?.agentrun?.package_path
+        || job.params?.agentrun?.package_path,
+      );
+      const from = packagePath
+        ? agentrun.resolveLocalPackageDir(job.project, packagePath)
+        : agentrun.resolveAgentrunSource(job.project);
+      if (!from) {
+        throw new Error(
+          packagePath
+            ? `本地包路径无效：${packagePath}（须相对 source_path，且目录内含 deploy/scripts/run.mjs）`
+            : '本地部署需要容器可见的 source_path（挂 HOST_PROJECTS_ROOT，且能走到含 deploy/scripts/run.mjs 的仓库根）',
+        );
       }
-      await this.append(job.id, 'info', `[source] 复制本地工程 ${source}`);
-      agentrun.copySource(source, dir);
+      await this.append(
+        job.id,
+        'info',
+        packagePath ? `[source] 本地包路径 ${packagePath} → ${from}` : `[source] 复制本地工程 ${from}`,
+      );
+      agentrun.copySource(from, dir);
       return 'source';
     }
     throw new Error('无法准备代码：请选择本地 source_path 或 GitHub HTTPS + tag');
@@ -121,12 +136,25 @@ class DeployRunnerService extends Service {
     return token;
   }
 
+  resolveAgentrunPackagePath(job) {
+    try {
+      return normalizePackagePath(
+        job.params?.deploy_config?.agentrun?.package_path
+        || job.params?.agentrun?.package_path,
+      );
+    } catch (err) {
+      err.message = err.message || '包路径无效';
+      throw err;
+    }
+  }
+
   async prepareGithubRepo(job, dir, remote, rawTag) {
     if (!/^https?:\/\/github\.com\//i.test(remote)) {
       throw new Error('GitHub 部署需要 HTTPS 仓库地址');
     }
     const tag = assertGitTagName(rawTag);
     const branch = job.params?.git_branch || job.params?.deploy_config?.git_branch || 'main';
+    const packagePath = this.resolveAgentrunPackagePath(job);
     const token = await this.resolveGithubToken(job);
     const publicUrl = publicCloneUrl(remote);
     const authUrl = cloneUrlWithToken(remote, token);
@@ -134,6 +162,9 @@ class DeployRunnerService extends Service {
     const authEnv = gitAuthEnv();
 
     await this.append(job.id, 'info', `[github] 仓库 ${publicUrl}，分支 ${branch}，发布 tag ${tag}`);
+    if (packagePath) {
+      await this.append(job.id, 'info', `[github] 包路径 ${packagePath}：按路径拉取代码包（不克隆全仓）`);
+    }
     await this.append(job.id, 'info', `[github] 已读取部署人 PAT（长度 ${token.length}，前缀 ${token.slice(0, 4)}…），「保存配置」不会改动 Token`);
 
     let branchSha = '';
@@ -163,12 +194,28 @@ class DeployRunnerService extends Service {
     }
 
     if (tagSha && sameGitSha(tagSha, branchSha)) {
-      await this.append(job.id, 'info', `[github] tag ${tag} 已指向 ${branch} HEAD，直接克隆`);
-      await this.cloneByRef(job.id, authUrl, tag, dir, gitTimeout, authEnv, publicUrl);
+      await this.append(job.id, 'info', `[github] tag ${tag} 已指向 ${branch} HEAD，直接拉取`);
     } else if (tagSha && !sameGitSha(tagSha, branchSha)) {
       throw new Error(
         `远程已有 tag ${tag}，但指向的提交与 ${branch} HEAD 不同。请换一个新 tag 名再部署，避免覆盖已有发布点。`,
       );
+    } else if (packagePath) {
+      await this.append(job.id, 'info', `[github] 远程尚无 tag ${tag}，将通过 API 在 ${branch} HEAD 创建轻量 tag`);
+      const parsed = parseGithubHttps(remote);
+      try {
+        await createLightweightTag({
+          owner: parsed.owner,
+          repo: parsed.repo,
+          tag,
+          sha: branchSha,
+          token,
+        });
+      } catch (err) {
+        throw new Error(
+          `自动创建 tag ${tag} 失败。请确认 PAT 有 Contents: Write（或 classic repo）权限。${err.message}`,
+        );
+      }
+      await this.append(job.id, 'info', `[github] 已创建 tag ${tag} → ${branchSha.slice(0, 12)}`);
     } else {
       await this.append(job.id, 'info', `[github] 远程尚无 tag ${tag}，将在 ${branch} HEAD 创建并推送`);
       await this.cloneByRef(job.id, authUrl, branch, dir, gitTimeout, authEnv, publicUrl);
@@ -193,8 +240,37 @@ class DeployRunnerService extends Service {
         );
       }
       await this.append(job.id, 'info', `[github] 已推送 tag ${tag} → ${branchSha.slice(0, 12)}`);
+      const sha = await this.execCapture(job.id, [ 'git', 'rev-parse', 'HEAD' ], dir, authEnv);
+      await this.append(job.id, 'info', `[fetch] checkout ${tag} sha=${sha.slice(0, 12)}`);
+      return sha.slice(0, 40);
     }
 
+    if (packagePath) {
+      try {
+        const result = await downloadGithubPathPackage({
+          repoUrl: remote,
+          ref: tag,
+          packagePath,
+          token,
+          destDir: dir,
+          onProgress: (msg) => this.append(job.id, 'info', `[github] ${msg}`),
+        });
+        await this.append(
+          job.id,
+          'info',
+          `[fetch] 包路径 ${result.packagePath} 已落盘 ${result.fileCount} 个文件 sha=${result.sha.slice(0, 12)}`,
+        );
+        return result.sha.slice(0, 40);
+      } catch (err) {
+        throw new Error(`按包路径拉取失败（${packagePath}）。${err.message}`);
+      }
+    }
+
+    if (!(tagSha && sameGitSha(tagSha, branchSha))) {
+      // tag 已在上面全量 clone 分支并 push，不应走到这里
+      throw new Error('内部状态错误：全量克隆分支流程未返回');
+    }
+    await this.cloneByRef(job.id, authUrl, tag, dir, gitTimeout, authEnv, publicUrl);
     const sha = await this.execCapture(job.id, [ 'git', 'rev-parse', 'HEAD' ], dir, authEnv);
     await this.append(job.id, 'info', `[fetch] checkout ${tag} sha=${sha.slice(0, 12)}`);
     return sha.slice(0, 40);

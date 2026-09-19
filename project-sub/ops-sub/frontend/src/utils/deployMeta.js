@@ -113,6 +113,7 @@ export const AGENTRUN_CODE_LANGUAGES = [
 ];
 
 export const AGENTRUN_FIELD_TIPS = {
+  package_path: '选填。只填仓库内的目录，不要写到具体文件或 .zip。例如填 backup（不要填 backup/ss.zip 或 /backup/ss.zip）。填写后 GitHub 只拉该目录下的文件（不克隆全仓），本地源只复制该子目录；目录内须含 deploy/scripts/run.mjs。空表示整仓根目录。',
   account_id: '必填。阿里云主账号 UID（约 16 位数字），不是 RAM 子用户 ID。控制台右上角头像 → 账号中心 → 账号 ID。写入 Serverless Devs 的 AccountID。',
   access_key_id: 'RAM 子用户 AccessKey ID。推荐用子用户，不要用主账号 AK。',
   access_key_secret: 'AccessKey Secret，创建时只显示一次，勿提交 git。',

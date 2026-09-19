@@ -5,6 +5,8 @@
  * AgentRun 可真跑；其余产品本期只演示表单。
  */
 
+const { normalizePackagePath } = require('./gitSource');
+
 const PRODUCTS = [
   {
     id: 'generic',
@@ -43,6 +45,8 @@ function defaultAgentrun() {
   return {
     target_env: 'prod',
     cli_command: 'fitness-cli prod',
+    /** 仓库内相对路径；GitHub 源仅 sparse 拉取该目录，空则全仓 */
+    package_path: '',
     account: {
       account_id: '',
       access_key_id: '',
@@ -186,6 +190,7 @@ function normalizeDeployConfig(raw) {
     security_group_id: ensureAliyunPrefix(agentrun.platform?.security_group_id, 'sg-'),
     code_language: normalizeCodeLanguage(agentrun.platform?.code_language),
   };
+  agentrun.package_path = normalizePackagePath(agentrun.package_path);
   return {
     product,
     code_source: codeSource,

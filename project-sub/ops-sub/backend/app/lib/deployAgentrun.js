@@ -87,6 +87,27 @@ function resolveAgentrunSource(project) {
   return null;
 }
 
+/**
+ * 本地部署解析包目录。packagePath 为空时等同 resolveAgentrunSource；
+ * 非空时优先 hint/packagePath，其次若 hint 本身已是该包根也可用。
+ */
+function resolveLocalPackageDir(project, packagePath) {
+  const pkg = String(packagePath || '').trim().replace(/\\/g, '/').replace(/^\.\/+/, '').replace(/\/+$/, '');
+  if (!pkg) return resolveAgentrunSource(project);
+
+  for (const hint of collectAgentrunSourceHints(project)) {
+    const resolved = resolveSourcePath(hint);
+    if (!resolved) continue;
+    const nested = path.join(resolved, ...pkg.split('/'));
+    if (hasAgentrunRunScript(nested)) return path.resolve(nested);
+    if (hasAgentrunRunScript(resolved)) {
+      const posix = resolved.replace(/\\/g, '/');
+      if (posix === pkg || posix.endsWith(`/${pkg}`)) return path.resolve(resolved);
+    }
+  }
+  return null;
+}
+
 function shouldSkipCopy(src) {
   const posix = src.replace(/\\/g, '/');
   return /\/(node_modules|\.git|artifact|backups|dist)(\/|$)/i.test(posix)
@@ -205,6 +226,7 @@ module.exports = {
   liftToAgentrunRoot,
   hasAgentrunRunScript,
   resolveAgentrunSource,
+  resolveLocalPackageDir,
   collectAgentrunSourceHints,
   copySource,
   writeAccessYaml,

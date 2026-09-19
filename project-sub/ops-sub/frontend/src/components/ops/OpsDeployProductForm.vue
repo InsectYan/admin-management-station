@@ -40,6 +40,18 @@
     </el-alert>
 
     <el-collapse v-if="config.product === 'agentrun'" v-model="open">
+      <el-collapse-item title="代码包路径" name="package">
+        <el-form label-position="top">
+          <el-form-item label="包路径（相对仓库根）">
+            <el-input
+              v-model="ar.package_path"
+              placeholder="例如 backup 或 fitness-agent（目录即可，勿写 .zip）"
+              clearable
+            />
+            <p class="ops-field-tip">{{ tips.package_path }}</p>
+          </el-form-item>
+        </el-form>
+      </el-collapse-item>
       <el-collapse-item title="账号（原本地 ~/.s/access.yaml）" name="account">
         <el-form label-position="top">
           <el-form-item>
@@ -237,7 +249,7 @@ const props = defineProps({
 });
 const emit = defineEmits(['update:modelValue']);
 
-const open = ref([ 'account', 'platform', 'runtime', 'cmd' ]);
+const open = ref([ 'package', 'account', 'platform', 'runtime', 'cmd' ]);
 const config = reactive(emptyLocal());
 const tips = AGENTRUN_FIELD_TIPS;
 const codeLanguageOptions = AGENTRUN_CODE_LANGUAGES;
@@ -258,6 +270,7 @@ function emptyLocal() {
     agentrun: {
       target_env: 'prod',
       cli_command: 'fitness-cli prod',
+      package_path: '',
       account: { account_id: '', access_key_id: '', access_key_secret: '', sd_access: 'fitness-prod' },
       platform: {
         region: 'cn-hangzhou',
