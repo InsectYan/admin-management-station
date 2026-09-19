@@ -45,7 +45,7 @@
           <el-form-item label="包路径（相对仓库根）">
             <el-input
               v-model="ar.package_path"
-              placeholder="例如 backup 或 fitness-agent（目录即可，勿写 .zip）"
+              placeholder="例如 backup/ss.zip（预打 zip，勿再 pack）"
               clearable
             />
             <p class="ops-field-tip">{{ tips.package_path }}</p>

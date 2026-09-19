@@ -90,6 +90,7 @@ function resolveAgentrunSource(project) {
 /**
  * 本地部署解析包目录。packagePath 为空时等同 resolveAgentrunSource；
  * 非空时优先 hint/packagePath，其次若 hint 本身已是该包根也可用。
+ * @deprecated 包路径现指向预打 zip；保留供兼容旧配置。
  */
 function resolveLocalPackageDir(project, packagePath) {
   const pkg = String(packagePath || '').trim().replace(/\\/g, '/').replace(/^\.\/+/, '').replace(/\/+$/, '');
@@ -106,6 +107,52 @@ function resolveLocalPackageDir(project, packagePath) {
     }
   }
   return null;
+}
+
+function artifactZipTarget(repoDir) {
+  return path.join(repoDir, 'deploy', 'agentrun', 'code-package', 'artifact.zip');
+}
+
+/** 在 source_path 下解析预打 zip：支持 backup/ss.zip，或目录内 artifact.zip / 唯一 *.zip */
+function resolveLocalArtifactZip(project, packagePath) {
+  const pkg = String(packagePath || '').trim().replace(/\\/g, '/').replace(/^\.\/+/, '').replace(/\/+$/, '');
+  if (!pkg) return null;
+
+  for (const hint of collectAgentrunSourceHints(project)) {
+    const root = resolveSourcePath(hint);
+    if (!root) continue;
+    if (/\.zip$/i.test(pkg)) {
+      const file = path.join(root, ...pkg.split('/'));
+      if (safeStat(file)?.isFile()) return path.resolve(file);
+      continue;
+    }
+    const dir = path.join(root, ...pkg.split('/'));
+    if (!safeStat(dir)?.isDirectory()) continue;
+    const preferred = path.join(dir, 'artifact.zip');
+    if (safeStat(preferred)?.isFile()) return path.resolve(preferred);
+    let names = [];
+    try {
+      names = fs.readdirSync(dir).filter(name => /\.zip$/i.test(name));
+    } catch {
+      names = [];
+    }
+    if (names.length === 1) return path.resolve(dir, names[0]);
+    if (names.includes('ss.zip')) return path.resolve(dir, 'ss.zip');
+  }
+  return null;
+}
+
+function placeArtifactZip(repoDir, zipPath) {
+  const dest = artifactZipTarget(repoDir);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(zipPath, dest);
+  return dest;
+}
+
+/** 已有 artifact.zip 时只跑 deploy.sh（跳过 pack，与本机「已有 zip 再 deploy」一致） */
+function resolveDeployOnlyArgv(targetEnv) {
+  const env = [ 'prod', 'test' ].includes(String(targetEnv)) ? targetEnv : 'prod';
+  return [ 'bash', 'deploy/agentrun/code-package/scripts/deploy.sh', env ];
 }
 
 function shouldSkipCopy(src) {
@@ -227,6 +274,10 @@ module.exports = {
   hasAgentrunRunScript,
   resolveAgentrunSource,
   resolveLocalPackageDir,
+  resolveLocalArtifactZip,
+  artifactZipTarget,
+  placeArtifactZip,
+  resolveDeployOnlyArgv,
   collectAgentrunSourceHints,
   copySource,
   writeAccessYaml,

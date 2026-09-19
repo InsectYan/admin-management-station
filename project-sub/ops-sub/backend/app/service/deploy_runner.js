@@ -15,7 +15,7 @@ const { publicCloneUrl, cloneUrlWithToken, gitAuthEnv, withGitHttpCompat, classi
 const { runOssPreflight, agentrunNetworkEnv } = require('../lib/deployOssPreflight');
 const { resolveDeployExecutor } = require('../lib/deployNetwork');
 const { execOnHost } = require('../lib/hostDeployClient');
-const { downloadGithubPathPackage, createLightweightTag } = require('../lib/githubPathPackage');
+const { downloadGithubPathPackage, downloadGithubFile, resolveGithubZipFilePath, createLightweightTag } = require('../lib/githubPathPackage');
 
 const KEEP = 5;
 
@@ -96,26 +96,24 @@ class DeployRunnerService extends Service {
       return this.prepareGithubRepo(job, dir, remote, tag);
     }
     if (isAgentrun(product) || codeSource === 'local') {
-      const packagePath = normalizePackagePath(
-        job.params?.deploy_config?.agentrun?.package_path
-        || job.params?.agentrun?.package_path,
-      );
-      const from = packagePath
-        ? agentrun.resolveLocalPackageDir(job.project, packagePath)
-        : agentrun.resolveAgentrunSource(job.project);
-      if (!from) {
-        throw new Error(
-          packagePath
-            ? `本地包路径无效：${packagePath}（须相对 source_path，且目录内含 deploy/scripts/run.mjs）`
-            : '本地部署需要容器可见的 source_path（挂 HOST_PROJECTS_ROOT，且能走到含 deploy/scripts/run.mjs 的仓库根）',
-        );
+      const source = agentrun.resolveAgentrunSource(job.project);
+      if (!source) {
+        throw new Error('本地部署需要容器可见的 source_path（挂 HOST_PROJECTS_ROOT，且能走到含 deploy/scripts/run.mjs 的仓库根）');
       }
-      await this.append(
-        job.id,
-        'info',
-        packagePath ? `[source] 本地包路径 ${packagePath} → ${from}` : `[source] 复制本地工程 ${from}`,
-      );
-      agentrun.copySource(from, dir);
+      await this.append(job.id, 'info', `[source] 复制本地工程 ${source}`);
+      agentrun.copySource(source, dir);
+      const packagePath = this.resolveAgentrunPackagePath(job);
+      if (packagePath) {
+        const zip = agentrun.resolveLocalArtifactZip(job.project, packagePath);
+        if (!zip) {
+          throw new Error(
+            `本地预打 zip 未找到：${packagePath}（相对 source_path；可填 backup/ss.zip，或含 artifact.zip 的目录）`,
+          );
+        }
+        const dest = agentrun.placeArtifactZip(dir, zip);
+        const mb = (fs.statSync(dest).size / (1024 * 1024)).toFixed(1);
+        await this.append(job.id, 'info', `[source] 已放置预打 zip ${zip} → artifact.zip（≈ ${mb} MB），将跳过 pack`);
+      }
       return 'source';
     }
     throw new Error('无法准备代码：请选择本地 source_path 或 GitHub HTTPS + tag');
@@ -148,6 +146,42 @@ class DeployRunnerService extends Service {
     }
   }
 
+  /** GitHub：只拉 deploy/ 脚手架 + 预打 zip，不克隆全仓、不在此机 pack */
+  async prepareGithubPrebuiltZip(job, dir, remote, tag, packagePath, token) {
+    const zipRel = await resolveGithubZipFilePath({
+      repoUrl: remote,
+      ref: tag,
+      packagePath,
+      token,
+    });
+    await this.append(job.id, 'info', `[github] 预打 zip：${zipRel}；另拉取 deploy/ 脚手架（供 s deploy）`);
+    const deployDir = path.join(dir, 'deploy');
+    const scaffold = await downloadGithubPathPackage({
+      repoUrl: remote,
+      ref: tag,
+      packagePath: 'deploy',
+      token,
+      destDir: deployDir,
+      onProgress: (msg) => this.append(job.id, 'info', `[github] ${msg}`),
+    });
+    const dest = agentrun.artifactZipTarget(dir);
+    const zipMeta = await downloadGithubFile({
+      repoUrl: remote,
+      ref: tag,
+      filePath: zipRel,
+      token,
+      destFile: dest,
+      onProgress: (msg) => this.append(job.id, 'info', `[github] ${msg}`),
+    });
+    const mb = (zipMeta.bytes / (1024 * 1024)).toFixed(1);
+    await this.append(
+      job.id,
+      'info',
+      `[fetch] 脚手架 ${scaffold.fileCount} 文件 + zip ≈ ${mb} MB；sha=${zipMeta.sha.slice(0, 12)}；跳过 pack，直接上传阿里云`,
+    );
+    return zipMeta.sha.slice(0, 40);
+  }
+
   async prepareGithubRepo(job, dir, remote, rawTag) {
     if (!/^https?:\/\/github\.com\//i.test(remote)) {
       throw new Error('GitHub 部署需要 HTTPS 仓库地址');
@@ -163,7 +197,7 @@ class DeployRunnerService extends Service {
 
     await this.append(job.id, 'info', `[github] 仓库 ${publicUrl}，分支 ${branch}，发布 tag ${tag}`);
     if (packagePath) {
-      await this.append(job.id, 'info', `[github] 包路径 ${packagePath}：按路径拉取代码包（不克隆全仓）`);
+      await this.append(job.id, 'info', `[github] 包路径 ${packagePath}：使用预打 zip，不克隆全仓、不在此机 pack`);
     }
     await this.append(job.id, 'info', `[github] 已读取部署人 PAT（长度 ${token.length}，前缀 ${token.slice(0, 4)}…），「保存配置」不会改动 Token`);
 
@@ -247,27 +281,13 @@ class DeployRunnerService extends Service {
 
     if (packagePath) {
       try {
-        const result = await downloadGithubPathPackage({
-          repoUrl: remote,
-          ref: tag,
-          packagePath,
-          token,
-          destDir: dir,
-          onProgress: (msg) => this.append(job.id, 'info', `[github] ${msg}`),
-        });
-        await this.append(
-          job.id,
-          'info',
-          `[fetch] 包路径 ${result.packagePath} 已落盘 ${result.fileCount} 个文件 sha=${result.sha.slice(0, 12)}`,
-        );
-        return result.sha.slice(0, 40);
+        return await this.prepareGithubPrebuiltZip(job, dir, remote, tag, packagePath, token);
       } catch (err) {
-        throw new Error(`按包路径拉取失败（${packagePath}）。${err.message}`);
+        throw new Error(`预打 zip 拉取失败（${packagePath}）。${err.message}`);
       }
     }
 
     if (!(tagSha && sameGitSha(tagSha, branchSha))) {
-      // tag 已在上面全量 clone 分支并 push，不应走到这里
       throw new Error('内部状态错误：全量克隆分支流程未返回');
     }
     await this.cloneByRef(job.id, authUrl, tag, dir, gitTimeout, authEnv, publicUrl);
@@ -321,6 +341,7 @@ class DeployRunnerService extends Service {
   async runAgentrun(job, dir) {
     const config = job.params?.deploy_config || {};
     const ar = config.agentrun || {};
+    const packagePath = this.resolveAgentrunPackagePath(job);
     const homeDir = path.join(dir, '.ops-home');
     fs.mkdirSync(homeDir, { recursive: true });
     const prepared = agentrun.materialize(dir, homeDir, ar);
@@ -328,9 +349,31 @@ class DeployRunnerService extends Service {
     if (prepared.componentSeed?.seeded) {
       await this.append(job.id, 'info', `[agentrun] 已复用本地 agentrun 组件缓存（跳过易失败的 registry latest 探测）`);
     }
-    if (!fs.existsSync(path.join(dir, 'deploy', 'scripts', 'run.mjs'))) {
+
+    const artifactZip = agentrun.artifactZipTarget(dir);
+    const usePrebuiltZip = Boolean(packagePath) && fs.existsSync(artifactZip);
+    const deploySh = path.join(dir, 'deploy', 'agentrun', 'code-package', 'scripts', 'deploy.sh');
+    if (usePrebuiltZip) {
+      if (!fs.existsSync(deploySh)) {
+        throw new Error('预打 zip 部署需要 deploy/agentrun/code-package/scripts/deploy.sh（GitHub 应能拉到 deploy/ 脚手架）');
+      }
+      const mb = (fs.statSync(artifactZip).size / (1024 * 1024)).toFixed(1);
+      await this.append(
+        job.id,
+        'info',
+        `[agentrun] 使用预打 artifact.zip ≈ ${mb} MB（包路径 ${packagePath}），跳过 pack，直接 s deploy 上传阿里云`,
+      );
+    } else if (!fs.existsSync(path.join(dir, 'deploy', 'scripts', 'run.mjs'))) {
       throw new Error('仓库里没有 deploy/scripts/run.mjs。GitHub 请把 tag 打在 fitness-agent 仓库根的提交上；本地 source_path 请指向 fitness-agent 而不是只含 .pi 的目录。');
+    } else if (fs.existsSync(artifactZip)) {
+      const mb = (fs.statSync(artifactZip).size / (1024 * 1024)).toFixed(1);
+      await this.append(
+        job.id,
+        'info',
+        `[agentrun] artifact.zip ≈ ${mb} MB；未配置包路径时仍会走 fitness-cli（含 pack）`,
+      );
     }
+
     await this.append(job.id, 'info', '[agentrun] 探测部署执行面（容器直连 vs 宿主机，与 fitness-cli 对齐）…');
     const execPlan = await resolveDeployExecutor({
       ...process.env,
@@ -339,16 +382,6 @@ class DeployRunnerService extends Service {
     await this.append(job.id, 'info', `[agentrun] 执行面=${execPlan.mode}；${execPlan.reason}`);
     if (execPlan.error) {
       throw new Error(execPlan.error);
-    }
-
-    const artifactZip = path.join(dir, 'deploy', 'agentrun', 'code-package', 'artifact.zip');
-    if (fs.existsSync(artifactZip)) {
-      const mb = (fs.statSync(artifactZip).size / (1024 * 1024)).toFixed(1);
-      await this.append(
-        job.id,
-        'info',
-        `[agentrun] artifact.zip ≈ ${mb} MB；直连/宿主机执行时本地 CLI 通常很快，不应卡数分钟`,
-      );
     }
 
     if (execPlan.mode === 'direct') {
@@ -387,6 +420,10 @@ class DeployRunnerService extends Service {
       extraEnv.OPS_FC_PROBE_ACCOUNT = String(ar.account.account_id);
     }
 
+    const argv = usePrebuiltZip
+      ? agentrun.resolveDeployOnlyArgv(prepared.envName)
+      : prepared.argv;
+
     if (execPlan.mode === 'host') {
       if (!String(process.env.OPS_DEPLOY_WORKDIR_HOST || '').trim()) {
         throw new Error(
@@ -397,11 +434,11 @@ class DeployRunnerService extends Service {
       await this.append(
         job.id,
         'info',
-        `[agentrun] 经宿主机执行器运行（等同 fitness-cli 网络）：${prepared.argv.join(' ')}`,
+        `[agentrun] 经宿主机执行器运行（等同 fitness-cli 网络）：${argv.join(' ')}`,
       );
       await execOnHost({
         cwd: dir,
-        argv: prepared.argv,
+        argv,
         env: extraEnv,
         timeoutMs: timeout,
         onLog: (text, level) => {
@@ -409,8 +446,8 @@ class DeployRunnerService extends Service {
         },
       });
     } else {
-      await this.append(job.id, 'info', `[agentrun] 容器内直连执行：${prepared.argv.join(' ')}`);
-      await this.exec(job.id, prepared.argv, dir, timeout, extraEnv);
+      await this.append(job.id, 'info', `[agentrun] 容器内直连执行：${argv.join(' ')}`);
+      await this.exec(job.id, argv, dir, timeout, extraEnv);
     }
     await this.append(job.id, 'info', '[check] AgentRun 命令退出码 0；请到控制台确认会话亲和已关闭');
   }

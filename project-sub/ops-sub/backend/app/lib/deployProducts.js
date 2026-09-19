@@ -45,7 +45,7 @@ function defaultAgentrun() {
   return {
     target_env: 'prod',
     cli_command: 'fitness-cli prod',
-    /** 仓库内相对路径；GitHub 源仅 sparse 拉取该目录，空则全仓 */
+    /** 仓库内预打 zip 路径（如 backup/ss.zip）；有则跳过 pack，直接 s deploy 上传 */
     package_path: '',
     account: {
       account_id: '',

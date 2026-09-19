@@ -176,8 +176,86 @@ async function downloadGithubPathPackage({
   return { sha: commitSha, fileCount: blobs.length, packagePath: pkg };
 }
 
+/**
+ * 下载仓库内单个文件（用于预打 artifact zip）。
+ */
+async function downloadGithubFile({
+  repoUrl,
+  ref,
+  filePath,
+  token,
+  destFile,
+  onProgress,
+} = {}) {
+  const parsed = parseGithubHttps(repoUrl);
+  if (!parsed) throw new Error('仅支持 GitHub HTTPS 仓库按路径拉取');
+  const pkg = normalizePackagePath(filePath);
+  if (!pkg) throw new Error('缺少文件路径');
+  const { owner, repo } = parsed;
+  const commitSha = await resolveCommitSha({ owner, repo, ref, token });
+  if (typeof onProgress === 'function') {
+    await onProgress(`下载 ${pkg} @ ${commitSha.slice(0, 12)}`);
+  }
+  const buf = await downloadRawFile({
+    owner,
+    repo,
+    commitSha,
+    filePath: pkg,
+    token,
+  });
+  if (!buf.length || buf[0] !== 0x50 || buf[1] !== 0x4b) {
+    throw new Error(`下载内容不是 zip 文件：${pkg}`);
+  }
+  fs.mkdirSync(path.dirname(destFile), { recursive: true });
+  fs.writeFileSync(destFile, buf);
+  return { sha: commitSha, bytes: buf.length, filePath: pkg };
+}
+
+/**
+ * 在目录路径下选出要部署的 zip（优先 artifact.zip，其次唯一 *.zip）。
+ */
+async function resolveGithubZipFilePath({
+  repoUrl,
+  ref,
+  packagePath,
+  token,
+} = {}) {
+  const pkg = normalizePackagePath(packagePath);
+  if (!pkg) throw new Error('缺少包路径');
+  if (/\.zip$/i.test(pkg)) return pkg;
+
+  const parsed = parseGithubHttps(repoUrl);
+  const commitSha = await resolveCommitSha({
+    owner: parsed.owner,
+    repo: parsed.repo,
+    ref,
+    token,
+  });
+  const blobs = await listPathBlobs({
+    owner: parsed.owner,
+    repo: parsed.repo,
+    commitSha,
+    packagePath: pkg,
+    token,
+  });
+  const zips = blobs
+    .map(item => item.path)
+    .filter(p => /\.zip$/i.test(p));
+  const artifact = zips.find(p => /(^|\/)artifact\.zip$/i.test(p));
+  if (artifact) return artifact;
+  if (zips.length === 1) return zips[0];
+  const ss = zips.find(p => /(^|\/)ss\.zip$/i.test(p));
+  if (ss) return ss;
+  if (!zips.length) {
+    throw new Error(`包路径 ${pkg} 下没有 .zip；请填 backup/ss.zip 这类文件路径`);
+  }
+  throw new Error(`包路径 ${pkg} 下有多个 zip（${zips.map(p => path.posix.basename(p)).join(', ')}），请直接填具体文件路径`);
+}
+
 module.exports = {
   downloadGithubPathPackage,
+  downloadGithubFile,
+  resolveGithubZipFilePath,
   createLightweightTag,
   resolveCommitSha,
 };
