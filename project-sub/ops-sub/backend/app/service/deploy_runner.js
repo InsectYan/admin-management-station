@@ -146,7 +146,7 @@ class DeployRunnerService extends Service {
     }
   }
 
-  /** GitHub：只拉 deploy/ 脚手架 + 预打 zip，不克隆全仓、不在此机 pack */
+  /** GitHub：预打 zip 只下载一次；zip 在 deploy/ 下则随脚手架一次拉齐，否则脚手架排除 zip 再单拉目标包 */
   async prepareGithubPrebuiltZip(job, dir, remote, tag, packagePath, token) {
     const zipRel = await resolveGithubZipFilePath({
       repoUrl: remote,
@@ -154,17 +154,65 @@ class DeployRunnerService extends Service {
       packagePath,
       token,
     });
-    await this.append(job.id, 'info', `[github] 预打 zip：${zipRel}；另拉取 deploy/ 脚手架（供 s deploy）`);
+    const zipUnderDeploy = zipRel === 'deploy' || zipRel.startsWith('deploy/');
     const deployDir = path.join(dir, 'deploy');
+    const dest = agentrun.artifactZipTarget(dir);
+
+    if (zipUnderDeploy) {
+      await this.append(
+        job.id,
+        'info',
+        `[github] 预打 zip 位于 ${zipRel}，随 deploy/ 一次拉取（不二次下载）`,
+      );
+      const scaffold = await downloadGithubPathPackage({
+        repoUrl: remote,
+        ref: tag,
+        packagePath: 'deploy',
+        token,
+        destDir: deployDir,
+        onProgress: (msg) => this.append(job.id, 'info', `[github] ${msg}`),
+      });
+      const sourced = path.join(dir, ...zipRel.split('/'));
+      if (!fs.existsSync(sourced)) {
+        throw new Error(`已拉取 deploy/，但未找到预打 zip：${zipRel}`);
+      }
+      if (path.resolve(sourced) !== path.resolve(dest)) {
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        fs.copyFileSync(sourced, dest);
+      }
+      const mb = (fs.statSync(dest).size / (1024 * 1024)).toFixed(1);
+      const head = Buffer.alloc(2);
+      const fd = fs.openSync(dest, 'r');
+      try {
+        fs.readSync(fd, head, 0, 2, 0);
+      } finally {
+        fs.closeSync(fd);
+      }
+      if (head[0] !== 0x50 || head[1] !== 0x4b) {
+        throw new Error(`预打文件不是 zip：${zipRel}`);
+      }
+      await this.append(
+        job.id,
+        'info',
+        `[fetch] 一次拉取 ${scaffold.fileCount} 个文件，artifact.zip ≈ ${mb} MB；sha=${scaffold.sha.slice(0, 12)}；跳过 pack`,
+      );
+      return scaffold.sha.slice(0, 40);
+    }
+
+    await this.append(
+      job.id,
+      'info',
+      `[github] 预打 zip：${zipRel}（不在 deploy/ 内）；脚手架排除 zip，目标包只下一次`,
+    );
     const scaffold = await downloadGithubPathPackage({
       repoUrl: remote,
       ref: tag,
       packagePath: 'deploy',
       token,
       destDir: deployDir,
+      exclude: (repoPath) => /\.zip$/i.test(repoPath),
       onProgress: (msg) => this.append(job.id, 'info', `[github] ${msg}`),
     });
-    const dest = agentrun.artifactZipTarget(dir);
     const zipMeta = await downloadGithubFile({
       repoUrl: remote,
       ref: tag,
@@ -177,7 +225,7 @@ class DeployRunnerService extends Service {
     await this.append(
       job.id,
       'info',
-      `[fetch] 脚手架 ${scaffold.fileCount} 文件 + zip ≈ ${mb} MB；sha=${zipMeta.sha.slice(0, 12)}；跳过 pack，直接上传阿里云`,
+      `[fetch] 脚手架 ${scaffold.fileCount} 文件 + zip 一次 ≈ ${mb} MB；sha=${zipMeta.sha.slice(0, 12)}；跳过 pack`,
     );
     return zipMeta.sha.slice(0, 40);
   }

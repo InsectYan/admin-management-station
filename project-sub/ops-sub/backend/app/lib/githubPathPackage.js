@@ -133,7 +133,8 @@ async function mapPool(items, concurrency, worker) {
 }
 
 /**
- * 将 package_path 下的文件落到 destDir 根（已 hoist，含 deploy/scripts/run.mjs）。
+ * 将 package_path 下的文件落到 destDir 根（已 hoist）。
+ * @param {{ exclude?: (repoPath: string) => boolean }} [options]
  * @returns {{ sha: string, fileCount: number, packagePath: string }}
  */
 async function downloadGithubPathPackage({
@@ -143,6 +144,7 @@ async function downloadGithubPathPackage({
   token,
   destDir,
   onProgress,
+  exclude,
 } = {}) {
   const parsed = parseGithubHttps(repoUrl);
   if (!parsed) throw new Error('仅支持 GitHub HTTPS 仓库按路径拉取');
@@ -150,7 +152,13 @@ async function downloadGithubPathPackage({
   if (!pkg) throw new Error('按路径拉取需要 package_path');
   const { owner, repo } = parsed;
   const commitSha = await resolveCommitSha({ owner, repo, ref, token });
-  const blobs = await listPathBlobs({ owner, repo, commitSha, packagePath: pkg, token });
+  let blobs = await listPathBlobs({ owner, repo, commitSha, packagePath: pkg, token });
+  if (typeof exclude === 'function') {
+    blobs = blobs.filter(blob => !exclude(blob.path));
+  }
+  if (!blobs.length) {
+    throw new Error(`包路径下没有可下载文件：${pkg}`);
+  }
   if (typeof onProgress === 'function') {
     await onProgress(`包路径 ${pkg}：共 ${blobs.length} 个文件，开始下载`);
   }
