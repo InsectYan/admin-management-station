@@ -1,3 +1,5 @@
+import { rewriteLoopbackHost } from './publicHost.js';
+
 export const TOKEN_KEY = 'ams_access_token';
 export const USER_KEY = 'ams_user';
 
@@ -51,7 +53,7 @@ export function clearSession() {
 }
 
 export function loginUrl(redirect) {
-  const main = import.meta.env.VITE_MAIN_ORIGIN || 'http://localhost:5100';
+  const main = rewriteLoopbackHost(import.meta.env.VITE_MAIN_ORIGIN || 'http://localhost:5100');
   const target = redirect || window.location.href;
   if (window.location.port === '5100' || window.location.pathname.startsWith('/media/')) {
     return `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;

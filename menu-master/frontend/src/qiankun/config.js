@@ -1,3 +1,5 @@
+import { rewriteLoopbackHost } from '../lib/publicHost.js';
+
 const SUBAPP_ENTRY_MAP = {
   'novel-app': import.meta.env.VITE_SUBAPP_NOVEL_ENTRY,
   'testgen-app': import.meta.env.VITE_SUBAPP_TESTGEN_ENTRY,
@@ -7,12 +9,12 @@ const SUBAPP_ENTRY_MAP = {
 function normalizeEntry(entry) {
   if (!entry) return '';
   if (entry.startsWith('//') || entry.startsWith('http://') || entry.startsWith('https://')) {
-    return entry;
+    return rewriteLoopbackHost(entry);
   }
   if (entry.startsWith('/')) {
     return entry;
   }
-  return `//${entry.replace(/^\/+/, '')}`;
+  return rewriteLoopbackHost(`//${entry.replace(/^\/+/, '')}`);
 }
 
 export function resolveSubAppEntry(microappName, menuEntry) {

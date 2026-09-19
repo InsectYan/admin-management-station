@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper';
+import { rewriteLoopbackHost } from '../lib/publicHost.js';
 
 function normalizeBase(base) {
   return String(base || '').replace(/\/$/, '');
@@ -16,14 +17,11 @@ function isAbsoluteUrl(value) {
 export function resolveApiBase() {
   const configured = import.meta.env.VITE_API_BASE;
   if (configured && isAbsoluteUrl(configured)) {
-    return normalizeBase(configured);
+    return normalizeBase(rewriteLoopbackHost(configured));
   }
   if (qiankunWindow.__POWERED_BY_QIANKUN__) {
-    return normalizeBase(
-      import.meta.env.VITE_TESTGEN_API_ORIGIN
-        ? `${import.meta.env.VITE_TESTGEN_API_ORIGIN}/api`
-        : 'http://localhost:5202/api',
-    );
+    const origin = import.meta.env.VITE_TESTGEN_API_ORIGIN || 'http://localhost:5202';
+    return normalizeBase(rewriteLoopbackHost(`${origin}/api`));
   }
   return normalizeBase(configured || '/api');
 }
