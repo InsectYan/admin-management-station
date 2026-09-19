@@ -112,6 +112,22 @@
             <el-input v-model="ar.platform.endpoint_name" />
             <p class="ops-field-tip">{{ tips.endpoint_name }}</p>
           </el-form-item>
+          <el-form-item>
+            <template #label>
+              <span>Node 运行时版本</span>
+              <span class="ops-field-req">必填</span>
+            </template>
+            <el-radio-group v-model="ar.platform.code_language">
+              <el-radio-button
+                v-for="item in codeLanguageOptions"
+                :key="item.value"
+                :label="item.value"
+              >
+                {{ item.label }}
+              </el-radio-button>
+            </el-radio-group>
+            <p class="ops-field-tip">{{ tips.code_language }}</p>
+          </el-form-item>
           <el-form-item label="调用根地址 AGENT_BASE_URL">
             <el-input v-model="ar.platform.agent_base_url" placeholder="https://…" />
             <p class="ops-field-tip">{{ tips.agent_base_url }}</p>
@@ -212,7 +228,7 @@
 
 <script setup>
 import { computed, nextTick, reactive, ref, watch } from 'vue';
-import { AGENTRUN_FIELD_TIPS, FALLBACK_DEPLOY_PRODUCTS } from '../../utils/deployMeta.js';
+import { AGENTRUN_CODE_LANGUAGES, AGENTRUN_FIELD_TIPS, FALLBACK_DEPLOY_PRODUCTS } from '../../utils/deployMeta.js';
 
 const props = defineProps({
   modelValue: { type: Object, default: () => ({}) },
@@ -224,6 +240,7 @@ const emit = defineEmits(['update:modelValue']);
 const open = ref([ 'account', 'platform', 'runtime', 'cmd' ]);
 const config = reactive(emptyLocal());
 const tips = AGENTRUN_FIELD_TIPS;
+const codeLanguageOptions = AGENTRUN_CODE_LANGUAGES;
 const runtimeFields = [
   { key: 'DATABASE_URL', secret: true, required: true },
   { key: 'AGENT_DATABASE_URL', secret: true, required: false, placeholder: '空则同 DATABASE_URL' },

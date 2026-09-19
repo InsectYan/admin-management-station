@@ -133,8 +133,20 @@ function emptyDeployConfig() {
   };
 }
 
+const AGENTRUN_CODE_LANGUAGES = [ 'nodejs18', 'nodejs20', 'nodejs22' ];
+const DEFAULT_CODE_LANGUAGE = 'nodejs20';
+
 function asObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function normalizeCodeLanguage(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (AGENTRUN_CODE_LANGUAGES.includes(raw)) return raw;
+  if (raw === '18' || raw === 'node18' || raw === 'nodejs-18') return 'nodejs18';
+  if (raw === '20' || raw === 'node20' || raw === 'nodejs-20') return 'nodejs20';
+  if (raw === '22' || raw === 'node22' || raw === 'nodejs-22') return 'nodejs22';
+  return DEFAULT_CODE_LANGUAGE;
 }
 
 function ensureAliyunPrefix(value, prefix) {
@@ -172,6 +184,7 @@ function normalizeDeployConfig(raw) {
     vpc_id: ensureAliyunPrefix(agentrun.platform?.vpc_id, 'vpc-'),
     vswitch_id: ensureAliyunPrefix(agentrun.platform?.vswitch_id, 'vsw-'),
     security_group_id: ensureAliyunPrefix(agentrun.platform?.security_group_id, 'sg-'),
+    code_language: normalizeCodeLanguage(agentrun.platform?.code_language),
   };
   return {
     product,
@@ -241,6 +254,10 @@ function listProductsPublic() {
   return {
     list: PRODUCTS.map(item => ({ ...item })),
     prerequisites: { agentrun: AGENTRUN_PREREQS },
+    code_languages: AGENTRUN_CODE_LANGUAGES.map(value => ({
+      value,
+      label: value === 'nodejs20' ? 'Node.js 20（默认）' : `Node.js ${value.replace('nodejs', '')}`,
+    })),
     defaults: emptyDeployConfig(),
   };
 }
@@ -248,8 +265,11 @@ function listProductsPublic() {
 module.exports = {
   PRODUCTS,
   AGENTRUN_PREREQS,
+  AGENTRUN_CODE_LANGUAGES,
+  DEFAULT_CODE_LANGUAGE,
   emptyDeployConfig,
   normalizeDeployConfig,
+  normalizeCodeLanguage,
   findProduct,
   isDemoProduct,
   isAgentrun,

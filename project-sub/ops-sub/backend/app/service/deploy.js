@@ -12,7 +12,7 @@ const {
 } = require('../lib/deployProducts');
 const { resolveAgentrunSource } = require('../lib/deployAgentrun');
 const menuMaster = require('../lib/menuMaster');
-const { parseGithubHttps, resolveCodeSource, resolveGitBranch, assertGitTagName } = require('../lib/gitSource');
+const { parseGithubHttps, resolveCodeSource, resolveGitBranch, assertGitTagName, suggestNextReleaseTag } = require('../lib/gitSource');
 
 const ACTIVE = [ 'queued', 'running' ];
 const TERMINAL = [ 'success', 'failed', 'aborted' ];
@@ -381,16 +381,31 @@ class DeployService extends Service {
     const repoUrl = String(query.repo_url || project.repo_url || '').trim();
     const parsed = parseRepo(repoUrl);
     if (!parsed) {
-      return { list: [], message: repoUrl ? '仅支持 GitHub / Gitee 的 HTTPS 地址' : '未配置仓库地址，可手动输入 tag' };
+      const empty = suggestNextReleaseTag([]);
+      return {
+        list: [],
+        ...empty,
+        message: repoUrl ? '仅支持 GitHub / Gitee 的 HTTPS 地址' : '未配置仓库地址，可手动输入 tag',
+      };
     }
     try {
       const list = parsed.host === 'gitee.com'
         ? await this.fetchGiteeTags(parsed)
         : await this.fetchGithubTags(parsed);
-      return { list, message: list.length ? '' : '未读到 tag，可手动输入' };
+      const suggested = suggestNextReleaseTag(list);
+      return {
+        list,
+        ...suggested,
+        message: list.length
+          ? (suggested.latest_tag
+            ? `远程最新 ${suggested.latest_tag} → 建议发布 ${suggested.next_tag}`
+            : `已拉取 ${list.length} 个标签（无语义化版本），建议发布 ${suggested.next_tag}`)
+          : `未读到 tag，建议从 ${suggested.next_tag} 开始`,
+      };
     } catch (err) {
       this.ctx.logger.warn('[Deploy] git-tags failed: %s', err.message);
-      return { list: [], message: err.message || '拉取标签失败' };
+      const empty = suggestNextReleaseTag([]);
+      return { list: [], ...empty, message: err.message || '拉取标签失败' };
     }
   }
 
@@ -406,7 +421,7 @@ class DeployService extends Service {
     if (!token) token = process.env.OPS_GIT_TOKEN || '';
     const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'ops-sub' };
     if (token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/tags?per_page=50`, { headers });
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/tags?per_page=100`, { headers });
     if (res.status === 401 || res.status === 403) {
       throw new Error('无法列出 tag：仓库私有或 GitHub Token 无效。一键部署时会弹出填写，或到账号设置保存。');
     }

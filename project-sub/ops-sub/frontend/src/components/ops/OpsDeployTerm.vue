@@ -61,6 +61,7 @@ watch(
   line-height: 1.55;
   padding: 12px 14px;
   border-radius: 8px;
+  max-height: 600px;
 }
 
 .ops-deploy-term__empty {

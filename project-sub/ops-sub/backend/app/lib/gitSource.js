@@ -32,6 +32,29 @@ function gitAuthEnv() {
   };
 }
 
+/** Alpine/Docker 下 Git↔GitHub 偶发 TLS EOF，强制 HTTP/1.1 更稳 */
+function withGitHttpCompat(argv) {
+  const list = Array.isArray(argv) ? [ ...argv ] : [];
+  if (list[0] !== 'git') return list;
+  const flags = [ '-c', 'http.version=HTTP/1.1' ];
+  if (list.includes('http.version')) return list;
+  return [ 'git', ...flags, ...list.slice(1) ];
+}
+
+function classifyGithubGitError(err) {
+  const text = String(err && err.message || err || '');
+  if (/TLS|SSL|unexpected eof|gnutls|schannel|unable to access/i.test(text)) {
+    return `访问 GitHub 时 TLS/网络失败（不是 Token 丢失）。容器到 github.com 链路不稳定时可重试。详情：${text}`;
+  }
+  if (/Authentication failed|Invalid username|403|401|Permission denied/i.test(text)) {
+    return `GitHub 鉴权失败，请确认个人信息中的 PAT 有效且具有 repo 读（推送 tag 还需 Write）权限。详情：${text}`;
+  }
+  if (/could not read Username|terminal prompts disabled/i.test(text)) {
+    return `Git 未带上 Token（或 Token 为空）。请到账号设置重新保存 PAT 后再部署。详情：${text}`;
+  }
+  return text;
+}
+
 function assertGitTagName(raw) {
   const tag = String(raw || '').trim();
   if (!tag || tag === 'source' || tag === 'demo') {
@@ -90,14 +113,52 @@ function resolveGitBranch(input) {
   return branch || 'main';
 }
 
+function parseSemverTag(name) {
+  const raw = String(name || '').trim();
+  const matched = raw.match(/^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/i);
+  if (!matched) return null;
+  return {
+    name: raw,
+    major: Number(matched[1]),
+    minor: Number(matched[2]),
+    patch: Number(matched[3]),
+    prefix: /^v/i.test(raw) ? (raw[0] === 'V' ? 'V' : 'v') : 'v',
+  };
+}
+
+function compareSemver(a, b) {
+  if (a.major !== b.major) return a.major - b.major;
+  if (a.minor !== b.minor) return a.minor - b.minor;
+  return a.patch - b.patch;
+}
+
+function suggestNextReleaseTag(tagNames, fallback = 'v0.0.1') {
+  const parsed = (Array.isArray(tagNames) ? tagNames : [])
+    .map(item => parseSemverTag(typeof item === 'string' ? item : item && item.name))
+    .filter(Boolean)
+    .sort(compareSemver);
+  if (!parsed.length) {
+    return { latest_tag: '', next_tag: fallback };
+  }
+  const latest = parsed[parsed.length - 1];
+  return {
+    latest_tag: latest.name,
+    next_tag: `${latest.prefix}${latest.major}.${latest.minor}.${latest.patch + 1}`,
+  };
+}
+
 module.exports = {
   parseGithubHttps,
   publicCloneUrl,
   cloneUrlWithToken,
   gitAuthEnv,
+  withGitHttpCompat,
+  classifyGithubGitError,
   assertGitTagName,
   parseLsRemoteRefSha,
   sameGitSha,
   resolveCodeSource,
   resolveGitBranch,
+  parseSemverTag,
+  suggestNextReleaseTag,
 };

@@ -5,7 +5,7 @@ RUN sed -i \
     -e "s#https://dl-cdn.alpinelinux.org/alpine#${ALPINE_MIRROR}#g" \
     -e "s#http://dl-cdn.alpinelinux.org/alpine#${ALPINE_MIRROR}#g" \
     /etc/apk/repositories \
-  && apk add --no-cache git bash
+  && apk add --no-cache git bash zip unzip
 WORKDIR /app
 COPY backend/package*.json ./
 RUN npm ci --omit=dev 2>/dev/null || npm install --omit=dev

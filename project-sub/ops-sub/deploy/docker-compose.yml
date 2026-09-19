@@ -48,6 +48,19 @@ services:
       HOST_PROJECTS_ROOT: ${HOST_PROJECTS_ROOT:-/host-projects}
       MENU_MASTER_URL: ${MENU_MASTER_URL:-http://host.docker.internal:5200}
       OPS_INTERNAL_KEY: ${OPS_INTERNAL_KEY:-CHANGE_ME_LOCAL_JWT}
+      # AgentRun：默认直连；Docker Desktop 探测失败时自动改走宿主机执行器 :1329（等同 fitness-cli）
+      OPS_DEPLOY_EXECUTOR: ${OPS_DEPLOY_EXECUTOR:-auto}
+      OPS_DEPLOY_WORKDIR: ${OPS_DEPLOY_WORKDIR:-/tmp/ops-deploy}
+      OPS_DEPLOY_WORKDIR_HOST: ${OPS_DEPLOY_WORKDIR_HOST:-}
+      OPS_HOST_RUNNER_HOST: ${OPS_HOST_RUNNER_HOST:-host.docker.internal}
+      OPS_HOST_RUNNER_PORT: ${OPS_HOST_RUNNER_PORT:-1329}
+      OPS_HOST_EGRESS_ENABLED: ${OPS_HOST_EGRESS_ENABLED:-0}
+      OPS_HOST_EGRESS_HOST: host.docker.internal
+      OPS_HOST_EGRESS_PORT: "1328"
+      FC_CODE_TEMP_OSS_ENDPOINT: "https://oss-accelerate.aliyuncs.com"
+      FC_REGION: ""
+      AGENTRUN_CUSTOM_ENDPOINT: ""
+      NPM_CONFIG_REGISTRY: ${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.com}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -60,6 +73,8 @@ services:
       - ../backend/config:/app/config
       - ../database:/app/database:ro
       - ${HOST_PROJECTS_MOUNT:-E:/AI Tools/projects}:/host-projects:ro
+      # 与宿主机执行器共享工作区（clone/pack 在容器，s deploy 可在宿主机）
+      - ${OPS_DEPLOY_WORKDIR_HOST:-../.ops-deploy-work}:${OPS_DEPLOY_WORKDIR:-/tmp/ops-deploy}
 
   ops-frontend:
     build:

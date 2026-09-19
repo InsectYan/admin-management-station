@@ -86,10 +86,13 @@ function printHelp() {
   cd ops-sub/deploy && npm link
 
 用法:
-  ams-ops local              启动 Postgres + API + 前端
+  ams-ops local              启动 Postgres + API + 前端 + 宿主机出网代理(:1328)
   ams-ops local:infra        仅 Postgres（宿主机热更新业务代码）
   ams-ops local:reset        清库重建
-  ams-ops local:down         停止本栈
+  ams-ops local:down         停止本栈与出网代理
+
+说明:
+  AgentRun 部署需宿主机 CONNECT 代理（Docker 容器直连 *.fc.aliyuncs.com 常 TLS 失败）
 
 数据库（须 Postgres 已启动，默认端口见 deploy/config/.env.local）:
   ams-ops db:init             执行 database/init.sql 初始化 schema 与种子数据
@@ -121,7 +124,8 @@ switch (task) {
     }
     break
   case 'local:down':
-    runCompose(['down'])
+    if (isWin) runPs1('stop-local.ps1')
+    else runCompose(['down'])
     break
   case 'db':
   case 'db:init':

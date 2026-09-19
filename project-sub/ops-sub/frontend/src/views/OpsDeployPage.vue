@@ -63,8 +63,8 @@
         </el-form>
         <template v-else>
           <p class="ops-deploy-hint">
-            填写本次发布 tag。若远程没有该 tag，一键部署会在分支 <code>{{ gitBranch }}</code> 的 HEAD 自动创建并推送；已存在且指向同一提交则直接使用。
-            Token 存在个人信息中，本页不重复填写。
+            填写本次发布 tag。点「生成下一版本」会拉取 GitHub 已有标签，并按最近语义化版本自动 patch+1（如 v0.0.1 → v0.0.2）；远程尚无该 tag 时，一键部署会在分支
+            <code>{{ gitBranch }}</code> 的 HEAD 创建并推送。
           </p>
           <el-form label-position="top" class="ops-github-form">
             <el-form-item label="GitHub HTTPS 仓库">
@@ -80,12 +80,20 @@
                   filterable
                   allow-create
                   default-first-option
-                  placeholder="例如 v0.0.2，可新建"
+                  placeholder="例如 v0.0.2"
                   style="width: 280px"
                 >
+                  <el-option
+                    v-if="nextTagPreview && !tags.some((t) => t.name === nextTagPreview)"
+                    :key="`next-${nextTagPreview}`"
+                    :label="`${nextTagPreview}（待发布）`"
+                    :value="nextTagPreview"
+                  />
                   <el-option v-for="item in tags" :key="item.name" :label="item.name" :value="item.name" />
                 </el-select>
-                <el-button :loading="tagsLoading" @click="loadTags">刷新已有标签</el-button>
+                <el-button type="primary" plain :loading="tagsLoading" @click="bumpNextTag">
+                  生成下一版本
+                </el-button>
               </div>
               <p v-if="tagsMessage" class="ops-deploy-hint">{{ tagsMessage }}</p>
             </el-form-item>
@@ -172,6 +180,8 @@ import { statusMeta, typeLabel } from '../utils/opsMeta.js';
 import {
   defaultDeployParams,
   FALLBACK_DEPLOY_PRODUCTS,
+  latestSemverTag,
+  nextReleaseTag,
   parseDeployProductCatalog,
 } from '../utils/deployMeta.js';
 
@@ -195,6 +205,8 @@ const githubLogin = ref('');
 const tags = ref([]);
 const tagsMessage = ref('');
 const tagsLoading = ref(false);
+const nextTagPreview = ref('');
+const latestRemoteTag = ref('');
 const params = reactive(defaultDeployParams('frontend'));
 const deployConfig = ref({ product: 'generic' });
 const products = ref(FALLBACK_DEPLOY_PRODUCTS);
@@ -243,18 +255,38 @@ async function loadActive() {
   activeJob.value = data.list?.[0] || null;
 }
 
-async function loadTags() {
+async function loadTags({ bump = false } = {}) {
   tagsLoading.value = true;
   try {
     const data = await fetchGitTags(route.params.id, { repo_url: project.repo_url });
-    tags.value = data.list || [];
-    tagsMessage.value = data.message || '';
-    if (!gitTag.value && tags.value[0]) gitTag.value = tags.value[0].name;
+    const list = data.list || [];
+    tags.value = list;
+    const latest = data.latest_tag || latestSemverTag(list);
+    const next = data.next_tag || nextReleaseTag(list);
+    latestRemoteTag.value = latest;
+    nextTagPreview.value = next;
+    if (bump || !gitTag.value.trim()) {
+      gitTag.value = next;
+    }
+    if (list.length) {
+      tagsMessage.value = latest
+        ? `远程最新 ${latest} → 建议发布 ${next}`
+        : (data.message || `已拉取 ${list.length} 个标签，建议发布 ${next}`);
+    } else {
+      tagsMessage.value = data.message || `远程尚无语义化 tag，建议从 ${next} 开始`;
+    }
+    if (bump) {
+      ElMessage.success(`已生成下一版本：${next}`);
+    }
   } catch (err) {
     ElMessage.error(err.message || '拉取标签失败');
   } finally {
     tagsLoading.value = false;
   }
+}
+
+async function bumpNextTag() {
+  await loadTags({ bump: true });
 }
 
 async function load() {
@@ -454,7 +486,7 @@ function closeTokenDialog() {
 }
 
 watch(codeSource, (value) => {
-  if (value === 'github' && project.id) loadTags();
+  if (value === 'github' && project.id) loadTags({ bump: !gitTag.value.trim() });
 });
 
 onMounted(() => {

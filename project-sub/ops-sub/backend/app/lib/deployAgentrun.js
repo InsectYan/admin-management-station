@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { resolveCliArgv, ensureAliyunPrefix } = require('./deployProducts');
+const { resolveCliArgv, ensureAliyunPrefix, normalizeCodeLanguage } = require('./deployProducts');
 
 function safeStat(target) {
   try {
@@ -109,6 +109,48 @@ function writeAccessYaml(homeDir, account) {
   return alias;
 }
 
+/** 复用已下载的 agentrun 组件，避免每次冷启动都打 registry（易被错误代理响应误伤）。 */
+function seedAgentrunComponent(homeDir) {
+  const dest = path.join(homeDir, '.s', 'components', 'devsapp.cn', 'v3', 'agentrun');
+  const destEntry = path.join(dest, 'dist', 'index.js');
+  if (fs.existsSync(destEntry)) return { seeded: false, reason: 'already-present' };
+
+  const cacheRoot = process.env.OPS_AGENTRUN_COMPONENT_CACHE
+    || path.join(process.env.OPS_DEPLOY_WORKDIR || path.join(require('os').tmpdir(), 'ops-deploy'), '_component-cache', 'agentrun');
+  const cacheEntry = path.join(cacheRoot, 'dist', 'index.js');
+
+  const candidates = [];
+  if (fs.existsSync(cacheEntry)) candidates.push(cacheRoot);
+  try {
+    const workRoot = process.env.OPS_DEPLOY_WORKDIR || path.join(require('os').tmpdir(), 'ops-deploy');
+    const jobs = fs.readdirSync(workRoot, { withFileTypes: true })
+      .filter(d => d.isDirectory() && /^\d+$/.test(d.name))
+      .map(d => d.name)
+      .sort((a, b) => Number(b) - Number(a));
+    for (const id of jobs.slice(0, 8)) {
+      const p = path.join(workRoot, id, '.ops-home', '.s', 'components', 'devsapp.cn', 'v3', 'agentrun');
+      if (fs.existsSync(path.join(p, 'dist', 'index.js'))) candidates.push(p);
+    }
+  } catch {
+    /* ignore */
+  }
+
+  const src = candidates[0];
+  if (!src) return { seeded: false, reason: 'no-cache' };
+
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.cpSync(src, dest, { recursive: true });
+  try {
+    if (!fs.existsSync(cacheEntry)) {
+      fs.mkdirSync(path.dirname(cacheRoot), { recursive: true });
+      fs.cpSync(src, cacheRoot, { recursive: true });
+    }
+  } catch {
+    /* ignore cache warm */
+  }
+  return { seeded: true, from: src };
+}
+
 function envLines(agentrun) {
   const account = agentrun.account || {};
   const platform = agentrun.platform || {};
@@ -119,7 +161,7 @@ function envLines(agentrun) {
     DEPLOY_MODE: 'agentrun',
     SCHEME: 'code-package',
     CONFIG_SOURCE: 'deploy/config',
-    CODE_LANGUAGE: platform.code_language || 'nodejs20',
+    CODE_LANGUAGE: normalizeCodeLanguage(platform.code_language),
     SD_ACCESS: account.sd_access || 'fitness-prod',
     AGENTRUN_REGION: platform.region || '',
     AGENT_NAME: platform.agent_name || '',
@@ -154,7 +196,8 @@ function materialize(repoDir, homeDir, agentrun) {
   const alias = writeAccessYaml(homeDir, agentrun.account || {});
   const { envName, map } = writeDotEnv(repoDir, agentrun);
   const argv = resolveCliArgv(agentrun.cli_command, envName);
-  return { alias, envName, map, argv };
+  const componentSeed = seedAgentrunComponent(homeDir);
+  return { alias, envName, map, argv, componentSeed };
 }
 
 module.exports = {
@@ -167,6 +210,7 @@ module.exports = {
   writeAccessYaml,
   writeDotEnv,
   materialize,
+  seedAgentrunComponent,
   envLines,
   ensureAliyunPrefix,
 };

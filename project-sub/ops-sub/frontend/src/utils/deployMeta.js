@@ -36,6 +36,48 @@ export function defaultDeployParams(projectType) {
   return { ...common, build_cmd: 'npm ci && npm run build', out_dir: 'dist' };
 }
 
+/** 解析 v0.0.1 / 0.0.1 类版本；非语义化返回 null */
+export function parseSemverTag(name) {
+  const raw = String(name || '').trim();
+  const matched = raw.match(/^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/i);
+  if (!matched) return null;
+  return {
+    name: raw,
+    major: Number(matched[1]),
+    minor: Number(matched[2]),
+    patch: Number(matched[3]),
+    prefix: /^v/i.test(raw) ? 'v' : (raw.startsWith('V') ? 'V' : 'v'),
+  };
+}
+
+function compareSemver(a, b) {
+  if (a.major !== b.major) return a.major - b.major;
+  if (a.minor !== b.minor) return a.minor - b.minor;
+  return a.patch - b.patch;
+}
+
+/**
+ * 根据远程已有 tag 生成下一发布号：取最新语义化版本 patch+1。
+ * 无 tag → v0.0.1；最新 v0.0.1 → v0.0.2。
+ */
+export function nextReleaseTag(tagNames, { fallback = 'v0.0.1' } = {}) {
+  const parsed = (Array.isArray(tagNames) ? tagNames : [])
+    .map((item) => parseSemverTag(typeof item === 'string' ? item : item?.name))
+    .filter(Boolean)
+    .sort(compareSemver);
+  if (!parsed.length) return fallback;
+  const latest = parsed[parsed.length - 1];
+  return `${latest.prefix || 'v'}${latest.major}.${latest.minor}.${latest.patch + 1}`;
+}
+
+export function latestSemverTag(tagNames) {
+  const parsed = (Array.isArray(tagNames) ? tagNames : [])
+    .map((item) => parseSemverTag(typeof item === 'string' ? item : item?.name))
+    .filter(Boolean)
+    .sort(compareSemver);
+  return parsed.length ? parsed[parsed.length - 1].name : '';
+}
+
 /** 产品目录写死在代码，不入库。接口失败时用这份兜底，避免下拉空白。 */
 export const FALLBACK_DEPLOY_PRODUCTS = [
   {
@@ -64,6 +106,12 @@ export const FALLBACK_DEPLOY_PRODUCTS = [
   },
 ];
 
+export const AGENTRUN_CODE_LANGUAGES = [
+  { value: 'nodejs18', label: 'Node.js 18' },
+  { value: 'nodejs20', label: 'Node.js 20（默认）' },
+  { value: 'nodejs22', label: 'Node.js 22' },
+];
+
 export const AGENTRUN_FIELD_TIPS = {
   account_id: '必填。阿里云主账号 UID（约 16 位数字），不是 RAM 子用户 ID。控制台右上角头像 → 账号中心 → 账号 ID。写入 Serverless Devs 的 AccountID。',
   access_key_id: 'RAM 子用户 AccessKey ID。推荐用子用户，不要用主账号 AK。',
@@ -74,6 +122,7 @@ export const AGENTRUN_FIELD_TIPS = {
   workspace_id: 'AgentRun 工作空间 ID，控制台复制。为空常见报错 No default workspace found。',
   agent_name: '运行时名称，对应 yaml 里的 AGENT_NAME。',
   endpoint_name: 'Endpoint 名称，生产常见 production。',
+  code_language: '写入 CODE_LANGUAGE，对应 AgentRun 代码包运行时。默认 Node.js 20；请与仓库 engines / 依赖兼容性一致。',
   agent_base_url: '发布后的调用根地址（平台域名）。套壳用它访问 Agent。',
   vpc_id: '须与 RDS、NAS 同一 VPC。可只填 ID 后半段，保存时自动补 vpc- 前缀。漏填会在提交时直接拦住。',
   vswitch_id: '交换机 ID。可只填后半段，保存时自动补 vsw-。',

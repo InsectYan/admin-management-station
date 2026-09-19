@@ -11,7 +11,10 @@ const { isAgentrun } = require('../lib/deployProducts');
 const agentrun = require('../lib/deployAgentrun');
 const { redactDeployLog } = require('../lib/deployLogRedact');
 const menuMaster = require('../lib/menuMaster');
-const { publicCloneUrl, cloneUrlWithToken, gitAuthEnv, resolveCodeSource, parseLsRemoteRefSha, sameGitSha, assertGitTagName } = require('../lib/gitSource');
+const { publicCloneUrl, cloneUrlWithToken, gitAuthEnv, withGitHttpCompat, classifyGithubGitError, resolveCodeSource, parseLsRemoteRefSha, sameGitSha, assertGitTagName } = require('../lib/gitSource');
+const { runOssPreflight, agentrunNetworkEnv } = require('../lib/deployOssPreflight');
+const { resolveDeployExecutor } = require('../lib/deployNetwork');
+const { execOnHost } = require('../lib/hostDeployClient');
 
 const KEEP = 5;
 
@@ -131,26 +134,29 @@ class DeployRunnerService extends Service {
     const authEnv = gitAuthEnv();
 
     await this.append(job.id, 'info', `[github] 仓库 ${publicUrl}，分支 ${branch}，发布 tag ${tag}`);
+    await this.append(job.id, 'info', `[github] 已读取部署人 PAT（长度 ${token.length}，前缀 ${token.slice(0, 4)}…），「保存配置」不会改动 Token`);
 
     let branchSha = '';
     let tagSha = '';
     try {
-      const branchOut = await this.execCapture(
+      const branchOut = await this.gitRemote(
         job.id,
         [ 'git', 'ls-remote', authUrl, `refs/heads/${branch}` ],
         path.dirname(dir),
         authEnv,
+        { capture: true },
       );
       branchSha = parseLsRemoteRefSha(branchOut, `refs/heads/${branch}`);
-      const tagOut = await this.execCapture(
+      const tagOut = await this.gitRemote(
         job.id,
         [ 'git', 'ls-remote', '--tags', authUrl, `refs/tags/${tag}` ],
         path.dirname(dir),
         authEnv,
+        { capture: true },
       );
       tagSha = parseLsRemoteRefSha(tagOut, `refs/tags/${tag}`);
     } catch (err) {
-      throw new Error(`无法访问 GitHub 仓库（鉴权或网络失败）。请确认 PAT 有 repo 读权限。${err.message}`);
+      throw new Error(classifyGithubGitError(err));
     }
     if (!branchSha) {
       throw new Error(`远程不存在分支 ${branch}，请先把代码推到该分支`);
@@ -169,17 +175,17 @@ class DeployRunnerService extends Service {
       try {
         await this.exec(
           job.id,
-          [ 'git', '-c', 'user.name=ops-sub', '-c', 'user.email=ops-sub@local', 'tag', '-a', tag, '-m', `ops-sub deploy #${job.id}` ],
+          withGitHttpCompat([ 'git', '-c', 'user.name=ops-sub', '-c', 'user.email=ops-sub@local', 'tag', '-a', tag, '-m', `ops-sub deploy #${job.id}` ]),
           dir,
           gitTimeout,
           authEnv,
         );
-        await this.exec(
+        await this.gitRemote(
           job.id,
           [ 'git', 'push', authUrl, `refs/tags/${tag}` ],
           dir,
-          gitTimeout,
           authEnv,
+          { timeoutMs: gitTimeout },
         );
       } catch (err) {
         throw new Error(
@@ -194,25 +200,45 @@ class DeployRunnerService extends Service {
     return sha.slice(0, 40);
   }
 
+  async gitRemote(jobId, argv, cwd, authEnv, { timeoutMs, capture = false, attempts = 3 } = {}) {
+    let lastErr;
+    for (let i = 1; i <= attempts; i++) {
+      try {
+        const cmd = withGitHttpCompat(argv);
+        if (capture) return await this.execCapture(jobId, cmd, cwd, authEnv);
+        await this.exec(jobId, cmd, cwd, timeoutMs, authEnv);
+        return '';
+      } catch (err) {
+        lastErr = err;
+        const msg = String(err.message || '');
+        const retryable = /TLS|SSL|unexpected eof|unable to access|Failed to connect|Connection reset/i.test(msg);
+        if (!retryable || i === attempts) break;
+        await this.append(jobId, 'warn', `[github] 网络抖动，第 ${i}/${attempts} 次重试…`);
+        await new Promise(resolve => setTimeout(resolve, 800 * i));
+      }
+    }
+    throw lastErr;
+  }
+
   async cloneByRef(jobId, authUrl, ref, dir, timeoutMs, authEnv, publicUrl) {
     try {
-      await this.exec(
+      await this.gitRemote(
         jobId,
         [ 'git', 'clone', '--depth', '1', '--branch', ref, authUrl, dir ],
         path.dirname(dir),
-        timeoutMs,
         authEnv,
+        { timeoutMs },
       );
       // 去掉 .git/config 里的带 token 远程地址，后续 push 显式传 authUrl
       await this.exec(
         jobId,
-        [ 'git', 'remote', 'set-url', 'origin', publicUrl ],
+        withGitHttpCompat([ 'git', 'remote', 'set-url', 'origin', publicUrl ]),
         dir,
         timeoutMs,
         authEnv,
       );
     } catch (err) {
-      throw new Error(`GitHub 克隆失败（ref ${ref}，仓库 ${publicUrl}）。${err.message}`);
+      throw new Error(`GitHub 克隆失败（ref ${ref}，仓库 ${publicUrl}）。${classifyGithubGitError(err)}`);
     }
   }
 
@@ -223,17 +249,93 @@ class DeployRunnerService extends Service {
     fs.mkdirSync(homeDir, { recursive: true });
     const prepared = agentrun.materialize(dir, homeDir, ar);
     await this.append(job.id, 'info', `[agentrun] 已写入 deploy/config/.env.${prepared.envName} 与隔离 ~/.s（别名 ${prepared.alias}）`);
-    await this.append(job.id, 'info', `[agentrun] RAM 策略 / Workspace / 会话亲和见项目配置前置条件，执行 ${prepared.argv.join(' ')}`);
+    if (prepared.componentSeed?.seeded) {
+      await this.append(job.id, 'info', `[agentrun] 已复用本地 agentrun 组件缓存（跳过易失败的 registry latest 探测）`);
+    }
     if (!fs.existsSync(path.join(dir, 'deploy', 'scripts', 'run.mjs'))) {
       throw new Error('仓库里没有 deploy/scripts/run.mjs。GitHub 请把 tag 打在 fitness-agent 仓库根的提交上；本地 source_path 请指向 fitness-agent 而不是只含 .pi 的目录。');
     }
-    const timeout = Number(process.env.OPS_DEPLOY_AGENTRUN_TIMEOUT_MS || 30 * 60 * 1000);
+    await this.append(job.id, 'info', '[agentrun] 探测部署执行面（容器直连 vs 宿主机，与 fitness-cli 对齐）…');
+    const execPlan = await resolveDeployExecutor({
+      ...process.env,
+      OPS_FC_PROBE_ACCOUNT: String(ar.account?.account_id || process.env.OPS_FC_PROBE_ACCOUNT || ''),
+    });
+    await this.append(job.id, 'info', `[agentrun] 执行面=${execPlan.mode}；${execPlan.reason}`);
+    if (execPlan.error) {
+      throw new Error(execPlan.error);
+    }
+
+    const artifactZip = path.join(dir, 'deploy', 'agentrun', 'code-package', 'artifact.zip');
+    if (fs.existsSync(artifactZip)) {
+      const mb = (fs.statSync(artifactZip).size / (1024 * 1024)).toFixed(1);
+      await this.append(
+        job.id,
+        'info',
+        `[agentrun] artifact.zip ≈ ${mb} MB；直连/宿主机执行时本地 CLI 通常很快，不应卡数分钟`,
+      );
+    }
+
+    if (execPlan.mode === 'direct') {
+      await this.append(job.id, 'info', '[oss-preflight] 容器直连模式：检查加速上传…');
+      const preflight = await runOssPreflight({
+        ...process.env,
+        OPS_FC_PROBE_ACCOUNT: String(ar.account?.account_id || ''),
+        OPS_HOST_EGRESS_DISABLED: '1',
+      });
+      for (const line of preflight.lines) {
+        await this.append(job.id, preflight.ok ? 'info' : 'warn', line);
+      }
+      if (!preflight.ok) {
+        throw new Error(preflight.error || 'OSS 出网预检失败');
+      }
+    }
+
+    const timeout = Number(process.env.OPS_DEPLOY_AGENTRUN_TIMEOUT_MS || 45 * 60 * 1000);
+    await this.append(job.id, 'info', `[agentrun] 整段命令超时上限 ${Math.round(timeout / 60000)} 分钟`);
+    const netEnv = agentrunNetworkEnv({
+      ...process.env,
+      OPS_HOST_EGRESS_DISABLED: execPlan.mode === 'host' ? '1' : process.env.OPS_HOST_EGRESS_DISABLED,
+      // host 模式禁止注入 egress agent；direct 且 ECS 也应默认禁用
+      OPS_HOST_EGRESS_ENABLED: process.env.OPS_HOST_EGRESS_ENABLED || '0',
+    });
     const extraEnv = {
       HOME: homeDir,
       USERPROFILE: homeDir,
+      CI: '1',
+      FORCE_COLOR: '0',
+      TERM: 'dumb',
       ...prepared.map,
+      ...netEnv,
     };
-    await this.exec(job.id, prepared.argv, dir, timeout, extraEnv);
+    if (ar.account?.account_id) {
+      extraEnv.OPS_FC_PROBE_ACCOUNT = String(ar.account.account_id);
+    }
+
+    if (execPlan.mode === 'host') {
+      if (!String(process.env.OPS_DEPLOY_WORKDIR_HOST || '').trim()) {
+        throw new Error(
+          '宿主机执行器需要 OPS_DEPLOY_WORKDIR_HOST（与容器 OPS_DEPLOY_WORKDIR 绑定同一目录）。' +
+          '请检查 deploy/config/.env.local 后 ams-ops local 重启',
+        );
+      }
+      await this.append(
+        job.id,
+        'info',
+        `[agentrun] 经宿主机执行器运行（等同 fitness-cli 网络）：${prepared.argv.join(' ')}`,
+      );
+      await execOnHost({
+        cwd: dir,
+        argv: prepared.argv,
+        env: extraEnv,
+        timeoutMs: timeout,
+        onLog: (text, level) => {
+          this.append(job.id, level || 'info', text).catch(() => {});
+        },
+      });
+    } else {
+      await this.append(job.id, 'info', `[agentrun] 容器内直连执行：${prepared.argv.join(' ')}`);
+      await this.exec(job.id, prepared.argv, dir, timeout, extraEnv);
+    }
     await this.append(job.id, 'info', '[check] AgentRun 命令退出码 0；请到控制台确认会话亲和已关闭');
   }
 
@@ -285,28 +387,64 @@ class DeployRunnerService extends Service {
 
   exec(jobId, argv, cwd, timeoutMs, extraEnv) {
     return new Promise((resolve, reject) => {
+      const startedAt = Date.now();
+      const env = { ...process.env, GIT_TERMINAL_PROMPT: '0', ...(extraEnv || {}) };
+      // 空字符串仍会被 axios 当成「已配置代理」；必须 delete
+      for (const key of [
+        'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY',
+        'http_proxy', 'https_proxy', 'all_proxy',
+        'NO_PROXY', 'no_proxy',
+      ]) {
+        if (env[key] == null || String(env[key]).trim() === '') delete env[key];
+      }
       const child = spawn(argv[0], argv.slice(1), {
         cwd,
-        env: { ...process.env, GIT_TERMINAL_PROMPT: '0', ...(extraEnv || {}) },
+        env,
         windowsHide: true,
       });
       track(jobId, child);
       let stderrTail = '';
-      const onOut = (buf, level) => {
-        String(buf).split(/\r?\n/).forEach(line => {
-          const text = line.trim();
+      let lastLine = '';
+      let lastActivity = Date.now();
+      const flushChunk = (buf, level) => {
+        // s CLI / npm 进度常用 \r 刷新同一行，按 \r|\n 切开才能进黑窗口
+        String(buf).split(/\r?\n|\r/).forEach(line => {
+          const text = line.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '').trim();
           if (!text) return;
-          if (level === 'warn' || level === 'error') stderrTail = (stderrTail + '\n' + text).slice(-800);
+          lastActivity = Date.now();
+          lastLine = text.slice(0, 200);
+          if (level === 'warn' || level === 'error') stderrTail = (stderrTail + '\n' + text).slice(-1200);
           this.append(jobId, level, text).catch(() => {});
         });
       };
-      child.stdout.on('data', buf => onOut(buf, 'info'));
-      child.stderr.on('data', buf => onOut(buf, 'warn'));
+      child.stdout.on('data', buf => flushChunk(buf, 'info'));
+      child.stderr.on('data', buf => flushChunk(buf, 'warn'));
+
+      const heartbeatMs = Number(process.env.OPS_DEPLOY_HEARTBEAT_MS || 20 * 1000);
+      const heartbeat = setInterval(() => {
+        const silentSec = Math.round((Date.now() - lastActivity) / 1000);
+        if (silentSec < Math.round(heartbeatMs / 1000)) return;
+        const ranSec = Math.round((Date.now() - startedAt) / 1000);
+        const tip = lastLine ? `；最近输出：${lastLine}` : '';
+        this.append(
+          jobId,
+          'info',
+          `[heartbeat] 命令仍在运行（已 ${ranSec}s，距上次输出 ${silentSec}s）${tip}`,
+        ).catch(() => {});
+      }, heartbeatMs);
+
       const timer = timeoutMs ? setTimeout(() => {
         child.kill('SIGKILL');
-        reject(new Error(`命令超时：${argv[0]}`));
+        const ranMin = ((Date.now() - startedAt) / 60000).toFixed(1);
+        reject(new Error(
+          `命令超时（${ranMin} 分钟）：${argv[0]}。` +
+          '若卡在 Uploading code to temporary OSS：本地一键通常不会这么久，请查 Docker Desktop 代理/VPN/公司网拦截，或看任务日志里的 [oss-preflight]。' +
+          `最近输出：${lastLine || '(无)'}`,
+        ));
       }, timeoutMs) : null;
+
       child.on('error', err => {
+        clearInterval(heartbeat);
         if (timer) clearTimeout(timer);
         untrack(jobId);
         if (argv[0] === 'git' && err.code === 'ENOENT') {
@@ -316,6 +454,7 @@ class DeployRunnerService extends Service {
         reject(new Error(`无法启动 ${argv[0]}：${err.message}`));
       });
       child.on('close', code => {
+        clearInterval(heartbeat);
         if (timer) clearTimeout(timer);
         untrack(jobId);
         if (code === 0) resolve();

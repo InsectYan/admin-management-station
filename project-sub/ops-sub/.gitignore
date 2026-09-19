@@ -1,3 +1,4 @@
+.ops-deploy-work/
 node_modules/
 dist/
 *.log
@@ -5,3 +6,5 @@ dist/
 
 backend/logs/
 backend/run/
+deploy/scripts/.host-deploy-runner.pid
+deploy/scripts/.host-egress-proxy.pid
