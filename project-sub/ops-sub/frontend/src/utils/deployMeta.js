@@ -113,7 +113,7 @@ export const AGENTRUN_CODE_LANGUAGES = [
 ];
 
 export const AGENTRUN_FIELD_TIPS = {
-  package_path: '填仓库内预打好的 zip 路径，上传阿里云用，运维侧不再 pack。推荐 backup/ss.zip；也可填目录 backup（目录内须有 artifact.zip，或多个 zip 时请写清文件名）。空则仍走 fitness-cli（含本机 pack）。',
+  package_path: '仓库内相对路径，指向预打好的 zip（推荐 backup/ss.zip）。运维从 Git 按该路径取包后直接 s deploy 上传阿里云，不再 pack。也可只填目录 backup（目录内需有 artifact.zip，或仅一个 .zip）。留空则走 fitness-cli（会 pack）。',
   account_id: '必填。阿里云主账号 UID（约 16 位数字），不是 RAM 子用户 ID。控制台右上角头像 → 账号中心 → 账号 ID。写入 Serverless Devs 的 AccountID。',
   access_key_id: 'RAM 子用户 AccessKey ID。推荐用子用户，不要用主账号 AK。',
   access_key_secret: 'AccessKey Secret，创建时只显示一次，勿提交 git。',

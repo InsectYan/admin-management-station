@@ -40,12 +40,12 @@
     </el-alert>
 
     <el-collapse v-if="config.product === 'agentrun'" v-model="open">
-      <el-collapse-item title="代码包路径" name="package">
+      <el-collapse-item title="代码包路径（预打 zip）" name="package">
         <el-form label-position="top">
-          <el-form-item label="包路径（相对仓库根）">
+          <el-form-item label="包路径">
             <el-input
               v-model="ar.package_path"
-              placeholder="例如 backup/ss.zip（预打 zip，勿再 pack）"
+              placeholder="backup/ss.zip"
               clearable
             />
             <p class="ops-field-tip">{{ tips.package_path }}</p>
