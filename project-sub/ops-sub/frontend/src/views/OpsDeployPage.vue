@@ -232,7 +232,12 @@ function applyParams(type) {
 }
 
 function goDetail() {
-  router.push({ name: 'ops-detail', params: { id: String(project.id || route.params.id) } });
+  const id = String(project.id || route.params.id || '').trim();
+  if (!id) {
+    ElMessage.error('缺少项目 ID，无法返回详情');
+    return;
+  }
+  router.push({ name: 'ops-detail', params: { id } }).catch(() => {});
 }
 
 function goHistory() {

@@ -114,6 +114,21 @@ function defaultAgentrun() {
       OTEL_SERVICE_NAME: 'fitness-pi-agent-prod',
       OTEL_EXPORTER_OTLP_ENDPOINT: '-',
     },
+    /** 线上运行时绑定（部署成功后写入，供详情页状态/切模型） */
+    binding: {
+      agent_runtime_id: '',
+      agent_name: '',
+      region: '',
+      workspace_id: '',
+      endpoint_name: '',
+      endpoint_url: '',
+      code_language: '',
+      status: '',
+      llm_profile: '',
+      llm_provider: '',
+      llm_model: '',
+      synced_at: '',
+    },
   };
 }
 
@@ -205,6 +220,7 @@ function normalizeDeployConfig(raw) {
   };
   agentrun.package_path = normalizePackagePath(agentrun.package_path);
   agentrun.runtime = asObject(agentrun.runtime);
+  agentrun.binding = asObject(agentrun.binding);
   applyLlmProfileToRuntime(agentrun.runtime, agentrun.runtime.LLM_DEFAULT_PROFILE);
   return {
     product,

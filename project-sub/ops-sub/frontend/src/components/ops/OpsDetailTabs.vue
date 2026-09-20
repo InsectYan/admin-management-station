@@ -1,6 +1,7 @@
 <template>
   <el-menu
     class="ops-detail-tabs"
+    :key="String(active)"
     :default-active="String(active)"
     @select="onSelect"
   >

@@ -15,6 +15,8 @@ module.exports = app => {
   router.get('/api/projects/:id/export', controller.project.exportFile);
   router.get('/api/deploy/products', controller.deploy.products);
   router.get('/api/projects/:id/git-tags', controller.deploy.gitTags);
+  router.get('/api/projects/:id/runtime', controller.deploy.runtimeStatus);
+  router.post('/api/projects/:id/runtime/switch-llm', controller.deploy.switchLlm);
   router.post('/api/projects/:id/deploy', controller.deploy.create);
   router.get('/api/projects/:id/deploy/jobs', controller.deploy.listByProject);
   router.get('/api/deploy/jobs', controller.deploy.listAll);

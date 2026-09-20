@@ -100,7 +100,9 @@ const range = ref([]);
 const filters = reactive({ status: '', triggered_by: '', git_tag: '' });
 
 function goDetail() {
-  router.push({ name: 'ops-detail', params: { id: String(route.params.id) } });
+  const id = String(route.params.id || '').trim();
+  if (!id) return;
+  router.push({ name: 'ops-detail', params: { id } }).catch(() => {});
 }
 
 function goDeploy() {

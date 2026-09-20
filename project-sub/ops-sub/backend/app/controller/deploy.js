@@ -19,6 +19,41 @@ class DeployController extends Controller {
     this.success(listProductsPublic());
   }
 
+  async runtimeStatus() {
+    try {
+      const project = await this.ctx.service.deploy.requireProject(this.ctx.params.id);
+      const { readCloudStatus } = require('../lib/agentrunRuntimeOps');
+      const data = await readCloudStatus(project);
+      this.success(data);
+    } catch (err) {
+      this.fail(err);
+    }
+  }
+
+  async switchLlm() {
+    try {
+      const project = await this.ctx.service.deploy.requireProject(this.ctx.params.id);
+      const profileId = this.ctx.request.body?.profile_id || this.ctx.request.body?.profileId;
+      const { switchLlmProfile } = require('../lib/agentrunRuntimeOps');
+      const result = await switchLlmProfile(project, profileId);
+      if (result.deploy_config) {
+        await this.ctx.model.OpsProject.update(
+          { deploy_config: result.deploy_config },
+          { where: { id: project.id } },
+        );
+      }
+      this.success({
+        message: result.message,
+        unchanged: Boolean(result.unchanged),
+        binding: result.binding || null,
+        profile: result.profile || null,
+        status: result.status || null,
+      });
+    } catch (err) {
+      this.fail(err);
+    }
+  }
+
   async gitTags() {
     try {
       const data = await this.ctx.service.deploy.listGitTags(this.ctx.params.id, this.ctx.query);

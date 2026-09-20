@@ -54,6 +54,18 @@ export function retryDeployJob(jobId) {
   return request(`/deploy/jobs/${jobId}/retry`, { method: 'post' });
 }
 
+export function fetchProjectRuntime(projectId) {
+  return request(`/projects/${projectId}/runtime`, { method: 'get', timeout: 60000 });
+}
+
+export function switchProjectLlm(projectId, profileId) {
+  return request(`/projects/${projectId}/runtime/switch-llm`, {
+    method: 'post',
+    data: { profile_id: profileId },
+    timeout: 200000,
+  });
+}
+
 export function deployStreamUrl(jobId, after) {
   const token = getAccessToken();
   const query = new URLSearchParams();

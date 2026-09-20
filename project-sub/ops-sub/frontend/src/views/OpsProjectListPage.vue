@@ -494,7 +494,11 @@ async function handleDelete(row) {
   }
 }
 
-watch(viewMode, () => writeQuery());
+watch(viewMode, (next) => {
+  const current = route.query.view === 'table' ? 'table' : 'board';
+  if (next === current) return;
+  writeQuery();
+});
 watch(() => route.query, () => {
   readQuery();
   loadProjects();

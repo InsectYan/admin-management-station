@@ -13,7 +13,7 @@
         <NavMenu :embedded="embedded" />
       </div>
       <el-main :class="['ops-sub-content', { embedded }, sceneClass]">
-        <router-view />
+        <router-view :key="viewKey" />
       </el-main>
     </el-container>
   </el-container>
@@ -28,6 +28,12 @@ import './MainLayout.css';
 
 const embedded = computed(() => isQiankunEmbedded());
 const route = useRoute();
+/** 仅路径实体变化时重挂载；query（如 tab）变化不重建页面，避免切 tab / 返回时报错 */
+const viewKey = computed(() => {
+  const id = route.params.id != null ? String(route.params.id) : '';
+  const jobId = route.params.jobId != null ? String(route.params.jobId) : '';
+  return [ String(route.name || ''), id, jobId ].filter(Boolean).join(':');
+});
 const sceneClass = computed(() => {
   if (route.name === 'ops-list' || route.name === 'ops-deploy-history' || route.name === 'ops-deploy-jobs') {
     return 'ops-scene ops-scene--meadow';

@@ -57,6 +57,9 @@ class DeployRunnerService extends Service {
         await this.check(job, dir);
       }
       if (!(await this.stillRunning(jobId))) return;
+      if (isAgentrun(product)) {
+        await this.persistAgentrunBinding(job);
+      }
       await deploy.patchStatus(jobId, { status: 'success', finished_at: new Date() });
       await this.append(jobId, 'info', '[done] 部署完成');
     } catch (err) {
@@ -507,6 +510,31 @@ class DeployRunnerService extends Service {
       await this.exec(job.id, argv, dir, timeout, extraEnv);
     }
     await this.append(job.id, 'info', '[check] AgentRun 命令退出码 0；请到控制台确认会话亲和已关闭');
+  }
+
+  async persistAgentrunBinding(job) {
+    try {
+      const { syncBindingAfterDeploy } = require('../lib/agentrunRuntimeOps');
+      const project = job.project
+        || await this.ctx.service.project.findById(job.project_id);
+      const nextConfig = await syncBindingAfterDeploy(project, job.params?.deploy_config?.agentrun);
+      if (!nextConfig) {
+        await this.append(job.id, 'warn', '[binding] 未能同步线上 runtime id（详情页可稍后刷新状态）');
+        return;
+      }
+      await this.ctx.model.OpsProject.update(
+        { deploy_config: nextConfig },
+        { where: { id: project.id } },
+      );
+      const id = nextConfig.agentrun?.binding?.agent_runtime_id || '';
+      await this.append(
+        job.id,
+        'info',
+        `[binding] 已写入 runtime 绑定${id ? `：${id}` : ''}`,
+      );
+    } catch (err) {
+      await this.append(job.id, 'warn', `[binding] 同步失败：${err.message}`);
+    }
   }
 
   projectType(job) {

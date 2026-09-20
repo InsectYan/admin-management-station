@@ -64,12 +64,16 @@
         :project-id="form.id"
         @update:active-key="activeFlowKey = $event"
       />
+      <DetailDeployStatus
+        v-else-if="tab === 5"
+        :project-id="form.id"
+      />
     </OpsDetailShell>
   </div>
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import OpsDetailShell from '../components/ops/OpsDetailShell.vue';
@@ -78,6 +82,7 @@ import DetailBasicInfo from '../components/ops/DetailBasicInfo.vue';
 import DetailDirectory from '../components/ops/DetailDirectory.vue';
 import DetailRoutes from '../components/ops/DetailRoutes.vue';
 import DetailFlowChart from '../components/ops/DetailFlowChart.vue';
+import DetailDeployStatus from '../components/ops/DetailDeployStatus.vue';
 import OpsGeneratePanel from '../components/ops/OpsGeneratePanel.vue';
 import { exportProject, fetchProject, updateProject } from '../services/opsService.js';
 import { downloadJson, ensureOverviewFlow } from '../utils/opsMeta.js';
@@ -103,6 +108,9 @@ const form = reactive({
   updated_at: '',
 });
 
+let loadSeq = 0;
+let alive = true;
+
 const readonly = computed(() => route.name !== 'ops-edit');
 
 const tabs = computed(() => [
@@ -110,6 +118,7 @@ const tabs = computed(() => [
   { id: 2, label: '目录结构' },
   { id: 3, label: form.project_type === 'frontend' || form.project_type === 'fullstack' ? '路由信息' : 'HTTP 接口' },
   { id: 4, label: '功能流程' },
+  { id: 5, label: '部署状态' },
 ]);
 
 const currentTab = computed(() => tabs.value.find((item) => item.id === tab.value));
@@ -139,48 +148,81 @@ function applyProject(data) {
   form.updated_at = data.updated_at;
 }
 
+function syncTabFromQuery() {
+  const nextTab = Number(route.query.tab);
+  tab.value = Number.isFinite(nextTab) && nextTab >= 1 && nextTab <= 5 ? nextTab : 1;
+  activeFlowKey.value = String(route.query.flow || 'overview');
+}
+
 async function load() {
+  const id = String(route.params.id || '').trim();
+  if (!id) {
+    loadError.value = '缺少项目 ID';
+    return;
+  }
+  const seq = ++loadSeq;
   loadError.value = '';
   try {
-    const data = await fetchProject(route.params.id);
+    const data = await fetchProject(id);
+    if (!alive || seq !== loadSeq) return;
     applyProject(data);
   } catch (err) {
+    if (!alive || seq !== loadSeq) return;
     loadError.value = err.message || '加载失败';
   }
 }
 
+function navigate(location) {
+  return router.push(location).catch(() => {});
+}
+
 function goBack() {
-  router.push({ name: 'ops-list' });
+  router.push({ name: 'ops-list' }).catch(() => {});
 }
 
 function goDeploy() {
-  router.push({ name: 'ops-deploy', params: { id: String(form.id) } });
+  const id = String(form.id || route.params.id || '').trim();
+  if (!id) return;
+  navigate({ name: 'ops-deploy', params: { id } });
 }
 
 function goJobs() {
-  router.push({ name: 'ops-deploy-jobs' });
+  navigate({ name: 'ops-deploy-jobs' });
 }
 
 function goEdit() {
-  router.push({
+  const id = String(form.id || route.params.id || '').trim();
+  if (!id) return;
+  navigate({
     name: 'ops-edit',
-    params: { id: String(form.id) },
+    params: { id },
     query: { tab: String(tab.value), flow: activeFlowKey.value },
   });
 }
 
 function goToTab(next) {
-  tab.value = next;
-  router.replace({ query: { ...route.query, tab: String(next) } });
+  const id = Number(next);
+  if (!Number.isFinite(id)) return;
+  tab.value = id;
+  router.replace({
+    name: route.name,
+    params: { ...route.params },
+    query: { ...route.query, tab: String(id) },
+  }).catch(() => {});
 }
 
 function openFlow(flowKey) {
   activeFlowKey.value = flowKey || 'overview';
   tab.value = 4;
-  router.replace({ query: { ...route.query, tab: '4', flow: activeFlowKey.value } });
+  router.replace({
+    name: route.name,
+    params: { ...route.params },
+    query: { ...route.query, tab: '4', flow: activeFlowKey.value },
+  }).catch(() => {});
 }
 
 async function save() {
+  if (!form.id) return;
   saving.value = true;
   try {
     const saved = await updateProject(form.id, {
@@ -196,6 +238,11 @@ async function save() {
     });
     applyProject(saved);
     ElMessage.success('已保存');
+    await navigate({
+      name: 'ops-detail',
+      params: { id: String(form.id) },
+      query: { tab: String(tab.value), flow: activeFlowKey.value },
+    });
   } catch (err) {
     ElMessage.error(err.message || '保存失败');
   } finally {
@@ -214,14 +261,27 @@ async function handleExport() {
 }
 
 watch(
-  () => [ route.params.id, route.name ],
-  () => {
-    tab.value = Number(route.query.tab) || 1;
-    activeFlowKey.value = String(route.query.flow || 'overview');
+  () => String(route.params.id || ''),
+  (id) => {
+    if (!id) return;
+    syncTabFromQuery();
     load();
   },
   { immediate: true },
 );
+
+watch(
+  () => route.name,
+  (name) => {
+    if (name !== 'ops-detail' && name !== 'ops-edit') return;
+    syncTabFromQuery();
+  },
+);
+
+onBeforeUnmount(() => {
+  alive = false;
+  loadSeq += 1;
+});
 </script>
 
 <style scoped>
