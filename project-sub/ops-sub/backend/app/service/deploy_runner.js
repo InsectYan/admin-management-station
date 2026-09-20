@@ -467,6 +467,15 @@ class DeployRunnerService extends Service {
     if (ar.account?.account_id) {
       extraEnv.OPS_FC_PROBE_ACCOUNT = String(ar.account.account_id);
     }
+    // Node22 UpdateAgentRuntime 补丁：直接注入 AK，避免依赖加密版 ~/.s
+    if (ar.account?.access_key_id) {
+      extraEnv.ALIBABA_CLOUD_ACCESS_KEY_ID = String(ar.account.access_key_id);
+      extraEnv.ACCESS_KEY_ID = String(ar.account.access_key_id);
+    }
+    if (ar.account?.access_key_secret) {
+      extraEnv.ALIBABA_CLOUD_ACCESS_KEY_SECRET = String(ar.account.access_key_secret);
+      extraEnv.ACCESS_KEY_SECRET = String(ar.account.access_key_secret);
+    }
 
     const argv = usePrebuiltZip
       ? agentrun.resolveDeployOnlyArgv(prepared.envName)

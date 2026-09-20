@@ -72,7 +72,7 @@ function defaultAgentrun() {
       nas_server_addr: '',
       log_project: '',
       log_store: 'fitness-agent-prod',
-      code_language: 'nodejs20',
+      code_language: 'nodejs22',
     },
     runtime: {
       NODE_ENV: 'production',
@@ -151,7 +151,7 @@ function emptyDeployConfig() {
 }
 
 const AGENTRUN_CODE_LANGUAGES = [ 'nodejs18', 'nodejs20', 'nodejs22' ];
-const DEFAULT_CODE_LANGUAGE = 'nodejs20';
+const DEFAULT_CODE_LANGUAGE = 'nodejs22';
 
 function asObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -281,7 +281,11 @@ function listProductsPublic() {
     prerequisites: { agentrun: AGENTRUN_PREREQS },
     code_languages: AGENTRUN_CODE_LANGUAGES.map(value => ({
       value,
-      label: value === 'nodejs20' ? 'Node.js 20（默认）' : `Node.js ${value.replace('nodejs', '')}`,
+      label: value === 'nodejs22'
+        ? 'Node.js 22（推荐：先 20 上传再 Update 覆写）'
+        : value === 'nodejs20'
+          ? 'Node.js 20'
+          : `Node.js ${value.replace('nodejs', '')}`,
     })),
     llm_profiles: listLlmProfilesPublic(),
     defaults: emptyDeployConfig(),

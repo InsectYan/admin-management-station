@@ -376,7 +376,7 @@ function emptyLocal() {
         nas_server_addr: '',
         log_project: '',
         log_store: 'fitness-agent-prod',
-        code_language: 'nodejs20',
+        code_language: 'nodejs22',
       },
       runtime: {
         DATABASE_URL: '',

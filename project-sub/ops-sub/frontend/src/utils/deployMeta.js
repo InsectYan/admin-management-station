@@ -108,8 +108,8 @@ export const FALLBACK_DEPLOY_PRODUCTS = [
 
 export const AGENTRUN_CODE_LANGUAGES = [
   { value: 'nodejs18', label: 'Node.js 18' },
-  { value: 'nodejs20', label: 'Node.js 20（默认）' },
-  { value: 'nodejs22', label: 'Node.js 22' },
+  { value: 'nodejs20', label: 'Node.js 20' },
+  { value: 'nodejs22', label: 'Node.js 22（推荐）' },
 ];
 
 /** 与后端 deployLlmCatalog 对齐；接口失败时兜底 */
@@ -148,7 +148,7 @@ export const AGENTRUN_FIELD_TIPS = {
   workspace_id: 'AgentRun 工作空间 ID，控制台复制。为空常见报错 No default workspace found。',
   agent_name: '运行时名称，对应 yaml 里的 AGENT_NAME。',
   endpoint_name: 'Endpoint 名称，生产常见 production。',
-  code_language: '写入 CODE_LANGUAGE，对应 AgentRun 代码包运行时。默认 Node.js 20；请与仓库 engines / 依赖兼容性一致。',
+  code_language: '写入 CODE_LANGUAGE。选 Node.js 22 时：s deploy 仍按 20 上传（CLI 上限），deploy 脚本再调 UpdateAgentRuntime 覆写为 22。选 20/18 则直接按该版本上传、不做覆写。',
   agent_base_url: '发布后的调用根地址（平台域名）。套壳用它访问 Agent。',
   vpc_id: '须与 RDS、NAS 同一 VPC。可只填 ID 后半段，保存时自动补 vpc- 前缀。漏填会在提交时直接拦住。',
   vswitch_id: '交换机 ID。可只填后半段，保存时自动补 vsw-。',
