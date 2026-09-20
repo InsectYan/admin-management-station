@@ -171,6 +171,46 @@
       </el-collapse-item>
       <el-collapse-item title="运行时密钥与业务地址（原 deploy/config/.env.prod）" name="runtime">
         <el-form label-position="top">
+          <el-form-item>
+            <template #label>
+              <span>默认大模型</span>
+              <span class="ops-field-req">必填</span>
+            </template>
+            <el-select
+              v-model="ar.runtime.LLM_DEFAULT_PROFILE"
+              filterable
+              style="width: 100%"
+              placeholder="选择模型"
+              @change="onLlmProfileChange"
+            >
+              <el-option-group
+                v-for="group in llmProfileGroups"
+                :key="group.provider"
+                :label="group.label"
+              >
+                <el-option
+                  v-for="item in group.items"
+                  :key="item.id"
+                  :label="item.label"
+                  :value="item.id"
+                />
+              </el-option-group>
+            </el-select>
+            <p class="ops-field-tip">{{ tips.LLM_DEFAULT_PROFILE }}</p>
+          </el-form-item>
+          <el-form-item>
+            <template #label>
+              <span>{{ selectedLlmApiKeyLabel }}</span>
+              <span class="ops-field-req">必填</span>
+            </template>
+            <el-input
+              v-model="config.agentrun.runtime[selectedLlmApiKeyEnv]"
+              type="password"
+              show-password
+              :placeholder="selectedLlmApiKeyEnv"
+            />
+            <p class="ops-field-tip">{{ tips.LLM_API_KEY }}</p>
+          </el-form-item>
           <el-form-item v-for="field in runtimeFields" :key="field.key">
             <template #label>
               <span>{{ field.key }}</span>
@@ -240,12 +280,19 @@
 
 <script setup>
 import { computed, nextTick, reactive, ref, watch } from 'vue';
-import { AGENTRUN_CODE_LANGUAGES, AGENTRUN_FIELD_TIPS, FALLBACK_DEPLOY_PRODUCTS } from '../../utils/deployMeta.js';
+import {
+  AGENTRUN_CODE_LANGUAGES,
+  AGENTRUN_FIELD_TIPS,
+  FALLBACK_DEPLOY_PRODUCTS,
+  FALLBACK_LLM_PROFILES,
+  llmProviderGroupLabel,
+} from '../../utils/deployMeta.js';
 
 const props = defineProps({
   modelValue: { type: Object, default: () => ({}) },
   products: { type: Array, default: () => [] },
   defaults: { type: Object, default: () => ({}) },
+  llmProfiles: { type: Array, default: () => [] },
 });
 const emit = defineEmits(['update:modelValue']);
 
@@ -257,12 +304,57 @@ const runtimeFields = [
   { key: 'DATABASE_URL', secret: true, required: true },
   { key: 'AGENT_DATABASE_URL', secret: true, required: false, placeholder: '空则同 DATABASE_URL' },
   { key: 'INTERNAL_API_KEY', secret: true, required: true },
-  { key: 'DEEPSEEK_API_KEY', secret: true, required: true },
   { key: 'CLOUD_DATA_OPS_TOKEN', secret: true, required: false },
   { key: 'SHELL_BASE_URL', secret: false, required: false },
   { key: 'CORS_ORIGIN', secret: false, required: false },
   { key: 'LEJIAN_API_BASE_URL', secret: false, required: false },
 ];
+
+const profileCatalog = computed(() => (
+  props.llmProfiles?.length ? props.llmProfiles : FALLBACK_LLM_PROFILES
+));
+
+const llmProfileGroups = computed(() => {
+  const order = [];
+  const map = new Map();
+  for (const item of profileCatalog.value) {
+    const provider = item.provider || 'other';
+    if (!map.has(provider)) {
+      map.set(provider, []);
+      order.push(provider);
+    }
+    map.get(provider).push(item);
+  }
+  return order.map((provider) => ({
+    provider,
+    label: llmProviderGroupLabel(provider),
+    items: map.get(provider),
+  }));
+});
+
+const selectedLlmProfile = computed(() => {
+  const id = config.agentrun?.runtime?.LLM_DEFAULT_PROFILE;
+  return profileCatalog.value.find((item) => item.id === id) || profileCatalog.value[0] || null;
+});
+
+const selectedLlmApiKeyEnv = computed(() => selectedLlmProfile.value?.apiKeyEnv || 'DEEPSEEK_API_KEY');
+const selectedLlmApiKeyLabel = computed(() => (
+  selectedLlmProfile.value?.apiKeyLabel || selectedLlmApiKeyEnv.value
+));
+
+function onLlmProfileChange(profileId) {
+  const hit = profileCatalog.value.find((item) => item.id === profileId);
+  if (!hit || !config.agentrun?.runtime) return;
+  config.agentrun.runtime.LLM_DEFAULT_PROFILE = hit.id;
+  config.agentrun.runtime.LLM_PROVIDER = hit.provider;
+  config.agentrun.runtime.LLM_MODEL_NAME = hit.model;
+  if (hit.baseUrlEnv && hit.baseUrl) {
+    const current = String(config.agentrun.runtime[hit.baseUrlEnv] || '').trim();
+    if (!current || current === '-' || current === 'CHANGE_ME') {
+      config.agentrun.runtime[hit.baseUrlEnv] = hit.baseUrl;
+    }
+  }
+}
 
 function emptyLocal() {
   return {
@@ -290,11 +382,21 @@ function emptyLocal() {
         DATABASE_URL: '',
         AGENT_DATABASE_URL: '',
         INTERNAL_API_KEY: '',
-        DEEPSEEK_API_KEY: '',
         CLOUD_DATA_OPS_TOKEN: '',
         SHELL_BASE_URL: '',
         CORS_ORIGIN: '*',
         LEJIAN_API_BASE_URL: 'https://lejian-api.bboycc.cn',
+        LLM_DEFAULT_PROFILE: 'deepseek-reasoner',
+        LLM_PROVIDER: 'deepseek',
+        LLM_MODEL_NAME: 'deepseek-reasoner',
+        DEEPSEEK_API_KEY: '',
+        DEEPSEEK_BASE_URL: 'https://api.deepseek.com/v1',
+        DASHSCOPE_API_KEY: '',
+        DASHSCOPE_BASE_URL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+        ZHIPU_API_KEY: '',
+        ZHIPU_BASE_URL: 'https://open.bigmodel.cn/api/paas/v4',
+        OPENAI_API_KEY: '',
+        OPENAI_BASE_URL: 'https://api.openai.com/v1',
       },
     },
     aliyun_ecs: { region: 'cn-hangzhou', instance_id: '', ssh_user: 'root', ssh_port: '22', deploy_path: '/opt/app' },

@@ -112,6 +112,7 @@
           v-model="deployConfig"
           :products="products"
           :defaults="productDefaults"
+          :llm-profiles="llmProfiles"
         />
         <el-button class="ops-save-cfg" :loading="saving" @click="onSaveConfig">保存配置</el-button>
       </el-card>
@@ -180,6 +181,7 @@ import { statusMeta, typeLabel } from '../utils/opsMeta.js';
 import {
   defaultDeployParams,
   FALLBACK_DEPLOY_PRODUCTS,
+  FALLBACK_LLM_PROFILES,
   latestSemverTag,
   nextReleaseTag,
   parseDeployProductCatalog,
@@ -211,6 +213,7 @@ const params = reactive(defaultDeployParams('frontend'));
 const deployConfig = ref({ product: 'generic' });
 const products = ref(FALLBACK_DEPLOY_PRODUCTS);
 const productDefaults = ref({});
+const llmProfiles = ref(FALLBACK_LLM_PROFILES);
 const activeJob = ref(null);
 const submitting = ref(false);
 const saving = ref(false);
@@ -305,8 +308,10 @@ async function load() {
       const catalog = parseDeployProductCatalog(await fetchDeployProducts());
       products.value = catalog.list;
       productDefaults.value = catalog.defaults || {};
+      llmProfiles.value = catalog.llm_profiles?.length ? catalog.llm_profiles : FALLBACK_LLM_PROFILES;
     } catch (err) {
       products.value = FALLBACK_DEPLOY_PRODUCTS;
+      llmProfiles.value = FALLBACK_LLM_PROFILES;
       ElMessage.warning(err.message || '部署产品目录接口不可用，已使用内置选项');
     }
     deployConfig.value = data.deploy_config && data.deploy_config.product

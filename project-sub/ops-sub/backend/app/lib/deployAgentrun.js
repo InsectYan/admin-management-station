@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { resolveCliArgv, ensureAliyunPrefix, normalizeCodeLanguage } = require('./deployProducts');
+const { applyLlmProfileToRuntime } = require('./deployLlmCatalog');
 
 function safeStat(target) {
   try {
@@ -222,7 +223,8 @@ function seedAgentrunComponent(homeDir) {
 function envLines(agentrun) {
   const account = agentrun.account || {};
   const platform = agentrun.platform || {};
-  const runtime = agentrun.runtime || {};
+  const runtime = { ...(agentrun.runtime || {}) };
+  applyLlmProfileToRuntime(runtime, runtime.LLM_DEFAULT_PROFILE);
   const envName = agentrun.target_env === 'test' ? 'test' : 'prod';
   const map = {
     DEPLOY_ENV: envName,

@@ -112,6 +112,31 @@ export const AGENTRUN_CODE_LANGUAGES = [
   { value: 'nodejs22', label: 'Node.js 22' },
 ];
 
+/** 与后端 deployLlmCatalog 对齐；接口失败时兜底 */
+export const FALLBACK_LLM_PROFILES = [
+  { id: 'deepseek-chat', label: 'DeepSeek · deepseek-chat', provider: 'deepseek', model: 'deepseek-chat', apiKeyEnv: 'DEEPSEEK_API_KEY', apiKeyLabel: 'DeepSeek API Key', baseUrl: 'https://api.deepseek.com/v1', baseUrlEnv: 'DEEPSEEK_BASE_URL' },
+  { id: 'deepseek-reasoner', label: 'DeepSeek · deepseek-reasoner', provider: 'deepseek', model: 'deepseek-reasoner', apiKeyEnv: 'DEEPSEEK_API_KEY', apiKeyLabel: 'DeepSeek API Key', baseUrl: 'https://api.deepseek.com/v1', baseUrlEnv: 'DEEPSEEK_BASE_URL' },
+  { id: 'deepseek-vision', label: 'DeepSeek · v4-flash-vision-exp（看图）', provider: 'deepseek', model: 'deepseek-v4-flash-vision-exp', apiKeyEnv: 'DEEPSEEK_API_KEY', apiKeyLabel: 'DeepSeek API Key', baseUrl: 'https://api.deepseek.com/v1', baseUrlEnv: 'DEEPSEEK_BASE_URL', vision: true },
+  { id: 'qwen-turbo', label: '通义千问 · qwen-turbo', provider: 'dashscope', model: 'qwen-turbo', apiKeyEnv: 'DASHSCOPE_API_KEY', apiKeyLabel: '通义千问 / 百炼 API Key（DASHSCOPE_API_KEY）', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', baseUrlEnv: 'DASHSCOPE_BASE_URL' },
+  { id: 'qwen-plus', label: '通义千问 · qwen-plus', provider: 'dashscope', model: 'qwen-plus', apiKeyEnv: 'DASHSCOPE_API_KEY', apiKeyLabel: '通义千问 / 百炼 API Key（DASHSCOPE_API_KEY）', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', baseUrlEnv: 'DASHSCOPE_BASE_URL' },
+  { id: 'qwen-max', label: '通义千问 · qwen-max', provider: 'dashscope', model: 'qwen-max', apiKeyEnv: 'DASHSCOPE_API_KEY', apiKeyLabel: '通义千问 / 百炼 API Key（DASHSCOPE_API_KEY）', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', baseUrlEnv: 'DASHSCOPE_BASE_URL' },
+  { id: 'qwen-vl-plus', label: '通义千问 · qwen-vl-plus（看图）', provider: 'dashscope', model: 'qwen-vl-plus', apiKeyEnv: 'DASHSCOPE_API_KEY', apiKeyLabel: '通义千问 / 百炼 API Key（DASHSCOPE_API_KEY）', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', baseUrlEnv: 'DASHSCOPE_BASE_URL', vision: true },
+  { id: 'zhipu-flash', label: '智谱 · glm-4-flash', provider: 'zhipu', model: 'glm-4-flash', apiKeyEnv: 'ZHIPU_API_KEY', apiKeyLabel: '智谱 API Key', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', baseUrlEnv: 'ZHIPU_BASE_URL' },
+  { id: 'zhipu-plus', label: '智谱 · glm-4-plus', provider: 'zhipu', model: 'glm-4-plus', apiKeyEnv: 'ZHIPU_API_KEY', apiKeyLabel: '智谱 API Key', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', baseUrlEnv: 'ZHIPU_BASE_URL' },
+  { id: 'openai-mini', label: 'OpenAI · gpt-4o-mini', provider: 'openai', model: 'gpt-4o-mini', apiKeyEnv: 'OPENAI_API_KEY', apiKeyLabel: 'OpenAI API Key', baseUrl: 'https://api.openai.com/v1', baseUrlEnv: 'OPENAI_BASE_URL' },
+  { id: 'openai-4o', label: 'OpenAI · gpt-4o', provider: 'openai', model: 'gpt-4o', apiKeyEnv: 'OPENAI_API_KEY', apiKeyLabel: 'OpenAI API Key', baseUrl: 'https://api.openai.com/v1', baseUrlEnv: 'OPENAI_BASE_URL' },
+];
+
+export function llmProviderGroupLabel(provider) {
+  const map = {
+    deepseek: 'DeepSeek',
+    dashscope: '通义千问（百炼）',
+    zhipu: '智谱',
+    openai: 'OpenAI',
+  };
+  return map[provider] || provider;
+}
+
 export const AGENTRUN_FIELD_TIPS = {
   package_path: '仓库内相对路径，指向预打好的 zip（推荐 backup/ss.zip）。运维从 Git 按该路径取包后直接 s deploy 上传阿里云，不再 pack。也可只填目录 backup（目录内需有 artifact.zip，或仅一个 .zip）。留空则走 fitness-cli（会 pack）。',
   account_id: '必填。阿里云主账号 UID（约 16 位数字），不是 RAM 子用户 ID。控制台右上角头像 → 账号中心 → 账号 ID。写入 Serverless Devs 的 AccountID。',
@@ -134,7 +159,10 @@ export const AGENTRUN_FIELD_TIPS = {
   DATABASE_URL: 'Agent 使用的 PostgreSQL 连接串。库名须为 fitness_agent，不是 fitness_shell。',
   AGENT_DATABASE_URL: '可空。空则与 DATABASE_URL 相同。',
   INTERNAL_API_KEY: '套壳 Gateway 调用 Agent 内部接口（/v1/agent/*）的共享密钥，须与业务服务一致。禁止下发到前端。',
-  DEEPSEEK_API_KEY: '大模型 API 密钥。',
+  LLM_DEFAULT_PROFILE: '写入 LLM_DEFAULT_PROFILE / LLM_PROVIDER / LLM_MODEL_NAME。与 fitness-agent 模型目录一致；同厂商多模型共用一把 API Key。',
+  LLM_API_KEY: '按所选模型厂商填写。DeepSeek 各模型共用 DEEPSEEK_API_KEY；通义千问共用 DASHSCOPE_API_KEY；智谱 / OpenAI 同理。切换同厂商模型不会要求重填。',
+  DEEPSEEK_API_KEY: 'DeepSeek API Key（同厂商模型共用）。',
+  DASHSCOPE_API_KEY: '阿里云百炼 / 通义千问 API Key（同厂商模型共用）。',
   CLOUD_DATA_OPS_TOKEN: '云端 wipe / 导出 NAS 的运维口令，仅 CLI 签名，不要给套壳。未配置则不挂载 ops 路由。',
   SHELL_BASE_URL: 'Agent 回调套壳 / 进度口的内网根地址。不要填启炼业务域名。',
   CORS_ORIGIN: '允许的前端来源。* 表示不限制。',
@@ -148,7 +176,10 @@ export function parseDeployProductCatalog(raw) {
     return {
       list,
       defaults: raw?.defaults && typeof raw.defaults === 'object' ? raw.defaults : {},
+      llm_profiles: Array.isArray(raw?.llm_profiles) && raw.llm_profiles.length
+        ? raw.llm_profiles
+        : FALLBACK_LLM_PROFILES,
     };
   }
-  return { list: FALLBACK_DEPLOY_PRODUCTS, defaults: {} };
+  return { list: FALLBACK_DEPLOY_PRODUCTS, defaults: {}, llm_profiles: FALLBACK_LLM_PROFILES };
 }

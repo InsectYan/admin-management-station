@@ -6,6 +6,13 @@
  */
 
 const { normalizePackagePath } = require('./gitSource');
+const {
+  DEFAULT_LLM_PROFILE_ID,
+  applyLlmProfileToRuntime,
+  requiredApiKeyEnv,
+  listLlmProfilesPublic,
+  PROVIDER_KEY_LABELS,
+} = require('./deployLlmCatalog');
 
 const PRODUCTS = [
   {
@@ -85,10 +92,16 @@ function defaultAgentrun() {
       INTERNAL_API_KEY: '',
       CLOUD_DATA_OPS_TOKEN: '',
       LLM_PROVIDER: 'deepseek',
+      LLM_DEFAULT_PROFILE: DEFAULT_LLM_PROFILE_ID,
+      LLM_MODEL_NAME: 'deepseek-reasoner',
       DEEPSEEK_API_KEY: '',
       DEEPSEEK_BASE_URL: 'https://api.deepseek.com/v1',
-      LLM_DEFAULT_PROFILE: 'deepseek-reasoner',
-      LLM_MODEL_NAME: 'deepseek-reasoner',
+      DASHSCOPE_API_KEY: '',
+      DASHSCOPE_BASE_URL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      ZHIPU_API_KEY: '',
+      ZHIPU_BASE_URL: 'https://open.bigmodel.cn/api/paas/v4',
+      OPENAI_API_KEY: '',
+      OPENAI_BASE_URL: 'https://api.openai.com/v1',
       COACH_TURN_MODE: 'async',
       COACH_TURN_WORKER: '1',
       COACH_TURN_WORKER_CONCURRENCY: '4',
@@ -191,6 +204,8 @@ function normalizeDeployConfig(raw) {
     code_language: normalizeCodeLanguage(agentrun.platform?.code_language),
   };
   agentrun.package_path = normalizePackagePath(agentrun.package_path);
+  agentrun.runtime = asObject(agentrun.runtime);
+  applyLlmProfileToRuntime(agentrun.runtime, agentrun.runtime.LLM_DEFAULT_PROFILE);
   return {
     product,
     code_source: codeSource,
@@ -231,7 +246,12 @@ function assertAgentrunReady(config) {
   if (!platform.security_group_id) missing.push('SECURITY_GROUP_ID');
   if (!runtime.DATABASE_URL && !runtime.AGENT_DATABASE_URL) missing.push('DATABASE_URL');
   if (!runtime.INTERNAL_API_KEY) missing.push('INTERNAL_API_KEY');
-  if (!runtime.DEEPSEEK_API_KEY) missing.push('DEEPSEEK_API_KEY');
+  applyLlmProfileToRuntime(runtime, runtime.LLM_DEFAULT_PROFILE);
+  const apiKeyEnv = requiredApiKeyEnv(runtime);
+  const apiKey = String(runtime[apiKeyEnv] || '').trim();
+  if (!apiKey || apiKey === '-' || apiKey === 'CHANGE_ME') {
+    missing.push(PROVIDER_KEY_LABELS[apiKeyEnv] || apiKeyEnv);
+  }
   if (missing.length) {
     const err = new Error(`AgentRun 配置不完整：${missing.join('、')}`);
     err.status = 400;
@@ -263,6 +283,7 @@ function listProductsPublic() {
       value,
       label: value === 'nodejs20' ? 'Node.js 20（默认）' : `Node.js ${value.replace('nodejs', '')}`,
     })),
+    llm_profiles: listLlmProfilesPublic(),
     defaults: emptyDeployConfig(),
   };
 }
