@@ -7,7 +7,23 @@ const { Service } = require('egg');
 const ROLES = new Set([ 'admin', 'operator' ]);
 const STATUSES = new Set([ 'pending', 'active', 'disabled' ]);
 const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function credentialFlags(row) {
+  const json = typeof row.toJSON === 'function' ? row.toJSON() : { ...row };
+  const ghToken = String(json.github_token || '').trim();
+  const akSecret = String(json.aliyun_access_key_secret || '').trim();
+  const akId = String(json.aliyun_access_key_id || '').trim();
+  return {
+    github_login: json.github_login || '',
+    github_token_configured: !!ghToken,
+    aliyun_account_id: json.aliyun_account_id || '',
+    aliyun_access_key_id: akId,
+    aliyun_access_key_configured: !!(akId && akSecret),
+  };
+}
+
+/** 列表/通用公开字段：含凭证「是否已配置」，不含密钥明文 */
 function publicUser(row) {
   if (!row) return null;
   const json = typeof row.toJSON === 'function' ? row.toJSON() : { ...row };
@@ -18,6 +34,7 @@ function publicUser(row) {
     role: json.role,
     status: json.status,
     mfa_enabled: !!json.mfa_enabled,
+    ...credentialFlags(json),
     created_at: json.created_at,
     updated_at: json.updated_at,
   };
@@ -88,10 +105,17 @@ class UserService extends Service {
     };
   }
 
+  async getDetail(id) {
+    const row = await this.findRow(id);
+    return publicUser(row);
+  }
+
   async updateUser(id, body = {}) {
     const actor = this.actorFromState();
     const row = await this.findRow(id);
     const next = {};
+    const secretTouched = [];
+
     if (body.role != null) {
       if (!ROLES.has(body.role)) this.ctx.throw(400, '角色仅支持 admin / operator');
       next.role = body.role;
@@ -100,19 +124,95 @@ class UserService extends Service {
       if (!STATUSES.has(body.status)) this.ctx.throw(400, '状态不合法');
       next.status = body.status;
     }
+    if (body.email != null) {
+      const mail = String(body.email || '').trim().toLowerCase();
+      if (!EMAIL_RE.test(mail)) this.ctx.throw(400, '邮箱格式不正确');
+      if (mail !== row.email) {
+        const clash = await this.ctx.model.PlatformUser.findOne({ where: { email: mail } });
+        if (clash && Number(clash.id) !== Number(row.id)) {
+          this.ctx.throw(409, '邮箱已被占用');
+        }
+        next.email = mail;
+      }
+    }
+
+    if (body.github_login != null) {
+      next.github_login = String(body.github_login || '').trim() || null;
+    }
+    if (body.clear_github_token === true) {
+      next.github_token = null;
+      secretTouched.push('github_token_clear');
+    } else if (body.github_token != null && String(body.github_token).trim()) {
+      next.github_token = String(body.github_token).trim();
+      secretTouched.push('github_token_save');
+    }
+
+    if (body.clear_aliyun_credentials === true) {
+      next.aliyun_account_id = null;
+      next.aliyun_access_key_id = null;
+      next.aliyun_access_key_secret = null;
+      secretTouched.push('aliyun_clear');
+    } else {
+      if (body.aliyun_account_id != null) {
+        next.aliyun_account_id = String(body.aliyun_account_id || '').trim() || null;
+      }
+      if (body.aliyun_access_key_id != null) {
+        next.aliyun_access_key_id = String(body.aliyun_access_key_id || '').trim() || null;
+      }
+      if (body.aliyun_access_key_secret != null && String(body.aliyun_access_key_secret).trim()) {
+        next.aliyun_access_key_secret = String(body.aliyun_access_key_secret).trim();
+        secretTouched.push('aliyun_secret_save');
+      }
+    }
+
     if (!Object.keys(next).length) this.ctx.throw(400, '没有可更新的字段');
 
     await this.assertSafeAdminChange(row, next.role, next.status, actor);
-    const before = { role: row.role, status: row.status };
+    const before = {
+      role: row.role,
+      status: row.status,
+      email: row.email,
+      github_login: row.github_login,
+      github_token_configured: !!String(row.github_token || '').trim(),
+      aliyun_account_id: row.aliyun_account_id,
+      aliyun_access_key_id: row.aliyun_access_key_id,
+      aliyun_access_key_configured: !!(
+        String(row.aliyun_access_key_id || '').trim()
+        && String(row.aliyun_access_key_secret || '').trim()
+      ),
+    };
     await row.update(next);
-    const action = next.status && next.status !== before.status
-      ? (next.status === 'active' ? 'approve' : next.status)
-      : 'set_role';
+
+    let action = 'update_profile';
+    if (next.status && next.status !== before.status) {
+      action = next.status === 'active' ? 'approve' : next.status;
+    } else if (next.role && next.role !== before.role) {
+      action = 'set_role';
+    } else if (secretTouched.length) {
+      action = 'update_credentials';
+    }
+
     await this.ctx.service.audit.write({
       actor,
       action,
       target: row,
-      detail: { before, after: next },
+      detail: {
+        before,
+        after: {
+          role: row.role,
+          status: row.status,
+          email: row.email,
+          github_login: row.github_login,
+          github_token_configured: !!String(row.github_token || '').trim(),
+          aliyun_account_id: row.aliyun_account_id,
+          aliyun_access_key_id: row.aliyun_access_key_id,
+          aliyun_access_key_configured: !!(
+            String(row.aliyun_access_key_id || '').trim()
+            && String(row.aliyun_access_key_secret || '').trim()
+          ),
+        },
+        secret_touched: secretTouched,
+      },
     });
     return publicUser(row);
   }

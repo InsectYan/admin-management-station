@@ -52,7 +52,9 @@ services:
       OPS_DEPLOY_EXECUTOR: ${OPS_DEPLOY_EXECUTOR:-auto}
       OPS_DEPLOY_WORKDIR: ${OPS_DEPLOY_WORKDIR:-/tmp/ops-deploy}
       OPS_DEPLOY_WORKDIR_HOST: ${OPS_DEPLOY_WORKDIR_HOST:-}
-      # ECS GitHub 镜像：与 AMS 同级目录（如 /opt/project）→ 容器 /host-mirrors；本地默认不启用
+      # ECS GitHub 镜像：宿主机 OPS_GIT_MIRROR_MOUNT → 容器 OPS_GIT_MIRROR_ROOT（须一致）
+      # ECS 推荐：MOUNT=/opt/project 且 ROOT=/opt/project，容器内路径即宿主机路径
+      # 本地默认：../.ops-git-mirrors → /host-mirrors
       OPS_GIT_MIRROR_ENABLED: ${OPS_GIT_MIRROR_ENABLED:-0}
       OPS_GIT_MIRROR_ROOT: ${OPS_GIT_MIRROR_ROOT:-/host-mirrors}
       # GitHub SSH：私钥目录（含 id_ed25519）；known_hosts 默认用镜像内置
@@ -81,9 +83,9 @@ services:
       - ../database:/app/database:ro
       # 相对 deploy/：默认挂本 monorepo 根（../../..）。Windows 若要挂盘符外其它工程目录，在 .env.local 覆盖 HOST_PROJECTS_MOUNT
       - ${HOST_PROJECTS_MOUNT:-../../..}:/host-projects:ro
-      # ECS：与 admin-management-station 同级根（如 /opt/project）可写挂载，供 GitHub 镜像 clone/fetch
-      # 本地默认 ../.ops-git-mirrors（未开 OPS_GIT_MIRROR_ENABLED 时不会使用）
-      - ${OPS_GIT_MIRROR_MOUNT:-../.ops-git-mirrors}:/host-mirrors
+      # 镜像仓挂载：宿主机 ${OPS_GIT_MIRROR_MOUNT} → 容器 ${OPS_GIT_MIRROR_ROOT}
+      # ECS：两者都设 /opt/project，容器才能读到宿主机 /opt/project/fitness-agent
+      - ${OPS_GIT_MIRROR_MOUNT:-../.ops-git-mirrors}:${OPS_GIT_MIRROR_ROOT:-/host-mirrors}
       # GitHub SSH 部署密钥（选 SSH 协议时需要；目录内放 id_ed25519，权限建议 600）
       - ${OPS_GIT_SSH_MOUNT:-../.ops-git-ssh}:/ops-git-ssh:ro
       # 与宿主机执行器共享工作区（clone/pack 在容器，s deploy 可在宿主机）

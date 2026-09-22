@@ -22,6 +22,15 @@ class UserController extends Controller {
     }
   }
 
+  async show() {
+    try {
+      const user = await this.ctx.service.user.getDetail(this.ctx.params.id);
+      this.ok({ user });
+    } catch (err) {
+      this.fail(err);
+    }
+  }
+
   async update() {
     try {
       const user = await this.ctx.service.user.updateUser(this.ctx.params.id, this.ctx.request.body || {});

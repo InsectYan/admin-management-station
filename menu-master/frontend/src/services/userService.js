@@ -13,6 +13,10 @@ export async function fetchUsers(query = {}) {
   return unwrap(await request(`/users${qs ? `?${qs}` : ''}`));
 }
 
+export async function fetchUser(id) {
+  return unwrap(await request(`/users/${id}`));
+}
+
 export async function updateUser(id, body) {
   return unwrap(await request(`/users/${id}`, {
     method: 'PATCH',

@@ -114,6 +114,24 @@ class AuthController extends Controller {
     }
   }
 
+  async saveAliyunCredentials() {
+    try {
+      const user = await this.ctx.service.auth.saveAliyunCredentials(this.ctx.request.body || {});
+      this.ok({ user });
+    } catch (err) {
+      this.fail(err);
+    }
+  }
+
+  async clearAliyunCredentials() {
+    try {
+      const user = await this.ctx.service.auth.clearAliyunCredentials();
+      this.ok({ user });
+    } catch (err) {
+      this.fail(err);
+    }
+  }
+
   async internalGithubCredential() {
     try {
       const expected = process.env.OPS_INTERNAL_KEY || process.env.JWT_SECRET || '';

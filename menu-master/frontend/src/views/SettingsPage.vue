@@ -66,13 +66,51 @@
         <el-button v-if="user.github_token_configured" :loading="ghLoading" @click="onClearGithub">清除</el-button>
       </el-form>
     </el-card>
+
+    <el-card shadow="never" class="settings-card">
+      <h2>阿里云账户</h2>
+      <p class="settings-hint">
+        用于 AgentRun / 函数计算部署上传。请填主账号 UID（AccountID）与 AccessKey；Secret 只存本账号，接口不回传明文。
+      </p>
+      <p v-if="user.aliyun_access_key_configured" class="settings-hint">
+        已保存{{ user.aliyun_account_id ? `（UID ${user.aliyun_account_id}` : '' }}{{ user.aliyun_access_key_id ? ` · AK ${user.aliyun_access_key_id}` : '' }}{{ user.aliyun_account_id || user.aliyun_access_key_id ? '）' : '' }}。Secret 留空再保存可只改 UID / AK ID。
+      </p>
+      <el-form :model="aliyun" label-position="top" style="max-width: 420px">
+        <el-form-item label="主账号 UID（AccountID）">
+          <el-input v-model="aliyun.account_id" placeholder="数字 UID，不是 RAM 子用户 ID" />
+        </el-form-item>
+        <el-form-item label="AccessKey ID">
+          <el-input v-model="aliyun.access_key_id" placeholder="LTAI…" />
+        </el-form-item>
+        <el-form-item label="AccessKey Secret">
+          <el-input
+            v-model="aliyun.access_key_secret"
+            type="password"
+            show-password
+            :placeholder="user.aliyun_access_key_configured ? '留空则保持原 Secret' : '必填'"
+          />
+        </el-form-item>
+        <el-button type="primary" :loading="aliyunLoading" @click="onSaveAliyun">保存阿里云凭证</el-button>
+        <el-button v-if="user.aliyun_access_key_configured" :loading="aliyunLoading" @click="onClearAliyun">清除</el-button>
+      </el-form>
+    </el-card>
   </div>
 </template>
 
 <script setup>
 import { reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
-import { changePassword, clearGithubToken, confirmMfa, disableMfa, fetchMe, saveGithubToken, setupMfa } from '../services/authService.js';
+import {
+  changePassword,
+  clearAliyunCredentials,
+  clearGithubToken,
+  confirmMfa,
+  disableMfa,
+  fetchMe,
+  saveAliyunCredentials,
+  saveGithubToken,
+  setupMfa,
+} from '../services/authService.js';
 import { getCachedUser, setSession, getAccessToken } from '../lib/amsAuth.js';
 
 const user = reactive({
@@ -80,16 +118,21 @@ const user = reactive({
   mfa_enabled: !!getCachedUser()?.mfa_enabled,
   github_token_configured: !!getCachedUser()?.github_token_configured,
   github_login: getCachedUser()?.github_login || '',
+  aliyun_account_id: getCachedUser()?.aliyun_account_id || '',
+  aliyun_access_key_id: getCachedUser()?.aliyun_access_key_id || '',
+  aliyun_access_key_configured: !!getCachedUser()?.aliyun_access_key_configured,
 });
 const pwdRef = ref(null);
 const pwdLoading = ref(false);
 const mfaLoading = ref(false);
 const ghLoading = ref(false);
+const aliyunLoading = ref(false);
 const setup = ref(null);
 const mfaCode = ref('');
 const pwd = reactive({ old_password: '', new_password: '' });
 const off = reactive({ password: '', code: '' });
 const gh = reactive({ token: '', github_login: '' });
+const aliyun = reactive({ account_id: '', access_key_id: '', access_key_secret: '' });
 const pwdRules = {
   old_password: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
   new_password: [
@@ -104,6 +147,9 @@ async function refreshMe() {
     const next = data.user || data;
     Object.assign(user, next);
     setSession({ token: getAccessToken(), user: next });
+    gh.github_login = next.github_login || '';
+    aliyun.account_id = next.aliyun_account_id || '';
+    aliyun.access_key_id = next.aliyun_access_key_id || '';
   } catch {
     /* 保持缓存 */
   }
@@ -140,6 +186,42 @@ async function onClearGithub() {
     ElMessage.error(err.message || '清除失败');
   } finally {
     ghLoading.value = false;
+  }
+}
+
+async function onSaveAliyun() {
+  aliyunLoading.value = true;
+  try {
+    const data = await saveAliyunCredentials(aliyun);
+    const next = data.user || data;
+    Object.assign(user, next);
+    setSession({ token: getAccessToken(), user: next });
+    aliyun.access_key_secret = '';
+    aliyun.account_id = next.aliyun_account_id || aliyun.account_id;
+    aliyun.access_key_id = next.aliyun_access_key_id || aliyun.access_key_id;
+    ElMessage.success('阿里云凭证已写入个人信息');
+  } catch (err) {
+    ElMessage.error(err.message || '保存失败');
+  } finally {
+    aliyunLoading.value = false;
+  }
+}
+
+async function onClearAliyun() {
+  aliyunLoading.value = true;
+  try {
+    const data = await clearAliyunCredentials();
+    const next = data.user || data;
+    Object.assign(user, next);
+    setSession({ token: getAccessToken(), user: next });
+    aliyun.account_id = '';
+    aliyun.access_key_id = '';
+    aliyun.access_key_secret = '';
+    ElMessage.success('已清除阿里云凭证');
+  } catch (err) {
+    ElMessage.error(err.message || '清除失败');
+  } finally {
+    aliyunLoading.value = false;
   }
 }
 

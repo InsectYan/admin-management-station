@@ -52,6 +52,18 @@ module.exports = app => {
         type: app.Sequelize.TEXT,
         allowNull: true,
       },
+      aliyun_account_id: {
+        type: STRING(64),
+        allowNull: true,
+      },
+      aliyun_access_key_id: {
+        type: STRING(128),
+        allowNull: true,
+      },
+      aliyun_access_key_secret: {
+        type: app.Sequelize.TEXT,
+        allowNull: true,
+      },
       created_at: DATE,
       updated_at: DATE,
     },

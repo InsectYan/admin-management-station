@@ -71,6 +71,19 @@ export async function clearGithubToken() {
   return res.data ?? res;
 }
 
+export async function saveAliyunCredentials(body) {
+  const res = await request('/auth/aliyun-credentials', {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+  return res.data ?? res;
+}
+
+export async function clearAliyunCredentials() {
+  const res = await request('/auth/aliyun-credentials', { method: 'DELETE' });
+  return res.data ?? res;
+}
+
 export async function logout() {
   try {
     await request('/auth/logout', { method: 'POST' });

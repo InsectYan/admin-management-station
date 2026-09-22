@@ -23,17 +23,28 @@
 
 ### 运维 GitHub 部署：同级镜像仓（可选）
 
-ECS 上 GitHub 部署可改为「与 AMS 同级 git 仓增量更新」，避免每次在容器内整段重下：
+`fitness-agent` 与 `admin-management-station` 是 **/opt/project 下的同级目录**，不是同一仓。  
+运维容器默认**看不到**宿主机 `/opt/project`，必须显式挂载，且 **MOUNT 与 ROOT 写成同一路径**：
 
 ```bash
-# ops-sub/deploy/config/.env.local
+# ops-sub/deploy/config/.env.local（ECS）
 OPS_GIT_MIRROR_ENABLED=1
-OPS_GIT_MIRROR_MOUNT=/opt/project          # 与 admin-management-station 同级根
-OPS_GIT_MIRROR_ROOT=/host-mirrors         # 容器内挂载点（compose 已配）
+OPS_GIT_MIRROR_MOUNT=/opt/project   # 宿主机
+OPS_GIT_MIRROR_ROOT=/opt/project    # 容器内（须与 MOUNT 相同；compose 挂载为 MOUNT:ROOT）
 ```
 
-效果：仓库 `…/fitness-agent.git` → 宿主机 `/opt/project/fitness-agent`（无则 clone，有则 fetch），再按 `同级/项目名/包路径` 取文件。  
-**本地 `code_source=local` / 本机开发不受影响**（保持 `OPS_GIT_MIRROR_ENABLED=0`）。
+效果：
+
+| 宿主机 | 容器内（正确配置后） |
+|--------|----------------------|
+| `/opt/project/admin-management-station` | `/opt/project/admin-management-station` |
+| `/opt/project/fitness-agent` | `/opt/project/fitness-agent` |
+
+部署时：目录已存在则比对 tag/sha，**已是目标则跳过 fetch**，直接取 `package_path` 下 zip；否则 clone/fetch 再取包。
+
+**错误示范**：`MOUNT=/opt/project` 但 `ROOT=/host-mirrors`（或 compose 写死挂到 `/host-mirrors`）时，容器里的 `/opt/project/fitness-agent` **不是** ECS 上那份工程，会出现「镜像仓未找到预打 zip」。
+
+本地保持 `OPS_GIT_MIRROR_ENABLED=0`（`MOUNT=../.ops-git-mirrors`，`ROOT=/host-mirrors`）。
 
 ### 运维 GitHub 部署：HTTPS / SSH
 

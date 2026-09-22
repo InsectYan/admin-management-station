@@ -13,6 +13,8 @@ const MFA_ISSUER = '私人管理平台';
 function publicUser(row) {
   if (!row) return null;
   const token = String(row.github_token || '').trim();
+  const akId = String(row.aliyun_access_key_id || '').trim();
+  const akSecret = String(row.aliyun_access_key_secret || '').trim();
   return {
     id: row.id,
     username: row.username,
@@ -22,6 +24,9 @@ function publicUser(row) {
     mfa_enabled: !!row.mfa_enabled,
     github_login: row.github_login || '',
     github_token_configured: !!token,
+    aliyun_account_id: row.aliyun_account_id || '',
+    aliyun_access_key_id: akId,
+    aliyun_access_key_configured: !!(akId && akSecret),
   };
 }
 
@@ -274,6 +279,51 @@ class AuthService extends Service {
       github_login: row.github_login || '',
       username: row.username,
     };
+  }
+
+  async saveAliyunCredentials({ account_id, access_key_id, access_key_secret }) {
+    const row = await this.ctx.model.PlatformUser.findByPk(this.currentUserId());
+    if (!row || row.status !== 'active') this.ctx.throw(401, '登录已失效');
+    const accountId = String(account_id || '').trim();
+    const akId = String(access_key_id || '').trim();
+    const akSecret = String(access_key_secret || '').trim();
+    if (!accountId) this.ctx.throw(400, '请填写阿里云主账号 UID（AccountID）');
+    if (!akId) this.ctx.throw(400, '请填写 AccessKey ID');
+    if (!akSecret) {
+      if (!String(row.aliyun_access_key_secret || '').trim()) {
+        this.ctx.throw(400, '请填写 AccessKey Secret');
+      }
+    } else if (/\s/.test(akSecret)) {
+      this.ctx.throw(400, 'AccessKey Secret 不能包含空格或换行');
+    }
+    const patch = {
+      aliyun_account_id: accountId,
+      aliyun_access_key_id: akId,
+    };
+    if (akSecret) patch.aliyun_access_key_secret = akSecret;
+    await row.update(patch);
+    await this.ctx.service.audit.write({
+      actor: { id: row.id, username: row.username },
+      action: 'aliyun_credentials_save',
+      target: row,
+    });
+    return publicUser(row);
+  }
+
+  async clearAliyunCredentials() {
+    const row = await this.ctx.model.PlatformUser.findByPk(this.currentUserId());
+    if (!row || row.status !== 'active') this.ctx.throw(401, '登录已失效');
+    await row.update({
+      aliyun_account_id: null,
+      aliyun_access_key_id: null,
+      aliyun_access_key_secret: null,
+    });
+    await this.ctx.service.audit.write({
+      actor: { id: row.id, username: row.username },
+      action: 'aliyun_credentials_clear',
+      target: row,
+    });
+    return publicUser(row);
   }
 
   async ensureBootstrapAdmin() {

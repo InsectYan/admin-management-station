@@ -13,12 +13,15 @@ module.exports = app => {
   router.put('/api/auth/github-token', controller.auth.saveGithubToken);
   router.delete('/api/auth/github-token', controller.auth.clearGithubToken);
   router.get('/api/auth/github-token', controller.auth.githubCredential);
+  router.put('/api/auth/aliyun-credentials', controller.auth.saveAliyunCredentials);
+  router.delete('/api/auth/aliyun-credentials', controller.auth.clearAliyunCredentials);
   router.get('/api/internal/github-credential', controller.auth.internalGithubCredential);
   router.post('/api/auth/password', controller.auth.changePassword);
   router.post('/api/auth/mfa/setup', controller.auth.mfaSetup);
   router.post('/api/auth/mfa/confirm', controller.auth.mfaConfirm);
   router.post('/api/auth/mfa/disable', controller.auth.mfaDisable);
   router.get('/api/users', adminAuth, controller.user.index);
+  router.get('/api/users/:id', adminAuth, controller.user.show);
   router.patch('/api/users/:id', adminAuth, controller.user.update);
   router.post('/api/users/:id/reset-password', adminAuth, controller.user.resetPassword);
   router.post('/api/users/:id/mfa/disable', adminAuth, controller.user.disableMfa);

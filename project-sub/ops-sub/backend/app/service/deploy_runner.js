@@ -349,7 +349,9 @@ class DeployRunnerService extends Service {
 
     // ECS：宿主机同级镜像仓增量更新（本地未开 OPS_GIT_MIRROR_ENABLED 时跳过）
     if (gitHostMirror.isEnabled()) {
-      return this.prepareGithubFromMirror(job, dir, remote, tag, token, packagePath, gitTimeout, authEnv, protocol);
+      return this.prepareGithubFromMirror(
+        job, dir, remote, tag, token, packagePath, gitTimeout, authEnv, protocol, tagSha || branchSha,
+      );
     }
 
     if (packagePath) {
@@ -373,7 +375,7 @@ class DeployRunnerService extends Service {
    * 从 ECS 同级 git 镜像仓取代码：无则 clone，有则 fetch；再按路径拷到任务目录。
    * 本地 source_path 模式不走此分支。
    */
-  async prepareGithubFromMirror(job, dir, remote, tag, token, packagePath, gitTimeout, authEnv, protocol = 'https') {
+  async prepareGithubFromMirror(job, dir, remote, tag, token, packagePath, gitTimeout, authEnv, protocol = 'https', expectedSha = '') {
     const targetEnv = job.params?.deploy_config?.agentrun?.target_env || 'prod';
     const runGit = async (argv, cwd, opts = {}) => {
       const cmd = withGitHttpCompat(argv, protocol);
@@ -391,6 +393,7 @@ class DeployRunnerService extends Service {
         ref: tag,
         token,
         protocol,
+        expectedSha,
         runGit,
         onLog: (msg) => this.append(job.id, 'info', msg),
       });
@@ -401,7 +404,9 @@ class DeployRunnerService extends Service {
     if (packagePath) {
       const deploySrc = path.join(mirror.repoDir, 'deploy');
       if (!fs.existsSync(deploySrc)) {
-        throw new Error(`镜像仓缺少 deploy/：${deploySrc}`);
+        throw new Error(
+          `镜像仓缺少 deploy/：${deploySrc}。${gitHostMirror.listDirHint(mirror.repoDir)}`,
+        );
       }
       const deployDest = path.join(dir, 'deploy');
       fs.rmSync(deployDest, { recursive: true, force: true });
@@ -412,8 +417,14 @@ class DeployRunnerService extends Service {
 
       const zipPath = this.resolveZipUnderRepo(mirror.repoDir, packagePath, targetEnv);
       if (!zipPath) {
+        const pkgDir = /\.zip$/i.test(packagePath)
+          ? path.dirname(path.join(mirror.repoDir, packagePath))
+          : path.join(mirror.repoDir, packagePath);
         throw new Error(
-          `镜像仓未找到预打 zip：${mirror.repoDir}/${packagePath}（可填 backup/ss.zip 或含 ${targetEnv}-artifact.zip 的目录）`,
+          `镜像仓未找到预打 zip：${mirror.repoDir}/${packagePath}`
+          + `（可填 backup/ss.zip 或含 ${targetEnv}-artifact.zip 的目录）。`
+          + `${gitHostMirror.listDirHint(pkgDir)}。`
+          + `若宿主机有该文件但容器没有：检查 OPS_GIT_MIRROR_MOUNT 与 OPS_GIT_MIRROR_ROOT 是否都指向 /opt/project 且 compose 为 MOUNT:ROOT。`,
         );
       }
       const dest = agentrun.placeArtifactZip(dir, zipPath, targetEnv);

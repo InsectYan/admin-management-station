@@ -51,6 +51,9 @@ CREATE TABLE IF NOT EXISTS platform_users (
   mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   github_login VARCHAR(128),
   github_token TEXT,
+  aliyun_account_id VARCHAR(64),
+  aliyun_access_key_id VARCHAR(128),
+  aliyun_access_key_secret TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
