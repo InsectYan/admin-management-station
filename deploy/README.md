@@ -35,6 +35,30 @@ OPS_GIT_MIRROR_ROOT=/host-mirrors         # 容器内挂载点（compose 已配�
 效果：仓库 `…/fitness-agent.git` → 宿主机 `/opt/project/fitness-agent`（无则 clone，有则 fetch），再按 `同级/项目名/包路径` 取文件。  
 **本地 `code_source=local` / 本机开发不受影响**（保持 `OPS_GIT_MIRROR_ENABLED=0`）。
 
+### 运维 GitHub 部署：HTTPS / SSH
+
+部署页可切换 **HTTPS** 或 **SSH**（选哪个用哪个；保存后会规范化 `repo_url`）。
+
+| 协议 | clone/fetch | 自动打 tag / 列标签 / 非镜像下包 |
+|------|-------------|----------------------------------|
+| HTTPS | PAT（个人信息） | PAT |
+| SSH | 容器内部署密钥 | 仍需 PAT |
+
+SSH 密钥挂载（ECS 示例）：
+
+```bash
+# 宿主机
+mkdir -p /opt/project/.ops-git-ssh
+# 放入私钥 id_ed25519（权限 600），公钥加到仓库 Deploy keys 或账号 SSH keys
+
+# ops-sub/deploy/config/.env.local
+OPS_GIT_SSH_MOUNT=/opt/project/.ops-git-ssh
+OPS_GIT_SSH_DIR=/ops-git-ssh
+# known_hosts 默认用镜像内置 GitHub 官方指纹
+```
+
+改完后需 `docker compose ... up -d --build` 重建 api-ops（镜像需含 `openssh-client`）。
+
 ### 0. 启动前必做文件（否则 compose 报 env file not found）
 
 主应用 `docker-compose.yml` 的 `env_file` **强制引用**下列路径；文件不存在会直接失败（你看到的  

@@ -1,0 +1,4 @@
+# GitHub.com official SSH host keys (https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints)
+github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=
+github.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCj7ndNxQowyyIkl84UuaeUAcgGEOA9W9tMfK+KiWB0W+4P9+628xis5uUrUdAJtXme/V0LLKTGiYi3LLCbk3AthwZKIxY9A2ERM31zLWDfSsKQgckXAV3eosEo44Ib6zjq/Yp3HqUw7/E69eqVXk2sJTdOkM0Xwi5qbm2uR7jmNLBxj1bxbZy6wrxW8Lbx+5ETnLLmdYm/6J9tqykrwQPFN5u3YS/+eWxAnhLh6UKRNHogGkIwN2Nx6I4XI5GEWQ==

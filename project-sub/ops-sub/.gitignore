@@ -1,4 +1,7 @@
 .ops-deploy-work/
+.ops-git-mirrors/
+.ops-git-ssh/
+!/.ops-git-ssh/README.md
 node_modules/
 dist/
 *.log

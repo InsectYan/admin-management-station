@@ -157,6 +157,7 @@ function emptyDeployConfig() {
   return {
     product: 'generic',
     code_source: 'local',
+    git_protocol: 'https',
     git_branch: 'main',
     git_tag: '',
     agentrun: defaultAgentrun(),
@@ -208,6 +209,9 @@ function normalizeDeployConfig(raw) {
   const codeSource = [ 'local', 'github' ].includes(String(input.code_source || '').trim())
     ? String(input.code_source).trim()
     : base.code_source;
+  const gitProtocol = [ 'https', 'ssh' ].includes(String(input.git_protocol || '').trim().toLowerCase())
+    ? String(input.git_protocol).trim().toLowerCase()
+    : base.git_protocol;
   const gitBranch = String(input.git_branch || '').trim() || base.git_branch;
   const gitTag = String(input.git_tag || '').trim();
   const agentrun = mergeDeep(base.agentrun, input.agentrun);
@@ -225,6 +229,7 @@ function normalizeDeployConfig(raw) {
   return {
     product,
     code_source: codeSource,
+    git_protocol: gitProtocol,
     git_branch: gitBranch,
     git_tag: gitTag,
     agentrun,

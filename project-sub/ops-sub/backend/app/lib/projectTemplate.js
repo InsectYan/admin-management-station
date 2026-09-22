@@ -23,7 +23,7 @@ const FIELD_GUIDE = {
   name: '项目名称（必填）',
   type: '项目类型：frontend | backend | fullstack | agent',
   description: '项目职责与范围说明',
-  repo_url: 'GitHub HTTPS 地址（GitHub 部署必填），例如 https://github.com/org/repo.git',
+  repo_url: 'GitHub 仓库地址（GitHub 部署必填）：HTTPS https://github.com/org/repo.git 或 SSH git@github.com:org/repo.git；部署页可选协议',
   source_path: '本地部署时拷贝的宿主机路径；Agent 须能走到含 deploy/scripts/run.mjs 的仓库根，不要只指 .pi',
   status: 'draft（梳理中）| active（在维护）| archived（已归档）',
   directory_tree: '目录树。flow_key 只绑该节点真正参与的那一条流程；支撑目录留空，禁止绑 overview 冒充万能入口',
@@ -32,7 +32,7 @@ const FIELD_GUIDE = {
   'flows[].nodes': '节点：id, name, type(start|page|api|action|decision|end)=业务形态；severity(可选 risk|warning)是独立标注，任何类型都能标；description=节点特点；risk_note=为何风险/警告及会导致什么问题',
   'flows[].edges': '连线：id, source, target, label, type(next|success|fail|branch)',
   extra_json: '排障反查表：message_types / shell_ops 或 api_ops / skills / errors / risks（风险仍须是图上红/橙节点）',
-  deploy_config: '部署产品配置。product=generic|agentrun|…；code_source=local|github；git_branch 默认 main；git_tag 为发布标签（GitHub 源会在部署时自动创建并推送，无需手工打 tag）；agentrun.package_path 为预打 zip 路径（如 backup/ss.zip），有则跳过 pack 直接上传阿里云。GitHub Token 存在登录用户个人信息',
+  deploy_config: '部署产品配置。product=generic|agentrun|…；code_source=local|github；git_protocol=https|ssh（选哪个用哪个）；git_branch 默认 main；git_tag 为发布标签（GitHub 源会在部署时自动创建并推送，无需手工打 tag）；agentrun.package_path 为预打 zip 路径（如 backup/ss.zip），有则跳过 pack 直接上传阿里云。GitHub Token 存在登录用户个人信息；SSH 还需容器挂载部署密钥',
 };
 
 function emptyDirectoryNode() {

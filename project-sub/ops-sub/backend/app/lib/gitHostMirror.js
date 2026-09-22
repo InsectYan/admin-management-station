@@ -7,14 +7,17 @@
  * 宿主机示例：/opt/project/admin-management-station
  *            /opt/project/fitness-agent   ← 镜像
  * 容器内：    /host-mirrors/fitness-agent（OPS_GIT_MIRROR_MOUNT → /host-mirrors）
+ *
+ * clone/fetch 支持 HTTPS+PAT 或 SSH 部署密钥（由 protocol 决定）。
  */
 
 const fs = require('fs');
 const path = require('path');
 const {
-  parseGithubHttps,
+  parseGithubRepo,
   publicCloneUrl,
   cloneUrlWithToken,
+  resolveGitProtocol,
 } = require('./gitSource');
 
 function isEnabled(env = process.env) {
@@ -28,9 +31,9 @@ function mirrorRoot(env = process.env) {
 }
 
 function repoNameFromUrl(repoUrl) {
-  const parsed = parseGithubHttps(repoUrl);
+  const parsed = parseGithubRepo(repoUrl);
   if (!parsed?.repo) {
-    const err = new Error('无法从仓库地址解析项目名（需要 https://github.com/org/repo.git）');
+    const err = new Error('无法从仓库地址解析项目名（需要 https://github.com/org/repo.git 或 git@github.com:org/repo.git）');
     err.status = 400;
     throw err;
   }
@@ -55,7 +58,7 @@ function assertMirrorRootWritable(env = process.env) {
 
 /**
  * 确保镜像仓存在并切到指定 ref（tag 或分支）。
- * @param {{ repoUrl: string, ref: string, token: string, runGit: Function, onLog?: Function }} opts
+ * @param {{ repoUrl: string, ref: string, token: string, protocol?: string, runGit: Function, onLog?: Function }} opts
  *   runGit(argv, cwd) — 执行 git（可带超时/日志）
  */
 async function ensureMirror(opts) {
@@ -63,6 +66,7 @@ async function ensureMirror(opts) {
     repoUrl,
     ref,
     token,
+    protocol,
     runGit,
     onLog = () => {},
     env = process.env,
@@ -73,10 +77,14 @@ async function ensureMirror(opts) {
   }
   assertMirrorRootWritable(env);
 
-  const parsed = parseGithubHttps(repoUrl);
+  const parsed = parseGithubRepo(repoUrl);
+  if (!parsed) {
+    throw new Error('无法解析 GitHub 仓库地址');
+  }
+  const proto = resolveGitProtocol(protocol, repoUrl);
   const dest = mirrorRepoDir(repoUrl, env);
-  const publicUrl = publicCloneUrl(repoUrl);
-  const authUrl = cloneUrlWithToken(repoUrl, token);
+  const publicUrl = publicCloneUrl(repoUrl, proto);
+  const authUrl = cloneUrlWithToken(repoUrl, token, proto);
   const gitDir = path.join(dest, '.git');
   const parent = path.dirname(dest);
 
@@ -89,11 +97,11 @@ async function ensureMirror(opts) {
       );
     }
     if (fs.existsSync(dest)) fs.rmSync(dest, { recursive: true, force: true });
-    onLog(`[mirror] 首次克隆 ${parsed.owner}/${parsed.repo} → ${dest}`);
+    onLog(`[mirror] 首次克隆（${proto}） ${parsed.owner}/${parsed.repo} → ${dest}`);
     await runGit([ 'git', 'clone', authUrl, dest ], parent);
     await runGit([ 'git', 'remote', 'set-url', 'origin', publicUrl ], dest);
   } else {
-    onLog(`[mirror] 增量更新 ${dest}（fetch + checkout ${ref}）`);
+    onLog(`[mirror] 增量更新（${proto}） ${dest}（fetch + checkout ${ref}）`);
     await runGit([ 'git', 'remote', 'set-url', 'origin', authUrl ], dest);
     try {
       await runGit([ 'git', 'fetch', '--tags', '--force', '--prune', 'origin' ], dest);
@@ -117,6 +125,7 @@ async function ensureMirror(opts) {
     owner: parsed.owner,
     sha: sha.slice(0, 40),
     mirrorRoot: mirrorRoot(env),
+    protocol: proto,
   };
 }
 

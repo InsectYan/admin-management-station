@@ -11,7 +11,7 @@ const { isAgentrun } = require('../lib/deployProducts');
 const agentrun = require('../lib/deployAgentrun');
 const { redactDeployLog } = require('../lib/deployLogRedact');
 const menuMaster = require('../lib/menuMaster');
-const { publicCloneUrl, cloneUrlWithToken, gitAuthEnv, withGitHttpCompat, classifyGithubGitError, resolveCodeSource, parseLsRemoteRefSha, sameGitSha, assertGitTagName, normalizePackagePath, parseGithubHttps } = require('../lib/gitSource');
+const { publicCloneUrl, cloneUrlWithToken, gitAuthEnv, withGitHttpCompat, classifyGithubGitError, resolveCodeSource, resolveGitProtocol, parseLsRemoteRefSha, sameGitSha, assertGitTagName, normalizePackagePath, parseGithubRepo, assertSshReady } = require('../lib/gitSource');
 const gitHostMirror = require('../lib/gitHostMirror');
 const { runOssPreflight, agentrunNetworkEnv } = require('../lib/deployOssPreflight');
 const { resolveDeployExecutor } = require('../lib/deployNetwork');
@@ -121,7 +121,7 @@ class DeployRunnerService extends Service {
       }
       return 'source';
     }
-    throw new Error('无法准备代码：请选择本地 source_path 或 GitHub HTTPS + tag');
+    throw new Error('无法准备代码：请选择本地 source_path 或 GitHub（HTTPS/SSH）+ tag');
   }
 
   async resolveGithubToken(job) {
@@ -237,23 +237,38 @@ class DeployRunnerService extends Service {
   }
 
   async prepareGithubRepo(job, dir, remote, rawTag) {
-    if (!/^https?:\/\/github\.com\//i.test(remote)) {
-      throw new Error('GitHub 部署需要 HTTPS 仓库地址');
+    const parsedRemote = parseGithubRepo(remote);
+    if (!parsedRemote) {
+      throw new Error('GitHub 部署需要 HTTPS（https://github.com/org/repo.git）或 SSH（git@github.com:org/repo.git）仓库地址');
+    }
+    const protocol = resolveGitProtocol(
+      job.params?.git_protocol || job.params?.deploy_config?.git_protocol,
+      remote,
+    );
+    if (protocol === 'ssh') {
+      assertSshReady();
     }
     const tag = assertGitTagName(rawTag);
     const branch = job.params?.git_branch || job.params?.deploy_config?.git_branch || 'main';
     const packagePath = this.resolveAgentrunPackagePath(job);
     const token = await this.resolveGithubToken(job);
-    const publicUrl = publicCloneUrl(remote);
-    const authUrl = cloneUrlWithToken(remote, token);
+    const publicUrl = publicCloneUrl(remote, protocol);
+    const authUrl = cloneUrlWithToken(remote, token, protocol);
     const gitTimeout = Number(process.env.OPS_DEPLOY_GIT_TIMEOUT_MS || 5 * 60 * 1000);
-    const authEnv = gitAuthEnv();
+    const authEnv = gitAuthEnv({ protocol, repoUrl: remote });
 
-    await this.append(job.id, 'info', `[github] 仓库 ${publicUrl}，分支 ${branch}，发布 tag ${tag}`);
+    await this.append(
+      job.id,
+      'info',
+      `[github] 仓库 ${publicUrl}（${protocol.toUpperCase()}），分支 ${branch}，发布 tag ${tag}`,
+    );
     if (packagePath) {
       await this.append(job.id, 'info', `[github] 包路径 ${packagePath}：使用预打 zip，不克隆全仓、不在此机 pack`);
     }
     await this.append(job.id, 'info', `[github] 已读取部署人 PAT（长度 ${token.length}，前缀 ${token.slice(0, 4)}…），「保存配置」不会改动 Token`);
+    if (protocol === 'ssh') {
+      await this.append(job.id, 'info', '[github] clone/fetch 走 SSH 部署密钥；打 tag / API 下包仍用 PAT');
+    }
 
     let branchSha = '';
     let tagSha = '';
@@ -263,7 +278,7 @@ class DeployRunnerService extends Service {
         [ 'git', 'ls-remote', authUrl, `refs/heads/${branch}` ],
         path.dirname(dir),
         authEnv,
-        { capture: true },
+        { capture: true, protocol },
       );
       branchSha = parseLsRemoteRefSha(branchOut, `refs/heads/${branch}`);
       const tagOut = await this.gitRemote(
@@ -271,7 +286,7 @@ class DeployRunnerService extends Service {
         [ 'git', 'ls-remote', '--tags', authUrl, `refs/tags/${tag}` ],
         path.dirname(dir),
         authEnv,
-        { capture: true },
+        { capture: true, protocol },
       );
       tagSha = parseLsRemoteRefSha(tagOut, `refs/tags/${tag}`);
     } catch (err) {
@@ -289,11 +304,10 @@ class DeployRunnerService extends Service {
       );
     } else if (packagePath || gitHostMirror.isEnabled()) {
       await this.append(job.id, 'info', `[github] 远程尚无 tag ${tag}，将通过 API 在 ${branch} HEAD 创建轻量 tag`);
-      const parsed = parseGithubHttps(remote);
       try {
         await createLightweightTag({
-          owner: parsed.owner,
-          repo: parsed.repo,
+          owner: parsedRemote.owner,
+          repo: parsedRemote.repo,
           tag,
           sha: branchSha,
           token,
@@ -306,11 +320,11 @@ class DeployRunnerService extends Service {
       await this.append(job.id, 'info', `[github] 已创建 tag ${tag} → ${branchSha.slice(0, 12)}`);
     } else {
       await this.append(job.id, 'info', `[github] 远程尚无 tag ${tag}，将在 ${branch} HEAD 创建并推送`);
-      await this.cloneByRef(job.id, authUrl, branch, dir, gitTimeout, authEnv, publicUrl);
+      await this.cloneByRef(job.id, authUrl, branch, dir, gitTimeout, authEnv, publicUrl, protocol);
       try {
         await this.exec(
           job.id,
-          withGitHttpCompat([ 'git', '-c', 'user.name=ops-sub', '-c', 'user.email=ops-sub@local', 'tag', '-a', tag, '-m', `ops-sub deploy #${job.id}` ]),
+          withGitHttpCompat([ 'git', '-c', 'user.name=ops-sub', '-c', 'user.email=ops-sub@local', 'tag', '-a', tag, '-m', `ops-sub deploy #${job.id}` ], protocol),
           dir,
           gitTimeout,
           authEnv,
@@ -320,11 +334,11 @@ class DeployRunnerService extends Service {
           [ 'git', 'push', authUrl, `refs/tags/${tag}` ],
           dir,
           authEnv,
-          { timeoutMs: gitTimeout },
+          { timeoutMs: gitTimeout, protocol },
         );
       } catch (err) {
         throw new Error(
-          `自动创建并推送 tag ${tag} 失败。请确认 PAT 有 Contents: Write（或 classic repo）权限。${err.message}`,
+          `自动创建并推送 tag ${tag} 失败。请确认 PAT 有 Contents: Write（或 classic repo）权限；SSH 则需部署密钥具备写权限。${err.message}`,
         );
       }
       await this.append(job.id, 'info', `[github] 已推送 tag ${tag} → ${branchSha.slice(0, 12)}`);
@@ -335,7 +349,7 @@ class DeployRunnerService extends Service {
 
     // ECS：宿主机同级镜像仓增量更新（本地未开 OPS_GIT_MIRROR_ENABLED 时跳过）
     if (gitHostMirror.isEnabled()) {
-      return this.prepareGithubFromMirror(job, dir, remote, tag, token, packagePath, gitTimeout, authEnv);
+      return this.prepareGithubFromMirror(job, dir, remote, tag, token, packagePath, gitTimeout, authEnv, protocol);
     }
 
     if (packagePath) {
@@ -349,7 +363,7 @@ class DeployRunnerService extends Service {
     if (!(tagSha && sameGitSha(tagSha, branchSha))) {
       throw new Error('内部状态错误：全量克隆分支流程未返回');
     }
-    await this.cloneByRef(job.id, authUrl, tag, dir, gitTimeout, authEnv, publicUrl);
+    await this.cloneByRef(job.id, authUrl, tag, dir, gitTimeout, authEnv, publicUrl, protocol);
     const sha = await this.execCapture(job.id, [ 'git', 'rev-parse', 'HEAD' ], dir, authEnv);
     await this.append(job.id, 'info', `[fetch] checkout ${tag} sha=${sha.slice(0, 12)}`);
     return sha.slice(0, 40);
@@ -359,10 +373,10 @@ class DeployRunnerService extends Service {
    * 从 ECS 同级 git 镜像仓取代码：无则 clone，有则 fetch；再按路径拷到任务目录。
    * 本地 source_path 模式不走此分支。
    */
-  async prepareGithubFromMirror(job, dir, remote, tag, token, packagePath, gitTimeout, authEnv) {
+  async prepareGithubFromMirror(job, dir, remote, tag, token, packagePath, gitTimeout, authEnv, protocol = 'https') {
     const targetEnv = job.params?.deploy_config?.agentrun?.target_env || 'prod';
     const runGit = async (argv, cwd, opts = {}) => {
-      const cmd = withGitHttpCompat(argv);
+      const cmd = withGitHttpCompat(argv, protocol);
       if (opts.capture) {
         return this.execCapture(job.id, cmd, cwd, authEnv);
       }
@@ -376,6 +390,7 @@ class DeployRunnerService extends Service {
         repoUrl: remote,
         ref: tag,
         token,
+        protocol,
         runGit,
         onLog: (msg) => this.append(job.id, 'info', msg),
       });
@@ -443,18 +458,18 @@ class DeployRunnerService extends Service {
     return null;
   }
 
-  async gitRemote(jobId, argv, cwd, authEnv, { timeoutMs, capture = false, attempts = 3 } = {}) {
+  async gitRemote(jobId, argv, cwd, authEnv, { timeoutMs, capture = false, attempts = 3, protocol = 'https' } = {}) {
     let lastErr;
     for (let i = 1; i <= attempts; i++) {
       try {
-        const cmd = withGitHttpCompat(argv);
+        const cmd = withGitHttpCompat(argv, protocol);
         if (capture) return await this.execCapture(jobId, cmd, cwd, authEnv);
         await this.exec(jobId, cmd, cwd, timeoutMs, authEnv);
         return '';
       } catch (err) {
         lastErr = err;
         const msg = String(err.message || '');
-        const retryable = /TLS|SSL|unexpected eof|unable to access|Failed to connect|Connection reset/i.test(msg);
+        const retryable = /TLS|SSL|unexpected eof|unable to access|Failed to connect|Connection reset|Connection timed out|Connection refused/i.test(msg);
         if (!retryable || i === attempts) break;
         await this.append(jobId, 'warn', `[github] 网络抖动，第 ${i}/${attempts} 次重试…`);
         await new Promise(resolve => setTimeout(resolve, 800 * i));
@@ -463,19 +478,19 @@ class DeployRunnerService extends Service {
     throw lastErr;
   }
 
-  async cloneByRef(jobId, authUrl, ref, dir, timeoutMs, authEnv, publicUrl) {
+  async cloneByRef(jobId, authUrl, ref, dir, timeoutMs, authEnv, publicUrl, protocol = 'https') {
     try {
       await this.gitRemote(
         jobId,
         [ 'git', 'clone', '--depth', '1', '--branch', ref, authUrl, dir ],
         path.dirname(dir),
         authEnv,
-        { timeoutMs },
+        { timeoutMs, protocol },
       );
       // 去掉 .git/config 里的带 token 远程地址，后续 push 显式传 authUrl
       await this.exec(
         jobId,
-        withGitHttpCompat([ 'git', 'remote', 'set-url', 'origin', publicUrl ]),
+        withGitHttpCompat([ 'git', 'remote', 'set-url', 'origin', publicUrl ], protocol),
         dir,
         timeoutMs,
         authEnv,

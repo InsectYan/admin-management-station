@@ -7,7 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { normalizePackagePath, parseGithubHttps } = require('./gitSource');
+const { normalizePackagePath, parseGithubRepo } = require('./gitSource');
 
 const UA = 'ops-sub-deploy';
 const API_VERSION = '2022-11-28';
@@ -197,7 +197,7 @@ async function downloadGithubPathPackage({
   onProgress,
   exclude,
 } = {}) {
-  const parsed = parseGithubHttps(repoUrl);
+  const parsed = parseGithubRepo(repoUrl);
   if (!parsed) throw new Error('仅支持 GitHub HTTPS 仓库按路径拉取');
   const pkg = normalizePackagePath(packagePath);
   if (!pkg) throw new Error('按路径拉取需要 package_path');
@@ -272,7 +272,7 @@ async function downloadGithubFile({
   destFile,
   onProgress,
 } = {}) {
-  const parsed = parseGithubHttps(repoUrl);
+  const parsed = parseGithubRepo(repoUrl);
   if (!parsed) throw new Error('仅支持 GitHub HTTPS 仓库按路径拉取');
   const pkg = normalizePackagePath(filePath);
   if (!pkg) throw new Error('缺少文件路径');
@@ -316,7 +316,7 @@ async function resolveGithubZipFilePath({
   if (!pkg) throw new Error('缺少包路径');
   if (/\.zip$/i.test(pkg)) return pkg;
 
-  const parsed = parseGithubHttps(repoUrl);
+  const parsed = parseGithubRepo(repoUrl);
   const commitSha = await resolveCommitSha({
     owner: parsed.owner,
     repo: parsed.repo,

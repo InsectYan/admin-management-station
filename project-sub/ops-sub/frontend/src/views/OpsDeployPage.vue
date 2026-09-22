@@ -41,7 +41,9 @@
       <el-alert
         v-if="codeSource === 'github' && !project.repo_url"
         type="info"
-        title="GitHub 部署需要 HTTPS 仓库地址，例如 https://github.com/org/repo.git"
+        :title="gitProtocol === 'ssh'
+          ? 'GitHub 部署需要 SSH 仓库地址，例如 git@github.com:org/repo.git'
+          : 'GitHub 部署需要 HTTPS 仓库地址，例如 https://github.com/org/repo.git'"
         show-icon
         :closable="false"
         class="ops-deploy-alert"
@@ -67,8 +69,20 @@
             <code>{{ gitBranch }}</code> 的 HEAD 创建并推送。
           </p>
           <el-form label-position="top" class="ops-github-form">
-            <el-form-item label="GitHub HTTPS 仓库">
-              <el-input v-model="project.repo_url" placeholder="https://github.com/org/repo.git" />
+            <el-form-item label="Git 协议">
+              <el-radio-group v-model="gitProtocol" @change="onGitProtocolChange">
+                <el-radio-button label="https">HTTPS</el-radio-button>
+                <el-radio-button label="ssh">SSH</el-radio-button>
+              </el-radio-group>
+              <p class="ops-deploy-hint">
+                选哪个用哪个。SSH 时 clone/fetch 走容器内部署密钥（挂载 OPS_GIT_SSH_MOUNT）；自动打 tag、列标签、非镜像下包仍需 PAT。
+              </p>
+            </el-form-item>
+            <el-form-item :label="gitProtocol === 'ssh' ? 'GitHub SSH 仓库' : 'GitHub HTTPS 仓库'">
+              <el-input
+                v-model="project.repo_url"
+                :placeholder="gitProtocol === 'ssh' ? 'git@github.com:org/repo.git' : 'https://github.com/org/repo.git'"
+              />
             </el-form-item>
             <el-form-item label="部署分支">
               <el-input v-model="gitBranch" placeholder="main" />
@@ -201,6 +215,7 @@ const project = reactive({
 });
 const gitTag = ref('');
 const gitBranch = ref('main');
+const gitProtocol = ref('https');
 const codeSource = ref('local');
 const githubReady = ref(false);
 const githubLogin = ref('');
@@ -324,7 +339,10 @@ async function load() {
       : { ...(productDefaults.value || {}), product: data.project_type === 'agent' ? 'agentrun' : 'generic' };
     codeSource.value = deployConfig.value.code_source === 'github' ? 'github' : 'local';
     gitBranch.value = deployConfig.value.git_branch || 'main';
+    gitProtocol.value = deployConfig.value.git_protocol === 'ssh' ? 'ssh' : 'https';
     if (deployConfig.value.git_tag) gitTag.value = deployConfig.value.git_tag;
+    // 协议与地址对齐（例如配置为 ssh 但库里仍是 https）
+    onGitProtocolChange(gitProtocol.value);
     await Promise.all([loadActive(), refreshGithubProfile()]);
   } catch (err) {
     loadError.value = err.message || '项目不存在';
@@ -345,6 +363,7 @@ function syncedDeployConfig() {
   return {
     ...deployConfig.value,
     code_source: codeSource.value,
+    git_protocol: gitProtocol.value === 'ssh' ? 'ssh' : 'https',
     git_branch: gitBranch.value || 'main',
     git_tag: codeSource.value === 'github' ? gitTag.value.trim() : (deployConfig.value.git_tag || ''),
   };
@@ -380,6 +399,7 @@ async function submitDeploy(extra = {}) {
   const product = deployConfig.value.product || 'generic';
   const data = await createDeployJob(project.id, {
     code_source: codeSource.value,
+    git_protocol: gitProtocol.value === 'ssh' ? 'ssh' : 'https',
     git_branch: gitBranch.value || 'main',
     repo_url: project.repo_url,
     git_tag: codeSource.value === 'local' ? 'source' : gitTag.value.trim(),
@@ -392,8 +412,16 @@ async function submitDeploy(extra = {}) {
 
 async function onSubmit() {
   if (codeSource.value === 'github') {
-    if (!/^https?:\/\/github\.com\//i.test(String(project.repo_url || ''))) {
-      ElMessage.warning('请填写 GitHub HTTPS 仓库地址');
+    const url = String(project.repo_url || '').trim();
+    const okHttps = /^https?:\/\/github\.com\//i.test(url);
+    const okSsh = /^git@github\.com:[^/]+\/[^/#?]+$/i.test(url)
+      || /^ssh:\/\/git@github\.com\/[^/]+\/[^/#?]+$/i.test(url);
+    if (gitProtocol.value === 'ssh' ? !okSsh : !okHttps) {
+      ElMessage.warning(
+        gitProtocol.value === 'ssh'
+          ? '请填写 GitHub SSH 仓库地址（git@github.com:org/repo.git）'
+          : '请填写 GitHub HTTPS 仓库地址（https://github.com/org/repo.git）',
+      );
       return;
     }
     if (!gitTag.value.trim()) {
@@ -498,6 +526,25 @@ function closeTokenDialog() {
 watch(codeSource, (value) => {
   if (value === 'github' && project.id) loadTags({ bump: !gitTag.value.trim() });
 });
+
+function parseGithubOwnerRepo(url) {
+  const raw = String(url || '').trim();
+  let matched = raw.match(/^https?:\/\/github\.com\/([^/]+)\/([^/#?]+)/i);
+  if (matched) return { owner: matched[1], repo: matched[2].replace(/\.git$/i, '') };
+  matched = raw.match(/^git@github\.com:([^/]+)\/([^/#?]+)$/i);
+  if (matched) return { owner: matched[1], repo: matched[2].replace(/\.git$/i, '') };
+  matched = raw.match(/^ssh:\/\/git@github\.com\/([^/]+)\/([^/#?]+)$/i);
+  if (matched) return { owner: matched[1], repo: matched[2].replace(/\.git$/i, '') };
+  return null;
+}
+
+function onGitProtocolChange(value) {
+  const parsed = parseGithubOwnerRepo(project.repo_url);
+  if (!parsed) return;
+  project.repo_url = value === 'ssh'
+    ? `git@github.com:${parsed.owner}/${parsed.repo}.git`
+    : `https://github.com/${parsed.owner}/${parsed.repo}.git`;
+}
 
 onMounted(() => {
   load();

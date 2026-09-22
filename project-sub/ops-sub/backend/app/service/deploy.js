@@ -12,7 +12,7 @@ const {
 } = require('../lib/deployProducts');
 const { resolveAgentrunSource } = require('../lib/deployAgentrun');
 const menuMaster = require('../lib/menuMaster');
-const { parseGithubHttps, resolveCodeSource, resolveGitBranch, assertGitTagName, suggestNextReleaseTag } = require('../lib/gitSource');
+const { parseGithubRepo, resolveCodeSource, resolveGitBranch, resolveGitProtocol, formatGithubCloneUrl, assertGitTagName, suggestNextReleaseTag } = require('../lib/gitSource');
 
 const ACTIVE = [ 'queued', 'running' ];
 const TERMINAL = [ 'success', 'failed', 'aborted' ];
@@ -36,12 +36,22 @@ function defaultParams(projectType) {
 
 function parseRepo(repoUrl) {
   const raw = String(repoUrl || '').trim();
-  const https = raw.match(/^https?:\/\/(github\.com|gitee\.com)\/([^/]+)\/([^/#?]+)/i);
+  const github = parseGithubRepo(raw);
+  if (github) {
+    return {
+      host: 'github.com',
+      owner: github.owner,
+      repo: github.repo,
+      protocol: github.protocol,
+    };
+  }
+  const https = raw.match(/^https?:\/\/(gitee\.com)\/([^/]+)\/([^/#?]+)/i);
   if (!https) return null;
   return {
     host: https[1].toLowerCase(),
     owner: https[2],
     repo: https[3].replace(/\.git$/i, ''),
+    protocol: 'https',
   };
 }
 
@@ -89,8 +99,10 @@ class DeployService extends Service {
       repoUrl,
     });
     const gitBranch = resolveGitBranch(body.git_branch || deployConfig.git_branch);
+    const gitProtocol = resolveGitProtocol(body.git_protocol || deployConfig.git_protocol, repoUrl);
     deployConfig.code_source = codeSource;
     deployConfig.git_branch = gitBranch;
+    deployConfig.git_protocol = gitProtocol;
 
     let gitTag = String(body.git_tag || deployConfig.git_tag || '').trim();
     if (codeSource === 'local') {
@@ -99,9 +111,12 @@ class DeployService extends Service {
         throw fail('本地部署需要容器可见的 source_path（宿主机项目须挂到 HOST_PROJECTS_ROOT，路径须能走到含 deploy/scripts/run.mjs 的仓库根）');
       }
     } else {
-      if (!parseGithubHttps(repoUrl)) {
-        throw fail('GitHub 部署需要项目仓库填 HTTPS 地址，例如 https://github.com/org/repo.git');
+      const parsed = parseGithubRepo(repoUrl);
+      if (!parsed) {
+        throw fail('GitHub 部署需要仓库地址：HTTPS（https://github.com/org/repo.git）或 SSH（git@github.com:org/repo.git）');
       }
+      // 按所选协议规范化落库地址
+      const effectiveRepoUrl = formatGithubCloneUrl(parsed, gitProtocol) || repoUrl;
       if (!gitTag || gitTag === 'source' || gitTag === 'demo') {
         throw fail('请填写本次发布 tag（例如 v0.0.2）。若远程没有该 tag，部署时会在部署分支 HEAD 自动创建并推送');
       }
@@ -126,7 +141,11 @@ class DeployService extends Service {
         }
       }
       if (!credential || !credential.token) {
-        const err = fail('未配置 GitHub Token，请在弹窗中填写并保存到个人信息');
+        const err = fail(
+          gitProtocol === 'ssh'
+            ? '未配置 GitHub Token。SSH 用于 clone/fetch；自动打 tag、列标签与非镜像下包仍需 PAT，请在弹窗中填写并保存到个人信息'
+            : '未配置 GitHub Token，请在弹窗中填写并保存到个人信息',
+        );
         err.code = 'GITHUB_TOKEN_REQUIRED';
         throw err;
       }
@@ -139,15 +158,20 @@ class DeployService extends Service {
         if (String(err.message || '').includes('部署执行器无法按用户名读取')) throw err;
         throw fail(`部署执行器读取 GitHub Token 失败：${err.message}。请确认 MENU_MASTER_URL 与 OPS_INTERNAL_KEY 与主应用一致。`, err.status || 502);
       }
+      // 用规范化后的地址继续后续流程
+      if (effectiveRepoUrl !== repoUrl) {
+        body.repo_url = effectiveRepoUrl;
+      }
     }
+    const finalRepoUrl = String(body.repo_url || repoUrl || project.repo_url || '').trim();
     if (!gitTag && isDemoProduct(product)) gitTag = 'demo';
     if (!gitTag) throw fail('请填写 git tag');
     if (gitTag.length > 128) throw fail('tag 过长');
     deployConfig.git_tag = codeSource === 'github' ? gitTag : (deployConfig.git_tag || '');
 
-    if (repoUrl && repoUrl !== project.repo_url) {
-      await this.ctx.model.OpsProject.update({ repo_url: repoUrl }, { where: { id: project.id } });
-      project.repo_url = repoUrl;
+    if (finalRepoUrl && finalRepoUrl !== project.repo_url) {
+      await this.ctx.model.OpsProject.update({ repo_url: finalRepoUrl }, { where: { id: project.id } });
+      project.repo_url = finalRepoUrl;
     }
 
     const params = {
@@ -157,6 +181,7 @@ class DeployService extends Service {
       deploy_config: deployConfig,
       code_source: codeSource,
       git_branch: gitBranch,
+      git_protocol: gitProtocol,
     };
     delete params.github_token;
     await this.ctx.model.OpsProject.update(
@@ -167,7 +192,7 @@ class DeployService extends Service {
     const payload = {
       project_id: project.id,
       status: 'queued',
-      git_remote: repoUrl || project.repo_url || '',
+      git_remote: finalRepoUrl || project.repo_url || '',
       git_tag: gitTag,
       params,
       triggered_by: this.actorName(),
@@ -385,7 +410,7 @@ class DeployService extends Service {
       return {
         list: [],
         ...empty,
-        message: repoUrl ? '仅支持 GitHub / Gitee 的 HTTPS 地址' : '未配置仓库地址，可手动输入 tag',
+        message: repoUrl ? '仅支持 GitHub（HTTPS/SSH）或 Gitee HTTPS 地址' : '未配置仓库地址，可手动输入 tag',
       };
     }
     try {

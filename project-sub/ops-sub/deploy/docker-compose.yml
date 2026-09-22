@@ -55,6 +55,10 @@ services:
       # ECS GitHub 镜像：与 AMS 同级目录（如 /opt/project）→ 容器 /host-mirrors；本地默认不启用
       OPS_GIT_MIRROR_ENABLED: ${OPS_GIT_MIRROR_ENABLED:-0}
       OPS_GIT_MIRROR_ROOT: ${OPS_GIT_MIRROR_ROOT:-/host-mirrors}
+      # GitHub SSH：私钥目录（含 id_ed25519）；known_hosts 默认用镜像内置
+      OPS_GIT_SSH_DIR: ${OPS_GIT_SSH_DIR:-/ops-git-ssh}
+      OPS_GIT_SSH_KEY: ${OPS_GIT_SSH_KEY:-}
+      OPS_GIT_SSH_KNOWN_HOSTS: ${OPS_GIT_SSH_KNOWN_HOSTS:-/etc/ssh/github_known_hosts}
       OPS_HOST_RUNNER_HOST: ${OPS_HOST_RUNNER_HOST:-host.docker.internal}
       OPS_HOST_RUNNER_PORT: ${OPS_HOST_RUNNER_PORT:-1329}
       OPS_HOST_EGRESS_ENABLED: ${OPS_HOST_EGRESS_ENABLED:-0}
@@ -80,6 +84,8 @@ services:
       # ECS：与 admin-management-station 同级根（如 /opt/project）可写挂载，供 GitHub 镜像 clone/fetch
       # 本地默认 ../.ops-git-mirrors（未开 OPS_GIT_MIRROR_ENABLED 时不会使用）
       - ${OPS_GIT_MIRROR_MOUNT:-../.ops-git-mirrors}:/host-mirrors
+      # GitHub SSH 部署密钥（选 SSH 协议时需要；目录内放 id_ed25519，权限建议 600）
+      - ${OPS_GIT_SSH_MOUNT:-../.ops-git-ssh}:/ops-git-ssh:ro
       # 与宿主机执行器共享工作区（clone/pack 在容器，s deploy 可在宿主机）
       - ${OPS_DEPLOY_WORKDIR_HOST:-../.ops-deploy-work}:${OPS_DEPLOY_WORKDIR:-/tmp/ops-deploy}
 

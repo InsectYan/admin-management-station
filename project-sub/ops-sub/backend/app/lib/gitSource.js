@@ -1,41 +1,170 @@
 'use strict';
 
-function parseGithubHttps(url) {
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * 解析 GitHub 仓库地址（HTTPS 或 SSH）。
+ * 支持：
+ *   https://github.com/owner/repo.git
+ *   git@github.com:owner/repo.git
+ *   ssh://git@github.com/owner/repo.git
+ * @returns {{ owner: string, repo: string, protocol: 'https'|'ssh' } | null}
+ */
+function parseGithubRepo(url) {
   const raw = String(url || '').trim();
-  const matched = raw.match(/^https?:\/\/github\.com\/([^/]+)\/([^/#?]+)/i);
-  if (!matched) return null;
-  return {
-    owner: matched[1],
-    repo: matched[2].replace(/\.git$/i, ''),
-  };
+  if (!raw) return null;
+
+  let matched = raw.match(/^https?:\/\/github\.com\/([^/]+)\/([^/#?]+)/i);
+  if (matched) {
+    return {
+      owner: matched[1],
+      repo: matched[2].replace(/\.git$/i, ''),
+      protocol: 'https',
+    };
+  }
+
+  matched = raw.match(/^git@github\.com:([^/]+)\/([^/#?]+)$/i);
+  if (matched) {
+    return {
+      owner: matched[1],
+      repo: matched[2].replace(/\.git$/i, ''),
+      protocol: 'ssh',
+    };
+  }
+
+  matched = raw.match(/^ssh:\/\/git@github\.com\/([^/]+)\/([^/#?]+)$/i);
+  if (matched) {
+    return {
+      owner: matched[1],
+      repo: matched[2].replace(/\.git$/i, ''),
+      protocol: 'ssh',
+    };
+  }
+
+  return null;
 }
 
-function publicCloneUrl(url) {
-  const parsed = parseGithubHttps(url);
-  if (!parsed) return String(url || '').trim();
+/** @deprecated 兼容旧调用：任意可解析的 GitHub 地址都返回 owner/repo（含 SSH） */
+function parseGithubHttps(url) {
+  const parsed = parseGithubRepo(url);
+  if (!parsed) return null;
+  return { owner: parsed.owner, repo: parsed.repo };
+}
+
+function resolveGitProtocol(input, repoUrl) {
+  const raw = String(input || '').trim().toLowerCase();
+  if (raw === 'ssh' || raw === 'https') return raw;
+  const parsed = parseGithubRepo(repoUrl);
+  return parsed?.protocol === 'ssh' ? 'ssh' : 'https';
+}
+
+function formatGithubCloneUrl(parsed, protocol = 'https') {
+  if (!parsed?.owner || !parsed?.repo) return '';
+  if (protocol === 'ssh') {
+    return `git@github.com:${parsed.owner}/${parsed.repo}.git`;
+  }
   return `https://github.com/${parsed.owner}/${parsed.repo}.git`;
 }
 
-function cloneUrlWithToken(url, token) {
-  const parsed = parseGithubHttps(url);
-  const trimmed = String(url || '').trim();
-  if (!parsed || !String(token || '').trim()) return trimmed;
+function publicCloneUrl(url, protocol) {
+  const parsed = parseGithubRepo(url);
+  if (!parsed) return String(url || '').trim();
+  const proto = resolveGitProtocol(protocol, url);
+  return formatGithubCloneUrl(parsed, proto);
+}
+
+/**
+ * clone/fetch 用的远程地址。
+ * HTTPS：带 PAT；SSH：纯 SSH URL（鉴权靠 GIT_SSH_COMMAND / 部署密钥）。
+ */
+function cloneUrlWithToken(url, token, protocol) {
+  const parsed = parseGithubRepo(url);
+  const proto = resolveGitProtocol(protocol, url);
+  if (!parsed) return String(url || '').trim();
+  if (proto === 'ssh') {
+    return formatGithubCloneUrl(parsed, 'ssh');
+  }
+  const trimmed = formatGithubCloneUrl(parsed, 'https');
+  if (!String(token || '').trim()) return trimmed;
   const safe = encodeURIComponent(String(token).trim());
   return `https://x-access-token:${safe}@github.com/${parsed.owner}/${parsed.repo}.git`;
 }
 
-function gitAuthEnv() {
+function defaultSshDir(env = process.env) {
+  return String(env.OPS_GIT_SSH_DIR || '/ops-git-ssh').trim().replace(/\/+$/, '') || '/ops-git-ssh';
+}
+
+function resolveSshKeyPath(env = process.env) {
+  const explicit = String(env.OPS_GIT_SSH_KEY || '').trim();
+  if (explicit) return explicit;
+  const dir = defaultSshDir(env);
+  const candidates = [ 'id_ed25519', 'id_rsa', 'id_ecdsa', 'deploy_key' ];
+  for (const name of candidates) {
+    const full = path.join(dir, name);
+    if (fs.existsSync(full)) return full;
+  }
+  return '';
+}
+
+function resolveSshKnownHostsPath(env = process.env) {
+  const explicit = String(env.OPS_GIT_SSH_KNOWN_HOSTS || '').trim();
+  if (explicit) return explicit;
+  const inDir = path.join(defaultSshDir(env), 'known_hosts');
+  if (fs.existsSync(inDir)) return inDir;
+  const baked = '/etc/ssh/github_known_hosts';
+  if (fs.existsSync(baked)) return baked;
+  return inDir;
+}
+
+function assertSshReady(env = process.env) {
+  const key = resolveSshKeyPath(env);
+  if (!key || !fs.existsSync(key)) {
+    const err = new Error(
+      `SSH 部署需要容器内可读的部署密钥。请挂载 OPS_GIT_SSH_MOUNT 到 ${defaultSshDir(env)}，并放置 id_ed25519（或设置 OPS_GIT_SSH_KEY）。`,
+    );
+    err.status = 400;
+    throw err;
+  }
   return {
+    keyPath: key,
+    knownHosts: resolveSshKnownHostsPath(env),
+  };
+}
+
+/**
+ * @param {{ protocol?: string }} [opts]
+ */
+function gitAuthEnv(opts = {}, env = process.env) {
+  const base = {
     GIT_TERMINAL_PROMPT: '0',
     GIT_ASKPASS: 'echo',
     GIT_CONFIG_NOSYSTEM: '1',
   };
+  const protocol = resolveGitProtocol(opts.protocol, opts.repoUrl);
+  if (protocol !== 'ssh') return base;
+
+  const { keyPath, knownHosts } = assertSshReady(env);
+  // 路径勿含空格；GIT_SSH_COMMAND 由 git 直接 exec
+  const cmd = [
+    'ssh',
+    '-i', keyPath,
+    '-o', 'IdentitiesOnly=yes',
+    '-o', `UserKnownHostsFile=${knownHosts}`,
+    '-o', 'StrictHostKeyChecking=yes',
+    '-o', 'BatchMode=yes',
+  ].join(' ');
+  return {
+    ...base,
+    GIT_SSH_COMMAND: cmd,
+  };
 }
 
-/** Alpine/Docker 下 Git↔GitHub 偶发 TLS EOF，强制 HTTP/1.1 更稳 */
-function withGitHttpCompat(argv) {
+/** Alpine/Docker 下 Git↔GitHub 偶发 TLS EOF，强制 HTTP/1.1 更稳；SSH 跳过 */
+function withGitHttpCompat(argv, protocol) {
   const list = Array.isArray(argv) ? [ ...argv ] : [];
   if (list[0] !== 'git') return list;
+  if (resolveGitProtocol(protocol) === 'ssh') return list;
   const flags = [ '-c', 'http.version=HTTP/1.1' ];
   if (list.includes('http.version')) return list;
   return [ 'git', ...flags, ...list.slice(1) ];
@@ -43,6 +172,15 @@ function withGitHttpCompat(argv) {
 
 function classifyGithubGitError(err) {
   const text = String(err && err.message || err || '');
+  if (/Could not resolve hostname|Network is unreachable|Connection timed out|Connection refused/i.test(text)) {
+    return `访问 GitHub 网络失败。详情：${text}`;
+  }
+  if (/Host key verification failed/i.test(text)) {
+    return `SSH known_hosts 未包含 github.com。请挂载 known_hosts 或使用镜像内置 /etc/ssh/github_known_hosts。详情：${text}`;
+  }
+  if (/Permission denied \(publickey\)|unable to authenticate/i.test(text)) {
+    return `GitHub SSH 公钥鉴权失败。请确认部署密钥已加到该仓库（Deploy keys）或账号 SSH keys，且容器已挂载对应私钥。详情：${text}`;
+  }
   if (/TLS|SSL|unexpected eof|gnutls|schannel|unable to access/i.test(text)) {
     return `访问 GitHub 时 TLS/网络失败（不是 Token 丢失）。容器到 github.com 链路不稳定时可重试。详情：${text}`;
   }
@@ -101,7 +239,7 @@ function resolveCodeSource(input, { product, tag, repoUrl } = {}) {
   if (raw === 'github' || raw === 'local') return raw;
   const tagName = String(tag || '').trim();
   if (tagName === 'source') return 'local';
-  if (/^https?:\/\/github\.com\//i.test(String(repoUrl || '')) && tagName && tagName !== 'demo') {
+  if (parseGithubRepo(repoUrl) && tagName && tagName !== 'demo') {
     return 'github';
   }
   if (product === 'agentrun') return 'local';
@@ -173,9 +311,16 @@ function suggestNextReleaseTag(tagNames, fallback = 'v0.0.1') {
 }
 
 module.exports = {
+  parseGithubRepo,
   parseGithubHttps,
+  resolveGitProtocol,
+  formatGithubCloneUrl,
   publicCloneUrl,
   cloneUrlWithToken,
+  defaultSshDir,
+  resolveSshKeyPath,
+  resolveSshKnownHostsPath,
+  assertSshReady,
   gitAuthEnv,
   withGitHttpCompat,
   classifyGithubGitError,

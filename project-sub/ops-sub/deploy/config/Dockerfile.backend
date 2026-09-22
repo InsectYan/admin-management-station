@@ -5,14 +5,18 @@ RUN sed -i \
     -e "s#https://dl-cdn.alpinelinux.org/alpine#${ALPINE_MIRROR}#g" \
     -e "s#http://dl-cdn.alpinelinux.org/alpine#${ALPINE_MIRROR}#g" \
     /etc/apk/repositories \
-  && apk add --no-cache git bash zip unzip
+  && apk add --no-cache git bash zip unzip openssh-client
 WORKDIR /app
 COPY backend/package*.json ./
 RUN npm ci --omit=dev 2>/dev/null || npm install --omit=dev
 RUN npm i -g @serverless-devs/s
 COPY backend/ .
 COPY database/ ./database/
+# GitHub SSH known_hosts（部署选 SSH 时用；也可被 OPS_GIT_SSH_KNOWN_HOSTS / 挂载目录覆盖）
+COPY deploy/config/github_known_hosts /etc/ssh/github_known_hosts
 EXPOSE 5203
 ENV PORT=5203
 ENV NODE_ENV=production
+ENV OPS_GIT_SSH_DIR=/ops-git-ssh
+ENV OPS_GIT_SSH_KNOWN_HOSTS=/etc/ssh/github_known_hosts
 CMD ["npx", "egg-scripts", "start", "--title=ops-sub-backend", "--workers=1"]
