@@ -21,6 +21,20 @@
 
 假设仓库根在 ECS 上为 `/opt/project/admin-management-station`（按实际路径替换）。
 
+### 运维 GitHub 部署：同级镜像仓（可选）
+
+ECS 上 GitHub 部署可改为「与 AMS 同级 git 仓增量更新」，避免每次在容器内整段重下：
+
+```bash
+# ops-sub/deploy/config/.env.local
+OPS_GIT_MIRROR_ENABLED=1
+OPS_GIT_MIRROR_MOUNT=/opt/project          # 与 admin-management-station 同级根
+OPS_GIT_MIRROR_ROOT=/host-mirrors         # 容器内挂载点（compose 已配）
+```
+
+效果：仓库 `…/fitness-agent.git` → 宿主机 `/opt/project/fitness-agent`（无则 clone，有则 fetch），再按 `同级/项目名/包路径` 取文件。  
+**本地 `code_source=local` / 本机开发不受影响**（保持 `OPS_GIT_MIRROR_ENABLED=0`）。
+
 ### 0. 启动前必做文件（否则 compose 报 env file not found）
 
 主应用 `docker-compose.yml` 的 `env_file` **强制引用**下列路径；文件不存在会直接失败（你看到的  

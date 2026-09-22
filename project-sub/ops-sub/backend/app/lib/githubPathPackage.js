@@ -333,6 +333,8 @@ async function resolveGithubZipFilePath({
   const zips = blobs
     .map(item => item.path)
     .filter(p => /\.zip$/i.test(p));
+  const envPrefixed = zips.find(p => /(^|\/)(prod|test)-artifact\.zip$/i.test(p));
+  if (envPrefixed) return envPrefixed;
   const artifact = zips.find(p => /(^|\/)artifact\.zip$/i.test(p));
   if (artifact) return artifact;
   if (zips.length === 1) return zips[0];

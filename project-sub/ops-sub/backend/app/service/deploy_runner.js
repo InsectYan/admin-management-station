@@ -12,6 +12,7 @@ const agentrun = require('../lib/deployAgentrun');
 const { redactDeployLog } = require('../lib/deployLogRedact');
 const menuMaster = require('../lib/menuMaster');
 const { publicCloneUrl, cloneUrlWithToken, gitAuthEnv, withGitHttpCompat, classifyGithubGitError, resolveCodeSource, parseLsRemoteRefSha, sameGitSha, assertGitTagName, normalizePackagePath, parseGithubHttps } = require('../lib/gitSource');
+const gitHostMirror = require('../lib/gitHostMirror');
 const { runOssPreflight, agentrunNetworkEnv } = require('../lib/deployOssPreflight');
 const { resolveDeployExecutor } = require('../lib/deployNetwork');
 const { execOnHost } = require('../lib/hostDeployClient');
@@ -106,16 +107,17 @@ class DeployRunnerService extends Service {
       await this.append(job.id, 'info', `[source] 复制本地工程 ${source}`);
       agentrun.copySource(source, dir);
       const packagePath = this.resolveAgentrunPackagePath(job);
+      const targetEnv = job.params?.deploy_config?.agentrun?.target_env || 'prod';
       if (packagePath) {
-        const zip = agentrun.resolveLocalArtifactZip(job.project, packagePath);
+        const zip = agentrun.resolveLocalArtifactZip(job.project, packagePath, targetEnv);
         if (!zip) {
           throw new Error(
-            `本地预打 zip 未找到：${packagePath}（相对 source_path；可填 backup/ss.zip，或含 artifact.zip 的目录）`,
+            `本地预打 zip 未找到：${packagePath}（相对 source_path；可填 backup/ss.zip，或含 ${targetEnv}-artifact.zip 的目录）`,
           );
         }
-        const dest = agentrun.placeArtifactZip(dir, zip);
+        const dest = agentrun.placeArtifactZip(dir, zip, targetEnv);
         const mb = (fs.statSync(dest).size / (1024 * 1024)).toFixed(1);
-        await this.append(job.id, 'info', `[source] 已放置预打 zip ${zip} → artifact.zip（≈ ${mb} MB），将跳过 pack`);
+        await this.append(job.id, 'info', `[source] 已放置预打 zip ${zip} → ${path.basename(dest)}（≈ ${mb} MB），将跳过 pack`);
       }
       return 'source';
     }
@@ -151,6 +153,7 @@ class DeployRunnerService extends Service {
 
   /** GitHub：预打 zip 只下载一次；zip 在 deploy/ 下则随脚手架一次拉齐，否则脚手架排除 zip 再单拉目标包 */
   async prepareGithubPrebuiltZip(job, dir, remote, tag, packagePath, token) {
+    const targetEnv = job.params?.deploy_config?.agentrun?.target_env || 'prod';
     const zipRel = await resolveGithubZipFilePath({
       repoUrl: remote,
       ref: tag,
@@ -159,7 +162,7 @@ class DeployRunnerService extends Service {
     });
     const zipUnderDeploy = zipRel === 'deploy' || zipRel.startsWith('deploy/');
     const deployDir = path.join(dir, 'deploy');
-    const dest = agentrun.artifactZipTarget(dir);
+    const dest = agentrun.artifactZipTarget(dir, targetEnv);
 
     if (zipUnderDeploy) {
       await this.append(
@@ -197,7 +200,7 @@ class DeployRunnerService extends Service {
       await this.append(
         job.id,
         'info',
-        `[fetch] 一次拉取 ${scaffold.fileCount} 个文件，artifact.zip ≈ ${mb} MB；sha=${scaffold.sha.slice(0, 12)}；跳过 pack`,
+        `[fetch] 一次拉取 ${scaffold.fileCount} 个文件，${path.basename(dest)} ≈ ${mb} MB；sha=${scaffold.sha.slice(0, 12)}；跳过 pack`,
       );
       return scaffold.sha.slice(0, 40);
     }
@@ -284,7 +287,7 @@ class DeployRunnerService extends Service {
       throw new Error(
         `远程已有 tag ${tag}，但指向的提交与 ${branch} HEAD 不同。请换一个新 tag 名再部署，避免覆盖已有发布点。`,
       );
-    } else if (packagePath) {
+    } else if (packagePath || gitHostMirror.isEnabled()) {
       await this.append(job.id, 'info', `[github] 远程尚无 tag ${tag}，将通过 API 在 ${branch} HEAD 创建轻量 tag`);
       const parsed = parseGithubHttps(remote);
       try {
@@ -330,6 +333,11 @@ class DeployRunnerService extends Service {
       return sha.slice(0, 40);
     }
 
+    // ECS：宿主机同级镜像仓增量更新（本地未开 OPS_GIT_MIRROR_ENABLED 时跳过）
+    if (gitHostMirror.isEnabled()) {
+      return this.prepareGithubFromMirror(job, dir, remote, tag, token, packagePath, gitTimeout, authEnv);
+    }
+
     if (packagePath) {
       try {
         return await this.prepareGithubPrebuiltZip(job, dir, remote, tag, packagePath, token);
@@ -345,6 +353,94 @@ class DeployRunnerService extends Service {
     const sha = await this.execCapture(job.id, [ 'git', 'rev-parse', 'HEAD' ], dir, authEnv);
     await this.append(job.id, 'info', `[fetch] checkout ${tag} sha=${sha.slice(0, 12)}`);
     return sha.slice(0, 40);
+  }
+
+  /**
+   * 从 ECS 同级 git 镜像仓取代码：无则 clone，有则 fetch；再按路径拷到任务目录。
+   * 本地 source_path 模式不走此分支。
+   */
+  async prepareGithubFromMirror(job, dir, remote, tag, token, packagePath, gitTimeout, authEnv) {
+    const targetEnv = job.params?.deploy_config?.agentrun?.target_env || 'prod';
+    const runGit = async (argv, cwd, opts = {}) => {
+      const cmd = withGitHttpCompat(argv);
+      if (opts.capture) {
+        return this.execCapture(job.id, cmd, cwd, authEnv);
+      }
+      await this.exec(job.id, cmd, cwd, gitTimeout, authEnv);
+      return '';
+    };
+
+    let mirror;
+    try {
+      mirror = await gitHostMirror.ensureMirror({
+        repoUrl: remote,
+        ref: tag,
+        token,
+        runGit,
+        onLog: (msg) => this.append(job.id, 'info', msg),
+      });
+    } catch (err) {
+      throw new Error(`Git 镜像同步失败：${classifyGithubGitError(err)}`);
+    }
+
+    if (packagePath) {
+      const deploySrc = path.join(mirror.repoDir, 'deploy');
+      if (!fs.existsSync(deploySrc)) {
+        throw new Error(`镜像仓缺少 deploy/：${deploySrc}`);
+      }
+      const deployDest = path.join(dir, 'deploy');
+      fs.rmSync(deployDest, { recursive: true, force: true });
+      fs.cpSync(deploySrc, deployDest, {
+        recursive: true,
+        filter: src => !/\/node_modules(\/|$)/i.test(src.replace(/\\/g, '/')),
+      });
+
+      const zipPath = this.resolveZipUnderRepo(mirror.repoDir, packagePath, targetEnv);
+      if (!zipPath) {
+        throw new Error(
+          `镜像仓未找到预打 zip：${mirror.repoDir}/${packagePath}（可填 backup/ss.zip 或含 ${targetEnv}-artifact.zip 的目录）`,
+        );
+      }
+      const dest = agentrun.placeArtifactZip(dir, zipPath, targetEnv);
+      const mb = (fs.statSync(dest).size / (1024 * 1024)).toFixed(1);
+      await this.append(
+        job.id,
+        'info',
+        `[mirror] 已从 ${mirror.repoName} 取 deploy/ + ${path.basename(zipPath)} → ${path.basename(dest)}（≈ ${mb} MB）`,
+      );
+      return mirror.sha;
+    }
+
+    agentrun.copySource(mirror.repoDir, dir);
+    await this.append(
+      job.id,
+      'info',
+      `[mirror] 已从同级镜像 ${mirror.repoDir} 同步全仓到任务目录（sha=${mirror.sha.slice(0, 12)}）`,
+    );
+    return mirror.sha;
+  }
+
+  resolveZipUnderRepo(repoDir, packagePath, envName) {
+    const pkg = String(packagePath || '').trim().replace(/\\/g, '/').replace(/^\.\/+/, '').replace(/\/+$/, '');
+    if (!pkg) return null;
+    if (/\.zip$/i.test(pkg)) {
+      const file = path.join(repoDir, ...pkg.split('/'));
+      return fs.existsSync(file) ? file : null;
+    }
+    const dir = path.join(repoDir, ...pkg.split('/'));
+    if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return null;
+    const preferred = [
+      agentrun.artifactZipName(envName),
+      'artifact.zip',
+      'ss.zip',
+    ];
+    for (const name of preferred) {
+      const full = path.join(dir, name);
+      if (fs.existsSync(full)) return full;
+    }
+    const names = fs.readdirSync(dir).filter(name => /\.zip$/i.test(name));
+    if (names.length === 1) return path.join(dir, names[0]);
+    return null;
   }
 
   async gitRemote(jobId, argv, cwd, authEnv, { timeoutMs, capture = false, attempts = 3 } = {}) {
@@ -401,7 +497,7 @@ class DeployRunnerService extends Service {
       await this.append(job.id, 'info', `[agentrun] 已复用本地 agentrun 组件缓存（跳过易失败的 registry latest 探测）`);
     }
 
-    const artifactZip = agentrun.artifactZipTarget(dir);
+    const artifactZip = agentrun.artifactZipTarget(dir, prepared.envName);
     const usePrebuiltZip = Boolean(packagePath) && fs.existsSync(artifactZip);
     const deploySh = path.join(dir, 'deploy', 'agentrun', 'code-package', 'scripts', 'deploy.sh');
     if (usePrebuiltZip) {
@@ -412,7 +508,7 @@ class DeployRunnerService extends Service {
       await this.append(
         job.id,
         'info',
-        `[agentrun] 使用预打 artifact.zip ≈ ${mb} MB（包路径 ${packagePath}），跳过 pack，直接 s deploy 上传阿里云`,
+        `[agentrun] 使用预打 ${path.basename(artifactZip)} ≈ ${mb} MB（包路径 ${packagePath}），跳过 pack，直接 s deploy 上传阿里云`,
       );
     } else if (!fs.existsSync(path.join(dir, 'deploy', 'scripts', 'run.mjs'))) {
       throw new Error('仓库里没有 deploy/scripts/run.mjs。GitHub 请把 tag 打在 fitness-agent 仓库根的提交上；本地 source_path 请指向 fitness-agent 而不是只含 .pi 的目录。');
@@ -421,7 +517,7 @@ class DeployRunnerService extends Service {
       await this.append(
         job.id,
         'info',
-        `[agentrun] artifact.zip ≈ ${mb} MB；未配置包路径时仍会走 fitness-cli（含 pack）`,
+        `[agentrun] ${path.basename(artifactZip)} ≈ ${mb} MB；未配置包路径时仍会走 fitness-cli（含 pack）`,
       );
     }
 

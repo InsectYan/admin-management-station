@@ -110,14 +110,24 @@ function resolveLocalPackageDir(project, packagePath) {
   return null;
 }
 
-function artifactZipTarget(repoDir) {
-  return path.join(repoDir, 'deploy', 'agentrun', 'code-package', 'artifact.zip');
+function artifactZipName(envName) {
+  const env = [ 'prod', 'test' ].includes(String(envName || '').trim()) ? String(envName).trim() : 'prod';
+  return `${env}-artifact.zip`;
 }
 
-/** 在 source_path 下解析预打 zip：支持 backup/ss.zip，或目录内 artifact.zip / 唯一 *.zip */
-function resolveLocalArtifactZip(project, packagePath) {
+function artifactZipTarget(repoDir, envName) {
+  return path.join(repoDir, 'deploy', 'agentrun', 'code-package', artifactZipName(envName));
+}
+
+/** 在 source_path 下解析预打 zip：支持 backup/ss.zip，或目录内 {env}-artifact.zip / artifact.zip / 唯一 *.zip */
+function resolveLocalArtifactZip(project, packagePath, envName) {
   const pkg = String(packagePath || '').trim().replace(/\\/g, '/').replace(/^\.\/+/, '').replace(/\/+$/, '');
   if (!pkg) return null;
+  const preferredNames = [
+    artifactZipName(envName),
+    'artifact.zip',
+    'ss.zip',
+  ];
 
   for (const hint of collectAgentrunSourceHints(project)) {
     const root = resolveSourcePath(hint);
@@ -129,8 +139,10 @@ function resolveLocalArtifactZip(project, packagePath) {
     }
     const dir = path.join(root, ...pkg.split('/'));
     if (!safeStat(dir)?.isDirectory()) continue;
-    const preferred = path.join(dir, 'artifact.zip');
-    if (safeStat(preferred)?.isFile()) return path.resolve(preferred);
+    for (const name of preferredNames) {
+      const preferred = path.join(dir, name);
+      if (safeStat(preferred)?.isFile()) return path.resolve(preferred);
+    }
     let names = [];
     try {
       names = fs.readdirSync(dir).filter(name => /\.zip$/i.test(name));
@@ -138,13 +150,12 @@ function resolveLocalArtifactZip(project, packagePath) {
       names = [];
     }
     if (names.length === 1) return path.resolve(dir, names[0]);
-    if (names.includes('ss.zip')) return path.resolve(dir, 'ss.zip');
   }
   return null;
 }
 
-function placeArtifactZip(repoDir, zipPath) {
-  const dest = artifactZipTarget(repoDir);
+function placeArtifactZip(repoDir, zipPath, envName) {
+  const dest = artifactZipTarget(repoDir, envName);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.copyFileSync(zipPath, dest);
   return dest;
@@ -277,6 +288,7 @@ module.exports = {
   resolveAgentrunSource,
   resolveLocalPackageDir,
   resolveLocalArtifactZip,
+  artifactZipName,
   artifactZipTarget,
   placeArtifactZip,
   resolveDeployOnlyArgv,
