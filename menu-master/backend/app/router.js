@@ -10,6 +10,7 @@ module.exports = app => {
   router.post('/api/auth/login/mfa', controller.auth.loginMfa);
   router.post('/api/auth/logout', controller.auth.logout);
   router.get('/api/auth/me', controller.auth.me);
+  router.get('/api/auth/password-hint', controller.auth.passwordHint);
   router.put('/api/auth/github-token', controller.auth.saveGithubToken);
   router.delete('/api/auth/github-token', controller.auth.clearGithubToken);
   router.get('/api/auth/github-token', controller.auth.githubCredential);

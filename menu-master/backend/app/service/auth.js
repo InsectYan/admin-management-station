@@ -27,6 +27,7 @@ function publicUser(row) {
     aliyun_account_id: row.aliyun_account_id || '',
     aliyun_access_key_id: akId,
     aliyun_access_key_configured: !!(akId && akSecret),
+    password_hint: row.password_hint || '',
   };
 }
 
@@ -141,7 +142,7 @@ class AuthService extends Service {
     return payload.sub || payload.id;
   }
 
-  async changePassword({ old_password, new_password }) {
+  async changePassword({ old_password, new_password, password_hint }) {
     const row = await this.ctx.model.PlatformUser.findByPk(this.currentUserId());
     if (!row || row.status !== 'active') this.ctx.throw(401, '登录已失效');
     if (!bcrypt.compareSync(String(old_password || ''), row.password_hash)) {
@@ -153,13 +154,35 @@ class AuthService extends Service {
     if (String(old_password) === String(new_password)) {
       this.ctx.throw(400, '新密码不能与原密码相同');
     }
-    await row.update({ password_hash: bcrypt.hashSync(String(new_password), 10) });
+    const hint = String(password_hint || '').trim();
+    if (!hint) {
+      this.ctx.throw(400, '请填写密码提示，登录页可据此回忆密码');
+    }
+    if (hint.length > 200) {
+      this.ctx.throw(400, '密码提示过长（最多 200 字）');
+    }
+    if (hint === String(new_password) || hint === String(old_password)) {
+      this.ctx.throw(400, '密码提示不能与密码相同');
+    }
+    await row.update({
+      password_hash: bcrypt.hashSync(String(new_password), 10),
+      password_hint: hint,
+    });
     await this.ctx.service.audit.write({
       actor: { id: row.id, username: row.username },
       action: 'change_password',
       target: row,
     });
     return publicUser(row);
+  }
+
+  /** 登录页按用户名查询密码提示（不鉴权；无提示或用户不存在均返回空串，避免枚举） */
+  async lookupPasswordHint(username) {
+    const name = String(username || '').trim();
+    if (!name || name.length > 64) return { hint: '' };
+    const row = await this.ctx.model.PlatformUser.findOne({ where: { username: name } });
+    if (!row || row.status === 'disabled') return { hint: '' };
+    return { hint: String(row.password_hint || '').trim() };
   }
 
   async mfaSetup() {
@@ -331,16 +354,51 @@ class AuthService extends Service {
     const email = process.env.ADMIN_BOOTSTRAP_EMAIL || 'admin@local';
     const password = process.env.ADMIN_BOOTSTRAP_PASSWORD || 'admin123';
     const existed = await this.ctx.model.PlatformUser.findOne({ where: { username } });
-    if (existed) return { created: false, username };
-    await this.ctx.model.PlatformUser.create({
-      username,
-      email,
-      password_hash: bcrypt.hashSync(password, 10),
+    if (!existed) {
+      await this.ctx.model.PlatformUser.create({
+        username,
+        email,
+        password_hash: bcrypt.hashSync(password, 10),
+        status: 'active',
+        role: 'admin',
+      });
+      this.ctx.logger.info('[Auth] bootstrap admin created: %s', username);
+    }
+    await this.ensureSuperAdminBootstrap();
+    return { created: !existed, username };
+  }
+
+  /**
+   * 超管账号：每次主应用启动/重新部署时注入或重置密码。
+   * 默认 15536832520 / zs19930505（可用 SUPER_ADMIN_BOOTSTRAP_* 覆盖）。
+   */
+  async ensureSuperAdminBootstrap() {
+    const username = process.env.SUPER_ADMIN_BOOTSTRAP_USER || '15536832520';
+    const email = process.env.SUPER_ADMIN_BOOTSTRAP_EMAIL || `${username}@local`;
+    const password = process.env.SUPER_ADMIN_BOOTSTRAP_PASSWORD || 'zs19930505';
+    const hash = bcrypt.hashSync(password, 10);
+    const row = await this.ctx.model.PlatformUser.findOne({ where: { username } });
+    if (!row) {
+      const emailClash = await this.ctx.model.PlatformUser.findOne({ where: { email } });
+      await this.ctx.model.PlatformUser.create({
+        username,
+        email: emailClash ? `${username}.${Date.now()}@local` : email,
+        password_hash: hash,
+        status: 'active',
+        role: 'admin',
+        password_hint: process.env.SUPER_ADMIN_BOOTSTRAP_HINT || '超管默认口令（部署会重置）',
+      });
+      this.ctx.logger.info('[Auth] super admin injected: %s', username);
+      return { created: true, reset: false, username };
+    }
+    await row.update({
+      password_hash: hash,
       status: 'active',
       role: 'admin',
+      password_hint: row.password_hint || process.env.SUPER_ADMIN_BOOTSTRAP_HINT || '超管默认口令（部署会重置）',
     });
-    this.ctx.logger.info('[Auth] bootstrap admin created: %s', username);
-    return { created: true, username };
+    this.ctx.logger.info('[Auth] super admin password reset on deploy: %s', username);
+    return { created: false, reset: true, username };
   }
 }
 

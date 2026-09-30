@@ -49,6 +49,15 @@ class AuthController extends Controller {
     }
   }
 
+  async passwordHint() {
+    try {
+      const data = await this.ctx.service.auth.lookupPasswordHint(this.ctx.query.username);
+      this.ok(data);
+    } catch (err) {
+      this.fail(err);
+    }
+  }
+
   async mfaSetup() {
     try {
       const data = await this.ctx.service.auth.mfaSetup();

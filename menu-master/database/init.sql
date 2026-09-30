@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS platform_users (
   aliyun_account_id VARCHAR(64),
   aliyun_access_key_id VARCHAR(128),
   aliyun_access_key_secret TEXT,
+  password_hint VARCHAR(200),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

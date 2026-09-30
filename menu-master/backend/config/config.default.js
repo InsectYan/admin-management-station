@@ -31,6 +31,7 @@ module.exports = appInfo => {
         || ctx.path === '/api/auth/login/mfa'
         || ctx.path === '/api/auth/register'
         || ctx.path === '/api/auth/logout'
+        || ctx.path === '/api/auth/password-hint'
         || ctx.path === '/api/internal/github-credential'
       ) {
         return true;

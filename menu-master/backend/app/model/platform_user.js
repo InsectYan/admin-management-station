@@ -64,6 +64,10 @@ module.exports = app => {
         type: app.Sequelize.TEXT,
         allowNull: true,
       },
+      password_hint: {
+        type: STRING(200),
+        allowNull: true,
+      },
       created_at: DATE,
       updated_at: DATE,
     },

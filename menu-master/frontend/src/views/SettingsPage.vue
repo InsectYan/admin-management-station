@@ -9,6 +9,7 @@
 
     <el-card shadow="never" class="settings-card">
       <h2>修改密码</h2>
+      <p class="settings-hint">修改密码时必须填写密码提示；登录页可点「查看密码提示」回忆。</p>
       <el-form ref="pwdRef" :model="pwd" :rules="pwdRules" label-position="top" style="max-width: 360px">
         <el-form-item label="原密码" prop="old_password">
           <el-input v-model="pwd.old_password" type="password" show-password />
@@ -16,6 +17,15 @@
         <el-form-item label="新密码" prop="new_password">
           <el-input v-model="pwd.new_password" type="password" show-password />
         </el-form-item>
+        <el-form-item label="密码提示" prop="password_hint">
+          <el-input
+            v-model="pwd.password_hint"
+            maxlength="200"
+            show-word-limit
+            placeholder="例如：生日后四位 + 宠物名（勿写真实密码）"
+          />
+        </el-form-item>
+        <p v-if="user.password_hint" class="settings-hint">当前提示：{{ user.password_hint }}</p>
         <el-button type="primary" :loading="pwdLoading" @click="onChangePwd">保存新密码</el-button>
       </el-form>
     </el-card>
@@ -129,7 +139,7 @@ const ghLoading = ref(false);
 const aliyunLoading = ref(false);
 const setup = ref(null);
 const mfaCode = ref('');
-const pwd = reactive({ old_password: '', new_password: '' });
+const pwd = reactive({ old_password: '', new_password: '', password_hint: '' });
 const off = reactive({ password: '', code: '' });
 const gh = reactive({ token: '', github_login: '' });
 const aliyun = reactive({ account_id: '', access_key_id: '', access_key_secret: '' });
@@ -138,6 +148,10 @@ const pwdRules = {
   new_password: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
     { pattern: /^(?=.*[A-Za-z])(?=.*\d).{8,}$/, message: '至少 8 位，且包含字母和数字', trigger: 'blur' },
+  ],
+  password_hint: [
+    { required: true, message: '请填写密码提示', trigger: 'blur' },
+    { max: 200, message: '密码提示最多 200 字', trigger: 'blur' },
   ],
 };
 
@@ -150,6 +164,7 @@ async function refreshMe() {
     gh.github_login = next.github_login || '';
     aliyun.account_id = next.aliyun_account_id || '';
     aliyun.access_key_id = next.aliyun_access_key_id || '';
+    if (next.password_hint) pwd.password_hint = next.password_hint;
   } catch {
     /* 保持缓存 */
   }
@@ -232,6 +247,7 @@ async function onChangePwd() {
     await changePassword(pwd);
     pwd.old_password = '';
     pwd.new_password = '';
+    Object.assign(user, { password_hint: pwd.password_hint });
     ElMessage.success('密码已更新');
   } catch (err) {
     ElMessage.error(err.message || '修改失败');

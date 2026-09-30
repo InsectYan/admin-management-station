@@ -37,6 +37,14 @@ export async function changePassword(body) {
   return res.data ?? res;
 }
 
+export async function fetchPasswordHint(username) {
+  const params = new URLSearchParams();
+  if (username) params.set('username', String(username));
+  const qs = params.toString();
+  const res = await request(`/auth/password-hint${qs ? `?${qs}` : ''}`);
+  return res.data ?? res;
+}
+
 export async function setupMfa() {
   const res = await request('/auth/mfa/setup', { method: 'POST' });
   return res.data ?? res;

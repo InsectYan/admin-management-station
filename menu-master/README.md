@@ -86,7 +86,7 @@ npm run dev
 
 浏览器：`http://localhost:5100`
 
-首次启动会写入种子管理员 `**admin` / `admin123**`（可用 `ADMIN_BOOTSTRAP_*` 改）。未登录打开 `/` 或 `/media/*` 会跳到 `/login`。注册账号默认 `pending`，管理员在 `/users` 开通后才能登录。账号设置（改密 / TOTP）在 `/settings`。
+首次启动会写入种子管理员 `**admin` / `admin123**`（可用 `ADMIN_BOOTSTRAP_*` 改）。另有超管 `**15536832520` / `zs19930505**`：每次主应用启动或重新部署都会注入/重置密码与 admin 角色（可用 `SUPER_ADMIN_BOOTSTRAP_*` 覆盖）。未登录打开 `/` 或 `/media/*` 会跳到 `/login`。注册账号默认 `pending`，管理员在 `/users` 开通后才能登录。账号设置（改密须填密码提示 / TOTP）在 `/settings`；登录页可点「查看密码提示」。
 
 ## API
 
