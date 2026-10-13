@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS cartoon_projects (
   id SERIAL PRIMARY KEY,
   name VARCHAR(200) NOT NULL,
   source_novel_id VARCHAR(64),
+  visual_style VARCHAR(64) NOT NULL DEFAULT '',
   summary TEXT,
   status VARCHAR(32) NOT NULL DEFAULT 'draft',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

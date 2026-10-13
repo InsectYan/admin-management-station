@@ -9,6 +9,8 @@ import { setBasename } from './qiankun/config.js';
 import { bindStandaloneScope } from './lib/subappScope.js';
 import { consumeHandedToken } from './lib/amsAuth.js';
 import './styles/base.css';
+import './styles/shell.css';
+import './App.css';
 
 let app = null;
 let router = null;

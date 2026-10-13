@@ -1,27 +1,22 @@
 <template>
-  <div class="shell" :class="{ embedded }">
-    <aside v-if="!embedded" class="sider">
-      <div class="brand">预检</div>
-      <el-menu :default-active="route.path" router background-color="transparent">
-        <el-menu-item index="/runtimes">运行时</el-menu-item>
-        <el-menu-item index="/workflows">工作流</el-menu-item>
-      </el-menu>
-    </aside>
-    <div class="content">
-      <el-menu v-if="embedded" mode="horizontal" :default-active="route.path" router>
-        <el-menu-item index="/runtimes">运行时</el-menu-item>
-        <el-menu-item index="/workflows">工作流</el-menu-item>
-      </el-menu>
-      <router-view />
-    </div>
-  </div>
+  <el-container :class="['precheck-sub-layout', { embedded }]">
+    <NavMenu v-if="!embedded" />
+    <el-container :class="['precheck-sub-main-column', { embedded }]" direction="vertical">
+      <div v-if="embedded" class="precheck-sub-embedded-bar">
+        <NavMenu embedded />
+      </div>
+      <el-main :class="['precheck-sub-content', { embedded }]">
+        <router-view />
+      </el-main>
+    </el-container>
+  </el-container>
 </template>
 
 <script setup>
 import { computed } from 'vue';
-import { useRoute } from 'vue-router';
 import { isQiankunEmbedded } from '../services/apiConfig.js';
+import NavMenu from './NavMenu.vue';
+import './MainLayout.css';
 
-const route = useRoute();
 const embedded = computed(() => isQiankunEmbedded());
 </script>

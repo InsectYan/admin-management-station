@@ -1,0 +1,8 @@
+html.precheck-sub-standalone,
+html.precheck-sub-standalone body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+html.precheck-sub-standalone #app { height: 100%; overflow: hidden; }

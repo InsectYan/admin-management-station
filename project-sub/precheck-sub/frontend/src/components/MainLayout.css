@@ -1,0 +1,49 @@
+.precheck-sub-layout {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+  background: #f3f8f4;
+  box-sizing: border-box;
+}
+.precheck-sub-layout.embedded { min-height: 0; background: transparent; }
+.precheck-sub-main-column {
+  flex: 1; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.precheck-sub-sider {
+  height: 100%; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden;
+  background: rgba(232, 244, 236, 0.72);
+  border-right: 1px solid rgba(47, 138, 91, 0.2);
+}
+.precheck-sub-brand {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px;
+  border-bottom: 1px solid rgba(47, 138, 91, 0.12);
+  font-weight: 600;
+  color: #1f3d2c;
+}
+.precheck-sub-sider.collapsed .precheck-sub-brand { justify-content: center; padding-inline: 8px; }
+.precheck-sub-brand-text { font-size: 16px; white-space: nowrap; }
+.precheck-collapse { color: #5c6b62; font-size: 18px; }
+.precheck-collapse:hover { color: #2f8a5b; }
+.precheck-sub-nav { border: none; background: transparent !important; }
+.precheck-sub-nav:not(.embedded) { height: calc(100% - 64px); border-right: none; }
+.precheck-sub-nav.embedded { border-bottom: none; }
+.precheck-sub-nav .el-menu-item { background: transparent !important; }
+.precheck-sub-nav .el-menu-item:hover { background: rgba(47, 138, 91, 0.08) !important; }
+.precheck-sub-nav .el-menu-item.is-active {
+  background: rgba(47, 138, 91, 0.12) !important;
+  color: #2f8a5b !important;
+}
+.precheck-sub-embedded-bar {
+  position: sticky; top: 0; z-index: 100; flex-shrink: 0;
+  background: rgba(243, 248, 244, 0.92);
+  border-bottom: 1px solid rgba(47, 138, 91, 0.16);
+}
+.precheck-sub-content { flex: 1; min-height: 0; overflow: auto; }
+.precheck-sub-content.el-main { --el-main-padding: 0; padding: 0 !important; }

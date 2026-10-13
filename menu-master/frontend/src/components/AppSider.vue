@@ -88,7 +88,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Loading, Grid, Reading, Cpu, Monitor, Fold, Expand, User, Document } from '@element-plus/icons-vue';
+import { Loading, Grid, Reading, Cpu, Monitor, Fold, Expand, User, Document, Film, CircleCheck } from '@element-plus/icons-vue';
 import { buildMenuPath } from '../qiankun/config.js';
 import { useNavCollapse } from '../composables/useNavCollapse.js';
 import { clearSession, getCachedUser, isAdmin } from '../lib/amsAuth.js';
@@ -125,16 +125,25 @@ const ICON_MAP = {
   'icon-novel': Reading,
   'icon-testgen': Cpu,
   'icon-ops': Monitor,
+  'icon-cartoon': Film,
+  'icon-precheck': CircleCheck,
 };
 
-function resolveIcon(iconName) {
-  return ICON_MAP[iconName] || Grid;
+const MICROAPP_ICON = {
+  'cartoon-app': Film,
+  'precheck-app': CircleCheck,
+};
+
+function resolveIcon(menu) {
+  if (menu?.icon && ICON_MAP[menu.icon]) return ICON_MAP[menu.icon];
+  if (menu?.microapp_name && MICROAPP_ICON[menu.microapp_name]) return MICROAPP_ICON[menu.microapp_name];
+  return Grid;
 }
 
 function toMenuItems(menus) {
   return menus.map(menu => ({
     key: buildMenuPath(menu.route_prefix),
-    icon: resolveIcon(menu.icon),
+    icon: resolveIcon(menu),
     label: menu.name,
     children: menu.children?.length ? toMenuItems(menu.children) : undefined,
   }));

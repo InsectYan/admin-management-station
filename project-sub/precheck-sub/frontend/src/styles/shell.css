@@ -1,0 +1,24 @@
+.precheck-sub-root {
+  height: 100%;
+  min-height: 0;
+  color: #2c4336;
+  background: #f3f8f4;
+}
+.precheck-page { padding: 16px 20px 24px; box-sizing: border-box; }
+.precheck-page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
+}
+.precheck-page-title { margin: 0; font-size: 18px; font-weight: 600; color: #1f3d2c; }
+.precheck-module {
+  margin-bottom: 16px;
+  padding: 16px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(47, 138, 91, 0.2);
+}
+.precheck-module__title { margin: 0 0 12px; font-size: 15px; font-weight: 600; color: #1f3d2c; }
+.precheck-sub-root .el-button--primary {
+  --el-button-bg-color: #2f8a5b;
+  --el-button-border-color: #2f8a5b;
+}

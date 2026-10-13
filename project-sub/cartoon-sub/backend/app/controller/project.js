@@ -33,6 +33,34 @@ class ProjectController extends Controller {
     ok(this.ctx, await this.ctx.service.project.create(body));
   }
 
+  async update() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.update(this.ctx.params.id, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async novels() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.listNovels());
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async chapters() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.listChapters(this.ctx.params.novelId));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async meta() {
+    ok(this.ctx, require('../lib/cartoonMeta').meta());
+  }
+
   async addImport() {
     try {
       ok(this.ctx, await this.ctx.service.project.addImport(this.ctx.params.id, this.ctx.request.body || {}));

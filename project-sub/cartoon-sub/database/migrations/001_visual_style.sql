@@ -1,0 +1,2 @@
+ALTER TABLE cartoon_projects
+  ADD COLUMN IF NOT EXISTS visual_style VARCHAR(64) NOT NULL DEFAULT '';

@@ -1,0 +1,94 @@
+.cartoon-sub-root {
+  --cartoon-color-primary: #2f8a5b;
+  --cartoon-color-bg: #f3f8f4;
+  --cartoon-color-deep: #1f3d2c;
+  --cartoon-color-muted: #5c6b62;
+  height: 100%;
+  min-height: 0;
+  color: #2c4336;
+  background: var(--cartoon-color-bg);
+}
+
+.cartoon-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  box-sizing: border-box;
+  padding: 16px 20px 24px;
+}
+.cartoon-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.cartoon-page-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--cartoon-color-deep);
+}
+.cartoon-page-extra { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+.cartoon-module {
+  margin-bottom: 16px;
+  padding: 16px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(47, 138, 91, 0.2);
+}
+.cartoon-module__title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--cartoon-color-deep);
+}
+.cartoon-module__hint {
+  margin: 0 0 12px;
+  color: var(--cartoon-color-muted);
+  font-size: 13px;
+}
+
+.cartoon-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.cartoon-steps__item {
+  flex: 1 1 110px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(47, 138, 91, 0.18);
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--cartoon-color-muted);
+  cursor: pointer;
+}
+.cartoon-steps__item.is-active,
+.cartoon-steps__item.is-done {
+  color: var(--cartoon-color-deep);
+  border-color: rgba(47, 138, 91, 0.45);
+  background: rgba(255, 255, 255, 0.86);
+}
+.cartoon-steps__index {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  background: rgba(47, 138, 91, 0.12);
+}
+.cartoon-steps__label { font-size: 13px; font-weight: 600; }
+
+.cartoon-sub-root .el-button--primary {
+  --el-button-bg-color: #2f8a5b;
+  --el-button-border-color: #2f8a5b;
+}

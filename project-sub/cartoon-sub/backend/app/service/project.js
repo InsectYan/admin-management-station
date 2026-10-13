@@ -1,6 +1,7 @@
 'use strict';
 
 const Service = require('egg').Service;
+const { VISUAL_STYLES, SHOT_SIZES, CAMERA_MOVES, assertEnum } = require('../lib/cartoonMeta');
 
 function unwrap(json) {
   if (json && Object.prototype.hasOwnProperty.call(json, 'data')) return json.data;
@@ -59,9 +60,55 @@ class ProjectService extends Service {
     return this.ctx.model.Project.create({
       name: payload.name,
       source_novel_id: payload.source_novel_id || null,
+      visual_style: assertEnum(payload.visual_style, VISUAL_STYLES, '画面风格'),
       summary: payload.summary || '',
       status: 'draft',
     });
+  }
+
+  async update(id, payload) {
+    const project = await this.ctx.model.Project.findByPk(id);
+    if (!project) this.ctx.throw(404, '项目不存在');
+    const patch = {};
+    if (payload.name != null) patch.name = String(payload.name).trim();
+    if (payload.summary != null) patch.summary = payload.summary;
+    if (payload.source_novel_id !== undefined) patch.source_novel_id = payload.source_novel_id || null;
+    if (payload.visual_style !== undefined) {
+      patch.visual_style = assertEnum(payload.visual_style, VISUAL_STYLES, '画面风格');
+    }
+    await project.update(patch);
+    return project;
+  }
+
+  async listNovels() {
+    const data = await this.fetchNovel('/api/novels?page=1&pageSize=100');
+    const list = Array.isArray(data) ? data : (data?.list || []);
+    return list.map(item => ({
+      id: item.id,
+      title: item.title || `小说 #${item.id}`,
+    }));
+  }
+
+  async listChapters(novelId) {
+    const data = await this.fetchNovel(`/api/novels/${encodeURIComponent(novelId)}/chapters`);
+    const list = Array.isArray(data) ? data : (data?.list || []);
+    return list.map(item => ({
+      id: item.chapter_id || item.id,
+      title: item.title || '未命名章节',
+      order: item.order,
+    }));
+  }
+
+  async fetchNovel(urlPath) {
+    const base = this.config.novel.baseUrl.replace(/\/$/, '');
+    let res;
+    try {
+      res = await fetch(`${base}${urlPath}`, { signal: AbortSignal.timeout(15000) });
+    } catch (err) {
+      this.ctx.throw(502, `无法连接小说平台：${err.message}`);
+    }
+    if (!res.ok) this.ctx.throw(502, `小说接口返回 ${res.status}`);
+    return unwrap(await res.json());
   }
 
   async addImport(projectId, payload) {
@@ -78,19 +125,12 @@ class ProjectService extends Service {
 
   async pullNovel(projectId, payload) {
     await this.show(projectId);
-    const base = this.config.novel.baseUrl.replace(/\/$/, '');
     let novel;
     let chapter;
     try {
-      const novelRes = await fetch(`${base}/api/novels/${payload.novel_id}`, { signal: AbortSignal.timeout(15000) });
-      if (!novelRes.ok) this.ctx.throw(502, `小说接口返回 ${novelRes.status}`);
-      novel = unwrap(await novelRes.json());
+      novel = await this.fetchNovel(`/api/novels/${payload.novel_id}`);
       if (payload.chapter_id) {
-        const chapterRes = await fetch(`${base}/api/novels/${payload.novel_id}/chapters/${payload.chapter_id}`, {
-          signal: AbortSignal.timeout(15000),
-        });
-        if (!chapterRes.ok) this.ctx.throw(502, `章节接口返回 ${chapterRes.status}`);
-        chapter = unwrap(await chapterRes.json());
+        chapter = await this.fetchNovel(`/api/novels/${payload.novel_id}/chapters/${payload.chapter_id}`);
       }
     } catch (err) {
       if (err.status) throw err;
@@ -120,8 +160,8 @@ class ProjectService extends Service {
     const shot = await this.ctx.model.Shot.create({
       project_id: Number(projectId),
       sort_order: Number.isFinite(max) ? max + 1 : 0,
-      shot_size: payload.shot_size || '中景',
-      camera_move: payload.camera_move || '固定',
+      shot_size: assertEnum(payload.shot_size || '中景', SHOT_SIZES, '景别') || '中景',
+      camera_move: assertEnum(payload.camera_move || '固定', CAMERA_MOVES, '运镜') || '固定',
       description: payload.description || '',
     });
     if (payload.positive_zh || payload.negative_zh) {

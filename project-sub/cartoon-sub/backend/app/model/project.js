@@ -6,6 +6,7 @@ module.exports = app => {
     id: { type: INTEGER, primaryKey: true, autoIncrement: true },
     name: { type: STRING(200), allowNull: false },
     source_novel_id: { type: STRING(64), allowNull: true },
+    visual_style: { type: STRING(64), allowNull: false, defaultValue: '' },
     summary: { type: TEXT, allowNull: true },
     status: { type: STRING(32), allowNull: false, defaultValue: 'draft' },
   }, { tableName: 'cartoon_projects' });
