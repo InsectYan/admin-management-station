@@ -14,11 +14,13 @@
 | 小说子应用 | [`project-sub/novel-sub/`](project-sub/novel-sub/) | `ams-novel` | 前端 + BFF · `:5201` · PG `:5301` |
 | AI 测试平台 | [`project-sub/testgen-sub/`](project-sub/testgen-sub/) | `ams-testgen` | 前端 + BFF · `:5202` · PG `:5302` |
 | 运维子应用 | [`project-sub/ops-sub/`](project-sub/ops-sub/) | `ams-ops` | 前端 + BFF · `:5203` · PG `:5303` |
+| 预检子应用 | [`project-sub/precheck-sub/`](project-sub/precheck-sub/) | `ams-precheck` | 前端 + BFF · `:5204` · PG `:5304` |
+| 漫剧子应用 | [`project-sub/cartoon-sub/`](project-sub/cartoon-sub/) | `ams-cartoon` | 前端 + BFF · `:5205` · PG `:5305` |
 
 每个应用 `deploy/docker-compose.yml` **自带 Postgres**；缓存默认 **memory**（见 `cache-local.mdc`），不共享根级 infra。
 
 > **Agent 平台**：智能体能力由独立仓库 [`agent-management-master`](../agent-management-master) 提供，**不**内嵌于本仓库各应用。  
-> **新 Skill 默认**在 [`agent-management-sub`](../agent-management-sub/plugins/) 开发，规范见 [`.cursor/rules/agent-skill-development.mdc`](.cursor/rules/agent-skill-development.mdc)。
+> **新 Skill、新 Scheme 直接写在该仓库**（`plugins/`、`app/lib/schemes/`）。规范见 [`.cursor/rules/agent-skill-development.mdc`](.cursor/rules/agent-skill-development.mdc)。
 
 ## 快速启动
 

@@ -1,0 +1,17 @@
+{
+  "name": "ams-cartoon-cli",
+  "version": "1.0.0",
+  "private": true,
+  "description": "漫剧子应用本地 Docker CLI（npm link 后使用 ams-cartoon <命令>）",
+  "type": "module",
+  "bin": {
+    "ams-cartoon": "./bin/ams-cartoon.mjs"
+  },
+  "scripts": {
+    "link": "npm link",
+    "local": "node scripts/run.mjs local",
+    "local:infra": "node scripts/run.mjs local:infra",
+    "local:reset": "node scripts/run.mjs local:reset",
+    "local:down": "node scripts/run.mjs local:down"
+  }
+}

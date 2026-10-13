@@ -32,7 +32,7 @@ docker exec ams-testgen-postgres psql -U admin -d testgen_db -f - < ../database/
 - **backend/** — Egg.js BFF，代理调用 Agent 平台 `testgen-skill`
 - **database/** — PostgreSQL 初始化脚本
 
-Agent 能力由 `agent-management-sub/plugins/testgen-skill` 提供，不在本子应用内嵌。
+Agent 能力由 `agent-management-master/plugins/testgen-skill` 提供，不在本子应用内嵌。
 
 ## 开发规范（必读）
 
@@ -41,7 +41,7 @@ Agent 能力由 `agent-management-sub/plugins/testgen-skill` 提供，不在本�
 | 规则 | 说明 |
 |------|------|
 | [subapp-development.mdc](../../.cursor/rules/subapp-development.mdc) | **变更登记、DB 联动、docs 同步（主规范）** |
-| [agent-skill-development.mdc](../../.cursor/rules/agent-skill-development.mdc) | **新 Skill 默认落点 agent-management-sub** |
+| [agent-skill-development.mdc](../../.cursor/rules/agent-skill-development.mdc) | **新 Skill 直接写在 agent-management-master/plugins** |
 | [subapp-onboarding.mdc](../../.cursor/rules/subapp-onboarding.mdc) | Qiankun 接入 |
 | [database-schema-sync.mdc](../../.cursor/rules/database-schema-sync.mdc) | 启动 Schema 同步 |
 | [fitness-agent-test-automation-sync.mdc](../../.cursor/rules/fitness-agent-test-automation-sync.mdc) | **fitness-agent 单测 → test_item_detail 自动化同步** |

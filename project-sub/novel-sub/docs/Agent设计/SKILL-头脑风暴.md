@@ -1,6 +1,6 @@
 # SKILL：头脑风暴 `novel-brainstorm-skill`
 
-> 落点：`agent-management-sub/plugins/novel-brainstorm-skill/`（运行时挂 master）  
+> 落点：`agent-management-master/plugins/novel-brainstorm-skill/`  
 > `scheme`：`react`，`maxSteps ≤ 2`  
 > 复用：书名、立意、世界观钩子、**人物第一道**、大纲情节点、可选章名  
 > **禁止**：输出表单 id、枚举主键、完整 `setting_json`

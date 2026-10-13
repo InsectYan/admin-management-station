@@ -5,4 +5,4 @@ CREATE TABLE IF NOT EXISTS test_item_prd_goal_link (
 );
 CREATE INDEX IF NOT EXISTS idx_test_item_prd_goal_link_item ON test_item_prd_goal_link(item_id);
 
--- 数据导入（0 条 · 仅 .pi 重建后清空）
+-- 数据导入（0 条 · 三端重建清空）

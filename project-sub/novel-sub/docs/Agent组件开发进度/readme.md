@@ -18,7 +18,7 @@
 | 5 | （同批）`novel-brainstorm-skill` | 书名/立意第一道火花；registry 里 `pipeline: [brainstorm, writer]` |
 | 6 | **当时不做**：orchestrator、05～09 | 首批只打通「起个书名 → 对话修正 → 应用到 title」 |
 
-工作区 **没有** `agent-management-sub`。Skill 在 `agent-management-master/plugins/`。
+Skill 在 `agent-management-master/plugins/`。
 
 ```text
 创建页坞  --scene=basic.title-->  POST /api/ai/sessions/:id/turns/stream

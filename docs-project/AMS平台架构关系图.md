@@ -33,7 +33,7 @@ flowchart TB
     Browser["浏览器 /media/testgen/*"]:::main
     Browser --> Testgen
     Testgen -->|"agentProxy"| Agent["agent-management-master :4001"]:::agent
-    Agent --> Plugins["agent-management-sub/plugins/"]:::agent
+    Agent --> Plugins["plugins/ 本仓库内"]:::agent
 ```
 
 | 维度 | admin-management-station | testgen-sub |
@@ -258,21 +258,20 @@ flowchart LR
         TG["testgen-sub BFF :5202"]:::ams
     end
 
-    subgraph AgentStack["Agent 栈 独立仓库"]
-        Master["agent-management-master :4001"]:::agent
-        Sub["agent-management-sub/plugins/"]:::agent
+    subgraph AgentStack["agent-management-master"]
+        Master["API :4001<br/>Scheme / LLM"]:::agent
+        Plugins["plugins/{name}-skill"]:::agent
     end
 
     TG -->|"POST /api/skills/*/invoke"| Master
-    Master --> Sub
-    Sub -->|"GET/POST /api/internal/*"| TG
+    Master --> Plugins
+    Plugins -->|"GET/POST /api/internal/*"| TG
 ```
 
 | 仓库 | 职责 |
 |------|------|
 | `admin-management-station` | UI + BFF + 业务 DB + 执行引擎 |
-| `agent-management-master` | Skill 路由、LLM、Scheme 执行 |
-| `agent-management-sub` | Skill 插件源码（testgen-skill 等） |
+| `agent-management-master` | Skill 插件、Skill 路由、LLM、Scheme 执行 |
 
 ---
 
@@ -316,5 +315,5 @@ flowchart TD
 | 测试平台架构 | `project-sub/testgen-sub/docs/测试平台架构关系图.md` |
 | **测试平台评分与计划** | `project-sub/testgen-sub/docs/项目评分与后续计划.md` |
 | **测试平台文档索引** | `project-sub/testgen-sub/docs/README.md` |
-| Agent Skill 说明 | `../agent-management-sub/README.md` |
+| Agent Skill 说明 | `../agent-management-master/README.md` |
 | Agent 联调 | `project-sub/testgen-sub/docs/设计-Agent联调配置.md` |

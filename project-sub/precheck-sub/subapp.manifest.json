@@ -1,0 +1,13 @@
+{
+  "app_key": "precheck",
+  "microapp_name": "precheck-app",
+  "display_name": "预检",
+  "route_prefix": "precheck",
+  "entry_dev": "http://localhost:5104",
+  "entry_prod": "/subapps/precheck-app/",
+  "vite_port": 5104,
+  "api_port": 5204,
+  "menu_order": 4,
+  "icon": "icon-precheck",
+  "entry_env": "SUBAPP_PRECHECK_ENTRY"
+}

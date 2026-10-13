@@ -9,6 +9,8 @@
 | `novel-sub/` | `novel` | `ams-novel` | `subapp.manifest.json` |
 | `testgen-sub/` | `testgen` | `ams-testgen` | `subapp.manifest.json` |
 | `ops-sub/` | `ops` | `ams-ops` | `subapp.manifest.json` |
+| `precheck-sub/` | `precheck` | `ams-precheck` | `subapp.manifest.json` |
+| `cartoon-sub/` | `cartoon` | `ams-cartoon` | `subapp.manifest.json` |
 
 ## 新增子应用
 

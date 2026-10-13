@@ -1,15 +1,62 @@
 [
   {
-    "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
     "team": "QA 团队",
     "status": "active",
-    "description": "Fitness Agent 智能健身平台全量测试用例库，涵盖六站流水线、业务功能、Agent 质量等维度。",
-    "repo_urls": ["https://github.com/example/fitness-agent"],
-    "cicd_config": { "provider": "github-actions", "pipeline": "ci-test.yml" },
+    "description": "lejian-wx-miniapp：教练/会员/店长前端呈现、交互、流式卡片与权限门禁。",
+    "repo_urls": [
+      "lejian-wx-miniapp"
+    ],
+    "cicd_config": {
+      "provider": "manual",
+      "pipeline": ""
+    },
     "member_roles": [
-      { "user": "admin", "role": "owner" },
-      { "user": "qa-lead", "role": "editor" }
+      {
+        "user": "admin",
+        "role": "owner"
+      }
+    ]
+  },
+  {
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "team": "QA 团队",
+    "status": "active",
+    "description": "lejian-business-service：/miniapp/* 与 /agent/* 接口、状态机、鉴权与 Agent 读数。",
+    "repo_urls": [
+      "lejian-business-service"
+    ],
+    "cicd_config": {
+      "provider": "manual",
+      "pipeline": ""
+    },
+    "member_roles": [
+      {
+        "user": "admin",
+        "role": "owner"
+      }
+    ]
+  },
+  {
+    "project_code": "fitness-agent",
+    "project_name": "启炼 Agent · Pi",
+    "team": "QA 团队",
+    "status": "active",
+    "description": "fitness-agent/.pi：场景围栏、emit 契约、教练工作流、会员/店长边界与 HTTP。",
+    "repo_urls": [
+      "fitness-agent"
+    ],
+    "cicd_config": {
+      "provider": "manual",
+      "pipeline": "npm test"
+    },
+    "member_roles": [
+      {
+        "user": "admin",
+        "role": "owner"
+      }
     ]
   }
 ]

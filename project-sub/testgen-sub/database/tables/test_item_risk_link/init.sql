@@ -13,4 +13,4 @@ CREATE TABLE IF NOT EXISTS test_item_risk_link (
 CREATE INDEX IF NOT EXISTS idx_risk_link_risk ON test_item_risk_link(risk_item_id);
 CREATE INDEX IF NOT EXISTS idx_risk_link_main ON test_item_risk_link(main_item_id);
 
--- 数据导入（0 条 · 仅 .pi 重建后清空）
+-- 数据导入（0 条 · 三端重建清空）

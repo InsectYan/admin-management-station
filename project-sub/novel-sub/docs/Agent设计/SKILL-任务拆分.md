@@ -1,6 +1,6 @@
 # SKILL：任务拆分 `novel-orchestrator-skill`
 
-> 落点：`agent-management-sub/plugins/novel-orchestrator-skill/`  
+> 落点：`agent-management-master/plugins/novel-orchestrator-skill/`  
 > `scheme`：`loop`，`maxSteps=3`：`inspect` → `plan` → `review`  
 > 使用方：仅 [08-总任务拆分](./08-总任务拆分.md)  
 > **不写** 书名、人物、大纲正文；**不** invoke 其他 Skill

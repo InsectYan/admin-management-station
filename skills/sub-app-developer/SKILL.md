@@ -18,7 +18,7 @@ description: >-
 2. 复制已登记子应用目录为模板（当前参考：`testgen-sub/`）
 3. **必读** [`subapp-onboarding.mdc`](../../.cursor/rules/subapp-onboarding.mdc)
 4. **迭代开发必读** [`subapp-development.mdc`](../../.cursor/rules/subapp-development.mdc)（变更登记、DB 联动、docs 同步）
-5. **新 Skill 必读** [`agent-skill-development.mdc`](../../.cursor/rules/agent-skill-development.mdc)（默认 `agent-management-sub/plugins/`）
+5. **新 Skill 必读** [`agent-skill-development.mdc`](../../.cursor/rules/agent-skill-development.mdc)（直接写在 `agent-management-master/plugins/`）
 
 ## 工作流文档（按需加载）
 

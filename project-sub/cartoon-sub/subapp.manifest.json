@@ -1,0 +1,13 @@
+{
+  "app_key": "cartoon",
+  "microapp_name": "cartoon-app",
+  "display_name": "漫剧",
+  "route_prefix": "cartoon",
+  "entry_dev": "http://localhost:5105",
+  "entry_prod": "/subapps/cartoon-app/",
+  "vite_port": 5105,
+  "api_port": 5205,
+  "menu_order": 5,
+  "icon": "icon-cartoon",
+  "entry_env": "SUBAPP_CARTOON_ENTRY"
+}

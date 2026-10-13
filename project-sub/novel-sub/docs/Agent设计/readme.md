@@ -77,7 +77,7 @@
 | 角色 | 仓库 | 是什么 | 不是什么 |
 |------|------|--------|----------|
 | **平台主 Agent** | `agent-management-master` | 插件加载、scheme 执行、LLM 三级优先级、记忆、审计路由 | 小说业务编排器 |
-| **总任务拆分** `novel-orchestrator-skill` | `agent-management-sub/plugins/` | 把用户意图 + 当前 `setting_json` 拆成有序子任务 | 不生成书名/人物/大纲正文 |
+| **总任务拆分** `novel-orchestrator-skill` | `agent-management-master/plugins/` | 把用户意图 + 当前 `setting_json` 拆成有序子任务 | 不生成书名/人物/大纲正文 |
 | **领域生成** `novel-writer-skill` | 同上 | `fill_basic` / `fill_world` / `fill_characters` / `fill_outline` / `fill_chapters` / `rewrite_field` | 不决定「下一步该做哪步」 |
 | **BFF 网关** | `novel-sub/backend` | `agentProxy`、注入枚举 catalog、按 plan 串行调用、审计、可选落库 | 不含 LLM SDK / MCP / Loop |
 | **前端** | `novel-sub/frontend` | 4 个 AI 组件 + 现有表单 | 禁止直连 `:4001` |
@@ -292,7 +292,7 @@ fill_basic
 
 ## 4. Skill 设计
 
-默认源码：`agent-management-sub/plugins/`，运行时挂到 `agent-management-master`（`PLUGIN_DIR` 或 symlink）。当前工作区若尚无 `agent-management-sub`，Phase 0 先在 master `plugins/` 落地，再按规范迁到 sub 仓。
+Skill 直接写在 `agent-management-master/plugins/`，由该仓库启动时扫描加载。
 
 ### 4.1 `novel-orchestrator-skill`
 
@@ -535,7 +535,7 @@ Agent 侧 Skill 表（run 记录）放 Skill `db/init.sql`，由 master `dbManag
 | `docs/待办-Agent开发任务清单.md` | Phase 0 从本文 §7 勾选化 |
 | `docs/架构关系图.md` | 已补 Agent 节，实现后改端口/API |
 | `docs/变更记录.md` | 每个落地 PR |
-| `agent-management-sub/README.md` Skill 表 | Skill 合入时 |
+| `agent-management-master/README.md` Skill 表 | Skill 合入时 |
 
 ---
 

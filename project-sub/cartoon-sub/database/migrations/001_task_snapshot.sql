@@ -1,0 +1,5 @@
+ALTER TABLE cartoon_tasks ADD COLUMN IF NOT EXISTS kind VARCHAR(32) NOT NULL DEFAULT 'image';
+ALTER TABLE cartoon_tasks ADD COLUMN IF NOT EXISTS prompt_id VARCHAR(64);
+ALTER TABLE cartoon_tasks ADD COLUMN IF NOT EXISTS error_message TEXT;
+ALTER TABLE cartoon_tasks ADD COLUMN IF NOT EXISTS workflow_snapshot JSONB;
+ALTER TABLE cartoon_outputs ADD COLUMN IF NOT EXISTS media_kind VARCHAR(32) NOT NULL DEFAULT 'image';

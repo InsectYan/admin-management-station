@@ -21,7 +21,7 @@ alwaysApply: true
 - 前端：`vue-web.mdc`、`vue-element-plus.mdc`、**`nav-layout.mdc`**、**`subapp-layout.mdc`**、**`subapp-style-isolation.mdc`**、**`vite-hmr.mdc`**
 - 微前端：`subapp-onboarding.mdc`、`qiankun-microfrontend.mdc`
 - **迭代开发：`subapp-development.mdc`**（变更登记、DB CLI 联动、docs 架构图/评分同步）
-- **Agent / Skill：`agent-skill-development.mdc`**（默认落点 agent-management-sub 子 Agent）
+- **Agent / Skill：`agent-skill-development.mdc`**（新 Skill / 新 Scheme 直接写在 `agent-management-master`）
 - **小说平台：`novel-sub-development.mdc`**（正文/对话 Markdown 渲染）
 - **多模态模型：`media-model.mdc`**（图片/视频走 `media_profile`，禁止用文本 LLM）
 - 后端：`egg-backend.mdc`、`postgresql.mdc`、**`database-schema-sync.mdc`**（涉及 BFF / 数据库时）

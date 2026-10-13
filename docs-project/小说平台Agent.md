@@ -57,7 +57,7 @@
 
 | 项 | 约定 |
 |----|------|
-| 插件源码 | `agent-management-sub/plugins/`（默认；运行时挂到 master） |
+| 插件源码 | `agent-management-master/plugins/` |
 | 方案 | orchestrator → `loop`；writer → `react`（短步）或 `loop`（多角色/多卷） |
 | 调用 | `POST /api/skills/:name/invoke`，body 含 `action` |
 | 前端 | 只调 `novel-sub` `/api/ai/*` |

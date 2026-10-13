@@ -55,7 +55,7 @@ project-sub/
 
 两应用各自自带 Postgres，缓存默认 **memory**，**不共享**根级 infra。
 
-**Agent / 智能体**：不在本仓库实现。如需 Skill 插件与 Loop 等 Agent 方案，见 [`agent-management-master`](../../agent-management-master) 与 [`agent-management-sub`](../../agent-management-sub)。
+**Agent / 智能体**：不在本仓库实现。Skill 插件与 Loop 等 Agent 方案直接写在 [`agent-management-master`](../../agent-management-master)。
 
 ## 开发规范
 

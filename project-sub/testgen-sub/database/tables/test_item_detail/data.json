@@ -1,5 +1,2675 @@
 [
   {
+    "dimension_id": "Q",
+    "category_major_id": "T10",
+    "category_minor_id": "T10_UI",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-LOGIN-001] 登录页可完成身份选择并进入对应端",
+    "detail_summary": "登录页可完成身份选择并进入对应端",
+    "expected_observation": "选择教练/会员/店长后进入对应分包首页",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "打开登录页",
+      "完成授权/登录",
+      "选择身份",
+      "进入对应首页"
+    ],
+    "assertion_points": [
+      "身份选择生效",
+      "跳转分包正确"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "ALL",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "pages/login; pages/select-identity",
+    "tags": [
+      "FE",
+      "T10"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "登录",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-LOGIN-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "Q",
+    "category_major_id": "T10",
+    "category_minor_id": "T10_COPY",
+    "sub_class": "UI-TEXT",
+    "item_name": "[FE-LOGIN-002] 账号未开通/邀请错误页文案可读",
+    "detail_summary": "账号未开通/邀请错误页文案可读",
+    "expected_observation": "未开通与邀请错误页有明确提示与返回入口",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：未开通与邀请错误页有明确提示与返回入口"
+    ],
+    "assertion_points": [
+      "未开通与邀请错误页有明确提示与返回入口"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "ALL",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "pages/account-unopened; pages/invite-error",
+    "tags": [
+      "FE",
+      "T10"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "登录",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-LOGIN-002",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T2",
+    "category_minor_id": "T2_ROLE",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-NAV-001] 教练端主导航可切换工作台与会员相关入口",
+    "detail_summary": "教练端主导航可切换工作台与会员相关入口",
+    "expected_observation": "导航切换无白屏；当前态高亮正确",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：导航切换无白屏；当前态高亮正确"
+    ],
+    "assertion_points": [
+      "导航切换无白屏；当前态高亮正确"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "subpackages/coach/pages/home",
+    "tags": [
+      "FE",
+      "T2"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "导航",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-NAV-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T7",
+    "category_minor_id": "T7_STREAM",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-HOME-001] 教练工作台可发起 AI 对话 turn",
+    "detail_summary": "教练工作台可发起 AI 对话 turn",
+    "expected_observation": "输入发送后进入思考/流式；仅 chat-session 发起 turn",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：输入发送后进入思考/流式；仅 chat-session 发起 turn"
+    ],
+    "assertion_points": [
+      "输入发送后进入思考/流式；仅 chat-session 发起 turn"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-05-CHAIN",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-04-CHAIN-OK",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "components/chat/chat-session; subpackages/coach/pages/home/home.js",
+    "tags": [
+      "FE",
+      "T7",
+      "STREAM"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "聊天",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-HOME-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T7",
+    "category_minor_id": "T7_STREAM",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-HOME-002] 流式过程展示思考中态与最终气泡",
+    "detail_summary": "流式过程展示思考中态与最终气泡",
+    "expected_observation": "思考中可见；结束后合并为最终消息，不残留半截乱入",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：思考中可见；结束后合并为最终消息，不残留半截乱入"
+    ],
+    "assertion_points": [
+      "思考中可见；结束后合并为最终消息，不残留半截乱入"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "service/chat/agent-stream.js; utils/chat/message-model.js",
+    "tags": [
+      "FE",
+      "T7",
+      "STREAM"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "聊天",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-HOME-002",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "B",
+    "category_major_id": "T3",
+    "category_minor_id": "T3_FLOW",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-CARD-001] plan_form 卡片可填写并提交",
+    "detail_summary": "plan_form 卡片可填写并提交",
+    "expected_observation": "卡片按 message_type 渲染；提交触发 PLAN_FORM_SUBMIT 链路",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：卡片按 message_type 渲染；提交触发 PLAN_FORM_SUBMIT 链路"
+    ],
+    "assertion_points": [
+      "卡片按 message_type 渲染；提交触发 PLAN_FORM_SUBMIT 链路"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-05-CHAIN",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-04-CHAIN-OK",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "utils/chat/message-registry.js; utils/plan-form.js",
+    "tags": [
+      "FE",
+      "T3"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "卡片",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-CARD-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "B",
+    "category_major_id": "T3",
+    "category_minor_id": "T3_FLOW",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-CARD-002] require_form / session_plan 卡片可打开课时详情",
+    "detail_summary": "require_form / session_plan 卡片可打开课时详情",
+    "expected_observation": "点击查看打开 lesson-detail-sheet；草稿/生效态可区分",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：点击查看打开 lesson-detail-sheet；草稿/生效态可区分"
+    ],
+    "assertion_points": [
+      "点击查看打开 lesson-detail-sheet；草稿/生效态可区分"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "subpackages/coach/components/lesson-detail-sheet",
+    "tags": [
+      "FE",
+      "T3"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "卡片",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-CARD-002",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "B",
+    "category_major_id": "T3",
+    "category_minor_id": "T3_CONFIRM",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-CARD-003] 训练总结确认卡与五态一致",
+    "detail_summary": "训练总结确认卡与五态一致",
+    "expected_observation": "总结卡可确认；失败可手动输入/重生成；不因额外落库阻塞确认",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：总结卡可确认；失败可手动输入/重生成；不因额外落库阻塞确认"
+    ],
+    "assertion_points": [
+      "总结卡可确认；失败可手动输入/重生成；不因额外落库阻塞确认"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "subpackages/coach/pages/home/home.js; course-detail",
+    "tags": [
+      "FE",
+      "T3"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "总结",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-CARD-003",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "B",
+    "category_major_id": "T3",
+    "category_minor_id": "T3_FLOW",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-CARD-004] member_switch / disambiguation 卡片可选人",
+    "detail_summary": "member_switch / disambiguation 卡片可选人",
+    "expected_observation": "候选列表可选；确认后绑定当前会员上下文",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：候选列表可选；确认后绑定当前会员上下文"
+    ],
+    "assertion_points": [
+      "候选列表可选；确认后绑定当前会员上下文"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "utils/chat/message-registry.js",
+    "tags": [
+      "FE",
+      "T3"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "卡片",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-CARD-004",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "Q",
+    "category_major_id": "T10",
+    "category_minor_id": "T10_UI",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-MEM-001] 会员详情页 Tab 与目标总览可读",
+    "detail_summary": "会员详情页 Tab 与目标总览可读",
+    "expected_observation": "档案 Tab 可切换；目标总览优先读 training_plan.goal_overview",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：档案 Tab 可切换；目标总览优先读 training_plan.goal_overview"
+    ],
+    "assertion_points": [
+      "档案 Tab 可切换；目标总览优先读 training_plan.goal_overview"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "subpackages/coach/pages/member-detail",
+    "tags": [
+      "FE",
+      "T10"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "会员详情",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-MEM-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "Q",
+    "category_major_id": "T10",
+    "category_minor_id": "T10_UI",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-MEM-002] 会员绑定/邀请入口可用",
+    "detail_summary": "会员绑定/邀请入口可用",
+    "expected_observation": "bind / invite-member 可打开并完成邀请或选人",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：bind / invite-member 可打开并完成邀请或选人"
+    ],
+    "assertion_points": [
+      "bind / invite-member 可打开并完成邀请或选人"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "subpackages/coach/pages/bind; invite-member",
+    "tags": [
+      "FE",
+      "T10"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "会员操作",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-MEM-002",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "B",
+    "category_major_id": "T3",
+    "category_minor_id": "T3_FLOW",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-ASSESS-001] 五项评估录入页可进入并保存",
+    "detail_summary": "五项评估录入页可进入并保存",
+    "expected_observation": "体成分/体态/围度/关节/体能页可录入并提交",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：体成分/体态/围度/关节/体能页可录入并提交"
+    ],
+    "assertion_points": [
+      "体成分/体态/围度/关节/体能页可录入并提交"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "subpackages/coach/pages/body-composition 等",
+    "tags": [
+      "FE",
+      "T3"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "评估",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-ASSESS-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "Q",
+    "category_major_id": "T10",
+    "category_minor_id": "T10_UI",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-ASSESS-002] 健康问卷页可填写提交",
+    "detail_summary": "健康问卷页可填写提交",
+    "expected_observation": "问卷可答并提交；结果可回会员档案",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：问卷可答并提交；结果可回会员档案"
+    ],
+    "assertion_points": [
+      "问卷可答并提交；结果可回会员档案"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "subpackages/coach/pages/health-questionnaire",
+    "tags": [
+      "FE",
+      "T10"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "评估",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-ASSESS-002",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "B",
+    "category_major_id": "T3",
+    "category_minor_id": "T3_STATE",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-COURSE-001] 课时详情页五态展示与编辑",
+    "detail_summary": "课时详情页五态展示与编辑",
+    "expected_observation": "draft/active/completed 等状态文案与可编辑区符合五态",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：draft/active/completed 等状态文案与可编辑区符合五态"
+    ],
+    "assertion_points": [
+      "draft/active/completed 等状态文案与可编辑区符合五态"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "subpackages/coach/pages/course-detail",
+    "tags": [
+      "FE",
+      "T3"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "课时",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-COURSE-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "Q",
+    "category_major_id": "T10",
+    "category_minor_id": "T10_COPY",
+    "sub_class": "UI-TEXT",
+    "item_name": "[FE-ERR-001] 超时/504 用户文案可读",
+    "detail_summary": "超时/504 用户文案可读",
+    "expected_observation": "error-message 给出人话提示，非裸技术栈信息",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：error-message 给出人话提示，非裸技术栈信息"
+    ],
+    "assertion_points": [
+      "error-message 给出人话提示，非裸技术栈信息"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "ALL",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": true,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "utils/chat/error-message.js",
+    "tags": [
+      "FE",
+      "T10"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "异常",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-ERR-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T2",
+    "category_minor_id": "T2_CAPABILITY",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-PERM-001] 会员端不可见教练写库类入口",
+    "detail_summary": "会员端不可见教练写库类入口",
+    "expected_observation": "会员首页无生成计划/写课时主 CTA；仅咨询与自助页",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：会员首页无生成计划/写课时主 CTA；仅咨询与自助页"
+    ],
+    "assertion_points": [
+      "会员首页无生成计划/写课时主 CTA；仅咨询与自助页"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "MEMBER",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-02-BND",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-03-ZERO",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": true,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "subpackages/member/pages/home",
+    "tags": [
+      "FE",
+      "T2"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "权限",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-PERM-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T7",
+    "category_minor_id": "T7_STREAM",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-MBR-HOME-001] 会员 AI 咨询可 turn",
+    "detail_summary": "会员 AI 咨询可 turn",
+    "expected_observation": "member_consult 场景可对话；卡片仅为 text 友好呈现",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：member_consult 场景可对话；卡片仅为 text 友好呈现"
+    ],
+    "assertion_points": [
+      "member_consult 场景可对话；卡片仅为 text 友好呈现"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "MEMBER",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "subpackages/member/pages/home",
+    "tags": [
+      "FE",
+      "T7"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "会员",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-MBR-HOME-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "Q",
+    "category_major_id": "T10",
+    "category_minor_id": "T10_UI",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-MBR-PLAN-001] 会员运动记录/计划详情可读目标总览",
+    "detail_summary": "会员运动记录/计划详情可读目标总览",
+    "expected_observation": "sport-record / plan-detail 展示 goal_overview 或空态",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：sport-record / plan-detail 展示 goal_overview 或空态"
+    ],
+    "assertion_points": [
+      "sport-record / plan-detail 展示 goal_overview 或空态"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "MEMBER",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "subpackages/member/pages/sport-record; plan-detail",
+    "tags": [
+      "FE",
+      "T10"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "会员",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-MBR-PLAN-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T2",
+    "category_minor_id": "T2_CAPABILITY",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-ADM-001] 店长看板可发起运营咨询",
+    "detail_summary": "店长看板可发起运营咨询",
+    "expected_observation": "dashboard scene=manager_ops 可对话；无教练写计划卡片",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：dashboard scene=manager_ops 可对话；无教练写计划卡片"
+    ],
+    "assertion_points": [
+      "dashboard scene=manager_ops 可对话；无教练写计划卡片"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "MANAGER",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "subpackages/admin/pages/dashboard",
+    "tags": [
+      "FE",
+      "T2"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "店长",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-ADM-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "Q",
+    "category_major_id": "T10",
+    "category_minor_id": "T10_UI",
+    "sub_class": "UI-INTERACT",
+    "item_name": "[FE-SET-001] 教练人设/设置页可编辑",
+    "detail_summary": "教练人设/设置页可编辑",
+    "expected_observation": "career / settings 可打开保存",
+    "test_input_example": null,
+    "preconditions": [
+      "环境可访问",
+      "已登录对应角色"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：career / settings 可打开保存"
+    ],
+    "assertion_points": [
+      "career / settings 可打开保存"
+    ],
+    "priority_id": "P2",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": null,
+    "http_method": null,
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "subpackages/coach/pages/career; settings",
+    "tags": [
+      "FE",
+      "T10"
+    ],
+    "notes": "真源：lejian-wx-miniapp + 前端UI；分类规则见 fitness-agent-test-docs T1–T12 / T10",
+    "source_doc": "三端用例目录.md",
+    "source_section": "设置",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-wx-miniapp",
+    "project_name": "启炼前端 · 微信小程序",
+    "item_id": "FE-SET-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "B",
+    "category_major_id": "T5",
+    "category_minor_id": "T5_TOOL",
+    "sub_class": "BE-SMOKE",
+    "item_name": "[BE-AGENT-SHELL-001] POST /agent/shell/data 可读数",
+    "detail_summary": "POST /agent/shell/data 可读数",
+    "expected_observation": "合法 Internal Key + op 返回 ok 数据；非法 Key 拒绝",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：合法 Internal Key + op 返回 ok 数据；非法 Key 拒绝"
+    ],
+    "assertion_points": [
+      "合法 Internal Key + op 返回 ok 数据；非法 Key 拒绝"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/agent/shell/data",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "router/agent/shell/index.js",
+    "tags": [
+      "BE",
+      "T5"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "Agent",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-AGENT-SHELL-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T1",
+    "category_minor_id": "T1_SCHEMA",
+    "sub_class": "BE-VALID",
+    "item_name": "[BE-AGENT-SHELL-002] shellData health_survey_goals 列与回退",
+    "detail_summary": "shellData health_survey_goals 列与回退",
+    "expected_observation": "问卷目标可读；无 answer_js 时可回退 relate_data_id/survey_id 语义不假空",
+    "test_input_example": "op=health_survey_goals",
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：问卷目标可读；无 answer_js 时可回退 relate_data_id/survey_id 语义不假空"
+    ],
+    "assertion_points": [
+      "问卷目标可读；无 answer_js 时可回退 relate_data_id/survey_id 语义不假空"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/agent/shell/data",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": true,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "service/agent/shellData.js",
+    "tags": [
+      "BE",
+      "T1"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "Agent",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-AGENT-SHELL-002",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "B",
+    "category_major_id": "T3",
+    "category_minor_id": "T3_STATE",
+    "sub_class": "BE-STATE",
+    "item_name": "[BE-AGENT-SHELL-003] active_macro_plan_snapshot 五态约束",
+    "detail_summary": "active_macro_plan_snapshot 五态约束",
+    "expected_observation": "同一 coach+member Active 至多 1；快照字段完整",
+    "test_input_example": "op=active_macro_plan_snapshot",
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：同一 coach+member Active 至多 1；快照字段完整"
+    ],
+    "assertion_points": [
+      "同一 coach+member Active 至多 1；快照字段完整"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/agent/shell/data",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-02-BND",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-02-CONTRACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "service/agent/shellData.js",
+    "tags": [
+      "BE",
+      "T3"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "Agent",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-AGENT-SHELL-003",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T7",
+    "category_minor_id": "T7_HTTP",
+    "sub_class": "BE-SMOKE",
+    "item_name": "[BE-AGENT-VIP-001] POST /agent/user_vip/select 查找会员",
+    "detail_summary": "POST /agent/user_vip/select 查找会员",
+    "expected_observation": "按昵称/条件返回会员列表或空；不走 /miniapp 加密",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：按昵称/条件返回会员列表或空；不走 /miniapp 加密"
+    ],
+    "assertion_points": [
+      "按昵称/条件返回会员列表或空；不走 /miniapp 加密"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/agent/user_vip/select",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "router/agent/user_vip",
+    "tags": [
+      "BE",
+      "T7"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "Agent",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-AGENT-VIP-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T2",
+    "category_minor_id": "T2_ROLE",
+    "sub_class": "BE-STATE",
+    "item_name": "[BE-AGENT-VIP-002] POST /agent/user_vip/updateRemark 写 ai_remark",
+    "detail_summary": "POST /agent/user_vip/updateRemark 写 ai_remark",
+    "expected_observation": "合法更新 remark；越权拒绝",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：合法更新 remark；越权拒绝"
+    ],
+    "assertion_points": [
+      "合法更新 remark；越权拒绝"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/agent/user_vip/updateRemark",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": true,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "router/agent/user_vip",
+    "tags": [
+      "BE",
+      "T2"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "Agent",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-AGENT-VIP-002",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T7",
+    "category_minor_id": "T7_HTTP",
+    "sub_class": "BE-SMOKE",
+    "item_name": "[BE-AGENT-INV-001] POST /agent/invitation/listByMember",
+    "detail_summary": "POST /agent/invitation/listByMember",
+    "expected_observation": "返回会员在服/授权教练列表",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：返回会员在服/授权教练列表"
+    ],
+    "assertion_points": [
+      "返回会员在服/授权教练列表"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/agent/invitation/listByMember",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "router/agent/invitation",
+    "tags": [
+      "BE",
+      "T7"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "Agent",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-AGENT-INV-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T1",
+    "category_minor_id": "T1_SCHEMA",
+    "sub_class": "BE-SMOKE",
+    "item_name": "[BE-AGENT-EXT-001] structured_extract analyze/persist",
+    "detail_summary": "structured_extract analyze/persist",
+    "expected_observation": "analyze 返回结构；persist 落库成功或明确失败",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：analyze 返回结构；persist 落库成功或明确失败"
+    ],
+    "assertion_points": [
+      "analyze 返回结构；persist 落库成功或明确失败"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/agent/structured_extract/analyze",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "router/agent/structured_extract",
+    "tags": [
+      "BE",
+      "T1"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "Agent",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-AGENT-EXT-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "B",
+    "category_major_id": "T3",
+    "category_minor_id": "T3_FLOW",
+    "sub_class": "BE-SMOKE",
+    "item_name": "[BE-AGENT-TC-001] /agent/training_content 可写课时（若启用）",
+    "detail_summary": "/agent/training_content 可写课时（若启用）",
+    "expected_observation": "合法请求可写或明确未启用；不污染 miniapp 加密路径",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：合法请求可写或明确未启用；不污染 miniapp 加密路径"
+    ],
+    "assertion_points": [
+      "合法请求可写或明确未启用；不污染 miniapp 加密路径"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/agent/training_content",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "router/agent/training_content",
+    "tags": [
+      "BE",
+      "T3"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "Agent",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-AGENT-TC-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T7",
+    "category_minor_id": "T7_STREAM",
+    "sub_class": "BE-SMOKE",
+    "item_name": "[BE-CONV-001] miniapp conversation turn 代理到 Agent",
+    "detail_summary": "miniapp conversation turn 代理到 Agent",
+    "expected_observation": "合法会话可发起 turn/stream；超时配置生效",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：合法会话可发起 turn/stream；超时配置生效"
+    ],
+    "assertion_points": [
+      "合法会话可发起 turn/stream；超时配置生效"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/miniapp/conversation",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-05-CHAIN",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-04-CHAIN-OK",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "router/miniapp/conversation; service/agent",
+    "tags": [
+      "BE",
+      "T7"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "对话",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-CONV-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T2",
+    "category_minor_id": "T2_ROLE",
+    "sub_class": "BE-AUTH",
+    "item_name": "[BE-CONV-002] 未登录 conversation 拒绝",
+    "detail_summary": "未登录 conversation 拒绝",
+    "expected_observation": "无 token 返回鉴权失败",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：无 token 返回鉴权失败"
+    ],
+    "assertion_points": [
+      "无 token 返回鉴权失败"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/miniapp/conversation",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-07-NEG",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-09-BLOCK-H",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": true,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "router/miniapp/conversation",
+    "tags": [
+      "BE",
+      "T2"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "对话",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-CONV-002",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "B",
+    "category_major_id": "T3",
+    "category_minor_id": "T3_STATE",
+    "sub_class": "BE-STATE",
+    "item_name": "[BE-PLAN-001] training_plan 确认后才写 Active",
+    "detail_summary": "training_plan 确认后才写 Active",
+    "expected_observation": "草稿确认流程正确；禁止并行多 Active",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：草稿确认流程正确；禁止并行多 Active"
+    ],
+    "assertion_points": [
+      "草稿确认流程正确；禁止并行多 Active"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/miniapp/training_plan",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-05-CHAIN",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-04-CHAIN-OK",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": true,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "router/miniapp/training_plan",
+    "tags": [
+      "BE",
+      "T3"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "计划",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-PLAN-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T1",
+    "category_minor_id": "T1_SCHEMA",
+    "sub_class": "BE-VALID",
+    "item_name": "[BE-PLAN-002] plan_forms 入参校验",
+    "detail_summary": "plan_forms 入参校验",
+    "expected_observation": "缺必填拒绝；合法可存确认表",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：缺必填拒绝；合法可存确认表"
+    ],
+    "assertion_points": [
+      "缺必填拒绝；合法可存确认表"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/miniapp/plan_forms",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-02-BND",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "router/miniapp/plan_forms",
+    "tags": [
+      "BE",
+      "T1"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "计划",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-PLAN-002",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "B",
+    "category_major_id": "T3",
+    "category_minor_id": "T3_STATE",
+    "sub_class": "BE-STATE",
+    "item_name": "[BE-TC-001] training_content 课时状态迁移",
+    "detail_summary": "training_content 课时状态迁移",
+    "expected_observation": "draft→active→completed 合法；非法跳转拒绝",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：draft→active→completed 合法；非法跳转拒绝"
+    ],
+    "assertion_points": [
+      "draft→active→completed 合法；非法跳转拒绝"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/miniapp/training_content",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-05-CHAIN",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-04-CHAIN-OK",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "router/miniapp/training_content",
+    "tags": [
+      "BE",
+      "T3"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "课时",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-TC-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "R",
+    "category_major_id": "T8",
+    "category_minor_id": "T8_IDEM",
+    "sub_class": "BE-IDEM",
+    "item_name": "[BE-TC-002] 课时确认幂等",
+    "detail_summary": "课时确认幂等",
+    "expected_observation": "重复确认不产生重复 Active 记录",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：重复确认不产生重复 Active 记录"
+    ],
+    "assertion_points": [
+      "重复确认不产生重复 Active 记录"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/miniapp/training_content",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-03-REP",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "router/miniapp/training_content",
+    "tags": [
+      "BE",
+      "T8"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "课时",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-TC-002",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T7",
+    "category_minor_id": "T7_HTTP",
+    "sub_class": "BE-SMOKE",
+    "item_name": "[BE-VIP-001] miniapp vipuser 列表/详情",
+    "detail_summary": "miniapp vipuser 列表/详情",
+    "expected_observation": "加密通道下教练可读名下会员",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：加密通道下教练可读名下会员"
+    ],
+    "assertion_points": [
+      "加密通道下教练可读名下会员"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/miniapp/vipuser",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "router/miniapp/user_vip",
+    "tags": [
+      "BE",
+      "T7"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "会员",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-VIP-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T2",
+    "category_minor_id": "T2_ROLE",
+    "sub_class": "BE-AUTH",
+    "item_name": "[BE-INV-001] invite 授权关系",
+    "detail_summary": "invite 授权关系",
+    "expected_observation": "邀请/授权链路正确；越权不可绑他人",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：邀请/授权链路正确；越权不可绑他人"
+    ],
+    "assertion_points": [
+      "邀请/授权链路正确；越权不可绑他人"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/miniapp/invite",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-07-NEG",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-09-BLOCK-H",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": true,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "router/miniapp/user_invitation_relation",
+    "tags": [
+      "BE",
+      "T2"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "邀请",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-INV-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "B",
+    "category_major_id": "T3",
+    "category_minor_id": "T3_FLOW",
+    "sub_class": "BE-SMOKE",
+    "item_name": "[BE-ASSESS-001] 评估五项写入与查询",
+    "detail_summary": "评估五项写入与查询",
+    "expected_observation": "体成分/体态/围度/关节/体能可存可读",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：体成分/体态/围度/关节/体能可存可读"
+    ],
+    "assertion_points": [
+      "体成分/体态/围度/关节/体能可存可读"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/miniapp/body_composition",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "router/miniapp/data_*",
+    "tags": [
+      "BE",
+      "T3"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "评估",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-ASSESS-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T1",
+    "category_minor_id": "T1_SCHEMA",
+    "sub_class": "BE-SMOKE",
+    "item_name": "[BE-SURVEY-001] 问卷答题记录",
+    "detail_summary": "问卷答题记录",
+    "expected_observation": "survey_answer_record 可写；Agent shell 可读目标",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：survey_answer_record 可写；Agent shell 可读目标"
+    ],
+    "assertion_points": [
+      "survey_answer_record 可写；Agent shell 可读目标"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/miniapp/survey_*",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "router/miniapp/survey_answer_record",
+    "tags": [
+      "BE",
+      "T1"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "问卷",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-SURVEY-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T7",
+    "category_minor_id": "T7_HTTP",
+    "sub_class": "BE-SMOKE",
+    "item_name": "[BE-GROUP-001] conversationGroup 会话组",
+    "detail_summary": "conversationGroup 会话组",
+    "expected_observation": "可创建/列表会话组；与 turn 关联正确",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：可创建/列表会话组；与 turn 关联正确"
+    ],
+    "assertion_points": [
+      "可创建/列表会话组；与 turn 关联正确"
+    ],
+    "priority_id": "P1",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/miniapp/conversationGroup",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "router/miniapp/conversation_group",
+    "tags": [
+      "BE",
+      "T7"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "对话",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-GROUP-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T7",
+    "category_minor_id": "T7_HTTP",
+    "sub_class": "BE-SMOKE",
+    "item_name": "[BE-PUBLIC-001] 公共上传/ASR 通畅",
+    "detail_summary": "公共上传/ASR 通畅",
+    "expected_observation": "/public 上传或 ASR 探针可通",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：/public 上传或 ASR 探针可通"
+    ],
+    "assertion_points": [
+      "/public 上传或 ASR 探针可通"
+    ],
+    "priority_id": "P2",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/public/uploadFile",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": false,
+    "is_observability_audit": false,
+    "is_p0_blocker": false,
+    "failure_symptom": null,
+    "code_reference": "router/common; router/public",
+    "tags": [
+      "BE",
+      "T7"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "公共",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-PUBLIC-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
+    "dimension_id": "S",
+    "category_major_id": "T2",
+    "category_minor_id": "T2_CAPABILITY",
+    "sub_class": "BE-AUTH",
+    "item_name": "[BE-BOUND-001] Agent 模块接口不依赖 miniapp 加密",
+    "detail_summary": "Agent 模块接口不依赖 miniapp 加密",
+    "expected_observation": "/agent/* 明文 JSON + Internal Key；与 /miniapp 隔离",
+    "test_input_example": null,
+    "preconditions": [
+      "业务服务可访问",
+      "持有合法 token / Internal Key"
+    ],
+    "test_steps": [
+      "按前置准备",
+      "执行操作",
+      "断言：/agent/* 明文 JSON + Internal Key；与 /miniapp 隔离"
+    ],
+    "assertion_points": [
+      "/agent/* 明文 JSON + Internal Key；与 /miniapp 隔离"
+    ],
+    "priority_id": "P0",
+    "prd_ref_id": null,
+    "prd_ref_ids": [],
+    "arch_ref_id": null,
+    "arch_ref_ids": [],
+    "prd_goal_ids": [],
+    "automation_status_id": "AUTO_TODO",
+    "automation_entry_id": "AUTO_TODO_SCRIPT",
+    "automation_command": null,
+    "config_env": null,
+    "config_env_id": null,
+    "station_id": "NONE",
+    "role_scope_id": "COACH",
+    "endpoint_path": "/agent/shell/data",
+    "http_method": "POST",
+    "http_status_expected": null,
+    "template_code": null,
+    "scheme_primary_id": "TS-01-DET",
+    "scheme_secondary_id": null,
+    "validation_primary_id": "VS-01-EXACT",
+    "validation_secondary_id": null,
+    "sample_execution_note": null,
+    "scheme_mapping_source": "三端用例目录.md",
+    "is_risk_flag": true,
+    "is_observability_audit": false,
+    "is_p0_blocker": true,
+    "failure_symptom": null,
+    "code_reference": "router/index.js",
+    "tags": [
+      "BE",
+      "T2",
+      "BOUNDARY"
+    ],
+    "notes": "真源：lejian-business-service/router；分类规则 T1–T12",
+    "source_doc": "三端用例目录.md",
+    "source_section": "边界",
+    "is_active": true,
+    "exec_env_id": "EXEC_BOTH",
+    "env_tier_id": "TIER_ANY",
+    "project_code": "lejian-business-service",
+    "project_name": "启炼服务端 · 业务 API",
+    "item_id": "BE-BOUND-001",
+    "exec_env_name": "双环境",
+    "env_tier_name": "随处等价"
+  },
+  {
     "dimension_id": "S",
     "category_major_id": "T2",
     "category_minor_id": "T2_ROLE",
@@ -49,6 +2719,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/support/sceneCode.ts",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -59,7 +2730,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SCENE-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -114,6 +2785,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/support/sceneCode.ts",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -124,7 +2796,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SCENE-002",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -179,6 +2851,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/support/sceneCode.ts",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -189,7 +2862,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SCENE-003",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -244,6 +2917,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/support/sceneCode.ts",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -254,7 +2928,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SCENE-004",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -309,6 +2983,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/support/sceneCode.ts",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -319,7 +2994,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SCENE-005",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -374,6 +3049,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/support/sceneCode.ts",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -384,7 +3060,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SCENE-006",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -439,6 +3115,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tests/scene-code.test.ts",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -449,7 +3126,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SCENE-007",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -504,6 +3181,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/support/sceneCode.ts",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -514,7 +3192,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SCENE-008",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -569,6 +3247,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/support/sceneCode.ts",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -579,7 +3258,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SCENE-009",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -634,6 +3313,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/.pi/skills/coach-profile/SKILL.md",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -644,7 +3324,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SCENE-010",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -699,6 +3379,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tests/emit-outbox.test.ts",
     "tags": [
+      "AG",
       "PI",
       "T1"
     ],
@@ -709,7 +3390,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-EMIT-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -764,6 +3445,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tests/core.test.ts",
     "tags": [
+      "AG",
       "PI",
       "T1"
     ],
@@ -774,7 +3456,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-EMIT-002",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -829,6 +3511,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tests/emit-outbox.test.ts",
     "tags": [
+      "AG",
       "PI",
       "T1"
     ],
@@ -839,7 +3522,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-EMIT-003",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -894,6 +3577,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tests/text-role-outbox-normalize.test.ts",
     "tags": [
+      "AG",
       "PI",
       "T1"
     ],
@@ -904,7 +3588,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-EMIT-004",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -959,6 +3643,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tests/text-role-outbox-normalize.test.ts",
     "tags": [
+      "AG",
       "PI",
       "T1"
     ],
@@ -969,7 +3654,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-EMIT-005",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -1024,6 +3709,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tests/coach-outbox-normalize.test.ts",
     "tags": [
+      "AG",
       "PI",
       "T1"
     ],
@@ -1034,7 +3720,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-EMIT-006",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -1089,6 +3775,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tests/outbox-draft-merge.test.ts",
     "tags": [
+      "AG",
       "PI",
       "T1"
     ],
@@ -1099,7 +3786,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-EMIT-007",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -1154,6 +3841,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/extensions",
     "tags": [
+      "AG",
       "PI",
       "T1"
     ],
@@ -1164,7 +3852,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-EMIT-008",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -1219,6 +3907,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tests/coach-turn-fallback.test.ts",
     "tags": [
+      "AG",
       "PI",
       "T1"
     ],
@@ -1229,7 +3918,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-EMIT-009",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -1284,6 +3973,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/AGENTS.md",
     "tags": [
+      "AG",
       "PI",
       "T1"
     ],
@@ -1294,7 +3984,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-EMIT-010",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -1349,6 +4039,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/AGENTS.md",
     "tags": [
+      "AG",
       "PI",
       "T1"
     ],
@@ -1359,7 +4050,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-EMIT-011",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -1414,6 +4105,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tests/core.test.ts",
     "tags": [
+      "AG",
       "PI",
       "T1"
     ],
@@ -1424,7 +4116,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-EMIT-012",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -1479,6 +4171,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/.pi/skills/generate-macro-plan/SKILL.md",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -1489,7 +4182,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MACRO-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -1544,6 +4237,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/AGENTS.md",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -1554,7 +4248,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MACRO-002",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -1609,6 +4303,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/.pi/skills/generate-macro-plan/SKILL.md",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -1619,7 +4314,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MACRO-003",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -1674,6 +4369,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -1684,7 +4380,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MACRO-004",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -1739,6 +4435,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -1749,7 +4446,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MACRO-005",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -1804,6 +4501,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -1814,7 +4512,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MACRO-006",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -1869,6 +4567,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/.pi/skills/macro-plan-lifecycle/SKILL.md",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -1879,7 +4578,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MACRO-007",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -1934,6 +4633,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -1944,7 +4644,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MACRO-008",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -1999,6 +4699,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -2009,7 +4710,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MACRO-009",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -2064,6 +4765,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -2074,7 +4776,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MACRO-010",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -2129,6 +4831,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -2139,7 +4842,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MACRO-011",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -2194,6 +4897,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/.pi/skills/generate-session-plan/SKILL.md",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -2204,7 +4908,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SESS-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -2259,6 +4963,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -2269,7 +4974,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SESS-002",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -2324,6 +5029,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -2334,7 +5040,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SESS-003",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -2389,6 +5095,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -2399,7 +5106,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SESS-004",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -2454,6 +5161,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -2464,7 +5172,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SESS-005",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -2519,6 +5227,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -2529,7 +5238,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SESS-006",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -2584,6 +5293,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -2594,7 +5304,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SESS-007",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -2649,6 +5359,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/.pi/skills/post-class-summary/SKILL.md",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -2659,7 +5370,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SUM-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -2714,6 +5425,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -2724,7 +5436,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SUM-002",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -2779,6 +5491,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -2789,7 +5502,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SUM-003",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -2844,6 +5557,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -2854,7 +5568,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SUM-004",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -2909,6 +5623,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/AGENTS.md",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -2919,7 +5634,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-DEL-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -2974,6 +5689,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -2984,7 +5700,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-DEL-002",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -3039,6 +5755,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/AGENTS.md",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -3049,7 +5766,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-FOLLOW-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -3104,6 +5821,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -3114,7 +5832,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-FOLLOW-002",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -3169,6 +5887,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -3179,7 +5898,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-ENTRY-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -3234,6 +5953,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -3244,7 +5964,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-ENTRY-002",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -3299,6 +6019,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -3309,7 +6030,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-ENTRY-003",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -3364,6 +6085,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/.pi/skills/training-safety-pain/SKILL.md",
     "tags": [
+      "AG",
       "PI",
       "T6"
     ],
@@ -3374,7 +6096,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SAFE-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -3429,6 +6151,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/.pi/skills/medical-boundary/SKILL.md",
     "tags": [
+      "AG",
       "PI",
       "T6"
     ],
@@ -3439,7 +6162,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SAFE-002",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -3494,6 +6217,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/.pi/skills/assessment-screening/SKILL.md",
     "tags": [
+      "AG",
       "PI",
       "T6"
     ],
@@ -3504,7 +6228,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SAFE-003",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -3559,6 +6283,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T6"
     ],
@@ -3569,7 +6294,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SAFE-004",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -3624,6 +6349,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/.pi/skills/record-archival/SKILL.md",
     "tags": [
+      "AG",
       "PI",
       "T3"
     ],
@@ -3634,7 +6360,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-ARCH-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -3689,6 +6415,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/member/AGENTS.md",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -3699,7 +6426,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MEMB-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -3754,6 +6481,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -3764,7 +6492,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MEMB-002",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -3819,6 +6547,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -3829,7 +6558,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MEMB-003",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -3884,6 +6613,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -3894,7 +6624,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MEMB-004",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -3949,6 +6679,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tests/text-role-outbox-normalize.test.ts",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -3959,7 +6690,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MEMB-005",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -4014,6 +6745,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -4024,7 +6756,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MEMB-006",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -4079,6 +6811,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/member/.pi/skills/medical-boundary/SKILL.md",
     "tags": [
+      "AG",
       "PI",
       "T6"
     ],
@@ -4089,7 +6822,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MEMB-007",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -4144,6 +6877,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tools/fitnessTools.ts",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -4154,7 +6888,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MEMB-008",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -4209,6 +6943,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/manager/.pi/skills/manager-ops/SKILL.md",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -4219,7 +6954,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MGR-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -4274,6 +7009,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -4284,7 +7020,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MGR-002",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -4339,6 +7075,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tests/text-role-outbox-normalize.test.ts",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -4349,7 +7086,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MGR-003",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -4404,6 +7141,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tools/fitnessTools.ts",
     "tags": [
+      "AG",
       "PI",
       "T2"
     ],
@@ -4414,7 +7152,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MGR-004",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -4469,6 +7207,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T6"
     ],
@@ -4479,7 +7218,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MGR-005",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -4534,6 +7273,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/.pi/skills/training-safety-pain/SKILL.md",
     "tags": [
+      "AG",
       "PI",
       "T4"
     ],
@@ -4544,7 +7284,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SKILL-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -4599,6 +7339,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T4"
     ],
@@ -4609,7 +7350,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SKILL-002",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -4664,6 +7405,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T4"
     ],
@@ -4674,7 +7416,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SKILL-003",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -4729,6 +7471,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T4"
     ],
@@ -4739,7 +7482,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SKILL-004",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -4794,6 +7537,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T4"
     ],
@@ -4804,7 +7548,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SKILL-005",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -4859,6 +7603,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/.pi/skills/wiki-knowledge/SKILL.md",
     "tags": [
+      "AG",
       "PI",
       "T4"
     ],
@@ -4869,7 +7614,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SKILL-006",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -4924,6 +7669,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T6"
     ],
@@ -4934,7 +7680,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SKILL-007",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -4989,6 +7735,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T6"
     ],
@@ -4999,7 +7746,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-SKILL-008",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -5054,6 +7801,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates/coach/.pi/skills/memory-persist/SKILL.md",
     "tags": [
+      "AG",
       "PI",
       "E3",
       "T5"
@@ -5065,7 +7813,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MEM-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -5120,6 +7868,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "E3",
       "T5"
@@ -5131,7 +7880,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MEM-002",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -5186,6 +7935,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tests/memory-limits-archive.test.ts",
     "tags": [
+      "AG",
       "PI",
       "E3",
       "T5"
@@ -5197,7 +7947,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-MEM-003",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -5252,6 +8002,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tools/fitnessTools.ts",
     "tags": [
+      "AG",
       "PI",
       "E2",
       "T5"
@@ -5263,7 +8014,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-TOOL-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -5318,6 +8069,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "E2",
       "T5"
@@ -5329,7 +8081,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-TOOL-002",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -5384,6 +8136,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tests/thinking-display.test.ts",
     "tags": [
+      "AG",
       "PI",
       "E5",
       "T6"
@@ -5395,7 +8148,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-THINK-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -5450,6 +8203,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tests/thinking-display.test.ts",
     "tags": [
+      "AG",
       "PI",
       "E5",
       "T6"
@@ -5461,7 +8215,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-THINK-002",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -5516,6 +8270,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "E5",
       "T6"
@@ -5527,7 +8282,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-THINK-003",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -5582,6 +8337,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/docs/integration.md",
     "tags": [
+      "AG",
       "PI",
       "T7"
     ],
@@ -5592,7 +8348,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-HTTP-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -5647,6 +8403,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T7"
     ],
@@ -5657,7 +8414,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-HTTP-002",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -5712,6 +8469,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T7"
     ],
@@ -5722,7 +8480,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-HTTP-003",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -5777,6 +8535,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T7"
     ],
@@ -5787,7 +8546,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-HTTP-004",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -5842,6 +8601,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/workspaces-templates",
     "tags": [
+      "AG",
       "PI",
       "T7"
     ],
@@ -5852,7 +8612,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-HTTP-005",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -5907,6 +8667,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/harness/tests/role-isolation-guard.test.ts",
     "tags": [
+      "AG",
       "PI",
       "T1"
     ],
@@ -5917,7 +8678,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-STATIC-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -5972,6 +8733,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/harness/tests/role-kernel-parity.test.ts",
     "tags": [
+      "AG",
       "PI",
       "T1"
     ],
@@ -5982,7 +8744,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-STATIC-002",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -6037,6 +8799,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/harness/tests/text-role-turn-pipeline-replay.test.ts",
     "tags": [
+      "AG",
       "PI",
       "T1"
     ],
@@ -6047,7 +8810,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-STATIC-003",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -6102,6 +8865,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/harness/tests/harness.test.ts",
     "tags": [
+      "AG",
       "PI",
       "T1"
     ],
@@ -6112,7 +8876,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-STATIC-004",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"
@@ -6167,6 +8931,7 @@
     "failure_symptom": null,
     "code_reference": ".pi/src/pi/tests/wiki-search.test.ts",
     "tags": [
+      "AG",
       "PI",
       "E2",
       "T5"
@@ -6178,7 +8943,7 @@
     "exec_env_id": "EXEC_BOTH",
     "env_tier_id": "TIER_ANY",
     "project_code": "fitness-agent",
-    "project_name": "Fitness Agent 测试项目",
+    "project_name": "启炼 Agent · Pi",
     "item_id": "PI-WIKI-001",
     "exec_env_name": "双环境",
     "env_tier_name": "随处等价"

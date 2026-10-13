@@ -1,6 +1,6 @@
 # SKILL：结构化生成 `novel-writer-skill`
 
-> 落点：`agent-management-sub/plugins/novel-writer-skill/`  
+> 落点：`agent-management-master/plugins/novel-writer-skill/`  
 > `scheme`：默认 `react`（短步）；`fill_characters` / `fill_outline` 过长可改 `loop`  
 > 职责：把用户话 + 头脑风暴 sparks + 表单快照收成 **可 merge 的 patch**
 

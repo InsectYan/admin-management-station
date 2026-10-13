@@ -1,0 +1,85 @@
+name: ams-cartoon
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    container_name: ams-cartoon-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      POSTGRES_DB: ${CARTOON_POSTGRES_DB:-cartoon_db}
+    ports:
+      - "${CARTOON_POSTGRES_PORT:-5305}:5432"
+    volumes:
+      - cartoon_pgdata:/var/lib/postgresql/data
+      - ../database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${CARTOON_POSTGRES_DB:-cartoon_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api-cartoon:
+    build:
+      context: ..
+      dockerfile: deploy/config/Dockerfile.backend
+    container_name: ams-api-cartoon
+    restart: unless-stopped
+    env_file:
+      - ./config/.env.local
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      PORT: ${CARTOON_PORT:-5205}
+      CARTOON_AUTH_OPTIONAL: "1"
+      PRECHECK_API_ORIGIN: ${PRECHECK_API_ORIGIN:-http://host.docker.internal:5204}
+      NOVEL_API_ORIGIN: ${NOVEL_API_ORIGIN:-http://host.docker.internal:5201}
+      # 出图仍打宿主机上的 ComfyUI，不把 ComfyUI 放进这个容器。
+      COMFYUI_BASE_URL: ${COMFYUI_BASE_URL:-http://host.docker.internal:8188}
+      CARTOON_T2I_WORKFLOW_ID: ${CARTOON_T2I_WORKFLOW_ID:-1}
+      CARTOON_VIDEO_WORKFLOW_ID: ${CARTOON_VIDEO_WORKFLOW_ID:-3}
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_LOCAL_JWT}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${CARTOON_PORT:-5205}:${CARTOON_PORT:-5205}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../backend/app:/app/app
+      - ../backend/config:/app/config
+      - ../database:/app/database:ro
+      - cartoon_outputs:/data/outputs
+
+  cartoon-frontend:
+    build:
+      context: ..
+      dockerfile: deploy/config/Dockerfile.frontend
+    container_name: ams-cartoon-frontend
+    restart: unless-stopped
+    ports:
+      - "${CARTOON_VITE_PORT:-5105}:5105"
+    env_file:
+      - ./config/.env.local
+    environment:
+      VITE_API_BASE: http://localhost:5205/api
+      VITE_CARTOON_API_ORIGIN: http://localhost:5205
+      VITE_DEV_PORT: 5105
+    volumes:
+      - ../frontend/src:/app/src
+      - ../frontend/index.html:/app/index.html
+      - ../frontend/vite.config.js:/app/vite.config.js
+      - ../frontend/package.json:/app/package.json
+      - ../frontend/package-lock.json:/app/package-lock.json
+    depends_on:
+      - api-cartoon
+
+networks:
+  default:
+    name: ams-cartoon-net
+
+volumes:
+  cartoon_pgdata:
+  cartoon_outputs:

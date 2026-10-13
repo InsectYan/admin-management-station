@@ -1,0 +1,7 @@
+**/node_modules/
+**/.ops-deploy-work/
+**/.ops-git-mirrors/
+**/dist/
+**/logs/
+**/*.log
+**/*.log.*

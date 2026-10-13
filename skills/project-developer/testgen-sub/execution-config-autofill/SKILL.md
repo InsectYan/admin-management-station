@@ -98,7 +98,7 @@ description: >-
 - [ ] 单职责：未往旧 Skill 塞编排/多功能 action  
 - [ ] Secret：Prompt/日志不轻易打 Token 全文（优先键存在性）  
 - [ ] 文档：本阶段要求回写的缺口/用法/联调是否已改  
-- [ ] 与 [agent-skill-development.mdc](../../../../.cursor/rules/agent-skill-development.mdc) 落点一致（新 Skill → `agent-management-sub/plugins/`）
+- [ ] 与 [agent-skill-development.mdc](../../../../.cursor/rules/agent-skill-development.mdc) 落点一致（新 Skill → `agent-management-master/plugins/`）
 
 ---
 
@@ -181,5 +181,5 @@ description: >-
 | 计划 | `testgen-sub/docs/计划-执行期配置AI自动补齐.md` |
 | 执行编排 | `testgen-sub/backend/app/service/execution/runOrchestrator.js` |
 | 全局上下文 | `testgen-sub/backend/app/lib/globalRequestContext.js` |
-| Agent 插件 | `agent-management-sub/plugins/` |
+| Agent 插件 | `agent-management-master/plugins/` |
 | 方案文档 | `agent-management-master/docs/schemes/` |

@@ -1,0 +1,80 @@
+name: ams-precheck
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    container_name: ams-precheck-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      POSTGRES_DB: ${PRECHECK_POSTGRES_DB:-precheck_db}
+    ports:
+      - "${PRECHECK_POSTGRES_PORT:-5304}:5432"
+    volumes:
+      - precheck_pgdata:/var/lib/postgresql/data
+      - ../database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${PRECHECK_POSTGRES_DB:-precheck_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api-precheck:
+    build:
+      context: ..
+      dockerfile: deploy/config/Dockerfile.backend
+    container_name: ams-api-precheck
+    restart: unless-stopped
+    env_file:
+      - ./config/.env.local
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      PORT: ${PRECHECK_PORT:-5204}
+      PRECHECK_AUTH_OPTIONAL: "1"
+      # ComfyUI 留在宿主机。容器里的 127.0.0.1 不是宿主机。
+      COMFYUI_BASE_URL: ${COMFYUI_BASE_URL:-http://host.docker.internal:8188}
+      COMFYUI_EXPECTED_VERSION: ${COMFYUI_EXPECTED_VERSION:-0.39.0}
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_LOCAL_JWT}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${PRECHECK_PORT:-5204}:${PRECHECK_PORT:-5204}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ../backend/app:/app/app
+      - ../backend/config:/app/config
+      - ../database:/app/database:ro
+
+  precheck-frontend:
+    build:
+      context: ..
+      dockerfile: deploy/config/Dockerfile.frontend
+    container_name: ams-precheck-frontend
+    restart: unless-stopped
+    ports:
+      - "${PRECHECK_VITE_PORT:-5104}:5104"
+    env_file:
+      - ./config/.env.local
+    environment:
+      VITE_API_BASE: http://localhost:5204/api
+      VITE_PRECHECK_API_ORIGIN: http://localhost:5204
+      VITE_DEV_PORT: 5104
+    volumes:
+      - ../frontend/src:/app/src
+      - ../frontend/index.html:/app/index.html
+      - ../frontend/vite.config.js:/app/vite.config.js
+      - ../frontend/package.json:/app/package.json
+      - ../frontend/package-lock.json:/app/package-lock.json
+    depends_on:
+      - api-precheck
+
+networks:
+  default:
+    name: ams-precheck-net
+
+volumes:
+  precheck_pgdata:

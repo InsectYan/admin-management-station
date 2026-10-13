@@ -78,7 +78,7 @@ database → backend API → frontend views → Agent 联调（testgen-skill）
 
 ### 4. Agent 协作
 
-- Skill 位于 `agent-management-sub/plugins/`（默认，见 `agent-skill-development.mdc`）
+- Skill 位于 `agent-management-master/plugins/`（见 `agent-skill-development.mdc`）
 - BFF 通过 `agentProxy` 调用 `POST /api/skills/testgen-skill/invoke`
 - 联调见 `docs/设计-Agent联调配置.md`
 
@@ -97,4 +97,4 @@ database → backend API → frontend views → Agent 联调（testgen-skill）
 - 在 testgen-sub 内嵌 MCP / LLM 直连
 - 硬编码端口
 - 前端直连 Agent 平台
-- 新 Skill 仅写在 BFF 而不落 `agent-management-sub/plugins/`
+- 新 Skill 仅写在 BFF 而不落 `agent-management-master/plugins/`
