@@ -5,12 +5,12 @@
     </template>
 
     <div class="cartoon-module">
-      <el-table v-loading="loading" :data="rows" @row-click="open">
+      <el-table class="cartoon-project-table" v-loading="loading" :data="rows" @row-click="open">
         <el-table-column prop="name" label="名称" min-width="160" />
         <el-table-column label="来源小说" min-width="160">
           <template #default="{ row }">{{ novelTitle(row.source_novel_id) }}</template>
         </el-table-column>
-        <el-table-column label="画面风格" width="120">
+        <el-table-column label="画面风格" min-width="120">
           <template #default="{ row }">{{ styleLabel(row.visual_style) }}</template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100" />
@@ -29,7 +29,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="画面风格">
-          <el-select v-model="form.visual_style" placeholder="选择风格" style="width: 100%">
+          <el-select v-model="form.visual_style" filterable placeholder="选择风格" style="width: 100%">
             <el-option v-for="item in styles" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
@@ -112,3 +112,9 @@ async function create() {
 function open(row) { router.push(`/projects/${row.id}`); }
 onMounted(load);
 </script>
+
+<style scoped>
+.cartoon-project-table :deep(.el-table__body tr) {
+  cursor: pointer;
+}
+</style>

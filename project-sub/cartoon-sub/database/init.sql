@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS cartoon_imports (
   body TEXT NOT NULL,
   characters JSONB NOT NULL DEFAULT '[]',
   script_data JSONB,
+  deleted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -129,6 +130,8 @@ CREATE TABLE IF NOT EXISTS cartoon_edit_jobs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE cartoon_imports ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 
 ALTER TABLE cartoon_outputs ALTER COLUMN task_id DROP NOT NULL;
 ALTER TABLE cartoon_outputs ADD COLUMN IF NOT EXISTS edit_job_id INTEGER;

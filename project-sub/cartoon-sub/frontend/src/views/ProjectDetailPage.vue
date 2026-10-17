@@ -1,7 +1,7 @@
 <template>
   <PageShell v-if="detail" :title="detail.project.name">
     <template #extra>
-      <el-button link type="primary" @click="router.push('/projects')">返回列表</el-button>
+      <el-button link type="primary" @click="router.push(`/projects/${route.params.id}`)">返回详情</el-button>
     </template>
     <el-alert v-if="notice" :title="notice" :type="noticeType" show-icon class="cartoon-module" />
     <FlowSteps :steps="steps" :current="step" @select="step = $event" />
@@ -9,21 +9,24 @@
     <section v-show="step === 1" class="cartoon-module">
       <h3 class="cartoon-module__title">项目设定</h3>
       <el-form label-position="top">
-        <el-form-item label="项目名称">
-          <el-input v-model="projectForm.name" />
-        </el-form-item>
-        <el-form-item label="来源小说">
-          <el-select v-model="projectForm.source_novel_id" filterable clearable placeholder="从小说平台选择" style="width: 100%" @change="onNovelChange">
-            <el-option v-for="item in novels" :key="item.id" :label="item.title" :value="String(item.id)" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="画面风格">
-          <el-select v-model="projectForm.visual_style" placeholder="选择风格" style="width: 100%">
-            <el-option v-for="item in meta.visual_styles" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
+        <div class="cartoon-setting-grid">
+          <el-form-item label="项目名称">
+            <el-input v-model="projectForm.name" />
+          </el-form-item>
+          <el-form-item label="来源小说">
+            <el-select v-model="projectForm.source_novel_id" filterable clearable placeholder="从小说平台选择" style="width: 100%" @change="onNovelChange">
+              <el-option v-for="item in novels" :key="item.id" :label="item.title" :value="String(item.id)" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="画面风格">
+            <el-select v-model="projectForm.visual_style" filterable placeholder="选择风格" style="width: 100%">
+              <el-option v-for="item in meta.visual_styles" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+        </div>
         <el-button type="primary" @click="saveProject">保存设定</el-button>
       </el-form>
+      <NovelBriefPanel :novel="novelBrief" :loading="novelLoading" />
     </section>
 
     <section v-show="step === 2">
@@ -33,7 +36,7 @@
         <el-form label-position="top">
           <el-form-item label="章节">
             <el-select v-model="chapterId" filterable placeholder="选择章节" style="width: 100%" :disabled="!projectForm.source_novel_id">
-              <el-option v-for="item in chapters" :key="item.id" :label="item.title" :value="String(item.id)" />
+              <el-option v-for="item in chapters" :key="item.id" :label="item.label || item.title" :value="String(item.id)" />
             </el-select>
           </el-form-item>
           <el-button type="primary" :disabled="!chapterId" @click="pull">拉取正文</el-button>
@@ -49,19 +52,52 @@
       </div>
       <div class="cartoon-module">
         <h3 class="cartoon-module__title">已有快照</h3>
-        <el-empty v-if="!detail.imports.length" description="还没有章节快照" />
-        <el-card v-for="item in detail.imports" :key="item.id" shadow="never" class="cartoon-snap">
+        <el-empty v-if="!liveImports.length" description="还没有章节快照" />
+        <el-card v-for="item in liveImports" :key="item.id" shadow="never" class="cartoon-snap">
           <strong>{{ item.chapter_title || '未命名章节' }}</strong>
           <p>{{ item.body }}</p>
           <p v-if="item.script_data && item.script_data.summary">{{ item.script_data.summary }}</p>
-          <el-button type="primary" :loading="draftingId === item.id" @click="draft(item)">起草分镜</el-button>
+          <div class="cartoon-snap__actions">
+            <el-button type="primary" :loading="draftingId === item.id" @click="draft(item)">起草分镜</el-button>
+            <el-button type="danger" plain @click="removeSnapshot(item)">删除快照</el-button>
+          </div>
         </el-card>
       </div>
     </section>
 
     <section v-show="step === 3" class="cartoon-module">
       <h3 class="cartoon-module__title">分镜</h3>
-      <el-form label-position="top">
+      <div class="cartoon-board">
+        <aside class="cartoon-board__snaps">
+          <p class="cartoon-board__label">章节快照</p>
+          <el-empty v-if="!boardItems.length" description="还没有快照" />
+          <button
+            v-for="item in boardItems"
+            :key="item.key"
+            type="button"
+            class="cartoon-board__snap"
+            :class="{ 'is-active': item.key === selectedImportKey }"
+            @click="selectedImportKey = item.key"
+          >
+            <span class="cartoon-board__snap-title">{{ item.title }}</span>
+            <el-tag v-if="item.deleted" type="danger" size="small">已删除</el-tag>
+            <span class="cartoon-board__snap-count">{{ item.count }} 镜</span>
+          </button>
+        </aside>
+        <div class="cartoon-board__main">
+          <div v-if="selectedBoard" class="cartoon-board__head">
+            <strong>{{ selectedBoard.title }}</strong>
+            <el-tag v-if="selectedBoard.deleted" type="danger" size="small">已删除</el-tag>
+            <el-button
+              v-if="selectedBoard.raw"
+              type="primary"
+              plain
+              :loading="draftingId === selectedBoard.raw.id"
+              @click="draft(selectedBoard.raw)"
+            >起草分镜</el-button>
+          </div>
+          <p v-else class="cartoon-module__hint">先在左侧选择一条章节快照。</p>
+      <el-form v-if="selectedBoard" label-position="top">
         <el-form-item label="景别">
           <el-select v-model="shot.shot_size" style="width: 220px">
             <el-option v-for="item in meta.shot_sizes" :key="item" :label="item" :value="item" />
@@ -76,7 +112,7 @@
         <el-form-item label="提示词"><el-input v-model="shot.positive_zh" type="textarea" :rows="2" /></el-form-item>
         <el-button type="primary" @click="addShot">添加分镜</el-button>
       </el-form>
-      <el-table :data="detail.shots" style="margin-top: 12px" @row-click="choose">
+      <el-table v-if="selectedBoard" :data="boardShots" style="margin-top: 12px">
         <el-table-column prop="sort_order" label="#" width="60" />
         <el-table-column label="景别" width="120">
           <template #default="{ row }">
@@ -107,50 +143,28 @@
             <el-input :model-value="row.prompt?.negative_zh || ''" type="textarea" :rows="2" @update:model-value="setPrompt(row, 'negative_zh', $event)" @blur="saveShot(row)" />
           </template>
         </el-table-column>
+        <el-table-column label="操作" width="168" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" @click.stop="openGenerate(row)">生成产物</el-button>
+            <el-button link type="primary" @click.stop="openOutputs(row)">查看产物</el-button>
+          </template>
+        </el-table-column>
       </el-table>
-    </section>
-
-    <section v-show="step === 4" class="cartoon-module">
-      <h3 class="cartoon-module__title">生成</h3>
-      <p v-if="selected">当前分镜：{{ selected.description || '（无描述）' }}</p>
-      <p v-else class="cartoon-module__hint">先在分镜步骤点一条分镜。</p>
-      <el-form label-position="top">
-        <el-form-item label="提示词"><el-input v-model="promptText" type="textarea" :rows="3" /></el-form-item>
-        <el-button type="primary" :disabled="!selected" :loading="generating" @click="generate('image')">生成图片</el-button>
-        <el-button :disabled="!selected" :loading="generating" @click="generate('video')">首尾帧视频</el-button>
-        <el-button :disabled="!selected" :loading="generating" @click="generate('i2v')">图生视频</el-button>
-        <el-button :disabled="!selected" :loading="generating" @click="generate('edit')">改图</el-button>
-      </el-form>
-    </section>
-
-    <section v-show="step === 5" class="cartoon-module">
-      <div class="cartoon-module__row">
-        <h3 class="cartoon-module__title">产物</h3>
-        <el-button @click="router.push(`/projects/${route.params.id}/edit`)">剪辑成片</el-button>
-      </div>
-      <el-empty v-if="!detail.tasks.length" description="还没有生成记录" />
-      <el-card v-for="task in detail.tasks" :key="task.id" shadow="never" class="cartoon-snap">
-        <p>{{ statusLabel(task.status) }} · {{ kindLabel(task.kind) }} · {{ task.shot_description }}</p>
-        <p v-if="task.error_message">{{ task.error_message }}</p>
-        <p v-if="task.precheck_workflow_id">
-          <a class="cartoon-precheck-link" :href="precheckHref(task.precheck_workflow_id)" target="_blank" rel="noreferrer">打开预检梳理</a>
-        </p>
-        <div v-for="output in task.outputs" :key="output.id">
-          <video v-if="output.media_kind === 'video'" :src="fileUrl(output.id)" controls class="cartoon-media"></video>
-          <img v-else :src="fileUrl(output.id)" :alt="task.shot_description" class="cartoon-media" />
         </div>
-      </el-card>
+      </div>
     </section>
+
   </PageShell>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import FlowSteps from '../components/FlowSteps.vue';
-import { request, resolveApiBase } from '../services/apiConfig.js';
+import NovelBriefPanel from '../components/NovelBriefPanel.vue';
+import { request } from '../services/apiConfig.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -158,10 +172,8 @@ const steps = [
   { step: 1, title: '项目' },
   { step: 2, title: '章节' },
   { step: 3, title: '分镜' },
-  { step: 4, title: '生成' },
-  { step: 5, title: '产物' },
 ];
-const step = ref(1);
+const step = ref(Number(route.query.step) || 1);
 const detail = ref(null);
 const novels = ref([]);
 const chapters = ref([]);
@@ -171,48 +183,62 @@ const chapterId = ref('');
 const chapterTitle = ref('');
 const body = ref('');
 const shot = reactive({ shot_size: '中景', camera_move: '固定', description: '', positive_zh: '' });
-const selected = ref(null);
-const promptText = ref('');
-const generating = ref(false);
+const novelBrief = ref(null);
+const novelLoading = ref(false);
 const draftingId = ref(null);
+const selectedImportKey = ref('');
 const notice = ref('');
 const noticeType = ref('info');
-let pollTimer = null;
 
-function statusLabel(status) {
-  return { queued: '排队', running: '生成中', saving: '生成中', success: '成功', failed: '失败' }[status] || status;
+const liveImports = computed(() => (detail.value?.imports || []).filter(item => !item.deleted_at));
+const boardItems = computed(() => {
+  const imports = detail.value?.imports || [];
+  const shots = detail.value?.shots || [];
+  const items = imports.map(item => ({
+    key: String(item.id),
+    importId: item.id,
+    title: item.chapter_title || '未命名章节',
+    deleted: Boolean(item.deleted_at),
+    count: shots.filter(shotRow => String(shotRow.import_id) === String(item.id)).length,
+    raw: item,
+  }));
+  const orphans = shots.filter(shotRow => shotRow.import_id == null);
+  if (orphans.length) {
+    items.push({
+      key: 'orphan',
+      importId: null,
+      title: '未关联快照',
+      deleted: false,
+      count: orphans.length,
+      raw: null,
+    });
+  }
+  return items;
+});
+const selectedBoard = computed(() => boardItems.value.find(item => item.key === selectedImportKey.value) || null);
+const boardShots = computed(() => {
+  const current = selectedBoard.value;
+  if (!current) return [];
+  const shots = detail.value?.shots || [];
+  if (current.importId == null) return shots.filter(shotRow => shotRow.import_id == null);
+  return shots.filter(shotRow => String(shotRow.import_id) === String(current.importId));
+});
+function ensureBoard() {
+  const items = boardItems.value;
+  if (!items.length) {
+    selectedImportKey.value = '';
+    return;
+  }
+  if (!items.some(item => item.key === selectedImportKey.value)) {
+    const live = items.find(item => !item.deleted) || items[0];
+    selectedImportKey.value = live.key;
+  }
 }
-function kindLabel(kind) {
-  return { image: '文生图', video: '首尾帧', i2v: '图生视频', edit: '改图' }[kind] || kind;
+function openGenerate(row) {
+  router.push({ path: `/projects/${route.params.id}/shots/${row.id}/generate`, query: { from: 'work' } });
 }
-function precheckHref(id) {
-  const origin = import.meta.env.VITE_PRECHECK_ORIGIN || 'http://localhost:5104';
-  return `${origin.replace(/\/$/, '')}/workflows?id=${id}`;
-}
-function fileUrl(id) { return `${resolveApiBase()}/outputs/${id}/file`; }
-function choose(row) {
-  selected.value = row;
-  promptText.value = row.prompt?.positive_zh || '';
-  step.value = 4;
-}
-function stopPoll() {
-  if (pollTimer) clearInterval(pollTimer);
-  pollTimer = null;
-}
-function startPoll() {
-  stopPoll();
-  pollTimer = setInterval(async () => {
-    await load();
-    const active = (detail.value?.tasks || []).some(item => [ 'queued', 'running', 'saving' ].includes(item.status));
-    if (!active) {
-      const latest = detail.value?.tasks?.[0];
-      if (latest) {
-        notice.value = latest.error_message ? `${statusLabel(latest.status)}：${latest.error_message}` : statusLabel(latest.status);
-        noticeType.value = latest.status === 'success' ? 'success' : 'error';
-      }
-      stopPoll();
-    }
-  }, 2000);
+function openOutputs(row) {
+  router.push({ path: `/projects/${route.params.id}/shots/${row.id}/outputs`, query: { from: 'work' } });
 }
 function fillProject() {
   const project = detail.value?.project;
@@ -226,13 +252,30 @@ async function loadChapters(novelId) {
   if (!novelId) return;
   chapters.value = await request(`/novel-catalog/${novelId}/chapters`).catch(() => []);
 }
+async function loadNovelBrief(novelId) {
+  novelBrief.value = null;
+  if (!novelId) return;
+  novelLoading.value = true;
+  try {
+    novelBrief.value = await request(`/novel-catalog/${novelId}`);
+  } catch (err) {
+    novelBrief.value = null;
+    ElMessage.warning(err.message || '小说基础信息没有加载出来');
+  } finally {
+    novelLoading.value = false;
+  }
+}
 async function onNovelChange() {
   chapterId.value = '';
-  await loadChapters(projectForm.source_novel_id);
+  await Promise.all([
+    loadChapters(projectForm.source_novel_id),
+    loadNovelBrief(projectForm.source_novel_id),
+  ]);
 }
 async function load() {
   detail.value = await request(`/projects/${route.params.id}`);
   fillProject();
+  ensureBoard();
 }
 async function saveProject() {
   try {
@@ -278,6 +321,25 @@ async function saveImport() {
   body.value = '';
   await load();
 }
+async function removeSnapshot(item) {
+  try {
+    await ElMessageBox.confirm(
+      '删除后章节目录不再显示这条快照。已经生成的分镜会留在分镜页，并标成已删除。',
+      '删除快照',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  try {
+    await request(`/projects/${route.params.id}/imports/${item.id}`, { method: 'delete' });
+    selectedImportKey.value = String(item.id);
+    await load();
+    ElMessage.success('已删除快照，分镜仍保留');
+  } catch (err) {
+    ElMessage.error(err.message);
+  }
+}
 function setPrompt(row, key, value) {
   if (!row.prompt) row.prompt = { positive_zh: '', negative_zh: '' };
   row.prompt[key] = value;
@@ -302,6 +364,7 @@ async function draft(item) {
     await request(`/projects/${route.params.id}/imports/${item.id}/draft`, { method: 'post', timeout: 600000 });
     notice.value = '分镜已写入，可以再改';
     noticeType.value = 'success';
+    selectedImportKey.value = String(item.id);
     await load();
     step.value = 3;
   } catch (err) {
@@ -312,32 +375,15 @@ async function draft(item) {
   }
 }
 async function addShot() {
-  await request(`/projects/${route.params.id}/shots`, { method: 'post', data: { ...shot } });
+  const current = selectedBoard.value;
+  if (!current) return;
+  await request(`/projects/${route.params.id}/shots`, {
+    method: 'post',
+    data: { ...shot, import_id: current.importId },
+  });
   shot.description = '';
   shot.positive_zh = '';
   await load();
-}
-async function generate(kind) {
-  if (!selected.value) return;
-  generating.value = true;
-  notice.value = '排队';
-  noticeType.value = 'info';
-  try {
-    const task = await request(`/projects/${route.params.id}/shots/${selected.value.id}/generate?kind=${kind}`, {
-      method: 'post',
-      data: { positive_zh: promptText.value },
-    });
-    notice.value = task.error_message ? `${statusLabel(task.status)}：${task.error_message}` : statusLabel(task.status);
-    noticeType.value = task.status === 'failed' ? 'error' : 'info';
-    await load();
-    if ([ 'queued', 'running' ].includes(task.status)) startPoll();
-    step.value = 5;
-  } catch (err) {
-    notice.value = err.message;
-    noticeType.value = 'error';
-  } finally {
-    generating.value = false;
-  }
 }
 onMounted(async () => {
   const [catalog, metaRes] = await Promise.all([
@@ -351,15 +397,43 @@ onMounted(async () => {
     meta.camera_moves = metaRes.camera_moves || meta.camera_moves;
   }
   await load();
-  await loadChapters(projectForm.source_novel_id);
+  await Promise.all([
+    loadChapters(projectForm.source_novel_id),
+    loadNovelBrief(projectForm.source_novel_id),
+  ]);
 });
-onUnmounted(stopPoll);
 </script>
 
 <style scoped>
-.cartoon-module__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.cartoon-module__row .cartoon-module__title { margin-bottom: 12px; }
+.cartoon-setting-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 16px;
+}
 .cartoon-snap { margin-bottom: 12px; }
-.cartoon-media { max-width: 420px; display: block; margin-top: 8px; }
-.cartoon-precheck-link { color: #2f8a5b; }
+.cartoon-snap__actions { display: flex; gap: 8px; }
+.cartoon-board { display: flex; gap: 16px; align-items: flex-start; width: 100%; min-width: 0; }
+.cartoon-board__snaps { flex: 0 0 240px; display: flex; flex-direction: column; gap: 8px; }
+.cartoon-board__label { margin: 0; color: #5c6b62; font-size: 13px; }
+.cartoon-board__snap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  border: 1px solid rgba(47, 138, 91, 0.25);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+.cartoon-board__snap.is-active { border-color: #2f8a5b; background: #eef7f1; }
+.cartoon-board__snap-title { flex: 1 1 100%; font-weight: 600; }
+.cartoon-board__snap-count { color: #5c6b62; font-size: 12px; }
+.cartoon-board__main { flex: 1; min-width: 0; overflow: hidden; }
+.cartoon-board__head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+@media (max-width: 900px) {
+  .cartoon-setting-grid { grid-template-columns: 1fr; }
+}
 </style>

@@ -8,6 +8,55 @@ function unwrap(json) {
   return json;
 }
 
+function indexOutlineVolumes(volumes) {
+  const map = new Map();
+  for (const vol of volumes || []) {
+    const title = String(vol?.title || '').trim();
+    const put = node => {
+      if (!node) return;
+      if (node.id) map.set(String(node.id), title);
+      if (node.title) map.set(String(node.title), title);
+    };
+    put(vol);
+    for (const group of vol.groups || []) {
+      put(group);
+      for (const section of group.sections || []) put(section);
+    }
+  }
+  return map;
+}
+
+function formatSnapshotTitle(volumeTitle, chapterTitle) {
+  const chapter = String(chapterTitle || '').trim() || '未命名章节';
+  const volume = String(volumeTitle || '').trim();
+  if (!volume || volume === '未关联大纲' || volume === '未命名卷') return chapter;
+  if (chapter.startsWith(`${volume}·`)) return chapter;
+  return `${volume}·${chapter}`;
+}
+
+function novelBriefOf(novel) {
+  const themes = (novel?.themes || []).map(item => item.name).filter(Boolean);
+  return {
+    id: novel?.id,
+    title: novel?.title || '',
+    creative_intent: novel?.creative_intent || '',
+    summary: novel?.summary || '',
+    story_overview: novel?.story_overview || '',
+    genre: novel?.genre || '',
+    genre_subcategory: novel?.genre_subcategory || '',
+    novel_type: novel?.novel_type || '',
+    themes,
+    target_audience: novel?.target_audience || '',
+    update_cadence: novel?.update_cadence || '',
+    author_name: novel?.author_name || '',
+    progress_status: novel?.progress_status || '',
+    progress_percent: novel?.progress_percent ?? null,
+    word_count: novel?.word_count ?? null,
+    chapter_written: novel?.chapter_written ?? null,
+    chapter_total: novel?.chapter_total ?? null,
+  };
+}
+
 class ProjectService extends Service {
   list() {
     return this.ctx.model.Project.findAll({ order: [[ 'id', 'DESC' ]] });
@@ -21,8 +70,9 @@ class ProjectService extends Service {
     } catch (err) {
       this.ctx.logger.warn('[cartoon] settle %s', err.message);
     }
-    const [ imports, assets, shots ] = await Promise.all([
-      this.ctx.model.Import.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] }),
+    const imports = await this.ctx.model.Import.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] });
+    await this.repairSnapshotTitles(project, imports);
+    const [ assets, shots ] = await Promise.all([
       this.ctx.model.Asset.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] }),
       this.ctx.model.Shot.findAll({ where: { project_id: id }, order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]] }),
     ]);
@@ -89,14 +139,62 @@ class ProjectService extends Service {
     }));
   }
 
+  async novelBrief(novelId) {
+    const novel = await this.fetchNovel(`/api/novels/${encodeURIComponent(novelId)}`);
+    if (!novel?.id) this.ctx.throw(404, '小说不存在');
+    return novelBriefOf(novel);
+  }
+
   async listChapters(novelId) {
-    const data = await this.fetchNovel(`/api/novels/${encodeURIComponent(novelId)}/chapters`);
-    const list = Array.isArray(data) ? data : (data?.list || []);
-    return list.map(item => ({
-      id: item.chapter_id || item.id,
-      title: item.title || '未命名章节',
-      order: item.order,
-    }));
+    const novel = await this.fetchNovel(`/api/novels/${encodeURIComponent(novelId)}`);
+    const setting = novel?.setting_json || {};
+    const volumes = indexOutlineVolumes(setting.outline?.volumes);
+    const chapters = Array.isArray(setting.chapters) ? setting.chapters : [];
+    return chapters
+      .map((item, index) => {
+        const title = item.title || '未命名章节';
+        const volume = volumes.get(String(item.outline_ref || '')) || '';
+        return {
+          id: item.id,
+          title,
+          volume,
+          label: formatSnapshotTitle(volume, title),
+          order: Number(item.order) || index + 1,
+        };
+      })
+      .filter(item => item.id)
+      .sort((a, b) => a.order - b.order);
+  }
+
+  async repairSnapshotTitles(project, imports) {
+    const pending = imports.filter(item => item.source_novel_id && !String(item.chapter_title || '').includes('·'));
+    if (!pending.length) return;
+    let reader;
+    try {
+      reader = await this.fetchNovel(`/api/novels/${encodeURIComponent(project.source_novel_id || pending[0].source_novel_id)}/reader`);
+    } catch (err) {
+      this.ctx.logger.warn('[cartoon] retitle %s', err.message);
+      return;
+    }
+    const chapters = [];
+    for (const volume of reader?.volumes || []) {
+      for (const chapter of volume.chapters || []) {
+        const body = String(chapter.body || '').trim();
+        if (!body) continue;
+        chapters.push({
+          title: formatSnapshotTitle(volume.title, chapter.title),
+          body,
+        });
+      }
+    }
+    for (const item of pending) {
+      const body = String(item.body || '').trim();
+      if (!body) continue;
+      const needle = body.slice(0, 120);
+      const hit = chapters.find(chapter => chapter.body === body || chapter.body.startsWith(needle));
+      if (!hit || item.chapter_title === hit.title) continue;
+      await item.update({ chapter_title: hit.title });
+    }
   }
 
   async fetchNovel(urlPath) {
@@ -123,6 +221,15 @@ class ProjectService extends Service {
     });
   }
 
+  async removeImport(projectId, importId) {
+    const row = await this.ctx.model.Import.findOne({
+      where: { id: importId, project_id: projectId },
+    });
+    if (!row) this.ctx.throw(404, '章节快照不存在');
+    if (!row.deleted_at) await row.update({ deleted_at: new Date() });
+    return row;
+  }
+
   async pullNovel(projectId, payload) {
     await this.show(projectId);
     let novel;
@@ -136,12 +243,16 @@ class ProjectService extends Service {
       if (err.status) throw err;
       this.ctx.throw(502, `无法连接小说平台：${err.message}`);
     }
-    const body = chapter?.content || chapter?.body || chapter?.text || '';
+    const setting = novel?.setting_json || {};
+    const meta = (setting.chapters || []).find(item => String(item.id) === String(payload.chapter_id));
+    const volume = indexOutlineVolumes(setting.outline?.volumes).get(String(meta?.outline_ref || '')) || '';
+    const chapterTitle = meta?.title || chapter?.chapter?.title || chapter?.title || '';
+    const body = chapter?.body || chapter?.content || chapter?.text || '';
     if (!body) this.ctx.throw(400, '没有拿到章节正文。可以改用手工粘贴快照');
-    const characters = novel?.setting_json?.characters || [];
+    const characters = setting.characters || [];
     const row = await this.addImport(projectId, {
       source_novel_id: String(payload.novel_id),
-      chapter_title: chapter?.title || novel?.title || '',
+      chapter_title: formatSnapshotTitle(volume, chapterTitle),
       body,
       characters,
     });
@@ -156,9 +267,18 @@ class ProjectService extends Service {
 
   async addShot(projectId, payload) {
     await this.show(projectId);
+    let importId = null;
+    if (payload.import_id) {
+      const chapter = await this.ctx.model.Import.findOne({
+        where: { id: payload.import_id, project_id: projectId },
+      });
+      if (!chapter) this.ctx.throw(404, '章节快照不存在');
+      importId = chapter.id;
+    }
     const max = await this.ctx.model.Shot.max('sort_order', { where: { project_id: projectId } });
     const shot = await this.ctx.model.Shot.create({
       project_id: Number(projectId),
+      import_id: importId,
       sort_order: Number.isFinite(max) ? max + 1 : 0,
       shot_size: assertEnum(payload.shot_size || '中景', SHOT_SIZES, '景别') || '中景',
       camera_move: assertEnum(payload.camera_move || '固定', CAMERA_MOVES, '运镜') || '固定',

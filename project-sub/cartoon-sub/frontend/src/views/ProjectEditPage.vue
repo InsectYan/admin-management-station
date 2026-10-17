@@ -1,7 +1,7 @@
 <template>
   <PageShell :title="store.project?.name ? `${store.project.name} · 剪辑` : '剪辑成片'">
     <template #extra>
-      <el-button @click="router.push(`/projects/${projectId}`)">返回项目</el-button>
+      <el-button @click="router.push(`/projects/${projectId}`)">返回详情</el-button>
       <el-button :disabled="!store.past.length" @click="store.undo()">撤销</el-button>
       <el-button :disabled="!store.future.length" @click="store.redo()">重做</el-button>
       <el-button type="primary" :disabled="!store.edit || !store.dirty" :loading="saving" @click="save">保存</el-button>

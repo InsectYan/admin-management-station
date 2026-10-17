@@ -10,6 +10,7 @@ module.exports = app => {
     required_nodes: { type: JSONB, allowNull: false, defaultValue: [] },
     required_models: { type: JSONB, allowNull: false, defaultValue: [] },
     suggested_vram_gb: { type: INTEGER, allowNull: true },
+    preview_json: { type: JSONB, allowNull: true },
   }, { tableName: 'precheck_workflows' });
   return Workflow;
 };

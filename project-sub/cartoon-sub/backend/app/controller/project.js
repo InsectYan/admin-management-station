@@ -57,6 +57,14 @@ class ProjectController extends Controller {
     }
   }
 
+  async novel() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.novelBrief(this.ctx.params.novelId));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async meta() {
     ok(this.ctx, require('../lib/cartoonMeta').meta());
   }
@@ -64,6 +72,14 @@ class ProjectController extends Controller {
   async addImport() {
     try {
       ok(this.ctx, await this.ctx.service.project.addImport(this.ctx.params.id, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async removeImport() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.removeImport(this.ctx.params.id, this.ctx.params.importId));
     } catch (err) {
       fail(this.ctx, err);
     }

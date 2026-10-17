@@ -41,10 +41,21 @@ function Start-ComfyUi {
   return @{ ok = $true; status = 200; already_running = $false; message = "已执行启动指令" }
 }
 
+$already = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+if ($already) {
+  Write-Host "ComfyUI start bridge already listening on $port"
+  exit 0
+}
+
 $listener = [System.Net.HttpListener]::new()
 $prefix = "http://127.0.0.1:${port}/"
 $listener.Prefixes.Add($prefix)
-$listener.Start()
+try {
+  $listener.Start()
+} catch {
+  Write-Host "ComfyUI start bridge failed to listen on ${port}: $($_.Exception.Message)"
+  exit 1
+}
 Write-Host "ComfyUI start bridge http://127.0.0.1:$port/  script=$startScript"
 
 while ($listener.IsListening) {

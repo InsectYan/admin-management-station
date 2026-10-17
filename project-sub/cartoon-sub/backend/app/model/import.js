@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = app => {
-  const { STRING, TEXT, INTEGER, JSONB } = app.Sequelize;
+  const { STRING, TEXT, INTEGER, JSONB, DATE } = app.Sequelize;
   return app.model.define('cartoon_import', {
     id: { type: INTEGER, primaryKey: true, autoIncrement: true },
     project_id: { type: INTEGER, allowNull: false },
@@ -10,5 +10,6 @@ module.exports = app => {
     body: { type: TEXT, allowNull: false },
     characters: { type: JSONB, allowNull: false, defaultValue: [] },
     script_data: { type: JSONB, allowNull: true },
+    deleted_at: { type: DATE, allowNull: true },
   }, { tableName: 'cartoon_imports' });
 };

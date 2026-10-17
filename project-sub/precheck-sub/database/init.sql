@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS precheck_workflows (
   required_nodes JSONB NOT NULL DEFAULT '[]',
   required_models JSONB NOT NULL DEFAULT '[]',
   suggested_vram_gb INTEGER,
+  preview_json JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE precheck_workflows ADD COLUMN IF NOT EXISTS preview_json JSONB;

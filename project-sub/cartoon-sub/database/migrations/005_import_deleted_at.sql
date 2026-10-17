@@ -1,0 +1,1 @@
+ALTER TABLE cartoon_imports ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;

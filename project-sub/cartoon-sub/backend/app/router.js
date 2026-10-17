@@ -12,11 +12,13 @@ module.exports = app => {
   router.get('/api/meta', controller.project.meta);
   router.get('/api/novel-catalog', controller.project.novels);
   router.get('/api/novel-catalog/:novelId/chapters', controller.project.chapters);
+  router.get('/api/novel-catalog/:novelId', controller.project.novel);
   router.get('/api/projects', controller.project.index);
   router.post('/api/projects', controller.project.create);
   router.get('/api/projects/:id', controller.project.show);
   router.put('/api/projects/:id', controller.project.update);
   router.post('/api/projects/:id/imports', controller.project.addImport);
+  router.delete('/api/projects/:id/imports/:importId', controller.project.removeImport);
   router.post('/api/projects/:id/imports/from-novel', controller.project.pullNovel);
   router.post('/api/projects/:id/imports/:importId/draft', controller.project.draft);
   router.post('/api/projects/:id/shots', controller.project.addShot);
