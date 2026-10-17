@@ -19,6 +19,15 @@ class RuntimeController extends Controller {
       this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
     }
   }
+
+  async start() {
+    try {
+      ok(this.ctx, await this.ctx.service.runtime.start(this.ctx.params.id));
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
 }
 
 module.exports = RuntimeController;

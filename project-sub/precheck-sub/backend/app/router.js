@@ -5,6 +5,7 @@ module.exports = app => {
   router.get('/api/health', controller.health.index);
   router.get('/api/runtimes', controller.runtime.index);
   router.get('/api/runtimes/:id/probe', controller.runtime.probe);
+  router.post('/api/runtimes/:id/start', controller.runtime.start);
   router.get('/api/workflows', controller.workflow.index);
   router.post('/api/workflows', controller.workflow.create);
   router.put('/api/workflows/:id', controller.workflow.update);

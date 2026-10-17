@@ -11,6 +11,7 @@ export function createAppRouter(basename) {
         children: [
           { path: '', redirect: '/projects' },
           { path: 'projects', component: () => import('../views/ProjectListPage.vue') },
+          { path: 'projects/:id/edit', component: () => import('../views/ProjectEditPage.vue') },
           { path: 'projects/:id', component: () => import('../views/ProjectDetailPage.vue') },
         ],
       },

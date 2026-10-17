@@ -115,12 +115,14 @@
                 >
                   {{ progressLabel(item.progress_status) }}
                 </el-tag>
-                <el-progress
-                  :percentage="item.progress_percent || 0"
-                  :stroke-width="6"
-                  :show-text="false"
-                  style="flex: 1; margin-left: 8px"
-                />
+                <el-tooltip :content="progressTip(item)" placement="top">
+                  <el-progress
+                    :percentage="item.progress_percent || 0"
+                    :stroke-width="6"
+                    :show-text="false"
+                    style="flex: 1; margin-left: 8px"
+                  />
+                </el-tooltip>
               </div>
               <p class="novel-card__stats">
                 {{ (item.word_count || 0).toLocaleString() }} 字 · {{ item.chapter_written || 0 }}/{{ item.chapter_total || 0 }} 章
@@ -299,11 +301,13 @@
                   >
                     {{ progressLabel(row.progress_status) }}
                   </el-tag>
-                  <el-progress
-                    :percentage="row.progress_percent || 0"
-                    :stroke-width="6"
-                    style="width: 60px"
-                  />
+                  <el-tooltip :content="progressTip(row)" placement="top">
+                    <el-progress
+                      :percentage="row.progress_percent || 0"
+                      :stroke-width="6"
+                      style="width: 60px"
+                    />
+                  </el-tooltip>
                 </div>
               </template>
             </el-table-column>
@@ -409,6 +413,13 @@ const viewOptions = [
   { label: '小说看板', value: 'board' },
   { label: '小说管理', value: 'table' },
 ];
+
+function progressTip(item) {
+  const words = Number(item?.word_count) || 0;
+  const target = Number(item?.word_target) || 0;
+  const chapters = `${item?.chapter_written || 0}/${item?.chapter_total || 0}`;
+  return `连载状态是书的进度标记。${item?.progress_percent || 0}% = 已写 ${words.toLocaleString()} 字 / 大纲规划 ${target.toLocaleString()} 字，不是已写章节 ${chapters}。`;
+}
 
 const loading = ref(false);
 const loadError = ref('');

@@ -37,8 +37,11 @@ services:
       NOVEL_API_ORIGIN: ${NOVEL_API_ORIGIN:-http://host.docker.internal:5201}
       # 出图仍打宿主机上的 ComfyUI，不把 ComfyUI 放进这个容器。
       COMFYUI_BASE_URL: ${COMFYUI_BASE_URL:-http://host.docker.internal:8188}
+      AGENT_PLATFORM_URL: ${AGENT_PLATFORM_URL:-http://host.docker.internal:4001}
       CARTOON_T2I_WORKFLOW_ID: ${CARTOON_T2I_WORKFLOW_ID:-1}
       CARTOON_VIDEO_WORKFLOW_ID: ${CARTOON_VIDEO_WORKFLOW_ID:-3}
+      CARTOON_I2V_WORKFLOW_ID: ${CARTOON_I2V_WORKFLOW_ID:-0}
+      CARTOON_EDIT_WORKFLOW_ID: ${CARTOON_EDIT_WORKFLOW_ID:-0}
       JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_LOCAL_JWT}
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -50,6 +53,7 @@ services:
     volumes:
       - ../backend/app:/app/app
       - ../backend/config:/app/config
+      - ../backend/fixtures:/app/fixtures:ro
       - ../database:/app/database:ro
       - cartoon_outputs:/data/outputs
 

@@ -40,6 +40,8 @@ module.exports = appInfo => {
   config.comfyui = {
     baseUrl: process.env.COMFYUI_BASE_URL || 'http://127.0.0.1:8188',
     expectedVersion: process.env.COMFYUI_EXPECTED_VERSION || '0.39.0',
+    startBridgeUrl: process.env.COMFYUI_START_BRIDGE_URL || 'http://host.docker.internal:18787/start',
+    startToken: process.env.COMFYUI_START_TOKEN || 'local-comfy-start',
   };
   return config;
 };

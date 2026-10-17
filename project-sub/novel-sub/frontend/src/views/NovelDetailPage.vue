@@ -87,6 +87,7 @@
           :world="worldForm"
           :initial-chapter-id="currentChapterId"
           :start-queue="startQueue"
+          :fix-auto="fixBoot"
           @chapter-change="onChapterChange"
           @progress-change="loadNovel"
           @queue-done="clearQueueQuery"
@@ -95,6 +96,7 @@
         <DetailReader
           v-else-if="currentTab === 8"
           :reader="reader"
+          :novel-id="novelId || novelMeta.id"
           :error="readerError"
           @export="onExportReader"
           @edit-chapter="goToStudioChapter"
@@ -116,6 +118,7 @@
 
 <script setup>
 import { ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import NovelDetailShell from '../components/novel/detail/NovelDetailShell.vue';
 import NovelDetailTabs from '../components/novel/detail/NovelDetailTabs.vue';
 import NovelDetailFooter from '../components/novel/detail/NovelDetailFooter.vue';
@@ -168,8 +171,14 @@ const {
   loadNovel,
 } = useNovelDetail();
 
+const route = useRoute();
+const fixBoot = ref(false);
 const reader = ref({ volumes: [] });
 const readerError = ref('');
+
+watch(loading, (busy, prev) => {
+  if (prev && !busy && route.query.fix === '1') fixBoot.value = true;
+});
 
 async function loadReader() {
   const id = novelId.value || novelMeta.id;

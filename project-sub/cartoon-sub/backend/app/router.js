@@ -3,6 +3,12 @@
 module.exports = app => {
   const { router, controller } = app;
   router.get('/api/health', controller.health.index);
+  router.get('/api/internal/ops/projects', controller.opsInternal.projects);
+  router.get('/api/internal/ops/summary', controller.opsInternal.summary);
+  router.get('/api/internal/ops/tasks', controller.opsInternal.tasks);
+  router.get('/api/internal/ops/tasks/:id', controller.opsInternal.show);
+  router.post('/api/internal/ops/tasks/:id/retry', controller.opsInternal.retry);
+  router.post('/api/internal/ops/tasks/:id/cancel', controller.opsInternal.cancel);
   router.get('/api/meta', controller.project.meta);
   router.get('/api/novel-catalog', controller.project.novels);
   router.get('/api/novel-catalog/:novelId/chapters', controller.project.chapters);
@@ -12,8 +18,15 @@ module.exports = app => {
   router.put('/api/projects/:id', controller.project.update);
   router.post('/api/projects/:id/imports', controller.project.addImport);
   router.post('/api/projects/:id/imports/from-novel', controller.project.pullNovel);
+  router.post('/api/projects/:id/imports/:importId/draft', controller.project.draft);
   router.post('/api/projects/:id/shots', controller.project.addShot);
   router.put('/api/shots/:id', controller.project.updateShot);
   router.post('/api/projects/:id/shots/:shotId/generate', controller.project.generate);
+  router.get('/api/media-tools', controller.edit.tools);
+  router.get('/api/projects/:id/edit', controller.edit.show);
+  router.put('/api/projects/:id/edit', controller.edit.save);
+  router.post('/api/projects/:id/edit/seed', controller.edit.seed);
+  router.post('/api/projects/:id/edit/export', controller.edit.startExport);
+  router.get('/api/edit-jobs/:id', controller.edit.job);
   router.get('/api/outputs/:id/file', controller.project.outputFile);
 };

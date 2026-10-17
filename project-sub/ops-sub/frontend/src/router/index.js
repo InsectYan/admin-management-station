@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import MainLayout from '../components/MainLayout.vue';
-import { getAccessToken, loginUrl } from '../lib/amsAuth.js';
+import { getAccessToken, getCachedUser, loginUrl } from '../lib/amsAuth.js';
 
 export function createAppRouter(basename) {
   const router = createRouter({
@@ -11,6 +11,48 @@ export function createAppRouter(basename) {
         component: MainLayout,
         children: [
           { path: '', redirect: 'projects' },
+          {
+            path: 'overview',
+            name: 'ops-overview',
+            component: () => import('../views/OpsOverviewPage.vue'),
+            meta: { title: '运维总览' },
+          },
+          {
+            path: 'jobs/:bizApp/:externalId',
+            name: 'ops-job-detail',
+            component: () => import('../views/OpsJobDetailPage.vue'),
+            meta: { title: '失败诊断' },
+          },
+          {
+            path: 'jobs',
+            name: 'ops-jobs',
+            component: () => import('../views/OpsJobsPage.vue'),
+            meta: { title: '任务队列' },
+          },
+          {
+            path: 'deps',
+            name: 'ops-deps',
+            component: () => import('../views/OpsDepsPage.vue'),
+            meta: { title: '依赖健康' },
+          },
+          {
+            path: 'alerts',
+            name: 'ops-alerts',
+            component: () => import('../views/OpsAlertsPage.vue'),
+            meta: { title: '告警中心' },
+          },
+          {
+            path: 'audit',
+            name: 'ops-audit',
+            component: () => import('../views/OpsAuditPage.vue'),
+            meta: { title: '操作审计' },
+          },
+          {
+            path: 'settings',
+            name: 'ops-settings',
+            component: () => import('../views/OpsSettingsPage.vue'),
+            meta: { title: '系统配置', admin: true },
+          },
           {
             path: 'deploy-jobs',
             name: 'ops-deploy-jobs',
@@ -65,6 +107,7 @@ export function createAppRouter(basename) {
   });
 
   router.beforeEach((to) => {
+    if (to.meta.admin && getCachedUser()?.role !== 'admin') return { name: 'ops-overview' };
     if (getAccessToken()) return true;
     if (import.meta.env.DEV && import.meta.env.VITE_OPS_AUTH_OPTIONAL === '1') return true;
     window.location.assign(loginUrl(window.location.origin + basename + to.fullPath));

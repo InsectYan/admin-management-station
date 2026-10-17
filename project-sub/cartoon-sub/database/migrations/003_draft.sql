@@ -1,0 +1,2 @@
+ALTER TABLE cartoon_imports ADD COLUMN IF NOT EXISTS script_data JSONB;
+ALTER TABLE cartoon_shots ADD COLUMN IF NOT EXISTS import_id INTEGER;

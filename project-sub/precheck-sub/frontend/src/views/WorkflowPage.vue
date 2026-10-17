@@ -35,7 +35,8 @@
         <p>缺失节点：{{ diff.missing_nodes.join('、') || '无' }}</p>
         <p>缺失模型：{{ diff.missing_models.map(item => item.name).join('、') || '无' }}</p>
         <p v-if="diff.low_vram">空闲显存 {{ diff.vram_free_gb }} GB，低于建议 {{ diff.suggested_vram_gb }} GB</p>
-        <p v-for="item in diff.missing_models" :key="item.name">{{ item.advice }}</p>
+        <p v-if="diff.missing_models.length">{{ diff.missing_models[0].advice }}</p>
+        <SupplyBoard v-if="diff.supplies" :supplies="diff.supplies" />
       </template>
     </div>
   </PageShell>
@@ -43,11 +44,14 @@
 
 <script setup>
 import { onMounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
+import SupplyBoard from '../components/SupplyBoard.vue';
 import { request } from '../services/apiConfig.js';
 
 const rows = ref([]);
+const route = useRoute();
 const name = ref('文生图夹具');
 const raw = ref('');
 const diff = ref(null);
@@ -87,5 +91,8 @@ async function save() {
   await check({ id: editingId.value });
 }
 
-onMounted(load);
+onMounted(async () => {
+  await load();
+  if (route.query.id) await check({ id: route.query.id });
+});
 </script>

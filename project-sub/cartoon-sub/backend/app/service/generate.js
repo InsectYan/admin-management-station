@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const Service = require('egg').Service;
+const { outputRoot, resolveInside } = require('../lib/mediaPaths');
 
 function unwrap(json) {
   if (json && Object.prototype.hasOwnProperty.call(json, 'data')) return json.data;
@@ -14,18 +15,29 @@ function linkedNode(graph, link) {
   return id == null ? null : graph[String(id)];
 }
 
+function writePrompt(node, text) {
+  if (node.class_type === 'TextEncodeQwenImageEdit') node.inputs.prompt = text;
+  else node.inputs.text = text;
+}
+
 function applyPositivePrompt(apiJson, text) {
   const graph = JSON.parse(JSON.stringify(apiJson));
-  const wan = Object.values(graph).find(node => node && node.class_type === 'WanFirstLastFrameToVideo');
-  const sampler = Object.values(graph).find(node => node && node.class_type === 'KSampler');
-  const seeds = [ wan?.inputs?.positive, sampler?.inputs?.positive ].filter(Boolean);
+  const seeds = Object.values(graph)
+    .filter(node => node && (
+      node.class_type === 'WanFirstLastFrameToVideo'
+      || node.class_type === 'WanImageToVideo'
+      || node.class_type === 'KSampler'
+      || node.class_type === 'KSamplerAdvanced'
+    ))
+    .map(node => node.inputs?.positive)
+    .filter(Boolean);
   let positive = null;
   for (const link of seeds) {
     let node = linkedNode(graph, link);
     const seen = new Set();
     while (node && !seen.has(node)) {
       seen.add(node);
-      if (node.class_type === 'CLIPTextEncode') {
+      if (node.class_type === 'CLIPTextEncode' || node.class_type === 'TextEncodeQwenImageEdit') {
         positive = node;
         break;
       }
@@ -34,11 +46,11 @@ function applyPositivePrompt(apiJson, text) {
     if (positive) break;
   }
   if (!positive) {
-    const error = new Error('工作流里没有正向 CLIPTextEncode');
+    const error = new Error('工作流里没有正向提示词节点');
     error.status = 400;
     throw error;
   }
-  positive.inputs.text = text;
+  writePrompt(positive, text);
   return graph;
 }
 
@@ -55,8 +67,34 @@ function collectMedia(outputs) {
   return files;
 }
 
-function outputRoot(app) {
-  return path.resolve(app.baseDir, '../data/outputs');
+const FIXTURES = [
+  { kind: 'image', name: '文生图夹具', file: 't2i-cartoon-v1.api.json', category: 'text_to_image' },
+  { kind: 'video', name: '首尾帧夹具', file: 'flf2v-cartoon-v1.api.json', category: 'image_to_video' },
+  { kind: 'i2v', name: 'Wan2.2图生视频', file: 'wan22-i2v-cartoon-v1.api.json', category: 'image_to_video' },
+  { kind: 'edit', name: '千问改图', file: 'qwen-edit-cartoon-v1.api.json', category: 'image_edit' },
+];
+
+function formatPrecheckBlock(diff, workflowId) {
+  if (!diff.online) return `连不上 ComfyUI：${diff.error || '离线'}。预检工作流 ${workflowId}`;
+  const parts = [ `预检拦住：工作流 ${workflowId}` ];
+  if (diff.missing_nodes?.length) parts.push(`缺失节点 ${diff.missing_nodes.join('、')}`);
+  if (diff.missing_models?.length) {
+    parts.push(`缺失模型 ${diff.missing_models.map(item => item.name).join('、')}`);
+  }
+  if (diff.low_vram) parts.push(`空闲显存 ${diff.vram_free_gb} GB，低于建议 ${diff.suggested_vram_gb} GB`);
+  if (diff.version_ok === false && parts.length === 1) parts.push(`版本 ${diff.version || '未知'} 与期望不符`);
+  if (parts.length === 1) parts.push(diff.error || '依赖不满足');
+  parts.push('到预检工作流页选择来源并梳理目录');
+  return parts.join('。');
+}
+
+function precheckGap(diff, workflowId) {
+  return {
+    workflow_id: workflowId,
+    missing_nodes: diff.missing_nodes || [],
+    missing_models: (diff.missing_models || []).map(item => item.name),
+    low_vram: Boolean(diff.low_vram),
+  };
 }
 
 class GenerateService extends Service {
@@ -75,16 +113,90 @@ class GenerateService extends Service {
     if (!text) this.ctx.throw(400, '需要一句提示词');
     await this.ctx.service.project.updateShot(shot.id, { positive_zh: text });
 
-    const workflowId = kind === 'video'
-      ? this.config.precheck.videoWorkflowId
-      : this.config.precheck.t2iWorkflowId;
-    if (!workflowId) this.ctx.throw(400, '没有配置这一类工作流');
     const task = await this.ctx.model.Task.create({
       project_id: Number(projectId),
       shot_id: shot.id,
       kind,
       status: 'queued',
     });
+    return this.execute(task, text);
+  }
+
+  workflowEnvId(kind) {
+    const ids = {
+      image: this.config.precheck.t2iWorkflowId,
+      video: this.config.precheck.videoWorkflowId,
+      i2v: this.config.precheck.i2vWorkflowId,
+      edit: this.config.precheck.editWorkflowId,
+    };
+    const id = Number(ids[kind] || 0);
+    return id > 0 ? id : 0;
+  }
+
+  async ensureFixtures() {
+    if (this.app.cartoonWorkflowIds) return this.app.cartoonWorkflowIds;
+    const listUrl = `${this.precheckBase()}/api/workflows`;
+    const res = await fetch(listUrl, { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) throw new Error(`预检返回 ${res.status}`);
+    const rows = unwrap(await res.json()) || [];
+    const ids = {};
+    for (const fixture of FIXTURES) {
+      const configured = this.workflowEnvId(fixture.kind);
+      if (configured) {
+        ids[fixture.kind] = configured;
+        continue;
+      }
+      const existing = rows.find(row => row.name === fixture.name);
+      if (existing) {
+        ids[fixture.kind] = existing.id;
+        continue;
+      }
+      const apiJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../../fixtures', fixture.file), 'utf8'));
+      const created = await fetch(listUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: fixture.name, category: fixture.category, api_json: apiJson }),
+        signal: AbortSignal.timeout(20000),
+      });
+      if (!created.ok) throw new Error(`导入${fixture.name}失败 ${created.status}`);
+      const row = unwrap(await created.json());
+      ids[fixture.kind] = row.id;
+    }
+    this.app.cartoonWorkflowIds = ids;
+    return ids;
+  }
+
+  async workflowIdFor(kind) {
+    const configured = this.workflowEnvId(kind);
+    if (configured) return configured;
+    const ids = await this.ensureFixtures();
+    if (!ids[kind]) this.ctx.throw(400, '没有配置这一类工作流');
+    return ids[kind];
+  }
+
+  async rerun(taskId) {
+    const task = await this.ctx.model.Task.findByPk(taskId);
+    if (!task) this.ctx.throw(404, '任务不存在');
+    if (![ 'failed', 'cancelled' ].includes(task.status)) {
+      this.ctx.throw(400, '只有失败或已取消的任务可以重跑');
+    }
+    const prompt = task.shot_id
+      ? await this.ctx.model.Prompt.findOne({ where: { shot_id: task.shot_id } })
+      : null;
+    const text = String(prompt?.positive_zh || '').trim();
+    if (!text) this.ctx.throw(400, '没有提示词，不能重跑');
+    await task.update({ status: 'queued', error_message: '', prompt_id: null });
+    return this.execute(task, text);
+  }
+
+  async execute(task, text) {
+    let workflowId;
+    try {
+      workflowId = await this.workflowIdFor(task.kind);
+    } catch (err) {
+      await task.update({ status: 'failed', error_message: err.message });
+      return task.reload();
+    }
     const depUrl = `${this.precheckBase()}/api/workflows/${workflowId}/dependencies`;
     this.ctx.logger.info('[cartoon] precheck GET %s', depUrl);
     let diff;
@@ -93,12 +205,21 @@ class GenerateService extends Service {
       if (!res.ok) throw new Error(`预检返回 ${res.status}`);
       diff = unwrap(await res.json());
     } catch (err) {
-      await task.update({ status: 'failed', error_message: `连不上预检：${err.message}` });
+      await task.update({
+        status: 'failed',
+        error_message: `连不上预检：${err.message}`,
+        precheck_workflow_id: workflowId,
+      });
       return task.reload();
     }
 
     if (!diff.ok) {
-      await task.update({ status: 'failed', error_message: this.blockReason(diff) });
+      await task.update({
+        status: 'failed',
+        error_message: formatPrecheckBlock(diff, workflowId),
+        precheck_workflow_id: workflowId,
+        precheck_gap: precheckGap(diff, workflowId),
+      });
       return task.reload();
     }
 
@@ -143,19 +264,10 @@ class GenerateService extends Service {
       prompt_id: submitted.prompt_id,
       workflow_snapshot: graph,
       error_message: '',
+      precheck_workflow_id: workflowId,
+      precheck_gap: null,
     });
     return task.reload();
-  }
-
-  blockReason(diff) {
-    if (!diff.online) return `连不上 ComfyUI：${diff.error || '离线'}`;
-    if (diff.missing_nodes?.length) return `预检拦住：缺失节点 ${diff.missing_nodes.join('、')}`;
-    if (diff.missing_models?.length) {
-      return `预检拦住：缺失模型 ${diff.missing_models.map(item => item.name).join('、')}`;
-    }
-    if (diff.low_vram) return `预检拦住：空闲显存 ${diff.vram_free_gb} GB，低于建议 ${diff.suggested_vram_gb} GB`;
-    if (diff.version_ok === false) return `预检拦住：版本 ${diff.version || '未知'} 与期望不符`;
-    return `预检拦住：${diff.error || '依赖不满足'}`;
   }
 
   async settleProject(projectId) {
@@ -234,13 +346,48 @@ class GenerateService extends Service {
     const output = await this.ctx.model.Output.findByPk(outputId);
     if (!output?.file_path) this.ctx.throw(404, '产物不存在');
     const root = outputRoot(this.app);
-    const absolute = path.resolve(root, output.file_path);
-    const fromRoot = path.relative(root, absolute);
-    if (fromRoot.startsWith('..') || path.isAbsolute(fromRoot)) this.ctx.throw(400, '产物路径无效');
+    const absolute = resolveInside(root, output.file_path);
+    if (!absolute) this.ctx.throw(400, '产物路径无效');
     if (!fs.existsSync(absolute)) this.ctx.throw(404, '产物文件不在磁盘上');
+    const stat = fs.statSync(absolute);
     const ext = path.extname(absolute).toLowerCase();
+    this.ctx.set('Accept-Ranges', 'bytes');
     this.ctx.type = ext === '.mp4' || ext === '.webm' ? ext.slice(1) : 'png';
-    this.ctx.body = fs.createReadStream(absolute);
+    const range = this.ctx.get('range');
+    if (!range) {
+      this.ctx.set('Content-Length', String(stat.size));
+      this.ctx.body = fs.createReadStream(absolute);
+      return;
+    }
+    const match = /^bytes=(\d*)-(\d*)$/i.exec(range.trim());
+    const unsatisfied = () => {
+      this.ctx.status = 416;
+      this.ctx.set('Content-Range', `bytes */${stat.size}`);
+      this.ctx.body = '';
+    };
+    if (!match || stat.size <= 0) {
+      unsatisfied();
+      return;
+    }
+    let start;
+    let end;
+    if (match[1] === '' && match[2] !== '') {
+      const suffix = Number(match[2]);
+      start = Math.max(0, stat.size - suffix);
+      end = stat.size - 1;
+    } else {
+      start = match[1] === '' ? 0 : Number(match[1]);
+      end = match[2] === '' ? stat.size - 1 : Number(match[2]);
+    }
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= stat.size) {
+      unsatisfied();
+      return;
+    }
+    end = Math.min(end, stat.size - 1);
+    this.ctx.status = 206;
+    this.ctx.set('Content-Range', `bytes ${start}-${end}/${stat.size}`);
+    this.ctx.set('Content-Length', String(end - start + 1));
+    this.ctx.body = fs.createReadStream(absolute, { start, end });
   }
 }
 

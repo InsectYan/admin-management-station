@@ -3,6 +3,20 @@
 module.exports = app => {
   const { router, controller } = app;
   router.get('/api/health', controller.health.index);
+  router.get('/api/content/overview', controller.content.overview);
+  router.get('/api/content/projects', controller.content.projects);
+  router.get('/api/content/jobs', controller.content.jobs);
+  router.get('/api/content/jobs/:bizApp/:externalId', controller.content.showJob);
+  router.post('/api/content/jobs/:bizApp/:externalId/retry', controller.content.retryJob);
+  router.post('/api/content/jobs/:bizApp/:externalId/cancel', controller.content.cancelJob);
+  router.get('/api/content/deps', controller.content.deps);
+  router.post('/api/content/watch/tick', controller.content.tick);
+  router.get('/api/content/alerts', controller.content.alerts);
+  router.post('/api/content/alerts/:id/ack', controller.content.ack);
+  router.post('/api/content/alerts/:id/resolve', controller.content.resolve);
+  router.get('/api/content/audit', controller.content.audit);
+  router.get('/api/content/settings', controller.content.settings);
+  router.put('/api/content/settings', controller.content.updateSettings);
   router.get('/api/profile/github', controller.profile.github);
   router.put('/api/profile/github-token', controller.profile.saveGithub);
   router.get('/api/projects/template', controller.project.template);

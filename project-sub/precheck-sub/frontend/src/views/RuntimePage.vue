@@ -5,7 +5,10 @@
       <p v-if="!runtime">还没有运行时。</p>
       <template v-else>
         <p>{{ runtime.name }} · {{ runtime.base_url }} · 期望版本 {{ runtime.expected_version }}</p>
-        <el-button type="primary" :loading="loading" @click="probe">重新探针</el-button>
+        <div class="precheck-runtime__actions">
+          <el-button type="primary" :loading="loading" @click="probe">重新探针</el-button>
+          <el-button :loading="starting" @click="startComfy">启动 ComfyUI</el-button>
+        </div>
       </template>
     </div>
     <el-alert v-if="error" :title="error" type="error" show-icon class="precheck-module" />
@@ -38,6 +41,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
+import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import { request } from '../services/apiConfig.js';
 
@@ -45,6 +49,7 @@ const runtime = ref(null);
 const report = ref(null);
 const error = ref('');
 const loading = ref(false);
+const starting = ref(false);
 
 const vramText = computed(() => {
   const device = report.value?.devices?.[0];
@@ -53,16 +58,55 @@ const vramText = computed(() => {
   return `${device.name || ''} 空闲 ${gb(device.vram_free)} / ${gb(device.vram_total)}`;
 });
 
+async function loadProbe() {
+  report.value = await request(`/runtimes/${runtime.value.id}/probe`);
+}
+
 async function probe() {
   if (!runtime.value) return;
   loading.value = true;
   error.value = '';
   try {
-    report.value = await request(`/runtimes/${runtime.value.id}/probe`);
+    await loadProbe();
   } catch (err) {
     error.value = err.message;
   } finally {
     loading.value = false;
+  }
+}
+
+function wait(ms) {
+  return new Promise((resolve) => { setTimeout(resolve, ms); });
+}
+
+async function startComfy() {
+  if (!runtime.value || starting.value) return;
+  starting.value = true;
+  error.value = '';
+  try {
+    const result = await request(`/runtimes/${runtime.value.id}/start`, { method: 'POST' });
+    ElMessage.success(result?.message || '已执行启动指令');
+    if (result?.already_running) {
+      await loadProbe();
+      return;
+    }
+    for (let i = 0; i < 15; i += 1) {
+      await wait(3000);
+      try {
+        await loadProbe();
+      } catch (err) {
+        error.value = err.message;
+      }
+      if (report.value?.online) {
+        ElMessage.success('ComfyUI 已在线');
+        return;
+      }
+    }
+    ElMessage.info('启动指令已执行，ComfyUI 仍在加载，可稍后重新探针');
+  } catch (err) {
+    error.value = err.message;
+  } finally {
+    starting.value = false;
   }
 }
 
@@ -72,3 +116,11 @@ onMounted(async () => {
   if (runtime.value) await probe();
 });
 </script>
+
+<style scoped>
+.precheck-runtime__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+</style>

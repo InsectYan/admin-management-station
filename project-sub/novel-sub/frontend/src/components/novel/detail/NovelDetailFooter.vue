@@ -11,6 +11,7 @@
         :show-text="false"
         color="#2F8A5B"
       />
+      <p class="novel-detail-footer__note">百分比是已写字数 / 大纲规划字数，不是已写章数。连载中是书的进度标记。</p>
     </div>
     <div class="novel-detail-footer__stats">
       <span>已写 {{ progress.chapterWritten || 0 }}/{{ progress.chapterCount || 0 }} 章</span>
@@ -66,6 +67,13 @@ defineEmits(['prev', 'next']);
 .novel-detail-footer__percent {
   font-weight: 700;
   color: var(--novel-color-primary, #3d6b4f);
+}
+
+.novel-detail-footer__note {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--novel-color-text-muted, #8a968e);
 }
 
 .novel-detail-footer__stats {

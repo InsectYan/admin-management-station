@@ -86,7 +86,7 @@ class ProbeService extends require('egg').Service {
       missing_nodes: missingNodes,
       missing_models: missingModels.map(name => ({
         name,
-        advice: '文件应在整合包模型目录中，并由源码版 extra_model_paths.yaml 挂入。不要把 custom_nodes 拷过来。',
+        advice: '在下方按配套选择来源。选完后点梳理，得到文件名和 ComfyUI 目录。',
       })),
       low_vram: Boolean(lowVram),
       vram_free_gb: freeGb == null ? null : Math.round(freeGb * 10) / 10,

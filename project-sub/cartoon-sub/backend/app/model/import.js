@@ -9,5 +9,6 @@ module.exports = app => {
     chapter_title: { type: STRING(200), allowNull: true },
     body: { type: TEXT, allowNull: false },
     characters: { type: JSONB, allowNull: false, defaultValue: [] },
+    script_data: { type: JSONB, allowNull: true },
   }, { tableName: 'cartoon_imports' });
 };

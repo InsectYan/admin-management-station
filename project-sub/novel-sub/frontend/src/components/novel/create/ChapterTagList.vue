@@ -1,10 +1,5 @@
 <template>
   <div class="novel-chapter-tags">
-    <div class="novel-chapter-tags__toolbar">
-      <el-button size="small" class="novel-wood-button" @click="$emit('add')">添加章节</el-button>
-      <span class="novel-chapter-tags__hint">拖拽左侧手柄调整章节顺序</span>
-    </div>
-
     <el-empty v-if="!chapters.length" description="暂无章节标签" />
 
     <div v-else ref="listRef" class="novel-chapter-tags__list">
@@ -50,7 +45,7 @@ const props = defineProps({
   chapters: { type: Array, required: true },
 });
 
-const emit = defineEmits(['change', 'add']);
+const emit = defineEmits(['change']);
 
 const listRef = ref(null);
 let sortableInstance = null;
@@ -102,16 +97,10 @@ watch(
 </script>
 
 <style scoped>
-.novel-chapter-tags__toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.novel-chapter-tags__hint {
-  font-size: 13px;
-  color: var(--novel-color-moon);
+.novel-chapter-tags {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .novel-chapter-tags__list {

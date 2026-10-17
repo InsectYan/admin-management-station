@@ -93,6 +93,39 @@ export function runNovelReview(payload = {}) {
   });
 }
 
+export function fetchAnomalyReports(params = {}) {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([key, val]) => {
+    if (val !== '' && val != null) qs.set(key, String(val));
+  });
+  const q = qs.toString();
+  return request(`/anomaly-reports${q ? `?${q}` : ''}`);
+}
+
+export function fetchAnomalyReport(id) {
+  return request(`/anomaly-reports/${id}`);
+}
+
+export function createAnomalyReport(novelId, mode) {
+  return request('/anomaly-reports', {
+    method: 'POST',
+    data: { novel_id: novelId, mode },
+  });
+}
+
+export function runAnomalyTask(reportId, taskId) {
+  return request(`/anomaly-reports/${reportId}/tasks/${encodeURIComponent(taskId)}/run`, {
+    method: 'POST',
+  });
+}
+
+export function setAnomalyTaskStatus(reportId, taskId, status, error = '') {
+  return request(`/anomaly-reports/${reportId}/tasks/${encodeURIComponent(taskId)}/status`, {
+    method: 'POST',
+    data: { status, error },
+  });
+}
+
 export function ignoreNovelQaFinding(id, findingId) {
   return request(`/novels/${id}/qa/ignore`, {
     method: 'POST',

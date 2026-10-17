@@ -36,4 +36,10 @@ module.exports = (app) => {
   router.post('/api/ai/review', controller.aiReview.create);
   router.get('/api/novels/:id/qa', controller.aiReview.show);
   router.post('/api/novels/:id/qa/ignore', controller.aiReview.ignore);
+
+  router.get('/api/anomaly-reports', controller.novelAnomaly.index);
+  router.post('/api/anomaly-reports', controller.novelAnomaly.create);
+  router.get('/api/anomaly-reports/:id', controller.novelAnomaly.show);
+  router.post('/api/anomaly-reports/:id/tasks/:taskId/run', controller.novelAnomaly.runTask);
+  router.post('/api/anomaly-reports/:id/tasks/:taskId/status', controller.novelAnomaly.setTaskStatus);
 };

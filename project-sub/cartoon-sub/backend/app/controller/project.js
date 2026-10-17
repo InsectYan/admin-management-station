@@ -79,6 +79,14 @@ class ProjectController extends Controller {
     }
   }
 
+  async draft() {
+    try {
+      ok(this.ctx, await this.ctx.service.draft.run(this.ctx.params.id, this.ctx.params.importId));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async addShot() {
     try {
       ok(this.ctx, await this.ctx.service.project.addShot(this.ctx.params.id, this.ctx.request.body || {}));
@@ -96,12 +104,14 @@ class ProjectController extends Controller {
   }
 
   async generate() {
+    const kinds = [ 'image', 'video', 'i2v', 'edit' ];
+    const kind = kinds.includes(this.ctx.query.kind) ? this.ctx.query.kind : 'image';
     try {
       ok(this.ctx, await this.ctx.service.generate.start(
         this.ctx.params.id,
         this.ctx.params.shotId,
         this.ctx.request.body || {},
-        this.ctx.query.kind === 'video' ? 'video' : 'image',
+        kind,
       ));
     } catch (err) {
       fail(this.ctx, err);

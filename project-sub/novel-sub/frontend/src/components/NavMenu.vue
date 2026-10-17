@@ -56,7 +56,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { Expand, Fold, Reading } from '@element-plus/icons-vue';
+import { Expand, Fold, Reading, Warning } from '@element-plus/icons-vue';
 import { navMenus } from '../config/navMenu.js';
 import { useNavCollapse } from '../composables/useNavCollapse.js';
 
@@ -65,7 +65,7 @@ defineProps({
   title: { type: String, default: '小说创作平台' },
 });
 
-const ICONS = { Reading };
+const ICONS = { Reading, Warning };
 function iconOf(name) {
   return ICONS[name] || Reading;
 }
@@ -73,7 +73,9 @@ function iconOf(name) {
 const route = useRoute();
 const { collapsed, toggleCollapsed } = useNavCollapse();
 const asideWidth = computed(() => (collapsed.value ? '64px' : '240px'));
-const activePath = computed(() => (
-  route.path.startsWith('/novels') ? '/novels' : route.path
-));
+const activePath = computed(() => {
+  if (route.path.startsWith('/anomalies')) return '/anomalies';
+  if (route.path.startsWith('/novels')) return '/novels';
+  return route.path;
+});
 </script>

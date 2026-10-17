@@ -1,0 +1,126 @@
+{
+  "1": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "Wan2.2\\I2V\\wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
+      "weight_dtype": "fp8_e4m3fn_fast"
+    }
+  },
+  "2": {
+    "class_type": "ModelSamplingSD3",
+    "inputs": {
+      "model": ["1", 0],
+      "shift": 8
+    }
+  },
+  "3": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "Wan2.2\\I2V\\wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
+      "weight_dtype": "fp8_e4m3fn_fast"
+    }
+  },
+  "4": {
+    "class_type": "ModelSamplingSD3",
+    "inputs": {
+      "model": ["3", 0],
+      "shift": 8
+    }
+  },
+  "5": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "type": "wan"
+    }
+  },
+  "6": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "Wan_2.1\\wan_2.1_vae.safetensors"
+    }
+  },
+  "7": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "anime comic, the character turns and looks back, camera moves closer",
+      "clip": ["5", 0]
+    }
+  },
+  "8": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "low quality, blurry, still frame, subtitles",
+      "clip": ["5", 0]
+    }
+  },
+  "9": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "start.png" }
+  },
+  "10": {
+    "class_type": "WanImageToVideo",
+    "inputs": {
+      "positive": ["7", 0],
+      "negative": ["8", 0],
+      "vae": ["6", 0],
+      "width": 480,
+      "height": 272,
+      "length": 5,
+      "batch_size": 1,
+      "start_image": ["9", 0]
+    }
+  },
+  "11": {
+    "class_type": "KSamplerAdvanced",
+    "inputs": {
+      "model": ["2", 0],
+      "add_noise": "enable",
+      "noise_seed": 1,
+      "steps": 4,
+      "cfg": 3.5,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "positive": ["10", 0],
+      "negative": ["10", 1],
+      "latent_image": ["10", 2],
+      "start_at_step": 0,
+      "end_at_step": 2,
+      "return_with_leftover_noise": "enable"
+    }
+  },
+  "12": {
+    "class_type": "KSamplerAdvanced",
+    "inputs": {
+      "model": ["4", 0],
+      "add_noise": "disable",
+      "noise_seed": 1,
+      "steps": 4,
+      "cfg": 3.5,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "positive": ["10", 0],
+      "negative": ["10", 1],
+      "latent_image": ["11", 0],
+      "start_at_step": 2,
+      "end_at_step": 10000,
+      "return_with_leftover_noise": "disable"
+    }
+  },
+  "13": {
+    "class_type": "VAEDecode",
+    "inputs": { "samples": ["12", 0], "vae": ["6", 0] }
+  },
+  "14": {
+    "class_type": "CreateVideo",
+    "inputs": { "images": ["13", 0], "fps": 8 }
+  },
+  "15": {
+    "class_type": "SaveVideo",
+    "inputs": {
+      "video": ["14", 0],
+      "filename_prefix": "wan22-i2v-cartoon-v1",
+      "format": "mp4"
+    }
+  }
+}

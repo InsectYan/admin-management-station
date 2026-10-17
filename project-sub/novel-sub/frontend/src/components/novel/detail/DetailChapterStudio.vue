@@ -155,6 +155,13 @@
           </el-button>
         </div>
       </header>
+      <AnomalyFixPanel
+        v-if="anomalyReportId"
+        :report-id="anomalyReportId"
+        home="studio"
+        :auto="fixAuto"
+        :execute="executeAnomalyRewrite"
+      />
       <div v-if="queue.running" class="novel-chapter-studio__queue">
         <span>续写 {{ queue.index }}/{{ queue.total }} · {{ queue.title || '空章' }}</span>
         <el-button size="small" :disabled="queue.paused" @click="pauseQueue">暂停</el-button>
@@ -207,6 +214,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import AiSceneTree from '../ai/AiSceneTree.vue';
 import AiFormDock from '../ai/AiFormDock.vue';
+import AnomalyFixPanel from '../AnomalyFixPanel.vue';
 import CharacterRelationGraph from '../create/CharacterRelationGraph.vue';
 import NovelMarkdown from '../markdown/NovelMarkdown.vue';
 import {
@@ -231,12 +239,14 @@ const props = defineProps({
   world: { type: Object, default: () => ({}) },
   initialChapterId: { type: String, default: '' },
   startQueue: { type: Boolean, default: false },
+  fixAuto: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['chapter-change', 'progress-change', 'queue-done', 'open-reader']);
 const route = useRoute();
 const router = useRouter();
 
+const anomalyReportId = computed(() => String(route.query.anomaly || ''));
 const TREE_MIN_WIDTH = 230;
 const REF_MIN_WIDTH = 280;
 const BODY_MIN_WIDTH = 280;
@@ -662,6 +672,18 @@ async function writeOneEmptyChapter(targetId) {
   } catch (err) {
     if (err?.code === 'QA_FAILED') throw err;
     ElMessage.warning(err.message || '核检暂时不可用，已跳过门禁');
+  }
+}
+
+async function executeAnomalyRewrite(task) {
+  if (queue.value.running || writingNext.value) throw new Error('正在写章节，请稍后再执行修正');
+  writingNext.value = true;
+  try {
+    enterEdit();
+    await writeOneEmptyChapter(task.chapter_id);
+    emit('progress-change');
+  } finally {
+    writingNext.value = false;
   }
 }
 

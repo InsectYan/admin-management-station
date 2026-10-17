@@ -37,6 +37,48 @@ class RuntimeService extends Service {
       has_checkpoint_loader: (nodeNames || []).includes('CheckpointLoaderSimple'),
     };
   }
+
+  async start(id) {
+    const row = await this.ctx.model.Runtime.findByPk(id);
+    if (!row) this.ctx.throw(404, '运行时不存在');
+    const snapshot = await this.ctx.service.probe.inspect(row.base_url, row.expected_version);
+    if (snapshot.online) {
+      return {
+        already_running: true,
+        started: false,
+        message: 'ComfyUI 已在运行',
+      };
+    }
+    const launched = await this.launchOnHost();
+    return {
+      already_running: Boolean(launched.already_running),
+      started: !launched.already_running,
+      message: launched.message || '已执行启动指令',
+    };
+  }
+
+  async launchOnHost() {
+    const { startBridgeUrl, startToken } = this.config.comfyui;
+    let response;
+    try {
+      response = await fetch(startBridgeUrl, {
+        method: 'POST',
+        headers: { 'x-start-token': startToken },
+        signal: AbortSignal.timeout(15000),
+      });
+    } catch (err) {
+      const error = new Error('无法执行启动指令：本机启动桥没有响应');
+      error.status = 503;
+      throw error;
+    }
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || body.ok === false) {
+      const error = new Error(body.message || '启动指令执行失败');
+      error.status = response.status || 502;
+      throw error;
+    }
+    return body;
+  }
 }
 
 module.exports = RuntimeService;

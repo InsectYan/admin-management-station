@@ -11,5 +11,7 @@ module.exports = app => {
     prompt_id: { type: STRING(64), allowNull: true },
     error_message: { type: TEXT, allowNull: true },
     workflow_snapshot: { type: JSONB, allowNull: true },
+    precheck_workflow_id: { type: INTEGER, allowNull: true },
+    precheck_gap: { type: JSONB, allowNull: true },
   }, { tableName: 'cartoon_tasks' });
 };

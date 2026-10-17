@@ -5,6 +5,7 @@ module.exports = app => {
   return app.model.define('cartoon_shot', {
     id: { type: INTEGER, primaryKey: true, autoIncrement: true },
     project_id: { type: INTEGER, allowNull: false },
+    import_id: { type: INTEGER, allowNull: true },
     sort_order: { type: INTEGER, allowNull: false, defaultValue: 0 },
     shot_size: { type: STRING(32), allowNull: true },
     camera_move: { type: STRING(32), allowNull: true },

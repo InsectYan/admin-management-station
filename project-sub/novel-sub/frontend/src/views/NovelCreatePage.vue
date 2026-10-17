@@ -176,12 +176,20 @@
         @change="markDirty"
         @add-volume="addOutlineVolume"
       />
-      <StepContentOrg
-        v-else-if="currentStep === 6"
-        :form="contentForm"
-        @change="markDirty"
-        @add="addChapter"
-      />
+      <template v-else-if="currentStep === 6">
+        <AnomalyFixPanel
+          v-if="route.query.anomaly"
+          :report-id="route.query.anomaly"
+          home="content"
+          :auto="fixBoot"
+          :reload="retryLoad"
+        />
+        <StepContentOrg
+          :form="contentForm"
+          @change="markDirty"
+          @add="addChapter"
+        />
+      </template>
 
       <template #footer>
         <NovelCreateFooter
@@ -204,7 +212,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import NovelCreateShell from '../components/novel/create/NovelCreateShell.vue';
@@ -217,6 +225,7 @@ import StepCharacters from '../components/novel/create/StepCharacters.vue';
 import StepOutline from '../components/novel/create/StepOutline.vue';
 import StepContentOrg from '../components/novel/create/StepContentOrg.vue';
 import AiFormDock from '../components/novel/ai/AiFormDock.vue';
+import AnomalyFixPanel from '../components/novel/AnomalyFixPanel.vue';
 import { useNovelCreateWizard } from '../composables/useNovelCreateWizard.js';
 import { BASIC_AI_SCENES, WORLD_AI_SCENES, OUTLINE_AI_SCENES, CONTENT_AI_SCENES, ORCHESTRATE_AI_SCENES, buildCharacterScenes, buildFactionScenes } from '../utils/aiScenes.js';
 import { applyBasicPatch, applyWorldPatch, applyFactionPatch, applyCharacterPatch, applyOutlinePatch, applyChaptersPatch, flattenOutlineTitles } from '../utils/aiApplyPatch.js';
@@ -271,6 +280,13 @@ const {
 
 const route = useRoute();
 const router = useRouter();
+const fixBoot = ref(false);
+
+watch(loading, (busy, prev) => {
+  if (prev && !busy && route.query.fix === '1' && String(route.query.step || '') === '6') {
+    fixBoot.value = true;
+  }
+});
 const { enums, load: loadEnums } = useNovelEnums();
 const showPlanDock = computed(() => route.query.ai === 'plan' && !autorunActive.value);
 const expandDock = computed(() => route.query.ai === '1' || route.query.ai === 'plan');

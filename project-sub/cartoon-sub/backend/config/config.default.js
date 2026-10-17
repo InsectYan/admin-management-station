@@ -42,11 +42,21 @@ module.exports = appInfo => {
   };
   config.precheck = {
     baseUrl: process.env.PRECHECK_API_ORIGIN || 'http://127.0.0.1:5204',
-    t2iWorkflowId: Number(process.env.CARTOON_T2I_WORKFLOW_ID || 1),
-    videoWorkflowId: Number(process.env.CARTOON_VIDEO_WORKFLOW_ID || 3),
+    t2iWorkflowId: Number(process.env.CARTOON_T2I_WORKFLOW_ID || 0),
+    videoWorkflowId: Number(process.env.CARTOON_VIDEO_WORKFLOW_ID || 0),
+    i2vWorkflowId: Number(process.env.CARTOON_I2V_WORKFLOW_ID || 0),
+    editWorkflowId: Number(process.env.CARTOON_EDIT_WORKFLOW_ID || 0),
   };
   config.comfy = {
     baseUrl: process.env.COMFYUI_BASE_URL || 'http://127.0.0.1:8188',
+  };
+  config.agentPlatform = {
+    baseUrl: process.env.AGENT_PLATFORM_URL || 'http://127.0.0.1:4001',
+    timeoutMs: Number(process.env.AGENT_PLATFORM_TIMEOUT_MS || 180000),
+  };
+  config.mediaTools = {
+    ffmpeg: process.env.CARTOON_FFMPEG_BIN || 'ffmpeg',
+    ffprobe: process.env.CARTOON_FFPROBE_BIN || 'ffprobe',
   };
   return config;
 };

@@ -95,7 +95,7 @@
       <dl class="novel-detail-fields">
         <div class="novel-detail-fields__row">
           <dt>进度</dt>
-          <dd>{{ progressLabel(form.progress_status) }} · {{ form.progress_percent || 0 }}%（按正文派生）</dd>
+          <dd>{{ progressLabel(form.progress_status) }} · {{ form.progress_percent || 0 }}%（已写字数 / 大纲规划字数，不是已写章数）</dd>
         </div>
         <div class="novel-detail-fields__row">
           <dt>创建时间</dt>

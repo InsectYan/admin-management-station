@@ -23,6 +23,18 @@ export function createAppRouter(basename) {
             meta: { title: '新建小说' },
           },
           {
+            path: 'anomalies',
+            name: 'novel-anomalies',
+            component: () => import('../views/AnomalyListPage.vue'),
+            meta: { title: '小说异常登记表' },
+          },
+          {
+            path: 'anomalies/:id',
+            name: 'novel-anomaly-detail',
+            component: () => import('../views/AnomalyDetailPage.vue'),
+            meta: { title: '异常详情' },
+          },
+          {
             path: 'novels/:id/qa',
             name: 'novel-qa',
             component: () => import('../views/NovelQaPage.vue'),

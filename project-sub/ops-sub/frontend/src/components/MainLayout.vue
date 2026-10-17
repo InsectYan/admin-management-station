@@ -32,10 +32,11 @@ const route = useRoute();
 const viewKey = computed(() => {
   const id = route.params.id != null ? String(route.params.id) : '';
   const jobId = route.params.jobId != null ? String(route.params.jobId) : '';
-  return [ String(route.name || ''), id, jobId ].filter(Boolean).join(':');
+  const externalId = route.params.externalId != null ? String(route.params.externalId) : '';
+  return [ String(route.name || ''), id, jobId, externalId ].filter(Boolean).join(':');
 });
 const sceneClass = computed(() => {
-  if (route.name === 'ops-list' || route.name === 'ops-deploy-history' || route.name === 'ops-deploy-jobs') {
+  if (route.name === 'ops-list' || route.name === 'ops-deploy-history' || route.name === 'ops-deploy-jobs' || route.name === 'ops-jobs' || route.name === 'ops-alerts' || route.name === 'ops-audit') {
     return 'ops-scene ops-scene--meadow';
   }
   if (route.name === 'ops-detail' || route.name === 'ops-edit') return 'ops-scene ops-scene--lake';

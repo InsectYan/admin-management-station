@@ -53,6 +53,8 @@
         <el-card v-for="item in detail.imports" :key="item.id" shadow="never" class="cartoon-snap">
           <strong>{{ item.chapter_title || '未命名章节' }}</strong>
           <p>{{ item.body }}</p>
+          <p v-if="item.script_data && item.script_data.summary">{{ item.script_data.summary }}</p>
+          <el-button type="primary" :loading="draftingId === item.id" @click="draft(item)">起草分镜</el-button>
         </el-card>
       </div>
     </section>
@@ -76,9 +78,35 @@
       </el-form>
       <el-table :data="detail.shots" style="margin-top: 12px" @row-click="choose">
         <el-table-column prop="sort_order" label="#" width="60" />
-        <el-table-column prop="shot_size" label="景别" width="100" />
-        <el-table-column prop="camera_move" label="运镜" width="100" />
-        <el-table-column prop="description" label="描述" />
+        <el-table-column label="景别" width="120">
+          <template #default="{ row }">
+            <el-select v-model="row.shot_size" @change="saveShot(row)">
+              <el-option v-for="item in meta.shot_sizes" :key="item" :label="item" :value="item" />
+            </el-select>
+          </template>
+        </el-table-column>
+        <el-table-column label="运镜" width="120">
+          <template #default="{ row }">
+            <el-select v-model="row.camera_move" @change="saveShot(row)">
+              <el-option v-for="item in meta.camera_moves" :key="item" :label="item" :value="item" />
+            </el-select>
+          </template>
+        </el-table-column>
+        <el-table-column label="描述">
+          <template #default="{ row }">
+            <el-input v-model="row.description" type="textarea" :rows="2" @blur="saveShot(row)" />
+          </template>
+        </el-table-column>
+        <el-table-column label="正向提示词">
+          <template #default="{ row }">
+            <el-input :model-value="row.prompt?.positive_zh || ''" type="textarea" :rows="2" @update:model-value="setPrompt(row, 'positive_zh', $event)" @blur="saveShot(row)" />
+          </template>
+        </el-table-column>
+        <el-table-column label="负向提示词">
+          <template #default="{ row }">
+            <el-input :model-value="row.prompt?.negative_zh || ''" type="textarea" :rows="2" @update:model-value="setPrompt(row, 'negative_zh', $event)" @blur="saveShot(row)" />
+          </template>
+        </el-table-column>
       </el-table>
     </section>
 
@@ -89,16 +117,24 @@
       <el-form label-position="top">
         <el-form-item label="提示词"><el-input v-model="promptText" type="textarea" :rows="3" /></el-form-item>
         <el-button type="primary" :disabled="!selected" :loading="generating" @click="generate('image')">生成图片</el-button>
-        <el-button :disabled="!selected" :loading="generating" @click="generate('video')">生成视频</el-button>
+        <el-button :disabled="!selected" :loading="generating" @click="generate('video')">首尾帧视频</el-button>
+        <el-button :disabled="!selected" :loading="generating" @click="generate('i2v')">图生视频</el-button>
+        <el-button :disabled="!selected" :loading="generating" @click="generate('edit')">改图</el-button>
       </el-form>
     </section>
 
     <section v-show="step === 5" class="cartoon-module">
-      <h3 class="cartoon-module__title">产物</h3>
+      <div class="cartoon-module__row">
+        <h3 class="cartoon-module__title">产物</h3>
+        <el-button @click="router.push(`/projects/${route.params.id}/edit`)">剪辑成片</el-button>
+      </div>
       <el-empty v-if="!detail.tasks.length" description="还没有生成记录" />
       <el-card v-for="task in detail.tasks" :key="task.id" shadow="never" class="cartoon-snap">
-        <p>{{ statusLabel(task.status) }} · {{ task.shot_description }}</p>
+        <p>{{ statusLabel(task.status) }} · {{ kindLabel(task.kind) }} · {{ task.shot_description }}</p>
         <p v-if="task.error_message">{{ task.error_message }}</p>
+        <p v-if="task.precheck_workflow_id">
+          <a class="cartoon-precheck-link" :href="precheckHref(task.precheck_workflow_id)" target="_blank" rel="noreferrer">打开预检梳理</a>
+        </p>
         <div v-for="output in task.outputs" :key="output.id">
           <video v-if="output.media_kind === 'video'" :src="fileUrl(output.id)" controls class="cartoon-media"></video>
           <img v-else :src="fileUrl(output.id)" :alt="task.shot_description" class="cartoon-media" />
@@ -138,12 +174,20 @@ const shot = reactive({ shot_size: '中景', camera_move: '固定', description:
 const selected = ref(null);
 const promptText = ref('');
 const generating = ref(false);
+const draftingId = ref(null);
 const notice = ref('');
 const noticeType = ref('info');
 let pollTimer = null;
 
 function statusLabel(status) {
   return { queued: '排队', running: '生成中', saving: '生成中', success: '成功', failed: '失败' }[status] || status;
+}
+function kindLabel(kind) {
+  return { image: '文生图', video: '首尾帧', i2v: '图生视频', edit: '改图' }[kind] || kind;
+}
+function precheckHref(id) {
+  const origin = import.meta.env.VITE_PRECHECK_ORIGIN || 'http://localhost:5104';
+  return `${origin.replace(/\/$/, '')}/workflows?id=${id}`;
 }
 function fileUrl(id) { return `${resolveApiBase()}/outputs/${id}/file`; }
 function choose(row) {
@@ -234,6 +278,39 @@ async function saveImport() {
   body.value = '';
   await load();
 }
+function setPrompt(row, key, value) {
+  if (!row.prompt) row.prompt = { positive_zh: '', negative_zh: '' };
+  row.prompt[key] = value;
+}
+async function saveShot(row) {
+  await request(`/shots/${row.id}`, {
+    method: 'put',
+    data: {
+      description: row.description,
+      shot_size: row.shot_size,
+      camera_move: row.camera_move,
+      positive_zh: row.prompt?.positive_zh || '',
+      negative_zh: row.prompt?.negative_zh || '',
+    },
+  });
+}
+async function draft(item) {
+  draftingId.value = item.id;
+  notice.value = '正在起草，这一步不出图';
+  noticeType.value = 'info';
+  try {
+    await request(`/projects/${route.params.id}/imports/${item.id}/draft`, { method: 'post', timeout: 600000 });
+    notice.value = '分镜已写入，可以再改';
+    noticeType.value = 'success';
+    await load();
+    step.value = 3;
+  } catch (err) {
+    notice.value = err.message;
+    noticeType.value = 'error';
+  } finally {
+    draftingId.value = null;
+  }
+}
 async function addShot() {
   await request(`/projects/${route.params.id}/shots`, { method: 'post', data: { ...shot } });
   shot.description = '';
@@ -280,6 +357,9 @@ onUnmounted(stopPoll);
 </script>
 
 <style scoped>
+.cartoon-module__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cartoon-module__row .cartoon-module__title { margin-bottom: 12px; }
 .cartoon-snap { margin-bottom: 12px; }
 .cartoon-media { max-width: 420px; display: block; margin-top: 8px; }
+.cartoon-precheck-link { color: #2f8a5b; }
 </style>

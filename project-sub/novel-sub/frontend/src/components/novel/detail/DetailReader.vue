@@ -6,11 +6,12 @@
         <span class="is-muted">{{ reader.word_count || 0 }} 字 · {{ reader.chapter_written || 0 }}/{{ reader.chapter_total || 0 }} 章</span>
       </header>
       <nav class="novel-reader__toc-list">
-        <template v-for="vol in reader.volumes || []" :key="vol.id">
-          <strong v-if="vol.title" class="novel-reader__vol">{{ vol.title }}</strong>
+        <template v-for="(ch, index) in chapters" :key="ch.id">
+          <strong
+            v-if="ch.volumeTitle && ch.volumeTitle !== chapters[index - 1]?.volumeTitle"
+            class="novel-reader__vol"
+          >{{ ch.volumeTitle }}</strong>
           <button
-            v-for="ch in vol.chapters || []"
-            :key="ch.id"
             type="button"
             class="novel-reader__toc-item"
             :class="{ 'is-active': activeId === ch.id, 'is-empty': !ch.word_count }"
@@ -23,9 +24,19 @@
     </aside>
     <div class="novel-reader__main">
       <header class="novel-reader__toolbar">
+        <el-button type="primary" plain @click="inspectOpen = true">小说检测</el-button>
         <el-button @click="$emit('export', 'md')">导出 Markdown</el-button>
         <el-button @click="$emit('export', 'txt')">导出 TXT</el-button>
       </header>
+      <el-dialog v-model="inspectOpen" title="小说检测" width="460px">
+        <p class="novel-reader__inspect-copy">
+          粗略检测只查章节目录是否乱序、各章字数是否不够。全面检测在此之上，再按大纲和前面章节的关联检查每一章正文。
+        </p>
+        <template #footer>
+          <el-button :loading="inspecting" @click="runInspect('rough')">粗略检测</el-button>
+          <el-button type="primary" :loading="inspecting" @click="runInspect('full')">全面检测</el-button>
+        </template>
+      </el-dialog>
       <el-alert v-if="error" type="error" :title="error" show-icon :closable="false" />
       <el-empty v-else-if="!chapters.length" description="还没有章节目录" />
       <article v-else class="novel-reader__body">
@@ -48,20 +59,51 @@
 
 <script setup>
 import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
 import NovelMarkdown from '../markdown/NovelMarkdown.vue';
+import { createAnomalyReport } from '../../../services/novelService.js';
 
 const props = defineProps({
   reader: { type: Object, default: () => ({ volumes: [] }) },
+  novelId: { type: [Number, String], default: null },
   error: { type: String, default: '' },
 });
 
 defineEmits(['export', 'edit-chapter']);
 
+const router = useRouter();
+const inspectOpen = ref(false);
+const inspecting = ref(false);
 const activeId = ref('');
 
-const chapters = computed(() => (
-  (props.reader.volumes || []).flatMap((vol) => vol.chapters || [])
-));
+async function runInspect(mode) {
+  if (!props.novelId) {
+    ElMessage.error('缺少小说');
+    return;
+  }
+  inspecting.value = true;
+  try {
+    const report = await createAnomalyReport(props.novelId, mode);
+    inspectOpen.value = false;
+    ElMessage.success(report?.summary || '检测完成');
+    await router.push({ name: 'novel-anomaly-detail', params: { id: report.id } });
+  } catch (err) {
+    ElMessage.error(err.message || '检测失败');
+  } finally {
+    inspecting.value = false;
+  }
+}
+
+const chapters = computed(() => {
+  const list = [];
+  for (const vol of props.reader.volumes || []) {
+    for (const ch of vol.chapters || []) {
+      list.push({ ...ch, volumeTitle: vol.title || '' });
+    }
+  }
+  return list.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+});
 
 function scrollTo(id) {
   activeId.value = id;
@@ -149,6 +191,12 @@ function scrollTo(id) {
   gap: 8px;
   flex-shrink: 0;
   margin-bottom: 8px;
+}
+
+.novel-reader__inspect-copy {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--novel-color-text-secondary, #5c6b62);
 }
 
 .novel-reader__body {

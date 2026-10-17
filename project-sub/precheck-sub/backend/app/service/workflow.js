@@ -2,6 +2,7 @@
 
 const Service = require('egg').Service;
 const { parseApiWorkflow } = require('../lib/workflowParse');
+const { buildSupplies } = require('../lib/supplyCatalog');
 
 class WorkflowService extends Service {
   async list() {
@@ -68,6 +69,13 @@ class WorkflowService extends Service {
       workflow.required_models,
       workflow.suggested_vram_gb,
     );
+    const supplies = snapshot.online
+      ? buildSupplies({
+        missingNodes: diff.missing_nodes,
+        requiredModels: workflow.required_models,
+        installedModels: snapshot.models || [],
+      })
+      : { note: '', plugins: [], families: [], loose: [] };
     return {
       workflow_id: workflow.id,
       runtime_id: runtime.id,
@@ -76,6 +84,7 @@ class WorkflowService extends Service {
       version_ok: snapshot.version_ok,
       error: snapshot.error,
       ...diff,
+      supplies,
     };
   }
 }

@@ -36,6 +36,8 @@ services:
       # ComfyUI 留在宿主机。容器里的 127.0.0.1 不是宿主机。
       COMFYUI_BASE_URL: ${COMFYUI_BASE_URL:-http://host.docker.internal:8188}
       COMFYUI_EXPECTED_VERSION: ${COMFYUI_EXPECTED_VERSION:-0.39.0}
+      COMFYUI_START_BRIDGE_URL: ${COMFYUI_START_BRIDGE_URL:-http://host.docker.internal:18787/start}
+      COMFYUI_START_TOKEN: ${COMFYUI_START_TOKEN:-local-comfy-start}
       JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_LOCAL_JWT}
     extra_hosts:
       - "host.docker.internal:host-gateway"

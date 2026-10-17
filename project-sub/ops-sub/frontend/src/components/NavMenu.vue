@@ -30,10 +30,13 @@
       active-text-color="#2f8a5b"
       router
     >
-      <el-menu-item v-for="item in navMenus" :key="item.path" :index="item.path">
-        <el-icon><component :is="iconOf(item.icon)" /></el-icon>
-        <span>{{ item.title }}</span>
-      </el-menu-item>
+      <el-menu-item-group v-for="group in visibleGroups" :key="group.title">
+        <template v-if="!collapsed" #title>{{ group.title }}</template>
+        <el-menu-item v-for="item in group.items" :key="item.path" :index="item.path">
+          <el-icon><component :is="iconOf(item.icon)" /></el-icon>
+          <span>{{ item.title }}</span>
+        </el-menu-item>
+      </el-menu-item-group>
     </el-menu>
     <div v-if="userName" class="ops-sub-user">{{ userName }}</div>
   </el-aside>
@@ -47,7 +50,7 @@
     active-text-color="#2f8a5b"
     router
   >
-    <el-menu-item v-for="item in navMenus" :key="item.path" :index="item.path">
+    <el-menu-item v-for="item in flatMenus" :key="item.path" :index="item.path">
       <el-icon><component :is="iconOf(item.icon)" /></el-icon>
       <span>{{ item.title }}</span>
     </el-menu-item>
@@ -57,8 +60,8 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { Clock, Expand, Fold, Monitor } from '@element-plus/icons-vue';
-import { navMenus } from '../config/navMenu.js';
+import { Bell, Clock, Connection, Expand, Fold, List, Monitor, Notebook, Odometer, Setting } from '@element-plus/icons-vue';
+import { navGroups } from '../config/navMenu.js';
 import { useNavCollapse } from '../composables/useNavCollapse.js';
 import { getCachedUser } from '../lib/amsAuth.js';
 
@@ -67,7 +70,7 @@ defineProps({
   title: { type: String, default: '运维管理平台' },
 });
 
-const ICONS = { Monitor, Clock };
+const ICONS = { Monitor, Clock, Odometer, List, Connection, Bell, Notebook, Setting };
 function iconOf(name) {
   return ICONS[name] || Monitor;
 }
@@ -75,8 +78,18 @@ function iconOf(name) {
 const route = useRoute();
 const { collapsed, toggleCollapsed } = useNavCollapse();
 const asideWidth = computed(() => (collapsed.value ? '64px' : '240px'));
-const activePath = computed(() => (
-  route.path.startsWith('/deploy-jobs') ? '/deploy-jobs' : '/projects'
-));
+const isAdmin = computed(() => getCachedUser()?.role === 'admin');
+const visibleGroups = computed(() => navGroups.map(group => ({
+  ...group,
+  items: group.items.filter(item => !item.adminOnly || isAdmin.value),
+})));
+const flatMenus = computed(() => visibleGroups.value.flatMap(group => group.items));
+const CONTENT_PATHS = [ '/overview', '/jobs', '/deps', '/alerts', '/audit', '/settings' ];
+const activePath = computed(() => {
+  const content = CONTENT_PATHS.find(path => route.path === path || route.path.startsWith(`${path}/`));
+  if (content) return content;
+  if (route.path.startsWith('/deploy-jobs')) return '/deploy-jobs';
+  return '/projects';
+});
 const userName = computed(() => getCachedUser()?.username || '');
 </script>
