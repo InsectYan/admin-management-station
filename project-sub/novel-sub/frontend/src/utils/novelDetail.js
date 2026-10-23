@@ -18,8 +18,12 @@ export const DETAIL_SETTING_TABS = WIZARD_STEPS.map((item) => ({
 
 export const DETAIL_STUDIO_TAB = { step: 7, key: 'chapter', title: '单章开发' };
 export const DETAIL_READER_TAB = { step: 8, key: 'reader', title: '全书预览' };
+export const DETAIL_PACKAGE_TAB = { step: 9, key: 'package', title: '发布' };
+export const DETAIL_PLOTLINE_TAB = { step: 10, key: 'plotline', title: '剧情线' };
+export const DETAIL_SCRIPT_TAB = { step: 11, key: 'script', title: '剧本' };
+export const DETAIL_INTENT_TAB = { step: 12, key: 'intent', title: '叙事分镜' };
 
-export const DETAIL_TABS = [...DETAIL_SETTING_TABS, DETAIL_STUDIO_TAB, DETAIL_READER_TAB];
+export const DETAIL_TABS = [...DETAIL_SETTING_TABS, DETAIL_STUDIO_TAB, DETAIL_READER_TAB, DETAIL_PACKAGE_TAB, DETAIL_PLOTLINE_TAB, DETAIL_SCRIPT_TAB, DETAIL_INTENT_TAB];
 
 export const DETAIL_TAB_MAX = DETAIL_TABS.length;
 
@@ -115,6 +119,8 @@ export function tabFilled(tabKey, {
     case 'chapter':
       return Boolean(contentForm?.chapters?.length);
     case 'reader':
+      return Boolean(contentForm?.chapters?.length);
+    case 'package':
       return Boolean(contentForm?.chapters?.length);
     default:
       return false;

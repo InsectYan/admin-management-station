@@ -38,5 +38,31 @@ export function exportReader(reader, format = 'md') {
     downloadText(`${name}.txt`, text, 'text/plain;charset=utf-8');
     return;
   }
+  if (format === 'doc') {
+    const html = `<html><head><meta charset="utf-8"></head><body><pre>${escapeHtml(text)}</pre></body></html>`;
+    downloadText(`${name}.doc`, html, 'application/msword');
+    return;
+  }
+  downloadText(`${name}.md`, text, 'text/markdown;charset=utf-8');
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+export function exportPlain(title, text, format = 'md') {
+  const name = safeFileName(title);
+  if (format === 'txt') {
+    downloadText(`${name}.txt`, text);
+    return;
+  }
+  if (format === 'doc') {
+    const html = `<html><head><meta charset="utf-8"></head><body><pre>${escapeHtml(text)}</pre></body></html>`;
+    downloadText(`${name}.doc`, html, 'application/msword');
+    return;
+  }
   downloadText(`${name}.md`, text, 'text/markdown;charset=utf-8');
 }

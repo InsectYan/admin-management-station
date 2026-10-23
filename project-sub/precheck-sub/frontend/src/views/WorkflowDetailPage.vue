@@ -19,7 +19,7 @@
       </el-tab-pane>
       <el-tab-pane label="预览" name="preview">
         <div class="precheck-module">
-          <p class="precheck-module__hint">填写生成参数后出图或出视频。重复生成时只留下最新的一份产物。</p>
+          <p class="precheck-module__hint">填写正向提示词，需要图片的工作流先上传图片。重复生成时只留下最新的一份产物。</p>
           <WorkflowPreview :workflow-id="row.id" :api-json="row.api_json" />
         </div>
       </el-tab-pane>

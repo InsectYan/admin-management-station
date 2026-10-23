@@ -5,9 +5,12 @@ CREATE TABLE IF NOT EXISTS cartoon_projects (
   visual_style VARCHAR(64) NOT NULL DEFAULT '',
   summary TEXT,
   status VARCHAR(32) NOT NULL DEFAULT 'draft',
+  template_id VARCHAR(64),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE cartoon_projects ADD COLUMN IF NOT EXISTS template_id VARCHAR(64);
 
 CREATE TABLE IF NOT EXISTS cartoon_imports (
   id SERIAL PRIMARY KEY,
@@ -21,6 +24,21 @@ CREATE TABLE IF NOT EXISTS cartoon_imports (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS cartoon_copy_blocks (
+  id SERIAL PRIMARY KEY,
+  project_id INTEGER NOT NULL REFERENCES cartoon_projects(id) ON DELETE CASCADE,
+  sort_order INTEGER NOT NULL DEFAULT 1,
+  title VARCHAR(200) NOT NULL DEFAULT '',
+  body TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE cartoon_copy_blocks DROP CONSTRAINT IF EXISTS cartoon_copy_blocks_project_id_fkey;
+ALTER TABLE cartoon_copy_blocks
+  ADD CONSTRAINT cartoon_copy_blocks_project_id_fkey
+  FOREIGN KEY (project_id) REFERENCES cartoon_projects(id) ON DELETE CASCADE ON UPDATE CASCADE;
 
 CREATE TABLE IF NOT EXISTS cartoon_assets (
   id SERIAL PRIMARY KEY,
@@ -142,3 +160,102 @@ ALTER TABLE cartoon_outputs DROP CONSTRAINT IF EXISTS cartoon_outputs_edit_job_i
 ALTER TABLE cartoon_outputs
   ADD CONSTRAINT cartoon_outputs_edit_job_id_fkey
   FOREIGN KEY (edit_job_id) REFERENCES cartoon_edit_jobs(id) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS cartoon_pipeline_nodes (
+  id SERIAL PRIMARY KEY,
+  content_type VARCHAR(32) NOT NULL,
+  node_key VARCHAR(64) NOT NULL,
+  title VARCHAR(80) NOT NULL DEFAULT '',
+  kind VARCHAR(16) NOT NULL DEFAULT 'custom',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  skill_name VARCHAR(80) NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (content_type, node_key)
+);
+
+CREATE TABLE IF NOT EXISTS cartoon_agent_configs (
+  id SERIAL PRIMARY KEY,
+  content_type VARCHAR(32) NOT NULL,
+  role VARCHAR(32) NOT NULL,
+  input_text TEXT NOT NULL DEFAULT '',
+  output_text TEXT NOT NULL DEFAULT '',
+  model_profile VARCHAR(64) NOT NULL DEFAULT '',
+  rule_text TEXT NOT NULL DEFAULT '',
+  retry_count INTEGER NOT NULL DEFAULT 1,
+  human_confirm BOOLEAN NOT NULL DEFAULT FALSE,
+  enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (content_type, role)
+);
+
+CREATE TABLE IF NOT EXISTS cartoon_batches (
+  id SERIAL PRIMARY KEY,
+  project_id INTEGER NOT NULL REFERENCES cartoon_projects(id) ON DELETE CASCADE,
+  status VARCHAR(32) NOT NULL DEFAULT 'queued',
+  total INTEGER NOT NULL DEFAULT 0,
+  success_count INTEGER NOT NULL DEFAULT 0,
+  failed_count INTEGER NOT NULL DEFAULT 0,
+  breakpoint_index INTEGER NOT NULL DEFAULT 0,
+  rule_snapshot JSONB NOT NULL DEFAULT '[]',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE cartoon_batches ADD COLUMN IF NOT EXISTS rule_snapshot JSONB NOT NULL DEFAULT '[]';
+ALTER TABLE cartoon_assets ADD COLUMN IF NOT EXISTS reference_path VARCHAR(300) NOT NULL DEFAULT '';
+ALTER TABLE cartoon_assets ADD COLUMN IF NOT EXISTS voice_key VARCHAR(80) NOT NULL DEFAULT '';
+ALTER TABLE cartoon_assets ADD COLUMN IF NOT EXISTS speech_rate VARCHAR(32) NOT NULL DEFAULT '';
+ALTER TABLE cartoon_assets ADD COLUMN IF NOT EXISTS emotion VARCHAR(64) NOT NULL DEFAULT '';
+
+CREATE TABLE IF NOT EXISTS cartoon_rules (
+  id SERIAL PRIMARY KEY,
+  content_type VARCHAR(32) NOT NULL,
+  kind VARCHAR(32) NOT NULL,
+  name VARCHAR(120) NOT NULL,
+  body TEXT NOT NULL DEFAULT '',
+  cost_cap INTEGER,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS cartoon_reviews (
+  id SERIAL PRIMARY KEY,
+  project_id INTEGER NOT NULL REFERENCES cartoon_projects(id) ON DELETE CASCADE,
+  video_task_id INTEGER,
+  decision VARCHAR(16) NOT NULL,
+  node VARCHAR(32) NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  issues TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS cartoon_type_panels (
+  id SERIAL PRIMARY KEY,
+  project_id INTEGER NOT NULL UNIQUE REFERENCES cartoon_projects(id) ON DELETE CASCADE,
+  conflict TEXT NOT NULL DEFAULT '',
+  twist TEXT NOT NULL DEFAULT '',
+  rhythm TEXT NOT NULL DEFAULT '',
+  branches TEXT NOT NULL DEFAULT '',
+  product_note TEXT NOT NULL DEFAULT '',
+  selling_points TEXT NOT NULL DEFAULT '',
+  comparison TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS cartoon_batch_items (
+  id SERIAL PRIMARY KEY,
+  batch_id INTEGER NOT NULL REFERENCES cartoon_batches(id) ON DELETE CASCADE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  title VARCHAR(200) NOT NULL DEFAULT '',
+  body TEXT NOT NULL DEFAULT '',
+  status VARCHAR(32) NOT NULL DEFAULT 'queued',
+  error_message TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

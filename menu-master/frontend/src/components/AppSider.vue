@@ -112,6 +112,7 @@ const cachedUser = computed(() => getCachedUser());
 const displayName = computed(() => cachedUser.value?.username || '已登录');
 const adminMenus = [
   { key: '/users', icon: User, label: '用户管理' },
+  { key: '/roles', icon: Document, label: '角色管理' },
   { key: '/audit', icon: Document, label: '审计日志' },
 ];
 
@@ -190,7 +191,7 @@ const menuItems = computed(() => {
   return items;
 });
 const selectedKey = computed(() => {
-  if ([ '/users', '/audit', '/settings' ].includes(route.path)) return route.path;
+  if ([ '/users', '/roles', '/audit', '/settings' ].includes(route.path)) return route.path;
   return findSelectedKey(route.path, props.menus);
 });
 const openKeys = computed(() => findOpenKeys(route.path, props.menus));

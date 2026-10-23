@@ -35,6 +35,11 @@ module.exports = app => {
         allowNull: false,
         defaultValue: 'operator',
       },
+      account_type: {
+        type: STRING(20),
+        allowNull: false,
+        defaultValue: 'user',
+      },
       mfa_secret: {
         type: STRING(64),
         allowNull: true,

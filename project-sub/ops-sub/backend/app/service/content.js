@@ -2,6 +2,7 @@
 
 const Service = require('egg').Service;
 const { cartoonQuery, cartoonRequest } = require('../lib/cartoonClient');
+const { novelQuery, novelRequest } = require('../lib/novelClient');
 
 const RULES = [
   { rule_key: 'queue_backlog', name: '队列堆积', level: 'warning' },
@@ -57,18 +58,51 @@ class ContentService extends Service {
   }
 
   assertAdmin() {
-    if (this.ctx.state.user?.role !== 'admin') this.ctx.throw(403, '需要管理员');
+    if (this.ctx.state.user?.account_type !== 'super_admin' && this.ctx.state.user?.role !== 'admin') {
+      this.ctx.throw(403, '需要超级管理员');
+    }
   }
 
   async writeAudit(entry) {
+    const actor = String(entry.actor || this.actor() || 'unknown').slice(0, 128);
     await this.ctx.model.OpsAuditLog.create({
-      actor: this.actor(),
+      actor,
       action: entry.action,
       biz_app: entry.biz_app || null,
       external_type: entry.external_type || null,
-      external_id: entry.external_id != null ? String(entry.external_id) : null,
+      external_id: entry.external_id != null ? String(entry.external_id).slice(0, 64) : null,
       detail: entry.detail || {},
     });
+  }
+
+  async recordAudit(payload) {
+    const events = {
+      'story.publish': { biz_app: 'narrative', external_type: 'package' },
+      'story.promotion.apply': { biz_app: 'narrative', external_type: 'promotion' },
+      'story.promotion.reject': { biz_app: 'narrative', external_type: 'promotion' },
+      'story.export': { biz_app: 'narrative', external_type: 'novel' },
+      'video.pin': { biz_app: 'video', external_type: 'project' },
+      'video.promote': { biz_app: 'video', external_type: 'shot' },
+      'video.generate': { biz_app: 'video', external_type: 'task' },
+      'video.export': { biz_app: 'video', external_type: 'edit_job' },
+      'video.review.pass': { biz_app: 'video', external_type: 'project' },
+      'video.review.reject': { biz_app: 'video', external_type: 'project' },
+    };
+    const action = String(payload.action || '');
+    const spec = events[action];
+    if (!spec) this.ctx.throw(400, '未知审计事件');
+    const detail = payload.detail && typeof payload.detail === 'object' && !Array.isArray(payload.detail)
+      ? payload.detail
+      : {};
+    await this.writeAudit({
+      actor: payload.actor,
+      action,
+      biz_app: spec.biz_app,
+      external_type: spec.external_type,
+      external_id: payload.external_id,
+      detail,
+    });
+    return { action };
   }
 
   async ensureConfig() {
@@ -101,6 +135,14 @@ class ContentService extends Service {
 
   async cartoon(path, options) {
     return cartoonRequest(this.app, path, options);
+  }
+
+  novel(path, options) {
+    return novelRequest(this.app, path, options);
+  }
+
+  narrativeScope(bizApp) {
+    return bizApp === 'novel' || bizApp === 'narrative';
   }
 
   async overview(query) {
@@ -150,9 +192,69 @@ class ContentService extends Service {
     return this.cartoon('/api/internal/ops/projects');
   }
 
+  async board() {
+    let production = null;
+    let productionError = '';
+    try {
+      const summary = await this.cartoon('/api/internal/ops/summary');
+      const done = Number(summary.hour_success || 0) + Number(summary.hour_failed || 0);
+      production = {
+        hour_success: summary.hour_success || 0,
+        hour_failed: summary.hour_failed || 0,
+        success_rate: done ? summary.hour_success / done : null,
+        avg_duration_sec: summary.avg_duration_sec,
+      };
+    } catch (err) {
+      productionError = err.message;
+    }
+    const usage = await this.ctx.service.usage.summary({});
+    let reviews = null;
+    try {
+      const listed = await this.cartoon('/api/library/reviews');
+      reviews = Array.isArray(listed) ? listed : (listed?.list || []);
+    } catch (err) {
+      reviews = null;
+    }
+    const narrative = await this.novel('/api/internal/ops/summary').catch(() => null);
+    const pass = reviews ? reviews.filter(row => row.decision === 'pass').length : null;
+    const reject = reviews ? reviews.filter(row => row.decision === 'reject').length : null;
+    const judged = pass == null ? 0 : pass + reject;
+    return {
+      production,
+      production_error: productionError,
+      cost: {
+        call_count: usage.call_count || 0,
+        media_seconds: usage.media_seconds || 0,
+        storage_bytes: usage.storage_bytes || 0,
+      },
+      quality: {
+        review_pass: pass,
+        review_reject: reject,
+        reject_rate: judged ? reject / judged : null,
+        open_consistency: narrative ? narrative.open_issues : null,
+      },
+    };
+  }
+
   async jobs(query) {
+    if (this.narrativeScope(query.biz_app)) {
+      const page = Math.max(1, Number(query.page) || 1);
+      const pageSize = Math.min(100, Math.max(1, Number(query.pageSize) || 20));
+      const data = await this.novel(novelQuery('/api/internal/ops/tasks', {
+        project_id: query.project_id,
+        status: query.status,
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+      }));
+      return {
+        ...data,
+        page,
+        pageSize,
+        list: (data.list || []).map(item => ({ ...item, biz_app: 'narrative' })),
+      };
+    }
     if (!isCartoonScope(query.biz_app)) {
-      return { list: [], total: 0, note: '小说写作会话将在后续接入' };
+      return { list: [], total: 0, note: '这个业务还没有任务' };
     }
     const config = await this.ensureConfig();
     const page = Math.max(1, Number(query.page) || 1);
@@ -181,6 +283,10 @@ class ContentService extends Service {
   }
 
   async showJob(bizApp, externalId) {
+    if (this.narrativeScope(bizApp)) {
+      const task = await this.novel(`/api/internal/ops/tasks/${externalId}`);
+      return { ...task, biz_app: 'narrative', diagnosis: { stage: 'narrative', suggestion: '回到叙事项目处理，这里不能重试或取消。', safe_action: 'none' } };
+    }
     if (bizApp !== 'cartoon') this.ctx.throw(400, '当前只接入漫剧任务');
     const task = await this.cartoon(`/api/internal/ops/tasks/${externalId}`);
     const config = await this.ensureConfig();
@@ -195,6 +301,7 @@ class ContentService extends Service {
   }
 
   async retryJob(bizApp, externalId) {
+    if (this.narrativeScope(bizApp)) this.ctx.throw(400, '叙事任务不能在这里重试');
     if (bizApp !== 'cartoon') this.ctx.throw(400, '当前只接入漫剧任务');
     const task = await this.cartoon(`/api/internal/ops/tasks/${externalId}/retry`, {
       method: 'POST',
@@ -211,6 +318,7 @@ class ContentService extends Service {
   }
 
   async cancelJob(bizApp, externalId) {
+    if (this.narrativeScope(bizApp)) this.ctx.throw(400, '叙事任务不能在这里取消');
     if (bizApp !== 'cartoon') this.ctx.throw(400, '当前只接入漫剧任务');
     const task = await this.cartoon(`/api/internal/ops/tasks/${externalId}/cancel`, { method: 'POST' });
     await this.writeAudit({

@@ -27,6 +27,14 @@ export function createNovel(payload) {
   return request('/novels', { method: 'POST', data: payload });
 }
 
+export function fetchStoryTemplates() {
+  return request('/story-templates');
+}
+
+export function createNovelFromTemplate(payload) {
+  return request('/novels/from-template', { method: 'POST', data: payload });
+}
+
 export function updateNovel(id, payload) {
   return request(`/novels/${id}`, { method: 'PUT', data: payload });
 }
@@ -131,4 +139,116 @@ export function ignoreNovelQaFinding(id, findingId) {
     method: 'POST',
     data: { finding_id: findingId },
   });
+}
+
+export function recordStoryExport(id, payload) {
+  return request(`/novels/${id}/exports`, { method: 'POST', data: payload });
+}
+
+export function fetchStoryDesk(id) {
+  return request(`/novels/${id}/packages`);
+}
+
+export function fetchPackageDiff(id, from, to) {
+  return request(`/novels/${id}/packages/diff?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+}
+
+export function publishStoryPackage(id, chapterIds, scriptIds, intentIds) {
+  return request(`/novels/${id}/packages`, {
+    method: 'POST',
+    data: { chapter_ids: chapterIds, script_ids: scriptIds || [], intent_ids: intentIds || [] },
+  });
+}
+
+export function fetchStoryPackage(packageId, version) {
+  return request(`/packages/${encodeURIComponent(packageId)}?version=${encodeURIComponent(version)}`);
+}
+
+export function runConsistency(id, chapterIds) {
+  return request(`/novels/${id}/consistency/run`, {
+    method: 'POST',
+    data: { chapter_ids: chapterIds },
+  });
+}
+
+export function createTerm(id, payload) {
+  return request(`/novels/${id}/terms`, { method: 'POST', data: payload });
+}
+
+export function deleteTerm(id, termId) {
+  return request(`/novels/${id}/terms/${termId}`, { method: 'DELETE' });
+}
+
+export function applyPromotion(id, promotionId) {
+  return request(`/novels/${id}/promotions/${promotionId}/apply`, { method: 'POST' });
+}
+
+export function rejectPromotion(id, promotionId, reason) {
+  return request(`/novels/${id}/promotions/${promotionId}/reject`, {
+    method: 'POST',
+    data: { reason },
+  });
+}
+
+export function fetchPlotlines(id) {
+  return request(`/novels/${id}/plotlines`);
+}
+
+export function createPlotline(id, payload) {
+  return request(`/novels/${id}/plotlines`, { method: 'POST', data: payload });
+}
+
+export function updatePlotline(id, plotlineId, payload) {
+  return request(`/novels/${id}/plotlines/${plotlineId}`, { method: 'PUT', data: payload });
+}
+
+export function deletePlotline(id, plotlineId) {
+  return request(`/novels/${id}/plotlines/${plotlineId}`, { method: 'DELETE' });
+}
+
+export function bindChapterPlotlines(id, chapterId, plotlineIds) {
+  return request(`/novels/${id}/chapters/${encodeURIComponent(chapterId)}/plotlines`, {
+    method: 'POST',
+    data: { plotline_ids: plotlineIds },
+  });
+}
+
+export function fetchScripts(id) {
+  return request(`/novels/${id}/scripts`);
+}
+
+export function suggestScript(id, payload) {
+  return request(`/novels/${id}/scripts/suggest`, { method: 'POST', data: payload });
+}
+
+export function createScript(id, payload) {
+  return request(`/novels/${id}/scripts`, { method: 'POST', data: payload });
+}
+
+export function updateScript(id, scriptId, payload) {
+  return request(`/novels/${id}/scripts/${scriptId}`, { method: 'PUT', data: payload });
+}
+
+export function deleteScript(id, scriptId) {
+  return request(`/novels/${id}/scripts/${scriptId}`, { method: 'DELETE' });
+}
+
+export function fetchIntentShots(id) {
+  return request(`/novels/${id}/intent-shots`);
+}
+
+export function suggestIntentShots(id, payload) {
+  return request(`/novels/${id}/intent-shots/suggest`, { method: 'POST', data: payload });
+}
+
+export function createIntentShot(id, payload) {
+  return request(`/novels/${id}/intent-shots`, { method: 'POST', data: payload });
+}
+
+export function updateIntentShot(id, shotId, payload) {
+  return request(`/novels/${id}/intent-shots/${shotId}`, { method: 'PUT', data: payload });
+}
+
+export function deleteIntentShot(id, shotId) {
+  return request(`/novels/${id}/intent-shots/${shotId}`, { method: 'DELETE' });
 }

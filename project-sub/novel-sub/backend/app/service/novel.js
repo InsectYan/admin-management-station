@@ -142,6 +142,12 @@ class NovelService extends Service {
     return this.findById(row.id);
   }
 
+  async createFromTemplate(payload) {
+    const { storyTemplateDraft } = require('../lib/storyTemplates');
+    const draft = storyTemplateDraft(payload.template_id, payload.title);
+    return this.create(draft);
+  }
+
   async update(id, payload) {
     const row = await this.ctx.model.Novel.findByPk(id);
     if (!row) return null;

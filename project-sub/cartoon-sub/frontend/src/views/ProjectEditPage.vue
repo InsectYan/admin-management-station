@@ -1,11 +1,11 @@
 <template>
   <PageShell :title="store.project?.name ? `${store.project.name} · 剪辑` : '剪辑成片'">
     <template #extra>
-      <el-button @click="router.push(`/projects/${projectId}`)">返回详情</el-button>
-      <el-button :disabled="!store.past.length" @click="store.undo()">撤销</el-button>
-      <el-button :disabled="!store.future.length" @click="store.redo()">重做</el-button>
-      <el-button type="primary" :disabled="!store.edit || !store.dirty" :loading="saving" @click="save">保存</el-button>
-      <el-button type="primary" plain :disabled="!canExport" :loading="exporting" @click="startExport">导出成片</el-button>
+      <el-button v-if="route.name !== 'workbench'" @click="router.push(`/projects/${projectId}`)">返回详情</el-button>
+      <el-button :disabled="!canMake() || !store.past.length" @click="store.undo()">撤销</el-button>
+      <el-button :disabled="!canMake() || !store.future.length" @click="store.redo()">重做</el-button>
+      <el-button type="primary" :disabled="!canMake() || !store.edit || !store.dirty" :loading="saving" @click="save">保存</el-button>
+      <el-button type="primary" plain :disabled="!canMake() || !canExport" :loading="exporting" @click="startExport">导出成片</el-button>
     </template>
 
     <el-alert
@@ -21,7 +21,7 @@
     <section v-if="loaded && !store.edit" class="cartoon-module">
       <el-empty description="还没有成片时间线" />
       <p class="cartoon-module__hint">先在分镜上生成视频，再按镜序排进时间线。</p>
-      <el-button type="primary" :loading="seeding" @click="seed(false)">从产物排列</el-button>
+      <el-button type="primary" :disabled="!canMake()" :loading="seeding" @click="seed(false)">从产物排列</el-button>
     </section>
 
     <template v-else-if="store.edit">
@@ -31,7 +31,7 @@
       </div>
       <TimelineBoard />
       <div class="cartoon-edit-toolbar">
-        <el-button :loading="seeding" @click="seed(true)">重新从产物排列</el-button>
+        <el-button :disabled="!canMake()" :loading="seeding" @click="seed(true)">重新从产物排列</el-button>
         <el-radio-group :model-value="canvasKey" @change="onCanvas">
           <el-radio-button value="portrait">竖版 720×1280</el-radio-button>
           <el-radio-button value="landscape">横版 1280×720</el-radio-button>
@@ -54,6 +54,7 @@ import TimelineBoard from '../components/edit/TimelineBoard.vue';
 import ClipInspector from '../components/edit/ClipInspector.vue';
 import { useEditTimelineStore } from '../stores/editTimeline.js';
 import { request, resolveApiBase } from '../services/apiConfig.js';
+import { canMake } from '../lib/appAccess.js';
 
 const route = useRoute();
 const router = useRouter();

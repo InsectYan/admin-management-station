@@ -19,6 +19,7 @@ module.exports = (app) => {
     setting_json: { type: JSONB, defaultValue: {} },
     author_name: { type: STRING(100), allowNull: true },
     status: { type: STRING(20), defaultValue: 'draft' },
+    project_kind: { type: STRING(32), allowNull: false, defaultValue: 'novel' },
     genre_category_id: { type: INTEGER, allowNull: true },
     genre_subcategory_id: { type: INTEGER, allowNull: true },
     length_id: { type: INTEGER, allowNull: true },

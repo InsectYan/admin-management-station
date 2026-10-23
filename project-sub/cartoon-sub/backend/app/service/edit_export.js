@@ -5,6 +5,7 @@ const path = require('path');
 const Service = require('egg').Service;
 const { outputRoot, tmpEditRoot, resolveInside } = require('../lib/mediaPaths');
 const { bins, run, inspect, probeFile, parseOutTimeMs } = require('../lib/mediaTools');
+const { reportAudit } = require('../lib/reportAudit');
 
 let busy = false;
 
@@ -56,6 +57,11 @@ class EditExportService extends Service {
         edit_id: edit.id,
         status: 'queued',
         progress: 0,
+      });
+      await reportAudit(this.ctx, {
+        action: 'video.export',
+        external_id: job.id,
+        detail: { project_id: Number(projectId), edit_id: edit.id },
       });
       const jobId = job.id;
       setImmediate(() => {

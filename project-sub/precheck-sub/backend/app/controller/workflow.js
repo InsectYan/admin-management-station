@@ -1,6 +1,7 @@
 'use strict';
 
 const Controller = require('egg').Controller;
+const { describeCallInputs } = require('../lib/workflowInputs');
 
 function ok(ctx, data) {
   ctx.body = { code: 0, message: 'ok', data };
@@ -13,7 +14,10 @@ class WorkflowController extends Controller {
 
   async show() {
     try {
-      ok(this.ctx, await this.ctx.service.workflow.show(this.ctx.params.id));
+      const row = await this.ctx.service.workflow.show(this.ctx.params.id);
+      const data = row.get({ plain: true });
+      data.call_inputs = describeCallInputs(data.api_json);
+      ok(this.ctx, data);
     } catch (err) {
       this.ctx.status = err.status || 500;
       this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
@@ -86,6 +90,15 @@ class WorkflowController extends Controller {
     }
     try {
       ok(this.ctx, await this.ctx.service.workflowPreview.fields(body.api_json));
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
+  async bind() {
+    try {
+      ok(this.ctx, await this.ctx.service.workflowPreview.bind(this.ctx.params.id, this.ctx.request.body || {}));
     } catch (err) {
       this.ctx.status = err.status || 500;
       this.ctx.body = { code: this.ctx.status, message: err.message, data: null };

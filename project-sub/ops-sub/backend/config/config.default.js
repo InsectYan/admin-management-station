@@ -65,14 +65,15 @@ module.exports = appInfo => {
   const origin = (name, fallback) => String(process.env[name] || fallback).replace(/\/$/, '');
   config.contentOps = {
     cartoonBaseUrl: origin('CARTOON_API_ORIGIN', 'http://127.0.0.1:5205'),
+    novelBaseUrl: origin('NOVEL_API_ORIGIN', 'http://127.0.0.1:5201'),
     internalToken: process.env.OPS_INTERNAL_TOKEN || 'ops-internal-dev',
     watchIntervalMs: Number(process.env.OPS_WATCH_INTERVAL_MS || 60000),
     deps: [
       { key: 'menu', name: '主应用', url: `${origin('MENU_MASTER_URL', 'http://127.0.0.1:5200')}/api/health` },
-      { key: 'novel', name: '小说', url: `${origin('NOVEL_API_ORIGIN', 'http://127.0.0.1:5201')}/api/health` },
+      { key: 'novel', name: '叙事工作台', url: `${origin('NOVEL_API_ORIGIN', 'http://127.0.0.1:5201')}/api/health` },
       { key: 'testgen', name: '测试', url: `${origin('TESTGEN_API_ORIGIN', 'http://127.0.0.1:5202')}/api/health` },
       { key: 'precheck', name: '预检', url: `${origin('PRECHECK_API_ORIGIN', 'http://127.0.0.1:5204')}/api/health` },
-      { key: 'cartoon', name: '漫剧', url: `${origin('CARTOON_API_ORIGIN', 'http://127.0.0.1:5205')}/api/health` },
+      { key: 'cartoon', name: 'AI 视频', url: `${origin('CARTOON_API_ORIGIN', 'http://127.0.0.1:5205')}/api/health` },
       { key: 'agent', name: 'Agent', url: `${origin('AGENT_PLATFORM_URL', 'http://127.0.0.1:4001')}/health` },
       { key: 'comfy', name: 'ComfyUI', url: `${origin('COMFYUI_BASE_URL', 'http://127.0.0.1:8188')}/system_stats` },
     ],

@@ -352,6 +352,11 @@ const characterSnapshot = computed(() => ({
     background: String(row.background || '').slice(0, 240),
     goal: String(row.goal || '').slice(0, 240),
     relations: String(row.relations || '').slice(0, 160),
+    appearance: String(row.appearance || '').slice(0, 240),
+    speech_style: String(row.speech_style || '').slice(0, 160),
+    identity: row.identity || '',
+    age: row.age || '',
+    arc: String(row.arc || '').slice(0, 240),
   })),
   factions: factions.value.map((row) => ({ id: row.id, name: row.name, kind: row.kind })),
   character_edges: characterEdges.value.map((row) => ({

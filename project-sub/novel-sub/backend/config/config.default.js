@@ -40,6 +40,16 @@ module.exports = appInfo => {
     },
   };
 
+  config.cartoon = {
+    baseUrl: process.env.CARTOON_API_ORIGIN || 'http://127.0.0.1:5205',
+    opsToken: process.env.OPS_INTERNAL_TOKEN || 'ops-internal-dev',
+  };
+
+  config.ops = {
+    baseUrl: process.env.OPS_API_ORIGIN || 'http://127.0.0.1:5203',
+    internalToken: process.env.OPS_INTERNAL_TOKEN || 'ops-internal-dev',
+  };
+
   config.agentPlatform = {
     baseUrl: process.env.AGENT_PLATFORM_URL || 'http://127.0.0.1:4001',
     timeoutMs: Number(process.env.AGENT_PLATFORM_TIMEOUT_MS || 600000),

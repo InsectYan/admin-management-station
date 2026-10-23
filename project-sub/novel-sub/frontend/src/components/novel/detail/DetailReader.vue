@@ -27,6 +27,7 @@
         <el-button type="primary" plain @click="inspectOpen = true">小说检测</el-button>
         <el-button @click="$emit('export', 'md')">导出 Markdown</el-button>
         <el-button @click="$emit('export', 'txt')">导出 TXT</el-button>
+        <el-button @click="$emit('export', 'doc')">导出 Word</el-button>
       </header>
       <el-dialog v-model="inspectOpen" title="小说检测" width="460px">
         <p class="novel-reader__inspect-copy">

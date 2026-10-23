@@ -8,6 +8,6 @@ export function bindStandaloneScope() {
     return () => {};
   }
   document.documentElement.classList.add(SUBAPP_STANDALONE_HTML_CLASS);
-  document.title = '漫剧';
+  document.title = 'AI 视频';
   return () => document.documentElement.classList.remove(SUBAPP_STANDALONE_HTML_CLASS);
 }

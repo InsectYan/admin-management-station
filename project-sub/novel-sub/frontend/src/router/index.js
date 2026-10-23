@@ -17,6 +17,12 @@ export function createAppRouter(basename) {
             meta: { title: '小说列表' },
           },
           {
+            path: 'templates',
+            name: 'story-templates',
+            component: () => import('../views/StoryTemplatePage.vue'),
+            meta: { title: '故事模板' },
+          },
+          {
             path: 'novels/create',
             name: 'novel-create',
             component: () => import('../views/NovelCreatePage.vue'),

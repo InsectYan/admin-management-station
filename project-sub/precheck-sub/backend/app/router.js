@@ -15,6 +15,7 @@ module.exports = app => {
   router.get('/api/workflows/drafts/:key/file', controller.workflow.draftFile);
   router.put('/api/workflows/:id', controller.workflow.update);
   router.get('/api/workflows/:id/dependencies', controller.workflow.dependencies);
+  router.post('/api/workflows/:id/bind', controller.workflow.bind);
   router.post('/api/workflows/:id/preview', controller.workflow.startPreview);
   router.get('/api/workflows/:id/preview', controller.workflow.previewStatus);
   router.get('/api/workflows/:id/preview/file', controller.workflow.previewFile);

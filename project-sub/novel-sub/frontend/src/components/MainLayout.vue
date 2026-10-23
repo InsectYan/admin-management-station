@@ -3,7 +3,7 @@
     <NavMenu
       v-if="!embedded"
       :embedded="embedded"
-      title="小说创作平台"
+      title="叙事工作台"
     />
     <el-container
       :class="['novel-sub-main-column', { embedded }]"

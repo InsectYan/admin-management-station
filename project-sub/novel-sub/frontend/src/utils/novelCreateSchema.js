@@ -137,6 +137,11 @@ export function createCharacter(data = {}) {
     goal: data.goal || '',
     relations: data.relations || '',
     faction_id: data.faction_id || '',
+    age: data.age || '',
+    identity: data.identity || '',
+    appearance: data.appearance || '',
+    speech_style: data.speech_style || '',
+    arc: data.arc || '',
   };
 }
 

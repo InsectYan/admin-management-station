@@ -28,7 +28,7 @@
       </el-tab-pane>
       <el-tab-pane label="预览" name="preview">
         <div class="precheck-module">
-          <p class="precheck-module__hint">改提示词、尺寸和采样参数后生成。多次生成只保留最新的图片或视频。</p>
+          <p class="precheck-module__hint">改提示词，需要图片时先上传。多次生成只保留最新的图片或视频。</p>
           <WorkflowPreview :workflow-id="workflowId" :api-json="previewJson" />
         </div>
       </el-tab-pane>

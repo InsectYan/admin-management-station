@@ -1,7 +1,7 @@
 {
   "app_key": "cartoon",
   "microapp_name": "cartoon-app",
-  "display_name": "漫剧",
+  "display_name": "AI 视频",
   "route_prefix": "cartoon",
   "entry_dev": "http://localhost:5105",
   "entry_prod": "/subapps/cartoon-app/",

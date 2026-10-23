@@ -4,7 +4,6 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { Service } = require('egg');
 
-const ROLES = new Set([ 'admin', 'operator' ]);
 const STATUSES = new Set([ 'pending', 'active', 'disabled' ]);
 const PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -32,6 +31,7 @@ function publicUser(row) {
     username: json.username,
     email: json.email,
     role: json.role,
+    account_type: json.account_type || (json.role === 'admin' ? 'super_admin' : 'user'),
     status: json.status,
     mfa_enabled: !!json.mfa_enabled,
     ...credentialFlags(json),
@@ -60,29 +60,25 @@ class UserService extends Service {
     return row;
   }
 
-  async countActiveAdmins() {
+  async countActiveSupers() {
     return this.ctx.model.PlatformUser.count({
-      where: { role: 'admin', status: 'active' },
+      where: { account_type: 'super_admin', status: 'active' },
     });
   }
 
-  async assertSafeAdminChange(row, nextRole, nextStatus, actor) {
-    if (Number(row.id) === Number(actor.id) && (nextRole || nextStatus)) {
-      this.ctx.throw(400, '不能调整自己的角色或状态');
+  async assertSafeAdminChange(row, nextStatus, actor) {
+    if (Number(row.id) === Number(actor.id) && nextStatus) {
+      this.ctx.throw(400, '不能调整自己的状态');
     }
-    const stayingAdmin = row.role === 'admin' && row.status === 'active';
-    if (!stayingAdmin) return;
-    const demoting = nextRole && nextRole !== 'admin';
-    const disabling = nextStatus && nextStatus !== 'active';
-    if (!demoting && !disabling) return;
-    const n = await this.countActiveAdmins();
-    if (n <= 1) this.ctx.throw(400, '不能取消最后一名管理员');
+    const staying = row.account_type === 'super_admin' && row.status === 'active';
+    if (!staying || !nextStatus || nextStatus === 'active') return;
+    const n = await this.countActiveSupers();
+    if (n <= 1) this.ctx.throw(400, '不能禁用最后一名超级管理员');
   }
 
   async list({ page = 1, pageSize = 20, status, role, q } = {}) {
     const where = {};
     if (status && STATUSES.has(status)) where.status = status;
-    if (role && ROLES.has(role)) where.role = role;
     if (q) {
       where[this.app.Sequelize.Op.or] = [
         { username: { [this.app.Sequelize.Op.iLike]: `%${q}%` } },
@@ -97,8 +93,9 @@ class UserService extends Service {
       limit,
       offset,
     });
+    const names = await this.ctx.service.role.enabledForUsers(rows.map(row => row.id));
     return {
-      list: rows.map(publicUser),
+      list: rows.map(row => ({ ...publicUser(row), roles: names.get(Number(row.id)) || [] })),
       total: count,
       page: Math.max(1, Number(page) || 1),
       pageSize: limit,
@@ -107,7 +104,10 @@ class UserService extends Service {
 
   async getDetail(id) {
     const row = await this.findRow(id);
-    return publicUser(row);
+    const user = publicUser(row);
+    const map = await this.ctx.service.role.enabledForUsers([ row.id ]);
+    user.roles = map.get(Number(row.id)) || [];
+    return user;
   }
 
   async updateUser(id, body = {}) {
@@ -116,10 +116,7 @@ class UserService extends Service {
     const next = {};
     const secretTouched = [];
 
-    if (body.role != null) {
-      if (!ROLES.has(body.role)) this.ctx.throw(400, '角色仅支持 admin / operator');
-      next.role = body.role;
-    }
+    if (body.role != null) this.ctx.throw(400, '业务角色请在角色绑定里修改');
     if (body.status != null) {
       if (!STATUSES.has(body.status)) this.ctx.throw(400, '状态不合法');
       next.status = body.status;
@@ -167,9 +164,9 @@ class UserService extends Service {
 
     if (!Object.keys(next).length) this.ctx.throw(400, '没有可更新的字段');
 
-    await this.assertSafeAdminChange(row, next.role, next.status, actor);
+    await this.assertSafeAdminChange(row, next.status, actor);
     const before = {
-      role: row.role,
+      account_type: row.account_type,
       status: row.status,
       email: row.email,
       github_login: row.github_login,
@@ -186,8 +183,6 @@ class UserService extends Service {
     let action = 'update_profile';
     if (next.status && next.status !== before.status) {
       action = next.status === 'active' ? 'approve' : next.status;
-    } else if (next.role && next.role !== before.role) {
-      action = 'set_role';
     } else if (secretTouched.length) {
       action = 'update_credentials';
     }
@@ -199,7 +194,7 @@ class UserService extends Service {
       detail: {
         before,
         after: {
-          role: row.role,
+          account_type: row.account_type,
           status: row.status,
           email: row.email,
           github_login: row.github_login,

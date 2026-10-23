@@ -2,8 +2,8 @@
   <PageShell :title="shot ? (shot.description || '产物') : '产物'">
     <template #extra>
       <el-button link type="primary" @click="back">← 返回</el-button>
-      <el-button v-if="shot" @click="openGenerate">继续生成</el-button>
-      <el-button @click="router.push(`/projects/${projectId}/edit`)">剪辑成片</el-button>
+      <el-button v-if="shot" :disabled="!canMake()" @click="openGenerate">继续生成</el-button>
+      <el-button @click="openEdit">剪辑成片</el-button>
     </template>
     <section class="cartoon-module">
       <p v-if="chapterTitle" class="cartoon-module__hint">{{ chapterTitle }}</p>
@@ -28,6 +28,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import PageShell from '../components/PageShell.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
+import { canMake } from '../lib/appAccess.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -37,6 +38,8 @@ const tasks = ref([]);
 const loaded = ref(false);
 let pollTimer = null;
 const projectId = computed(() => route.params.id);
+const shotId = computed(() => route.params.shotId || route.query.shot);
+const inWorkbench = computed(() => route.name === 'workbench');
 
 function statusLabel(status) {
   return { queued: '排队', running: '生成中', saving: '生成中', success: '成功', failed: '失败' }[status] || status;
@@ -50,6 +53,10 @@ function precheckHref(id) {
 }
 function fileUrl(id) { return `${resolveApiBase()}/outputs/${id}/file`; }
 function back() {
+  if (inWorkbench.value) {
+    router.replace({ query: { node: 'storyboard' } });
+    return;
+  }
   if (route.query.from === 'work') {
     router.push({ path: `/projects/${projectId.value}/work`, query: { step: '3' } });
     return;
@@ -57,10 +64,21 @@ function back() {
   router.push({ path: `/projects/${projectId.value}`, query: { tab: route.query.tab || '3' } });
 }
 function openGenerate() {
+  if (inWorkbench.value) {
+    router.replace({ query: { node: 'generate', shot: String(shotId.value) } });
+    return;
+  }
   router.push({
-    path: `/projects/${projectId.value}/shots/${route.params.shotId}/generate`,
+    path: `/projects/${projectId.value}/shots/${shotId.value}/generate`,
     query: { from: route.query.from || 'detail', tab: route.query.tab || '3' },
   });
+}
+function openEdit() {
+  if (inWorkbench.value) {
+    router.replace({ query: { node: 'compose' } });
+    return;
+  }
+  router.push(`/projects/${projectId.value}/edit`);
 }
 function stopPoll() {
   if (pollTimer) clearInterval(pollTimer);
@@ -68,10 +86,10 @@ function stopPoll() {
 }
 async function load() {
   const detail = await request(`/projects/${projectId.value}`);
-  shot.value = (detail.shots || []).find(item => String(item.id) === String(route.params.shotId)) || null;
+  shot.value = (detail.shots || []).find(item => String(item.id) === String(shotId.value)) || null;
   const chapter = (detail.imports || []).find(item => String(item.id) === String(shot.value?.import_id));
   chapterTitle.value = chapter?.chapter_title || '';
-  tasks.value = (detail.tasks || []).filter(item => String(item.shot_id) === String(route.params.shotId));
+  tasks.value = (detail.tasks || []).filter(item => String(item.shot_id) === String(shotId.value));
   loaded.value = true;
   const active = tasks.value.some(item => [ 'queued', 'running', 'saving' ].includes(item.status));
   if (active && !pollTimer) pollTimer = setInterval(load, 2000);

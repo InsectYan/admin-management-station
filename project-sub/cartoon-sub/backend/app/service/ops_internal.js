@@ -136,10 +136,25 @@ class OpsInternalService extends Service {
 
   async projects() {
     const rows = await this.ctx.model.Project.findAll({
-      attributes: [ 'id', 'name', 'status' ],
+      attributes: [ 'id', 'name', 'status', 'content_type', 'package_version' ],
       order: [[ 'id', 'DESC' ]],
     });
-    return rows.map(row => ({ id: row.id, name: row.name, status: row.status }));
+    const tasks = await this.ctx.model.VideoTask.findAll({
+      attributes: [ 'project_id', 'current_node', 'episode_no' ],
+      order: [[ 'episode_no', 'ASC' ]],
+    });
+    const nodeByProject = new Map();
+    for (const task of tasks) {
+      if (!nodeByProject.has(task.project_id)) nodeByProject.set(task.project_id, task.current_node);
+    }
+    return rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      status: row.status,
+      content_type: row.content_type,
+      package_version: row.package_version,
+      current_node: nodeByProject.get(row.id) || '',
+    }));
   }
 
   async summary(query) {

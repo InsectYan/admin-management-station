@@ -1,0 +1,27 @@
+CREATE TABLE IF NOT EXISTS ops_channels (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(80) NOT NULL,
+  platform VARCHAR(32) NOT NULL,
+  auth_status VARCHAR(32) NOT NULL DEFAULT 'unauthorized',
+  secret_hash VARCHAR(128) NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS ops_publish_jobs (
+  id SERIAL PRIMARY KEY,
+  channel_id INTEGER NOT NULL REFERENCES ops_channels(id) ON DELETE CASCADE,
+  source_app VARCHAR(32) NOT NULL,
+  source_id VARCHAR(80) NOT NULL,
+  version INTEGER,
+  scheduled_at TIMESTAMPTZ NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'scheduled',
+  reason TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE ops_channels ALTER COLUMN created_at SET DEFAULT NOW();
+ALTER TABLE ops_channels ALTER COLUMN updated_at SET DEFAULT NOW();
+ALTER TABLE ops_publish_jobs ALTER COLUMN created_at SET DEFAULT NOW();
+ALTER TABLE ops_publish_jobs ALTER COLUMN updated_at SET DEFAULT NOW();

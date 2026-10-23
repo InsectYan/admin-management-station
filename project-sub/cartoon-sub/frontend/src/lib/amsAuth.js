@@ -27,6 +27,13 @@ export function getAccessToken() {
 
 export function redirectToLogin() {
   localStorage.removeItem('ams_access_token');
+  localStorage.removeItem('ams_user');
+  const drop = [];
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index);
+    if (key && key.startsWith('ams_app_roles:')) drop.push(key);
+  }
+  drop.forEach(key => localStorage.removeItem(key));
   const main = rewriteLoopbackHost(import.meta.env.VITE_MAIN_ORIGIN || 'http://localhost:5100');
   window.location.assign(`${main}/login?redirect=${encodeURIComponent(window.location.href)}`);
 }

@@ -6,6 +6,7 @@ const Service = require('egg').Service;
 const { parseApiWorkflow } = require('../lib/workflowParse');
 const { buildSupplies } = require('../lib/supplyCatalog');
 const { listPreviewFields, applyPreviewValues, collectMedia } = require('../lib/workflowPreview');
+const { describeCallInputs, applyCallInputs, withCallFields } = require('../lib/workflowInputs');
 
 function previewRoot() {
   return process.env.PREVIEW_DIR || '/data/previews';
@@ -53,7 +54,7 @@ class WorkflowPreviewService extends Service {
 
   async fields(apiJson) {
     parseApiWorkflow(apiJson);
-    return listPreviewFields(apiJson);
+    return withCallFields(listPreviewFields(apiJson), apiJson);
   }
 
   async inspect(apiJson) {
@@ -84,8 +85,84 @@ class WorkflowPreviewService extends Service {
     };
   }
 
+  decodeImage(file) {
+    const raw = String(file?.data_base64 || file?.data || '');
+    const marker = ';base64,';
+    const encoded = raw.includes(marker) ? raw.slice(raw.indexOf(marker) + marker.length) : raw;
+    const bytes = Buffer.from(encoded, 'base64');
+    if (!bytes.length) {
+      const error = new Error('图片是空的');
+      error.status = 400;
+      throw error;
+    }
+    if (bytes.length > 12 * 1024 * 1024) {
+      const error = new Error('图片超过 12MB');
+      error.status = 400;
+      throw error;
+    }
+    const ext = String(file.filename || '').toLowerCase().match(/\.(png|jpe?g|webp)$/);
+    return { bytes, ext: ext ? ext[0].replace('jpeg', 'jpg') : '.png' };
+  }
+
+  async uploadImage(file, prefix) {
+    const image = this.decodeImage(file);
+    const filename = `${prefix}-${Date.now()}${image.ext}`.replace(/[^\w.-]/g, '');
+    const boundary = `----precheck${Date.now()}`;
+    const head = Buffer.from(
+      `--${boundary}\r\nContent-Disposition: form-data; name="overwrite"\r\n\r\ntrue\r\n`
+      + `--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="${filename}"\r\n`
+      + `Content-Type: application/octet-stream\r\n\r\n`,
+    );
+    const tail = Buffer.from(`\r\n--${boundary}--\r\n`);
+    const res = await fetch(`${this.comfyBase()}/upload/image`, {
+      method: 'POST',
+      headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+      body: Buffer.concat([ head, image.bytes, tail ]),
+      signal: AbortSignal.timeout(60000),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || !body.name) {
+      const error = new Error(body.error || `上传图片到 ComfyUI 失败 ${res.status}`);
+      error.status = 502;
+      throw error;
+    }
+    return body.subfolder ? `${body.subfolder}/${body.name}` : body.name;
+  }
+
+  async imageNames(apiJson, images) {
+    const call = describeCallInputs(apiJson);
+    const byId = new Map((images || []).map(item => [ item.slot_id || item.id, item ]));
+    const names = {};
+    for (const slot of call.images) {
+      const file = byId.get(slot.id);
+      const payload = file?.data_base64 || file?.data;
+      if (!payload) {
+        const error = new Error(`需要上传${slot.label}`);
+        error.status = 400;
+        throw error;
+      }
+      names[slot.id] = await this.uploadImage({ ...file, data_base64: payload }, `slot-${slot.node_id}`);
+    }
+    return names;
+  }
+
+  async bind(workflowId, payload) {
+    const row = await this.ctx.service.workflow.show(workflowId);
+    const positive = String(payload.positive ?? payload.positive_zh ?? '').trim();
+    if (!positive) {
+      const error = new Error('需要一句正向提示词');
+      error.status = 400;
+      throw error;
+    }
+    const names = await this.imageNames(row.api_json, payload.images || []);
+    const graph = applyCallInputs(row.api_json, { positive, imageNames: names });
+    parseApiWorkflow(graph);
+    return { prompt: graph, call_inputs: describeCallInputs(row.api_json) };
+  }
+
   async start({ workflowId, draftKey, apiJson, values }) {
-    const graph = applyPreviewValues(apiJson, values);
+    const names = await this.imageNames(apiJson, (values || []).filter(item => item?.type === 'image'));
+    const graph = applyCallInputs(applyPreviewValues(apiJson, values), { imageNames: names });
     parseApiWorkflow(graph);
     let submitted;
     try {

@@ -18,6 +18,21 @@ class NovelController extends Controller {
     this.ctx.body = { code: 0, message: 'ok', data: row };
   }
 
+  async templates() {
+    const { listStoryTemplates } = require('../lib/storyTemplates');
+    this.ctx.body = { code: 0, message: 'ok', data: listStoryTemplates() };
+  }
+
+  async createFromTemplate() {
+    try {
+      const row = await this.ctx.service.novel.createFromTemplate(this.ctx.request.body || {});
+      this.ctx.body = { code: 0, message: 'ok', data: row };
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
   async create() {
     const payload = this.ctx.request.body || {};
     if (!payload.title?.trim()) {

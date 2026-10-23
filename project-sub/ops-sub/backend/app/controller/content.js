@@ -13,6 +13,14 @@ function fail(ctx, err) {
 }
 
 class ContentController extends Controller {
+  async board() {
+    try {
+      ok(this.ctx, await this.ctx.service.content.board());
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async overview() {
     try {
       ok(this.ctx, await this.ctx.service.content.overview(this.ctx.query));
@@ -104,6 +112,14 @@ class ContentController extends Controller {
   async audit() {
     try {
       ok(this.ctx, await this.ctx.service.content.listAudit(this.ctx.query));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async recordAudit() {
+    try {
+      ok(this.ctx, await this.ctx.service.content.recordAudit(this.ctx.request.body || {}));
     } catch (err) {
       fail(this.ctx, err);
     }

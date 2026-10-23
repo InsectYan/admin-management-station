@@ -35,6 +35,7 @@ services:
       CARTOON_AUTH_OPTIONAL: "1"
       PRECHECK_API_ORIGIN: ${PRECHECK_API_ORIGIN:-http://host.docker.internal:5204}
       NOVEL_API_ORIGIN: ${NOVEL_API_ORIGIN:-http://host.docker.internal:5201}
+      MAIN_API_ORIGIN: ${MAIN_API_ORIGIN:-http://host.docker.internal:5200}
       # 出图仍打宿主机上的 ComfyUI，不把 ComfyUI 放进这个容器。
       COMFYUI_BASE_URL: ${COMFYUI_BASE_URL:-http://host.docker.internal:8188}
       AGENT_PLATFORM_URL: ${AGENT_PLATFORM_URL:-http://host.docker.internal:4001}

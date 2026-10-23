@@ -1,7 +1,7 @@
 export const BIZ_OPTIONS = [
   { value: 'platform', label: '全部平台' },
   { value: 'cartoon', label: '漫剧' },
-  { value: 'novel', label: '小说' },
+  { value: 'novel', label: '叙事' },
 ];
 
 export const TASK_STATUS_OPTIONS = [
@@ -52,5 +52,7 @@ export function kindLabel(kind) {
   if (kind === 'i2v') return '图生视频';
   if (kind === 'edit') return '改图';
   if (kind === 'image') return '文生图';
+  if (kind === 'promotion') return '提升';
+  if (kind === 'consistency') return '一致性';
   return kind || '—';
 }

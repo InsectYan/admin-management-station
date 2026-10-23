@@ -60,7 +60,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { Bell, Clock, Connection, Expand, Fold, List, Monitor, Notebook, Odometer, Setting } from '@element-plus/icons-vue';
+import { Bell, Clock, Coin, Connection, Cpu, DataLine, Expand, Fold, List, Monitor, Notebook, Odometer, Setting, Share, Warning } from '@element-plus/icons-vue';
 import { navGroups } from '../config/navMenu.js';
 import { useNavCollapse } from '../composables/useNavCollapse.js';
 import { getCachedUser } from '../lib/amsAuth.js';
@@ -70,7 +70,7 @@ defineProps({
   title: { type: String, default: '运维管理平台' },
 });
 
-const ICONS = { Monitor, Clock, Odometer, List, Connection, Bell, Notebook, Setting };
+const ICONS = { Monitor, Clock, Odometer, List, Connection, Bell, Notebook, Setting, Warning, Coin, Cpu, DataLine, Share };
 function iconOf(name) {
   return ICONS[name] || Monitor;
 }
@@ -78,7 +78,10 @@ function iconOf(name) {
 const route = useRoute();
 const { collapsed, toggleCollapsed } = useNavCollapse();
 const asideWidth = computed(() => (collapsed.value ? '64px' : '240px'));
-const isAdmin = computed(() => getCachedUser()?.role === 'admin');
+const isAdmin = computed(() => {
+  const user = getCachedUser();
+  return user?.account_type === 'super_admin' || user?.role === 'admin';
+});
 const visibleGroups = computed(() => navGroups.map(group => ({
   ...group,
   items: group.items.filter(item => !item.adminOnly || isAdmin.value),

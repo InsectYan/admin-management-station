@@ -163,3 +163,114 @@ CREATE TABLE IF NOT EXISTS novel_anomaly_reports (
 
 CREATE INDEX IF NOT EXISTS idx_novel_anomaly_reports_novel
   ON novel_anomaly_reports (novel_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS story_packages (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  package_id VARCHAR(64) NOT NULL,
+  version INTEGER NOT NULL,
+  snapshot_json JSONB NOT NULL,
+  published_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (package_id, version)
+);
+
+CREATE TABLE IF NOT EXISTS novel_terms (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  aliases JSONB NOT NULL DEFAULT '[]',
+  definition TEXT,
+  category VARCHAR(32) NOT NULL DEFAULT 'term',
+  status VARCHAR(20) NOT NULL DEFAULT 'active',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS consistency_issues (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  chapter_id VARCHAR(80) NOT NULL DEFAULT '',
+  rule VARCHAR(64) NOT NULL,
+  level VARCHAR(16) NOT NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'open',
+  message TEXT NOT NULL,
+  source VARCHAR(16) NOT NULL DEFAULT 'rule',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS story_promotions (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  video_project_id VARCHAR(64) NOT NULL,
+  shot_id VARCHAR(64) NOT NULL,
+  chapter_id VARCHAR(80) NOT NULL,
+  package_version INTEGER,
+  field VARCHAR(32) NOT NULL DEFAULT 'dialogue',
+  before_text TEXT NOT NULL,
+  after_text TEXT NOT NULL,
+  operator_id VARCHAR(64),
+  status VARCHAR(16) NOT NULL DEFAULT 'pending',
+  reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS plotlines (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  kind VARCHAR(32) NOT NULL DEFAULT 'main',
+  status VARCHAR(20) NOT NULL DEFAULT 'open',
+  plant_chapter_id VARCHAR(80) NOT NULL DEFAULT '',
+  payoff_chapter_id VARCHAR(80) NOT NULL DEFAULT '',
+  events JSONB NOT NULL DEFAULT '[]',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_plotlines_novel ON plotlines (novel_id);
+
+CREATE TABLE IF NOT EXISTS story_scripts (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  title VARCHAR(200) NOT NULL,
+  variant VARCHAR(32) NOT NULL DEFAULT 'comic',
+  chapter_ids JSONB NOT NULL DEFAULT '[]',
+  scenes JSONB NOT NULL DEFAULT '[]',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_story_scripts_novel ON story_scripts (novel_id);
+
+CREATE TABLE IF NOT EXISTS story_intent_shots (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  script_id INTEGER REFERENCES story_scripts(id) ON DELETE CASCADE,
+  sort_order INTEGER NOT NULL DEFAULT 1,
+  scene_order INTEGER NOT NULL DEFAULT 0,
+  intent TEXT NOT NULL DEFAULT '',
+  dialogue TEXT NOT NULL DEFAULT '',
+  emotion VARCHAR(40) NOT NULL DEFAULT '',
+  location VARCHAR(120) NOT NULL DEFAULT '',
+  character_ids JSONB NOT NULL DEFAULT '[]',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_story_intent_shots_novel ON story_intent_shots (novel_id, sort_order);
+
+CREATE TABLE IF NOT EXISTS story_downstreams (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  package_id VARCHAR(64) NOT NULL,
+  version INTEGER NOT NULL,
+  video_project_id VARCHAR(64) NOT NULL,
+  content_type VARCHAR(32) NOT NULL DEFAULT 'ai_comic',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (video_project_id)
+);

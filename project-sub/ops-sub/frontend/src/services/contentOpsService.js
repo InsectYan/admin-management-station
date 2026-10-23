@@ -5,6 +5,34 @@ async function request(path, options = {}) {
   return res.data?.data;
 }
 
+export function fetchContentBoard() {
+  return request('/content/board', { method: 'get' });
+}
+
+export function fetchChannels() {
+  return request('/content/channels', { method: 'get' });
+}
+
+export function createChannel(data) {
+  return request('/content/channels', { method: 'post', data });
+}
+
+export function fetchRecords() {
+  return request('/content/records', { method: 'get' });
+}
+
+export function scheduleRecord(data) {
+  return request('/content/records', { method: 'post', data });
+}
+
+export function finishRecord(id, data) {
+  return request(`/content/records/${id}/result`, { method: 'post', data });
+}
+
+export function takedownRecord(id, data) {
+  return request(`/content/records/${id}/takedown`, { method: 'post', data });
+}
+
 export function fetchContentOverview(params = {}) {
   return request('/content/overview', { method: 'get', params });
 }
@@ -59,4 +87,28 @@ export function fetchContentSettings() {
 
 export function updateContentSettings(body) {
   return request('/content/settings', { method: 'put', data: body });
+}
+
+export function fetchModels() {
+  return request('/content/models', { method: 'get' });
+}
+
+export function updateModel(catalog, id, enabled) {
+  return request(`/content/models/${catalog}/${id}`, { method: 'put', data: { enabled } });
+}
+
+export function fetchUsage(params = {}) {
+  return request('/content/usage', { method: 'get', params });
+}
+
+export function fetchCompliance() {
+  return request('/content/compliance', { method: 'get' });
+}
+
+export function createCompliance(body) {
+  return request('/content/compliance', { method: 'post', data: body });
+}
+
+export function updateCompliance(id, body) {
+  return request(`/content/compliance/${id}`, { method: 'put', data: body });
 }

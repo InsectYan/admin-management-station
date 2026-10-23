@@ -143,3 +143,84 @@ CREATE TABLE IF NOT EXISTS ops_audit_logs (
 
 CREATE INDEX IF NOT EXISTS idx_ops_audit_logs_created
   ON ops_audit_logs (created_at DESC);
+
+CREATE TABLE IF NOT EXISTS ops_compliance_rules (
+  id SERIAL PRIMARY KEY,
+  kind VARCHAR(32) NOT NULL,
+  name VARCHAR(120) NOT NULL,
+  body TEXT NOT NULL DEFAULT '',
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS ops_compliance_state (
+  id INTEGER PRIMARY KEY,
+  version INTEGER NOT NULL DEFAULT 1,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE ops_compliance_state ALTER COLUMN created_at SET DEFAULT NOW();
+ALTER TABLE ops_compliance_state ALTER COLUMN updated_at SET DEFAULT NOW();
+
+INSERT INTO ops_compliance_state (id, version, created_at, updated_at)
+VALUES (1, 1, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS ops_usage_events (
+  id SERIAL PRIMARY KEY,
+  actor VARCHAR(128) NOT NULL DEFAULT '',
+  biz_app VARCHAR(32) NOT NULL,
+  project_id VARCHAR(64) NOT NULL,
+  model_profile VARCHAR(80) NOT NULL DEFAULT '',
+  call_count INTEGER NOT NULL DEFAULT 0,
+  media_seconds INTEGER NOT NULL DEFAULT 0,
+  storage_bytes BIGINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ops_usage_events_project
+  ON ops_usage_events (biz_app, project_id);
+
+CREATE TABLE IF NOT EXISTS ops_model_gates (
+  id SERIAL PRIMARY KEY,
+  catalog VARCHAR(16) NOT NULL,
+  profile_id VARCHAR(80) NOT NULL,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (catalog, profile_id)
+);
+
+ALTER TABLE ops_model_gates ALTER COLUMN created_at SET DEFAULT NOW();
+ALTER TABLE ops_model_gates ALTER COLUMN updated_at SET DEFAULT NOW();
+
+CREATE TABLE IF NOT EXISTS ops_channels (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(80) NOT NULL,
+  platform VARCHAR(32) NOT NULL,
+  auth_status VARCHAR(32) NOT NULL DEFAULT 'unauthorized',
+  secret_hash VARCHAR(128) NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS ops_publish_jobs (
+  id SERIAL PRIMARY KEY,
+  channel_id INTEGER NOT NULL REFERENCES ops_channels(id) ON DELETE CASCADE,
+  source_app VARCHAR(32) NOT NULL,
+  source_id VARCHAR(80) NOT NULL,
+  version INTEGER,
+  scheduled_at TIMESTAMPTZ NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'scheduled',
+  reason TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE ops_channels ALTER COLUMN created_at SET DEFAULT NOW();
+ALTER TABLE ops_channels ALTER COLUMN updated_at SET DEFAULT NOW();
+ALTER TABLE ops_publish_jobs ALTER COLUMN created_at SET DEFAULT NOW();
+ALTER TABLE ops_publish_jobs ALTER COLUMN updated_at SET DEFAULT NOW();

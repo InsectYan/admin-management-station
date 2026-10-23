@@ -4,13 +4,13 @@
       <div class="cartoon-overview__bar">
         <el-button link type="primary" @click="router.push('/projects')">← 返回列表</el-button>
         <el-breadcrumb separator="/">
-          <el-breadcrumb-item><a href="#" @click.prevent="router.push('/projects')">漫剧项目</a></el-breadcrumb-item>
+          <el-breadcrumb-item><a href="#" @click.prevent="router.push('/projects')">AI 视频</a></el-breadcrumb-item>
           <el-breadcrumb-item>详情</el-breadcrumb-item>
           <el-breadcrumb-item>{{ tabTitle }}</el-breadcrumb-item>
         </el-breadcrumb>
         <div class="cartoon-overview__actions">
-          <el-button @click="router.push(`/projects/${projectId}/edit`)">剪辑成片</el-button>
-          <el-button type="primary" @click="router.push(`/projects/${projectId}/work`)">编辑设定</el-button>
+          <el-button @click="openWorkbench('compose')">剪辑成片</el-button>
+          <el-button type="primary" @click="openWorkbench('input')">进入制作</el-button>
         </div>
       </div>
       <div class="cartoon-overview__hero">
@@ -43,18 +43,27 @@
       <div class="cartoon-overview__pane">
         <section v-show="tab === 1" class="cartoon-module">
           <h3 class="cartoon-module__title">项目设定</h3>
+          <el-alert v-if="gaps.length" class="cartoon-module" type="warning" :closable="false" show-icon :title="`待补：${gaps.join('、')}`" />
           <dl class="cartoon-overview__facts">
             <div><dt>项目名称</dt><dd>{{ detail.project.name }}</dd></div>
             <div><dt>画面风格</dt><dd>{{ styleLabel || '未选择' }}</dd></div>
-            <div><dt>来源小说</dt><dd>{{ novelBrief?.title || '未绑定' }}</dd></div>
+            <div v-if="isScience"><dt>文案</dt><dd>本地文案</dd></div>
+            <div v-else><dt>来源小说</dt><dd>{{ novelBrief?.title || '未绑定' }}</dd></div>
             <div><dt>章节快照</dt><dd>{{ liveImports.length }}</dd></div>
             <div><dt>分镜</dt><dd>{{ detail.shots.length }}</dd></div>
             <div><dt>生成记录</dt><dd>{{ detail.tasks.length }}</dd></div>
           </dl>
-          <NovelBriefPanel :novel="novelBrief" :loading="novelLoading" />
+          <NovelBriefPanel v-if="!isScience" :novel="novelBrief" :loading="novelLoading" />
+          <TypePanel v-if="isShort || isCommerce" :project-id="projectId" :commerce="isCommerce" />
+          <ReviewBox :project-id="projectId" />
         </section>
 
-        <section v-show="tab === 2" class="cartoon-module">
+        <section v-show="tab === 2 && isScience" class="cartoon-module">
+          <h3 class="cartoon-module__title">本地文案</h3>
+          <CopyBlocks :project-id="projectId" />
+        </section>
+
+        <section v-show="tab === 2 && !isScience" class="cartoon-module">
           <h3 class="cartoon-module__title">章节快照</h3>
           <el-empty v-if="!liveImports.length" description="还没有章节快照" />
           <article v-for="item in liveImports" :key="item.id" class="cartoon-overview__snap">
@@ -94,13 +103,18 @@
                 </el-table-column>
                 <el-table-column label="操作" width="168" fixed="right">
                   <template #default="{ row }">
-                    <el-button link type="primary" @click.stop="openGenerate(row)">生成产物</el-button>
+                    <el-button link type="primary" :disabled="!canMake()" @click.stop="openGenerate(row)">生成产物</el-button>
                     <el-button link type="primary" @click.stop="openOutputs(row)">查看产物</el-button>
                   </template>
                 </el-table-column>
               </el-table>
             </div>
           </div>
+        </section>
+
+        <section v-show="tab === 4" class="cartoon-module">
+          <h3 class="cartoon-module__title">批量选题</h3>
+          <BatchPanel :project-id="projectId" :science="isScience" />
         </section>
       </div>
     </div>
@@ -111,16 +125,25 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import NovelBriefPanel from '../components/NovelBriefPanel.vue';
+import CopyBlocks from '../components/CopyBlocks.vue';
+import BatchPanel from '../components/BatchPanel.vue';
+import TypePanel from '../components/TypePanel.vue';
+import ReviewBox from '../components/ReviewBox.vue';
 import { request } from '../services/apiConfig.js';
+import { canMake } from '../lib/appAccess.js';
 
 const route = useRoute();
 const router = useRouter();
 const projectId = computed(() => route.params.id);
-const tabs = [
+const isScience = computed(() => detail.value?.project?.content_type === 'ai_science' || detail.value?.project?.content_type === 'ai_commerce');
+const isShort = computed(() => detail.value?.project?.content_type === 'ai_short');
+const isCommerce = computed(() => detail.value?.project?.content_type === 'ai_commerce');
+const tabs = computed(() => [
   { step: 1, title: '概览' },
-  { step: 2, title: '章节快照' },
+  { step: 2, title: isScience.value ? '本地文案' : '章节快照' },
   { step: 3, title: '分镜' },
-];
+  { step: 4, title: '批量' },
+]);
 const tab = ref(Number(route.query.tab) || 1);
 const detail = ref(null);
 const styles = ref([]);
@@ -128,10 +151,11 @@ const novelBrief = ref(null);
 const novelLoading = ref(false);
 const selectedImportKey = ref('');
 
-const tabTitle = computed(() => tabs.find(item => item.step === tab.value)?.title || '概览');
+const tabTitle = computed(() => tabs.value.find(item => item.step === tab.value)?.title || '概览');
 const mark = computed(() => (detail.value?.project?.name || '漫').trim().slice(0, 1));
 const styleLabel = computed(() => styles.value.find(item => item.value === detail.value?.project?.visual_style)?.label || '');
 const liveImports = computed(() => (detail.value?.imports || []).filter(item => !item.deleted_at));
+const gaps = computed(() => detail.value?.gaps || []);
 const boardItems = computed(() => {
   const imports = detail.value?.imports || [];
   const shots = detail.value?.shots || [];
@@ -171,11 +195,21 @@ function ensureBoard() {
     selectedImportKey.value = (items.find(item => !item.deleted) || items[0]).key;
   }
 }
+function openWorkbench(node, shot) {
+  const taskId = detail.value?.episodes?.[0]?.id;
+  const query = { node };
+  if (shot) query.shot = String(shot);
+  if (!taskId) {
+    router.push({ path: `/projects/${projectId.value}/work`, query });
+    return;
+  }
+  router.push({ path: `/projects/${projectId.value}/tasks/${taskId}`, query });
+}
 function openGenerate(row) {
-  router.push({ path: `/projects/${projectId.value}/shots/${row.id}/generate`, query: { from: 'detail', tab: String(tab.value) } });
+  openWorkbench('generate', row.id);
 }
 function openOutputs(row) {
-  router.push({ path: `/projects/${projectId.value}/shots/${row.id}/outputs`, query: { from: 'detail', tab: String(tab.value) } });
+  openWorkbench('preview', row.id);
 }
 async function loadNovel(novelId) {
   novelBrief.value = null;

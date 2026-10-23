@@ -4,54 +4,13 @@ const fs = require('fs');
 const path = require('path');
 const Service = require('egg').Service;
 const { outputRoot, resolveInside } = require('../lib/mediaPaths');
+const { reportAudit } = require('../lib/reportAudit');
+const { complianceCheck } = require('../lib/complianceCheck');
+const { usageSummary } = require('../lib/usageSummary');
 
 function unwrap(json) {
   if (json && Object.prototype.hasOwnProperty.call(json, 'data')) return json.data;
   return json;
-}
-
-function linkedNode(graph, link) {
-  const id = Array.isArray(link) ? link[0] : null;
-  return id == null ? null : graph[String(id)];
-}
-
-function writePrompt(node, text) {
-  if (node.class_type === 'TextEncodeQwenImageEdit') node.inputs.prompt = text;
-  else node.inputs.text = text;
-}
-
-function applyPositivePrompt(apiJson, text) {
-  const graph = JSON.parse(JSON.stringify(apiJson));
-  const seeds = Object.values(graph)
-    .filter(node => node && (
-      node.class_type === 'WanFirstLastFrameToVideo'
-      || node.class_type === 'WanImageToVideo'
-      || node.class_type === 'KSampler'
-      || node.class_type === 'KSamplerAdvanced'
-    ))
-    .map(node => node.inputs?.positive)
-    .filter(Boolean);
-  let positive = null;
-  for (const link of seeds) {
-    let node = linkedNode(graph, link);
-    const seen = new Set();
-    while (node && !seen.has(node)) {
-      seen.add(node);
-      if (node.class_type === 'CLIPTextEncode' || node.class_type === 'TextEncodeQwenImageEdit') {
-        positive = node;
-        break;
-      }
-      node = linkedNode(graph, node.inputs?.positive);
-    }
-    if (positive) break;
-  }
-  if (!positive) {
-    const error = new Error('工作流里没有正向提示词节点');
-    error.status = 400;
-    throw error;
-  }
-  writePrompt(positive, text);
-  return graph;
 }
 
 function collectMedia(outputs) {
@@ -109,8 +68,25 @@ class GenerateService extends Service {
   async start(projectId, shotId, payload, kind = 'image') {
     const shot = await this.ctx.model.Shot.findByPk(shotId);
     if (!shot || String(shot.project_id) !== String(projectId)) this.ctx.throw(404, '分镜不存在');
+    if (!await this.ctx.service.project.panelReady(projectId)) this.ctx.throw(400, '面板还没填完');
     const text = String(payload.positive_zh || '').trim();
     if (!text) this.ctx.throw(400, '需要一句提示词');
+    const compliance = await complianceCheck(this.ctx, text);
+    const hit = compliance?.hits?.[0];
+    if (hit) this.ctx.throw(400, `命中规则 ${hit.id}`);
+    const project = await this.ctx.model.Project.findByPk(projectId);
+    const caps = project
+      ? await this.ctx.model.Rule.findAll({ where: { content_type: project.content_type, kind: 'cost', enabled: true } })
+      : [];
+    const cap = caps.reduce((min, rule) => {
+      const value = Number(rule.cost_cap);
+      if (!value) return min;
+      return min === null || value < min ? value : min;
+    }, null);
+    if (cap) {
+      const usage = await usageSummary(this.ctx, projectId);
+      if (usage && Number(usage.call_count) >= cap) this.ctx.throw(400, '超过成本上限');
+    }
     await this.ctx.service.project.updateShot(shot.id, { positive_zh: text });
 
     const task = await this.ctx.model.Task.create({
@@ -119,7 +95,12 @@ class GenerateService extends Service {
       kind,
       status: 'queued',
     });
-    return this.execute(task, text);
+    await reportAudit(this.ctx, {
+      action: 'video.generate',
+      external_id: task.id,
+      detail: { project_id: Number(projectId), shot_id: shot.id, kind },
+    });
+    return this.execute(task, text, Array.isArray(payload.images) ? payload.images : []);
   }
 
   workflowEnvId(kind) {
@@ -186,10 +167,49 @@ class GenerateService extends Service {
     const text = String(prompt?.positive_zh || '').trim();
     if (!text) this.ctx.throw(400, '没有提示词，不能重跑');
     await task.update({ status: 'queued', error_message: '', prompt_id: null });
-    return this.execute(task, text);
+    const snapshot = task.workflow_snapshot;
+    if (snapshot && typeof snapshot === 'object' && Object.keys(snapshot).length) {
+      return this.submit(task, snapshot, task.precheck_workflow_id);
+    }
+    return this.execute(task, text, []);
   }
 
-  async execute(task, text) {
+  async inputs() {
+    const kinds = [ 'image', 'video', 'i2v', 'edit' ];
+    const result = {};
+    for (const kind of kinds) {
+      try {
+        const workflowId = await this.workflowIdFor(kind);
+        const res = await fetch(`${this.precheckBase()}/api/workflows/${workflowId}`, { signal: AbortSignal.timeout(20000) });
+        if (!res.ok) throw new Error(`预检返回 ${res.status}`);
+        const workflow = unwrap(await res.json());
+        result[kind] = { workflow_id: workflowId, images: workflow.call_inputs?.images || [] };
+      } catch (err) {
+        result[kind] = { workflow_id: null, images: [], error: err.message };
+      }
+    }
+    return result;
+  }
+
+  async bindWorkflow(workflowId, positive, images) {
+    const res = await fetch(`${this.precheckBase()}/api/workflows/${workflowId}/bind`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ positive, images: images || [] }),
+      signal: AbortSignal.timeout(60000),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const error = new Error(body.message || `预检返回 ${res.status}`);
+      error.status = res.status >= 400 && res.status < 500 ? res.status : 502;
+      throw error;
+    }
+    const data = unwrap(body);
+    if (!data?.prompt) throw new Error('预检没有返回可执行的工作流');
+    return data.prompt;
+  }
+
+  async execute(task, text, images = []) {
     let workflowId;
     try {
       workflowId = await this.workflowIdFor(task.kind);
@@ -225,16 +245,15 @@ class GenerateService extends Service {
 
     let graph;
     try {
-      const showUrl = `${this.precheckBase()}/api/workflows/${workflowId}`;
-      const res = await fetch(showUrl, { signal: AbortSignal.timeout(20000) });
-      if (!res.ok) throw new Error(`预检返回 ${res.status}`);
-      const workflow = unwrap(await res.json());
-      graph = applyPositivePrompt(workflow.api_json, text);
+      graph = await this.bindWorkflow(workflowId, text, images);
     } catch (err) {
-      await task.update({ status: 'failed', error_message: err.message });
+      await task.update({ status: 'failed', error_message: err.message, precheck_workflow_id: workflowId });
       return task.reload();
     }
+    return this.submit(task, graph, workflowId);
+  }
 
+  async submit(task, graph, workflowId) {
     const promptUrl = `${this.comfyBase()}/prompt`;
     this.ctx.logger.info('[cartoon] comfy POST %s', promptUrl);
     let submitted;
@@ -255,6 +274,7 @@ class GenerateService extends Service {
         status: 'failed',
         error_message: `连不上 ComfyUI：${err.message}`,
         workflow_snapshot: graph,
+        precheck_workflow_id: workflowId || task.precheck_workflow_id,
       });
       return task.reload();
     }
@@ -264,7 +284,7 @@ class GenerateService extends Service {
       prompt_id: submitted.prompt_id,
       workflow_snapshot: graph,
       error_message: '',
-      precheck_workflow_id: workflowId,
+      precheck_workflow_id: workflowId || task.precheck_workflow_id,
       precheck_gap: null,
     });
     return task.reload();
@@ -311,6 +331,9 @@ class GenerateService extends Service {
       if (!files.length) throw new Error('ComfyUI 没有返回图片');
       for (const file of files) await this.saveOutput(task, file);
       await task.update({ status: 'success', error_message: '' });
+      if (task.shot_id) {
+        await this.ctx.model.Shot.update({ upstream_stale: false }, { where: { id: task.shot_id } });
+      }
     } catch (err) {
       await task.update({ status: 'failed', error_message: err.message });
     }

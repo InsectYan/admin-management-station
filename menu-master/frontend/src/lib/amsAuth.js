@@ -26,10 +26,20 @@ export function setSession({ token, user }) {
 export function clearSession() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  const drop = [];
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index);
+    if (key && key.startsWith('ams_app_roles:')) drop.push(key);
+  }
+  drop.forEach(key => localStorage.removeItem(key));
 }
 
-export function isAdmin(user = getCachedUser()) {
-  return user?.role === 'admin';
+export function isSuperAdmin(user = getCachedUser()) {
+  return user?.account_type === 'super_admin' || user?.role === 'admin';
+}
+
+export function isAdmin(user) {
+  return isSuperAdmin(user);
 }
 
 export function loginPath(redirect) {

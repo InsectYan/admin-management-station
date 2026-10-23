@@ -1,10 +1,10 @@
 <template>
-  <PageShell v-if="detail" :title="detail.project.name">
-    <template #extra>
+  <PageShell v-if="detail" :title="embedded ? '' : detail.project.name">
+    <template v-if="!embedded" #extra>
       <el-button link type="primary" @click="router.push(`/projects/${route.params.id}`)">返回详情</el-button>
     </template>
     <el-alert v-if="notice" :title="notice" :type="noticeType" show-icon class="cartoon-module" />
-    <FlowSteps :steps="steps" :current="step" @select="step = $event" />
+    <FlowSteps v-if="!embedded" :steps="steps" :current="step" @select="step = $event" />
 
     <section v-show="step === 1" class="cartoon-module">
       <h3 class="cartoon-module__title">项目设定</h3>
@@ -13,7 +13,7 @@
           <el-form-item label="项目名称">
             <el-input v-model="projectForm.name" />
           </el-form-item>
-          <el-form-item label="来源小说">
+          <el-form-item v-if="!isScience" label="来源小说">
             <el-select v-model="projectForm.source_novel_id" filterable clearable placeholder="从小说平台选择" style="width: 100%" @change="onNovelChange">
               <el-option v-for="item in novels" :key="item.id" :label="item.title" :value="String(item.id)" />
             </el-select>
@@ -24,22 +24,33 @@
             </el-select>
           </el-form-item>
         </div>
-        <el-button type="primary" @click="saveProject">保存设定</el-button>
+        <el-button type="primary" :disabled="!canMake()" @click="saveProject">保存设定</el-button>
       </el-form>
-      <NovelBriefPanel :novel="novelBrief" :loading="novelLoading" />
+      <NovelBriefPanel v-if="!isScience" :novel="novelBrief" :loading="novelLoading" />
     </section>
 
-    <section v-show="step === 2">
+    <section v-show="step === 2 && isScience" class="cartoon-module">
+      <h3 class="cartoon-module__title">本地文案</h3>
+      <CopyBlocks :project-id="route.params.id" />
+    </section>
+
+    <section v-show="step === 2 && !isScience">
       <div class="cartoon-module">
         <h3 class="cartoon-module__title">从小说拉取</h3>
-        <p class="cartoon-module__hint">先在上一步选好小说，再选章节。不用手填 ID。</p>
+        <p class="cartoon-module__hint">新项目按叙事工作台已发布的故事包版本拉取。旧项目仍可直接拉章节，并标记为未钉扎。</p>
         <el-form label-position="top">
-          <el-form-item label="章节">
-            <el-select v-model="chapterId" filterable placeholder="选择章节" style="width: 100%" :disabled="!projectForm.source_novel_id">
-              <el-option v-for="item in chapters" :key="item.id" :label="item.label || item.title" :value="String(item.id)" />
+          <el-form-item v-if="packageVersions.length" label="故事包版本">
+            <el-select v-model="packageVersion" placeholder="选择已发布版本" style="width: 100%" @change="onPackageVersion">
+              <el-option v-for="item in packageVersions" :key="item.version" :label="`v${item.version} · ${item.published_at || ''}`" :value="item.version" />
             </el-select>
           </el-form-item>
-          <el-button type="primary" :disabled="!chapterId" @click="pull">拉取正文</el-button>
+          <el-alert v-else-if="pinRequired" type="info" show-icon :closable="false" title="还没有已发布的故事包。请先到叙事工作台发布，再回来拉取。" />
+          <el-form-item label="章节">
+            <el-select v-model="chapterId" filterable placeholder="选择章节" style="width: 100%" :disabled="!projectForm.source_novel_id">
+              <el-option v-for="item in pullChapters" :key="item.id" :label="item.label || item.title" :value="String(item.id)" />
+            </el-select>
+          </el-form-item>
+          <el-button type="primary" :disabled="!chapterId || !canMake() || (pinRequired && !packageVersion)" @click="pull">{{ pullLabel }}</el-button>
         </el-form>
       </div>
       <div class="cartoon-module">
@@ -47,7 +58,7 @@
         <el-form label-position="top">
           <el-form-item label="标题"><el-input v-model="chapterTitle" /></el-form-item>
           <el-form-item label="正文"><el-input v-model="body" type="textarea" :rows="6" /></el-form-item>
-          <el-button @click="saveImport">保存手工快照</el-button>
+          <el-button :disabled="!canMake()" @click="saveImport">保存手工快照</el-button>
         </el-form>
       </div>
       <div class="cartoon-module">
@@ -55,11 +66,13 @@
         <el-empty v-if="!liveImports.length" description="还没有章节快照" />
         <el-card v-for="item in liveImports" :key="item.id" shadow="never" class="cartoon-snap">
           <strong>{{ item.chapter_title || '未命名章节' }}</strong>
+          <el-tag v-if="item.legacy_unpinned" size="small">未钉扎</el-tag>
+          <el-tag v-else-if="item.package_version" size="small" type="success">故事包 v{{ item.package_version }}</el-tag>
           <p>{{ item.body }}</p>
           <p v-if="item.script_data && item.script_data.summary">{{ item.script_data.summary }}</p>
           <div class="cartoon-snap__actions">
-            <el-button type="primary" :loading="draftingId === item.id" @click="draft(item)">起草分镜</el-button>
-            <el-button type="danger" plain @click="removeSnapshot(item)">删除快照</el-button>
+            <el-button type="primary" :disabled="!canMake()" :loading="draftingId === item.id" @click="draft(item)">起草分镜</el-button>
+            <el-button type="danger" plain :disabled="!canMake()" @click="removeSnapshot(item)">删除快照</el-button>
           </div>
         </el-card>
       </div>
@@ -81,6 +94,7 @@
           >
             <span class="cartoon-board__snap-title">{{ item.title }}</span>
             <el-tag v-if="item.deleted" type="danger" size="small">已删除</el-tag>
+            <el-tag v-else-if="item.removed" type="warning" size="small">上游已移除</el-tag>
             <span class="cartoon-board__snap-count">{{ item.count }} 镜</span>
           </button>
         </aside>
@@ -88,10 +102,12 @@
           <div v-if="selectedBoard" class="cartoon-board__head">
             <strong>{{ selectedBoard.title }}</strong>
             <el-tag v-if="selectedBoard.deleted" type="danger" size="small">已删除</el-tag>
+            <el-tag v-else-if="selectedBoard.removed" type="warning" size="small">上游已移除</el-tag>
             <el-button
               v-if="selectedBoard.raw"
               type="primary"
               plain
+              :disabled="!canMake()"
               :loading="draftingId === selectedBoard.raw.id"
               @click="draft(selectedBoard.raw)"
             >起草分镜</el-button>
@@ -110,7 +126,7 @@
         </el-form-item>
         <el-form-item label="描述"><el-input v-model="shot.description" type="textarea" :rows="3" /></el-form-item>
         <el-form-item label="提示词"><el-input v-model="shot.positive_zh" type="textarea" :rows="2" /></el-form-item>
-        <el-button type="primary" @click="addShot">添加分镜</el-button>
+        <el-button type="primary" :disabled="!canMake()" @click="addShot">添加分镜</el-button>
       </el-form>
       <el-table v-if="selectedBoard" :data="boardShots" style="margin-top: 12px">
         <el-table-column prop="sort_order" label="#" width="60" />
@@ -126,6 +142,12 @@
             <el-select v-model="row.camera_move" @change="saveShot(row)">
               <el-option v-for="item in meta.camera_moves" :key="item" :label="item" :value="item" />
             </el-select>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="120">
+          <template #default="{ row }">
+            <el-tag v-if="row.upstream_stale" size="small" type="warning">上游已变</el-tag>
+            <el-tag v-if="hasOverride(row, 'dialogue')" size="small">台词已改</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="描述">
@@ -145,7 +167,7 @@
         </el-table-column>
         <el-table-column label="操作" width="168" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click.stop="openGenerate(row)">生成产物</el-button>
+            <el-button link type="primary" :disabled="!canMake()" @click.stop="openPromote(row)">提升台词</el-button>
             <el-button link type="primary" @click.stop="openOutputs(row)">查看产物</el-button>
           </template>
         </el-table-column>
@@ -154,18 +176,32 @@
       </div>
     </section>
 
+    <el-dialog v-model="promoteVisible" title="提升到叙事工作台" width="520px">
+      <p class="cartoon-module__hint">原句必须和钉扎版本里的句子一致。应用发生在叙事工作台，这里的生产稿不会被改回去。</p>
+      <el-form label-position="top">
+        <el-form-item label="原句"><el-input v-model="promoteBefore" type="textarea" :rows="3" /></el-form-item>
+        <el-form-item label="改后"><el-input v-model="promoteAfter" type="textarea" :rows="3" /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="promoteVisible = false">取消</el-button>
+        <el-button type="primary" :disabled="!canMake()" @click="submitPromote">提交</el-button>
+      </template>
+    </el-dialog>
   </PageShell>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import FlowSteps from '../components/FlowSteps.vue';
 import NovelBriefPanel from '../components/NovelBriefPanel.vue';
+import CopyBlocks from '../components/CopyBlocks.vue';
 import { request } from '../services/apiConfig.js';
+import { canMake } from '../lib/appAccess.js';
 
+const props = defineProps({ forcedStep: { type: Number, default: 0 } });
 const route = useRoute();
 const router = useRouter();
 const steps = [
@@ -173,13 +209,41 @@ const steps = [
   { step: 2, title: '章节' },
   { step: 3, title: '分镜' },
 ];
-const step = ref(Number(route.query.step) || 1);
+const embedded = computed(() => props.forcedStep > 0);
+const step = ref(props.forcedStep || Number(route.query.step) || 1);
+watch(() => props.forcedStep, (value) => { if (value) step.value = value; });
 const detail = ref(null);
 const novels = ref([]);
 const chapters = ref([]);
 const meta = reactive({ visual_styles: [], shot_sizes: [ '中景' ], camera_moves: [ '固定' ] });
 const projectForm = reactive({ name: '', source_novel_id: '', visual_style: '' });
 const chapterId = ref('');
+const packageDesk = ref(null);
+const packageVersion = ref(null);
+const promoteVisible = ref(false);
+const promoteBefore = ref('');
+const promoteAfter = ref('');
+const promoteShotId = ref(null);
+const pinRequired = computed(() => (detail.value?.project?.pin_mode || 'required') !== 'legacy');
+const isScience = computed(() => detail.value?.project?.content_type === 'ai_science' || detail.value?.project?.content_type === 'ai_commerce');
+const packageVersions = computed(() => packageDesk.value?.versions || []);
+const matchingImport = computed(() => (detail.value?.imports || []).find(item => (
+  !item.deleted_at && String(item.chapter_id) === String(chapterId.value)
+)));
+const pullLabel = computed(() => {
+  const row = matchingImport.value;
+  if (row?.package_version && packageVersion.value && Number(row.package_version) !== Number(packageVersion.value)) {
+    return '更新到此版本';
+  }
+  return '拉取正文';
+});
+const pullChapters = computed(() => {
+  const version = packageVersions.value.find(item => item.version === packageVersion.value);
+  if (version?.chapters?.length) {
+    return version.chapters.map(item => ({ id: item.chapter_id, title: item.title, label: item.title }));
+  }
+  return chapters.value;
+});
 const chapterTitle = ref('');
 const body = ref('');
 const shot = reactive({ shot_size: '中景', camera_move: '固定', description: '', positive_zh: '' });
@@ -199,6 +263,7 @@ const boardItems = computed(() => {
     importId: item.id,
     title: item.chapter_title || '未命名章节',
     deleted: Boolean(item.deleted_at),
+    removed: Boolean(item.upstream_removed),
     count: shots.filter(shotRow => String(shotRow.import_id) === String(item.id)).length,
     raw: item,
   }));
@@ -234,10 +299,21 @@ function ensureBoard() {
     selectedImportKey.value = live.key;
   }
 }
+function hasOverride(row, field) {
+  return Array.isArray(row.overridden_fields) && row.overridden_fields.includes(field);
+}
 function openGenerate(row) {
+  if (embedded.value) {
+    router.replace({ query: { node: 'generate', shot: String(row.id) } });
+    return;
+  }
   router.push({ path: `/projects/${route.params.id}/shots/${row.id}/generate`, query: { from: 'work' } });
 }
 function openOutputs(row) {
+  if (embedded.value) {
+    router.replace({ query: { node: 'preview', shot: String(row.id) } });
+    return;
+  }
   router.push({ path: `/projects/${route.params.id}/shots/${row.id}/outputs`, query: { from: 'work' } });
 }
 function fillProject() {
@@ -265,17 +341,35 @@ async function loadNovelBrief(novelId) {
     novelLoading.value = false;
   }
 }
+async function loadPackages(novelId) {
+  packageDesk.value = null;
+  if (!novelId) return;
+  try {
+    packageDesk.value = await request(`/novel-catalog/${novelId}/packages`);
+    if (!packageVersion.value && packageDesk.value?.versions?.length) {
+      packageVersion.value = packageDesk.value.versions[0].version;
+    }
+  } catch {
+    packageDesk.value = null;
+  }
+}
+function onPackageVersion() {
+  chapterId.value = '';
+}
 async function onNovelChange() {
   chapterId.value = '';
+  packageVersion.value = null;
   await Promise.all([
     loadChapters(projectForm.source_novel_id),
     loadNovelBrief(projectForm.source_novel_id),
+    loadPackages(projectForm.source_novel_id),
   ]);
 }
 async function load() {
   detail.value = await request(`/projects/${route.params.id}`);
   fillProject();
   ensureBoard();
+  await loadPackages(projectForm.source_novel_id);
 }
 async function saveProject() {
   try {
@@ -283,7 +377,7 @@ async function saveProject() {
       method: 'put',
       data: {
         name: projectForm.name,
-        source_novel_id: projectForm.source_novel_id || null,
+        source_novel_id: isScience.value ? null : (projectForm.source_novel_id || null),
         visual_style: projectForm.visual_style || '',
       },
     });
@@ -295,12 +389,38 @@ async function saveProject() {
 }
 async function pull() {
   try {
-    await request(`/projects/${route.params.id}/imports/from-novel`, {
-      method: 'post',
-      data: { novel_id: projectForm.source_novel_id, chapter_id: chapterId.value },
-    });
+    const data = { novel_id: projectForm.source_novel_id, chapter_id: chapterId.value };
+    if (packageVersion.value && packageDesk.value?.package_id) {
+      data.package_id = packageDesk.value.package_id;
+      data.version = packageVersion.value;
+    }
+    const updating = pullLabel.value === '更新到此版本';
+    const result = updating
+      ? await request(`/projects/${route.params.id}/rebase`, { method: 'post', data: { version: packageVersion.value, chapter_id: chapterId.value } })
+      : await request(`/projects/${route.params.id}/imports/from-novel`, { method: 'post', data });
     await load();
-    ElMessage.success('已拉取章节');
+    if (result?.unchanged) ElMessage.success(`这一章已经是故事包 v${result.package_version}`);
+    else if (result?.preserved_shots) ElMessage.success(`已更新到 v${result.package_version}，${result.preserved_shots} 条已改过的台词或描述保持原样`);
+    else if (result?.updated) ElMessage.success(`已更新到 v${result.package_version}`);
+    else ElMessage.success(data.package_id ? '已按故事包版本拉取' : '已拉取章节');
+  } catch (err) {
+    ElMessage.error(err.message);
+  }
+}
+function openPromote(row) {
+  promoteShotId.value = row.id;
+  promoteBefore.value = '';
+  promoteAfter.value = row.dialogue || row.description || '';
+  promoteVisible.value = true;
+}
+async function submitPromote() {
+  try {
+    await request(`/shots/${promoteShotId.value}/promote`, {
+      method: 'post',
+      data: { before: promoteBefore.value, after: promoteAfter.value },
+    });
+    promoteVisible.value = false;
+    ElMessage.success('已提交到叙事工作台，等待作者应用');
   } catch (err) {
     ElMessage.error(err.message);
   }

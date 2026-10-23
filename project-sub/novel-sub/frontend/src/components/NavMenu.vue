@@ -56,16 +56,16 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { Expand, Fold, Reading, Warning } from '@element-plus/icons-vue';
+import { Collection, Expand, Fold, Reading, Warning } from '@element-plus/icons-vue';
 import { navMenus } from '../config/navMenu.js';
 import { useNavCollapse } from '../composables/useNavCollapse.js';
 
 defineProps({
   embedded: { type: Boolean, default: false },
-  title: { type: String, default: '小说创作平台' },
+  title: { type: String, default: '叙事工作台' },
 });
 
-const ICONS = { Reading, Warning };
+const ICONS = { Reading, Warning, Collection };
 function iconOf(name) {
   return ICONS[name] || Reading;
 }

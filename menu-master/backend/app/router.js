@@ -21,6 +21,11 @@ module.exports = app => {
   router.post('/api/auth/mfa/setup', controller.auth.mfaSetup);
   router.post('/api/auth/mfa/confirm', controller.auth.mfaConfirm);
   router.post('/api/auth/mfa/disable', controller.auth.mfaDisable);
+  router.get('/api/open/roles', controller.role.open);
+  router.get('/api/roles', adminAuth, controller.role.index);
+  router.post('/api/roles', adminAuth, controller.role.create);
+  router.patch('/api/roles/:id', adminAuth, controller.role.update);
+  router.put('/api/users/:id/roles', adminAuth, controller.role.replaceForUser);
   router.get('/api/users', adminAuth, controller.user.index);
   router.get('/api/users/:id', adminAuth, controller.user.show);
   router.patch('/api/users/:id', adminAuth, controller.user.update);

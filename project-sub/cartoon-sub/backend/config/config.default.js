@@ -3,7 +3,7 @@ require('dotenv').config();
 module.exports = appInfo => {
   const config = {};
   config.keys = appInfo.name + '_cartoon_sub';
-  config.middleware = [ 'sessionAuth' ];
+  config.middleware = [ 'sessionAuth', 'roleGate' ];
   config.jwt = {
     secret: process.env.JWT_SECRET || 'CHANGE_ME_LOCAL_JWT',
     enable: false,
@@ -36,7 +36,10 @@ module.exports = appInfo => {
       hostname: '0.0.0.0',
     },
   };
-  config.bodyParser = { jsonLimit: '8mb', formLimit: '8mb' };
+  config.bodyParser = { jsonLimit: '32mb', formLimit: '32mb' };
+  config.main = {
+    baseUrl: process.env.MAIN_API_ORIGIN || 'http://127.0.0.1:5200',
+  };
   config.novel = {
     baseUrl: process.env.NOVEL_API_ORIGIN || 'http://127.0.0.1:5201',
   };
@@ -53,6 +56,10 @@ module.exports = appInfo => {
   config.agentPlatform = {
     baseUrl: process.env.AGENT_PLATFORM_URL || 'http://127.0.0.1:4001',
     timeoutMs: Number(process.env.AGENT_PLATFORM_TIMEOUT_MS || 180000),
+  };
+  config.ops = {
+    baseUrl: process.env.OPS_API_ORIGIN || 'http://127.0.0.1:5203',
+    internalToken: process.env.OPS_INTERNAL_TOKEN || 'ops-internal-dev',
   };
   config.mediaTools = {
     ffmpeg: process.env.CARTOON_FFMPEG_BIN || 'ffmpeg',

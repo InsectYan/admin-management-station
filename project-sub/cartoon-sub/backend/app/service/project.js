@@ -2,7 +2,9 @@
 
 const Service = require('egg').Service;
 const { VISUAL_STYLES, SHOT_SIZES, CAMERA_MOVES, assertEnum } = require('../lib/cartoonMeta');
-
+const { sameBody, keepsProductionText, withOverride } = require('../lib/rebasePlan');
+const { reportAudit } = require('../lib/reportAudit');
+const { videoTemplateDraft, templateGaps } = require('../lib/videoTemplates');
 function unwrap(json) {
   if (json && Object.prototype.hasOwnProperty.call(json, 'data')) return json.data;
   return json;
@@ -65,6 +67,7 @@ class ProjectService extends Service {
   async show(id) {
     const project = await this.ctx.model.Project.findByPk(id);
     if (!project) this.ctx.throw(404, '项目不存在');
+    const episode = await this.ensureEpisode(project.id);
     try {
       await this.ctx.service.generate.settleProject(id);
     } catch (err) {
@@ -90,10 +93,16 @@ class ProjectService extends Service {
       ? await this.ctx.model.Output.findAll({ where: { task_id: taskIds }, order: [[ 'id', 'ASC' ]] })
       : [];
     const shotById = new Map(shots.map(item => [ item.id, item ]));
+    const copyBlocks = await this.ctx.model.CopyBlock.findAll({
+      where: { project_id: id },
+      order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
+    });
     return {
       project,
       imports,
       assets,
+      copy_blocks: copyBlocks,
+      gaps: templateGaps(project.template_id, project, assets),
       shots: shots.map(shot => ({
         ...shot.toJSON(),
         prompt: promptByShot.get(shot.id) || null,
@@ -103,17 +112,97 @@ class ProjectService extends Service {
         shot_description: shotById.get(task.shot_id)?.description || '',
         outputs: outputs.filter(item => item.task_id === task.id),
       })),
+      episodes: [ episode ],
     };
   }
 
+  async ensureEpisode(projectId) {
+    let episode = await this.ctx.model.VideoTask.findOne({
+      where: { project_id: projectId },
+      order: [[ 'episode_no', 'ASC' ]],
+    });
+    if (!episode) {
+      episode = await this.ctx.model.VideoTask.create({
+        project_id: Number(projectId),
+        episode_no: 1,
+        title: '第1集',
+        current_node: 'input',
+        status: 'draft',
+      });
+    }
+    await this.ctx.model.Shot.update(
+      { video_task_id: episode.id },
+      { where: { project_id: projectId, video_task_id: null } },
+    );
+    return episode;
+  }
+
+  async touchNode(projectId, taskId, currentNode) {
+    const allowed = [ 'input', 'script', 'storyboard', 'assets', 'generate', 'compose', 'preview', 'export' ];
+    if (!allowed.includes(currentNode)) {
+      const err = new Error('节点不存在');
+      err.status = 400;
+      throw err;
+    }
+    const episode = await this.ctx.model.VideoTask.findOne({
+      where: { id: taskId, project_id: projectId },
+    });
+    if (!episode) {
+      const err = new Error('这一集不存在');
+      err.status = 404;
+      throw err;
+    }
+    await episode.update({ current_node: currentNode });
+    return episode;
+  }
+
   create(payload) {
+    const contentType = payload.content_type || 'ai_comic';
+    const local = contentType === 'ai_science' || contentType === 'ai_commerce';
+    if (![ 'ai_comic', 'ai_short', 'ai_science', 'ai_commerce' ].includes(contentType)) this.ctx.throw(400, '这个内容类型还没开放');
+    if (local && payload.source_novel_id) this.ctx.throw(400, '这个类型不绑定小说');
     return this.ctx.model.Project.create({
       name: payload.name,
-      source_novel_id: payload.source_novel_id || null,
+      source_novel_id: local ? null : (payload.source_novel_id || null),
       visual_style: assertEnum(payload.visual_style, VISUAL_STYLES, '画面风格'),
       summary: payload.summary || '',
       status: 'draft',
+      content_type: contentType,
+      pin_mode: local ? 'local' : 'required',
     });
+  }
+
+  async createFromTemplate(payload) {
+    const draft = videoTemplateDraft(payload.template_id);
+    const name = String(payload.name || '').trim();
+    if (!name) this.ctx.throw(400, '需要项目名称');
+    const project = await this.ctx.model.Project.create({
+      name,
+      source_novel_id: null,
+      visual_style: assertEnum(payload.visual_style, VISUAL_STYLES, '画面风格'),
+      summary: draft.scene,
+      status: 'draft',
+      content_type: draft.content_type,
+      pin_mode: draft.content_type === 'ai_science' ? 'local' : 'required',
+      template_id: draft.id,
+    });
+    const episode = await this.ensureEpisode(project.id);
+    for (const block of draft.copy_blocks) {
+      await this.ctx.model.CopyBlock.create({
+        project_id: project.id,
+        sort_order: block.sort_order,
+        title: block.title,
+        body: block.body,
+      });
+    }
+    for (const shot of draft.shots) {
+      await this.addShot(project.id, { description: shot.description });
+    }
+    return {
+      project,
+      episode_id: episode.id,
+      needs_package: draft.needs_package,
+    };
   }
 
   async update(id, payload) {
@@ -122,7 +211,11 @@ class ProjectService extends Service {
     const patch = {};
     if (payload.name != null) patch.name = String(payload.name).trim();
     if (payload.summary != null) patch.summary = payload.summary;
-    if (payload.source_novel_id !== undefined) patch.source_novel_id = payload.source_novel_id || null;
+    if (payload.source_novel_id !== undefined) {
+      const local = project.content_type === 'ai_science' || project.content_type === 'ai_commerce';
+      if (local && payload.source_novel_id) this.ctx.throw(400, '这个类型不绑定小说');
+      patch.source_novel_id = local ? null : (payload.source_novel_id || null);
+    }
     if (payload.visual_style !== undefined) {
       patch.visual_style = assertEnum(payload.visual_style, VISUAL_STYLES, '画面风格');
     }
@@ -218,6 +311,12 @@ class ProjectService extends Service {
       chapter_title: payload.chapter_title || '',
       body: payload.body,
       characters: payload.characters || [],
+      package_id: payload.package_id || null,
+      package_version: payload.package_version || null,
+      chapter_id: payload.chapter_id || null,
+      body_hash: payload.body_hash || null,
+      legacy_unpinned: Boolean(payload.legacy_unpinned),
+      overridden_fields: payload.overridden_fields || [],
     });
   }
 
@@ -231,7 +330,12 @@ class ProjectService extends Service {
   }
 
   async pullNovel(projectId, payload) {
-    await this.show(projectId);
+    const project = await this.ctx.model.Project.findByPk(projectId);
+    if (!project) this.ctx.throw(404, '项目不存在');
+    if (payload.package_id && payload.version) return this.pullPackage(project, payload);
+    if ((project.pin_mode || 'required') !== 'legacy') {
+      this.ctx.throw(400, '请先在叙事工作台发布故事包，再按版本拉取');
+    }
     let novel;
     let chapter;
     try {
@@ -241,7 +345,7 @@ class ProjectService extends Service {
       }
     } catch (err) {
       if (err.status) throw err;
-      this.ctx.throw(502, `无法连接小说平台：${err.message}`);
+      this.ctx.throw(502, `无法连接叙事工作台：${err.message}`);
     }
     const setting = novel?.setting_json || {};
     const meta = (setting.chapters || []).find(item => String(item.id) === String(payload.chapter_id));
@@ -249,20 +353,258 @@ class ProjectService extends Service {
     const chapterTitle = meta?.title || chapter?.chapter?.title || chapter?.title || '';
     const body = chapter?.body || chapter?.content || chapter?.text || '';
     if (!body) this.ctx.throw(400, '没有拿到章节正文。可以改用手工粘贴快照');
-    const characters = setting.characters || [];
     const row = await this.addImport(projectId, {
       source_novel_id: String(payload.novel_id),
       chapter_title: formatSnapshotTitle(volume, chapterTitle),
       body,
-      characters,
+      characters: setting.characters || [],
+      chapter_id: payload.chapter_id ? String(payload.chapter_id) : null,
+      legacy_unpinned: true,
     });
-    if (!payload.keep_unlinked) {
-      await this.ctx.model.Project.update(
-        { source_novel_id: String(payload.novel_id) },
-        { where: { id: projectId } },
-      );
-    }
+    if (!payload.keep_unlinked) await project.update({ source_novel_id: String(payload.novel_id) });
     return row;
+  }
+
+  async pullPackage(project, payload) {
+    const pack = await this.fetchNovel(
+      `/api/packages/${encodeURIComponent(payload.package_id)}?version=${encodeURIComponent(payload.version)}`,
+    );
+    const chapter = (pack?.chapters || []).find(item => String(item.chapter_id) === String(payload.chapter_id));
+    if (!chapter?.body) this.ctx.throw(400, '故事包里没有这一章正文');
+    const { Op } = this.app.Sequelize;
+    const existing = await this.ctx.model.Import.findOne({
+      where: {
+        project_id: project.id,
+        chapter_id: String(chapter.chapter_id),
+        deleted_at: { [Op.is]: null },
+      },
+      order: [[ 'id', 'DESC' ]],
+    });
+    const changed = existing ? !sameBody(existing, chapter) : false;
+    let row = existing;
+    let preserved = 0;
+    if (existing) {
+      await existing.update({
+        chapter_title: chapter.title || existing.chapter_title,
+        body: chapter.body,
+        characters: pack.characters || existing.characters,
+        package_id: pack.package_id,
+        package_version: pack.version,
+        body_hash: chapter.body_hash || null,
+        legacy_unpinned: false,
+        upstream_removed: false,
+      });
+      if (changed) {
+        const shots = await this.ctx.model.Shot.findAll({ where: { import_id: existing.id } });
+        preserved = shots.filter(keepsProductionText).length;
+        await this.ctx.model.Shot.update(
+          { upstream_stale: true, upstream_version: pack.version },
+          { where: { import_id: existing.id } },
+        );
+      }
+    } else {
+      row = await this.addImport(project.id, {
+        source_novel_id: String(pack.narrative_project_id || payload.novel_id || ''),
+        chapter_title: chapter.title || '未命名章节',
+        body: chapter.body,
+        characters: pack.characters || [],
+        package_id: pack.package_id,
+        package_version: pack.version,
+        chapter_id: String(chapter.chapter_id),
+        body_hash: chapter.body_hash || null,
+        legacy_unpinned: false,
+      });
+    }
+    await this.markRemovedChapters(project.id, pack);
+    await project.update({
+      source_novel_id: String(pack.narrative_project_id || payload.novel_id || project.source_novel_id || ''),
+      package_id: pack.package_id,
+      package_version: pack.version,
+      content_type: project.content_type || 'ai_comic',
+    });
+    await this.notifyDownstream(project);
+    await reportAudit(this.ctx, {
+      action: 'video.pin',
+      external_id: project.id,
+      detail: {
+        package_id: pack.package_id,
+        version: pack.version,
+        chapter_id: String(chapter.chapter_id),
+        updated: Boolean(existing && changed),
+        preserved_shots: preserved,
+      },
+    });
+    return {
+      id: row.id,
+      updated: Boolean(existing && changed),
+      unchanged: Boolean(existing && !changed),
+      preserved_shots: preserved,
+      package_version: pack.version,
+    };
+  }
+
+  async markRemovedChapters(projectId, pack) {
+    const liveIds = new Set((pack.chapters || []).map(item => String(item.chapter_id)));
+    const rows = await this.ctx.model.Import.findAll({
+      where: { project_id: projectId, package_id: pack.package_id },
+    });
+    for (const row of rows) {
+      if (row.deleted_at || !row.chapter_id) continue;
+      const removed = !liveIds.has(String(row.chapter_id));
+      if (Boolean(row.upstream_removed) !== removed) await row.update({ upstream_removed: removed });
+    }
+  }
+
+  async rebase(projectId, payload) {
+    const project = await this.ctx.model.Project.findByPk(projectId);
+    if (!project) this.ctx.throw(404, '项目不存在');
+    if (!project.package_id) this.ctx.throw(400, '这个项目还没有钉扎故事包');
+    if (!payload.version || !payload.chapter_id) this.ctx.throw(400, '需要目标版本和章节');
+    return this.pullPackage(project, {
+      package_id: project.package_id,
+      version: payload.version,
+      chapter_id: payload.chapter_id,
+      novel_id: project.source_novel_id,
+    });
+  }
+
+  async listNovelPackages(novelId) {
+    return this.fetchNovel(`/api/novels/${encodeURIComponent(novelId)}/packages`);
+  }
+
+  async notifyDownstream(project) {
+    if (!project.package_id || !project.source_novel_id) return;
+    const base = this.config.novel.baseUrl.replace(/\/$/, '');
+    try {
+      await fetch(`${base}/api/internal/downstreams`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          narrative_project_id: project.source_novel_id,
+          package_id: project.package_id,
+          version: project.package_version,
+          video_project_id: String(project.id),
+          content_type: project.content_type || 'ai_comic',
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+    } catch (err) {
+      this.ctx.logger.warn('[cartoon] downstream %s', err.message);
+    }
+  }
+
+  async promoteShot(shotId, payload) {
+    const shot = await this.ctx.model.Shot.findByPk(shotId);
+    if (!shot) this.ctx.throw(404, '分镜不存在');
+    const project = await this.ctx.model.Project.findByPk(shot.project_id);
+    const chapter = shot.import_id ? await this.ctx.model.Import.findByPk(shot.import_id) : null;
+    if (!project?.package_id || !chapter?.chapter_id) this.ctx.throw(400, '这个镜头还没有钉扎故事包章节');
+    const base = this.config.novel.baseUrl.replace(/\/$/, '');
+    let res;
+    try {
+      res = await fetch(`${base}/api/internal/promotions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          video_project_id: String(project.id),
+          shot_id: String(shot.id),
+          narrative_project_id: project.source_novel_id,
+          chapter_id: chapter.chapter_id,
+          package_version: chapter.package_version || project.package_version,
+          field: 'dialogue',
+          before: payload.before,
+          after: payload.after,
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+    } catch (err) {
+      this.ctx.throw(502, `无法连接叙事工作台：${err.message}`);
+    }
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || (json.code && json.code !== 0 && json.code !== 200)) {
+      this.ctx.throw(json.code || res.status || 400, json.message || '提升失败');
+    }
+    const fields = new Set(Array.isArray(shot.overridden_fields) ? shot.overridden_fields : []);
+    fields.add('dialogue');
+    await shot.update({ dialogue: payload.after || shot.dialogue, overridden_fields: [ ...fields ] });
+    await reportAudit(this.ctx, {
+      action: 'video.promote',
+      external_id: shot.id,
+      detail: {
+        project_id: project.id,
+        chapter_id: chapter.chapter_id,
+        package_version: chapter.package_version || project.package_version,
+      },
+    });
+    return json.data || null;
+  }
+
+  async dashboard() {
+    const summary = await this.ctx.service.opsInternal.summary({});
+    const { Op } = this.app.Sequelize;
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const [ unpinned, createdToday, recent ] = await Promise.all([
+      this.ctx.model.Project.count({ where: { pin_mode: 'required', package_id: null } }),
+      this.ctx.model.Project.count({ where: { created_at: { [Op.gte]: start } } }),
+      this.ctx.model.Task.findAll({
+        where: {
+          updated_at: { [Op.gte]: dayAgo },
+          status: { [Op.in]: [ 'success', 'failed' ] },
+        },
+        attributes: [ 'status' ],
+      }),
+    ]);
+    const success = recent.filter(item => item.status === 'success').length;
+    return {
+      generating: summary.running + summary.backlog,
+      failed: summary.today_failed,
+      unpinned,
+      created_today: createdToday,
+      success_rate_24h: recent.length ? Math.round((success / recent.length) * 100) : null,
+    };
+  }
+
+  async requireScience(projectId) {
+    const project = await this.ctx.model.Project.findByPk(projectId);
+    if (!project) this.ctx.throw(404, '项目不存在');
+    if (project.content_type !== 'ai_science' && project.content_type !== 'ai_commerce') this.ctx.throw(400, '这个类型使用本地文案');
+    return project;
+  }
+
+  async listCopyBlocks(projectId) {
+    await this.requireScience(projectId);
+    return this.ctx.model.CopyBlock.findAll({
+      where: { project_id: projectId },
+      order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
+    });
+  }
+
+  async saveCopyBlock(projectId, blockId, payload) {
+    await this.requireScience(projectId);
+    const title = String(payload.title || '').trim();
+    const body = String(payload.body || '').trim();
+    if (!title && !body) this.ctx.throw(400, '需要标题或正文');
+    const fields = {
+      title,
+      body,
+      sort_order: Number(payload.sort_order) || 1,
+    };
+    if (blockId) {
+      const row = await this.ctx.model.CopyBlock.findOne({ where: { id: blockId, project_id: projectId } });
+      if (!row) this.ctx.throw(404, '文案不存在');
+      await row.update(fields);
+      return row;
+    }
+    return this.ctx.model.CopyBlock.create({ project_id: Number(projectId), ...fields });
+  }
+
+  async removeCopyBlock(projectId, blockId) {
+    await this.requireScience(projectId);
+    const row = await this.ctx.model.CopyBlock.findOne({ where: { id: blockId, project_id: projectId } });
+    if (!row) this.ctx.throw(404, '文案不存在');
+    await row.destroy();
   }
 
   async addShot(projectId, payload) {
@@ -275,10 +617,12 @@ class ProjectService extends Service {
       if (!chapter) this.ctx.throw(404, '章节快照不存在');
       importId = chapter.id;
     }
+    const episode = await this.ensureEpisode(projectId);
     const max = await this.ctx.model.Shot.max('sort_order', { where: { project_id: projectId } });
     const shot = await this.ctx.model.Shot.create({
       project_id: Number(projectId),
       import_id: importId,
+      video_task_id: episode.id,
       sort_order: Number.isFinite(max) ? max + 1 : 0,
       shot_size: assertEnum(payload.shot_size || '中景', SHOT_SIZES, '景别') || '中景',
       camera_move: assertEnum(payload.camera_move || '固定', CAMERA_MOVES, '运镜') || '固定',
@@ -294,6 +638,26 @@ class ProjectService extends Service {
     return shot;
   }
 
+  async addAsset(projectId, payload) {
+    await this.show(projectId);
+    const name = String(payload.name || '').trim();
+    if (!name) this.ctx.throw(400, '需要资产名称');
+    const kinds = [ 'character', 'scene', 'prop', 'voice' ];
+    const kind = kinds.includes(payload.kind) ? payload.kind : 'character';
+    const voiceKey = String(payload.voice_key || '').trim();
+    if (kind === 'voice' && !voiceKey) this.ctx.throw(400, '需要音色标识');
+    return this.ctx.model.Asset.create({
+      project_id: Number(projectId),
+      kind,
+      name,
+      description: payload.description || '',
+      reference_path: String(payload.reference_path || '').trim(),
+      voice_key: voiceKey,
+      speech_rate: String(payload.speech_rate || '').trim(),
+      emotion: String(payload.emotion || '').trim(),
+    });
+  }
+
   async updateShot(id, payload) {
     const shot = await this.ctx.model.Shot.findByPk(id);
     if (!shot) this.ctx.throw(404, '分镜不存在');
@@ -302,6 +666,8 @@ class ProjectService extends Service {
       camera_move: payload.camera_move ?? shot.camera_move,
       description: payload.description ?? shot.description,
       sort_order: payload.sort_order ?? shot.sort_order,
+      dialogue: payload.dialogue ?? shot.dialogue,
+      overridden_fields: withOverride(shot, payload),
     });
     if (payload.positive_zh != null || payload.negative_zh != null) {
       const existing = await this.ctx.model.Prompt.findOne({ where: { shot_id: shot.id } });
@@ -319,6 +685,54 @@ class ProjectService extends Service {
       }
     }
     return shot;
+  }
+
+  async savePanel(projectId, payload) {
+    const project = await this.ctx.model.Project.findByPk(projectId);
+    if (!project) this.ctx.throw(404, '项目不存在');
+    const text = key => String(payload[key] || '').trim();
+    let fields = null;
+    if (project.content_type === 'ai_short') {
+      fields = {
+        conflict: text('conflict'),
+        twist: text('twist'),
+        rhythm: text('rhythm'),
+        branches: text('branches'),
+      };
+    } else if (project.content_type === 'ai_commerce') {
+      fields = {
+        product_note: text('product_note'),
+        selling_points: text('selling_points'),
+        comparison: text('comparison'),
+      };
+    } else this.ctx.throw(400, '这个类型没有面板');
+    const row = await this.ctx.model.TypePanel.findOne({ where: { project_id: project.id } });
+    if (row) await row.update(fields);
+    else await this.ctx.model.TypePanel.create({ project_id: project.id, ...fields });
+    return this.panelOf(project.id);
+  }
+
+  async panelOf(projectId) {
+    const project = await this.ctx.model.Project.findByPk(projectId);
+    if (!project) this.ctx.throw(404, '项目不存在');
+    const row = await this.ctx.model.TypePanel.findOne({ where: { project_id: project.id } });
+    return {
+      content_type: project.content_type,
+      ready: await this.panelReady(project),
+      panel: row,
+    };
+  }
+
+  async panelReady(projectOrId) {
+    const project = projectOrId && projectOrId.content_type
+      ? projectOrId
+      : await this.ctx.model.Project.findByPk(projectOrId);
+    if (!project) this.ctx.throw(404, '项目不存在');
+    if (project.content_type !== 'ai_short' && project.content_type !== 'ai_commerce') return true;
+    const row = await this.ctx.model.TypePanel.findOne({ where: { project_id: project.id } });
+    const filled = key => Boolean(String(row?.[key] || '').trim());
+    if (project.content_type === 'ai_short') return filled('conflict') && filled('twist') && filled('rhythm') && filled('branches');
+    return filled('product_note') && filled('selling_points');
   }
 }
 

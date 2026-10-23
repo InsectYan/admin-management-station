@@ -14,17 +14,16 @@
         <el-option label="已开通" value="active" />
         <el-option label="已禁用" value="disabled" />
       </el-select>
-      <el-select v-model="query.role" clearable placeholder="角色" @change="search">
-        <el-option label="管理员" value="admin" />
-        <el-option label="操作员" value="operator" />
-      </el-select>
       <el-button type="primary" @click="search">查询</el-button>
     </div>
     <el-table :data="list" v-loading="loading" stripe>
       <el-table-column prop="username" label="用户名" min-width="120" />
       <el-table-column prop="email" label="邮箱" min-width="180" />
-      <el-table-column label="角色" width="110">
-        <template #default="{ row }">{{ row.role === 'admin' ? '管理员' : '操作员' }}</template>
+      <el-table-column label="账号" width="120">
+        <template #default="{ row }">{{ row.account_type === 'super_admin' ? '超级管理员' : '用户' }}</template>
+      </el-table-column>
+      <el-table-column label="角色" min-width="180">
+        <template #default="{ row }">{{ roleText(row) }}</template>
       </el-table-column>
       <el-table-column label="状态" width="100">
         <template #default="{ row }">
@@ -54,16 +53,7 @@
           <el-button v-if="row.status === 'pending'" link type="primary" @click="setStatus(row, 'active')">开通</el-button>
           <el-button v-if="row.status === 'disabled'" link type="primary" @click="setStatus(row, 'active')">启用</el-button>
           <el-button v-if="row.status === 'active'" link type="danger" @click="setStatus(row, 'disabled')">禁用</el-button>
-          <el-button
-            v-if="row.role !== 'admin'"
-            link
-            @click="setRole(row, 'admin')"
-          >升为管理员</el-button>
-          <el-button
-            v-if="row.role === 'admin'"
-            link
-            @click="setRole(row, 'operator')"
-          >降为操作员</el-button>
+          <el-button link type="primary" @click="openRoles(row)">分配角色</el-button>
           <el-button link @click="onReset(row)">重置密码</el-button>
           <el-button v-if="row.mfa_enabled" link @click="onDisableMfa(row)">关闭 MFA</el-button>
         </template>
@@ -94,12 +84,6 @@
         </el-form-item>
         <el-form-item label="邮箱">
           <el-input v-model="edit.form.email" placeholder="user@example.com" />
-        </el-form-item>
-        <el-form-item label="角色">
-          <el-select v-model="edit.form.role" style="width: 100%">
-            <el-option label="管理员" value="admin" />
-            <el-option label="操作员" value="operator" />
-          </el-select>
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="edit.form.status" style="width: 100%">
@@ -166,6 +150,19 @@
         <el-button type="primary" :loading="edit.saving" @click="saveEdit">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="roles.visible" title="分配角色" width="520px" :close-on-click-modal="false">
+      <p class="role-user">{{ roles.username }}</p>
+      <el-checkbox-group v-model="roles.selected">
+        <el-checkbox v-for="item in roles.catalog" :key="item.id" :value="item.id">
+          {{ item.app_name }} / {{ item.name }}（{{ item.code }}）
+        </el-checkbox>
+      </el-checkbox-group>
+      <template #footer>
+        <el-button @click="roles.visible = false">取消</el-button>
+        <el-button type="primary" :loading="roles.saving" @click="saveRoles">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -173,11 +170,13 @@
 import { onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { disableUserMfa, fetchUser, fetchUsers, resetUserPassword, updateUser } from '../services/userService.js';
+import { request } from '../services/api.js';
 
 const loading = ref(false);
 const list = ref([]);
 const total = ref(0);
-const query = reactive({ q: '', status: '', role: '', page: 1, pageSize: 20 });
+const query = reactive({ q: '', status: '', page: 1, pageSize: 20 });
+const roles = reactive({ visible: false, saving: false, userId: null, username: '', catalog: [], selected: [] });
 const edit = reactive({
   visible: false,
   loading: false,
@@ -188,7 +187,6 @@ const edit = reactive({
     id: null,
     username: '',
     email: '',
-    role: 'operator',
     status: 'pending',
     mfa_enabled: false,
     github_login: '',
@@ -246,13 +244,41 @@ async function setStatus(row, status) {
   }
 }
 
-async function setRole(row, role) {
+function roleText(row) {
+  const bound = Array.isArray(row.roles) ? row.roles : [];
+  return bound.length ? bound.map(item => `${item.app_name || item.app_code}/${item.name}`).join('、') : '未分配';
+}
+
+async function openRoles(row) {
+  roles.visible = true;
+  roles.userId = row.id;
+  roles.username = row.username;
+  roles.selected = (row.roles || []).map(item => item.id);
   try {
-    await updateUser(row.id, { role });
+    const body = await request('/roles');
+    roles.catalog = (body.data?.list || []).filter(item => item.status === 'enabled');
+    const detail = await fetchUser(row.id);
+    const user = detail.user || detail;
+    roles.selected = (user.roles || []).map(item => item.id);
+  } catch (err) {
+    ElMessage.error(err.message || '加载角色失败');
+  }
+}
+
+async function saveRoles() {
+  roles.saving = true;
+  try {
+    await request(`/users/${roles.userId}/roles`, {
+      method: 'PUT',
+      body: JSON.stringify({ role_ids: roles.selected }),
+    });
     ElMessage.success('角色已更新');
+    roles.visible = false;
     load();
   } catch (err) {
-    ElMessage.error(err.message || '操作失败');
+    ElMessage.error(err.message || '保存失败');
+  } finally {
+    roles.saving = false;
   }
 }
 
@@ -265,7 +291,6 @@ async function openEdit(row) {
     id: row.id,
     username: row.username,
     email: row.email,
-    role: row.role,
     status: row.status,
     mfa_enabled: !!row.mfa_enabled,
     github_login: row.github_login || '',
@@ -283,7 +308,6 @@ async function openEdit(row) {
       id: user.id,
       username: user.username,
       email: user.email,
-      role: user.role,
       status: user.status,
       mfa_enabled: !!user.mfa_enabled,
       github_login: user.github_login || '',
@@ -311,7 +335,6 @@ async function saveEdit() {
   try {
     const body = {
       email: edit.form.email.trim(),
-      role: edit.form.role,
       status: edit.form.status,
       github_login: edit.form.github_login,
       aliyun_account_id: edit.form.aliyun_account_id,

@@ -3,7 +3,7 @@
     <header class="admin-head">
       <div>
         <h1>账号设置</h1>
-        <p>{{ user.username }} · {{ user.role === 'admin' ? '管理员' : '操作员' }}</p>
+        <p>{{ user.username }} · {{ user.account_type === 'super_admin' || user.role === 'admin' ? '超级管理员' : '用户' }}</p>
       </div>
     </header>
 

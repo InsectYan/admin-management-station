@@ -7,6 +7,7 @@
         <el-breadcrumb-item>列表页</el-breadcrumb-item>
       </el-breadcrumb>
       <el-button type="primary" :icon="Plus" @click="openCreate">新建小说</el-button>
+      <el-button @click="openTemplate">从模板创建</el-button>
       <el-button :icon="MagicStick" @click="openAiBook">AI 开书</el-button>
     </template>
 
@@ -372,6 +373,23 @@
       @submit="handleSave"
     />
     <AiOpenBookDialog v-model="aiBookVisible" />
+    <el-dialog v-model="templateVisible" title="从模板创建" width="420px">
+      <el-form label-width="72px">
+        <el-form-item label="模板">
+          <el-select v-model="templateId" style="width: 100%">
+            <el-option v-for="item in templates" :key="item.id" :label="item.name" :value="item.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="标题">
+          <el-input v-model="templateTitle" placeholder="作品标题" />
+        </el-form-item>
+      </el-form>
+      <p>会预填项目类型、空卷和人物角色。不写人物姓名，也不发布故事包。</p>
+      <template #footer>
+        <el-button @click="templateVisible = false">取消</el-button>
+        <el-button type="primary" :loading="templateSaving" @click="submitTemplate">创建</el-button>
+      </template>
+    </el-dialog>
   </PageShell>
 </template>
 
@@ -388,8 +406,10 @@ import NovelEditDialog from '../components/novel/NovelEditDialog.vue';
 import AiOpenBookDialog from '../components/novel/ai/AiOpenBookDialog.vue';
 import {
   batchDeleteNovels,
+  createNovelFromTemplate,
   deleteNovel,
   fetchNovels,
+  fetchStoryTemplates,
   updateNovel,
 } from '../services/novelService.js';
 import {
@@ -432,6 +452,11 @@ const saving = ref(false);
 const editVisible = ref(false);
 const editNovel = ref(null);
 const aiBookVisible = ref(false);
+const templateVisible = ref(false);
+const templateSaving = ref(false);
+const templates = ref([]);
+const templateId = ref('web_serial');
+const templateTitle = ref('');
 
 const visibleColumns = ref(
   TABLE_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key),
@@ -609,6 +634,38 @@ function openCreate() {
 
 function openAiBook() {
   aiBookVisible.value = true;
+}
+
+async function openTemplate() {
+  templateTitle.value = '';
+  templateVisible.value = true;
+  if (templates.value.length) return;
+  try {
+    templates.value = await fetchStoryTemplates() || [];
+    if (templates.value[0]) templateId.value = templates.value[0].id;
+  } catch (err) {
+    ElMessage.error(err.message || '模板加载失败');
+  }
+}
+
+async function submitTemplate() {
+  if (!templateTitle.value.trim()) {
+    ElMessage.warning('先写标题');
+    return;
+  }
+  templateSaving.value = true;
+  try {
+    const row = await createNovelFromTemplate({
+      template_id: templateId.value,
+      title: templateTitle.value.trim(),
+    });
+    templateVisible.value = false;
+    router.push({ name: 'novel-create', query: { id: String(row.id), step: '1' } });
+  } catch (err) {
+    ElMessage.error(err.message || '创建失败');
+  } finally {
+    templateSaving.value = false;
+  }
 }
 
 function openCreateWizard(row) {

@@ -19,7 +19,7 @@ function publicUser(row) {
     id: row.id,
     username: row.username,
     email: row.email,
-    role: row.role,
+    account_type: row.account_type || (row.role === 'admin' ? 'super_admin' : 'user'),
     status: row.status,
     mfa_enabled: !!row.mfa_enabled,
     github_login: row.github_login || '',
@@ -34,7 +34,7 @@ function publicUser(row) {
 class AuthService extends Service {
   signToken(user) {
     return this.app.jwt.sign(
-      { sub: user.id, username: user.username, role: user.role },
+      { sub: user.id, username: user.username, account_type: user.account_type || (user.role === 'admin' ? 'super_admin' : 'user') },
       this.app.config.jwt.secret,
       { expiresIn: `${TOKEN_DAYS}d` },
     );
@@ -76,6 +76,7 @@ class AuthService extends Service {
       password_hash: bcrypt.hashSync(pwd, 10),
       status: 'pending',
       role: 'operator',
+      account_type: 'user',
     });
     return publicUser(row);
   }
@@ -92,7 +93,7 @@ class AuthService extends Service {
     }
     if (row.mfa_enabled) {
       const mfa_ticket = this.app.jwt.sign(
-        { purpose: 'mfa', sub: row.id, username: row.username, role: row.role },
+        { purpose: 'mfa', sub: row.id, username: row.username, account_type: row.account_type },
         this.app.config.jwt.secret,
         { expiresIn: '5m' },
       );
@@ -104,7 +105,7 @@ class AuthService extends Service {
     }
     return {
       token: this.signToken(row),
-      user: publicUser(row),
+      user: await this.withRoles(row),
     };
   }
 
@@ -125,8 +126,15 @@ class AuthService extends Service {
     }
     return {
       token: this.signToken(row),
-      user: publicUser(row),
+      user: await this.withRoles(row),
     };
+  }
+
+  async withRoles(row) {
+    const user = publicUser(row);
+    const map = await this.ctx.service.role.enabledForUsers([ row.id ]);
+    user.roles = map.get(Number(row.id)) || [];
+    return user;
   }
 
   async me(userId) {
@@ -134,7 +142,7 @@ class AuthService extends Service {
     if (!row || row.status !== 'active') {
       this.ctx.throw(401, '登录已失效');
     }
-    return publicUser(row);
+    return this.withRoles(row);
   }
 
   currentUserId() {
@@ -361,8 +369,11 @@ class AuthService extends Service {
         password_hash: bcrypt.hashSync(password, 10),
         status: 'active',
         role: 'admin',
+        account_type: 'super_admin',
       });
       this.ctx.logger.info('[Auth] bootstrap admin created: %s', username);
+    } else if (existed.account_type !== 'super_admin') {
+      await existed.update({ account_type: 'super_admin' });
     }
     await this.ensureSuperAdminBootstrap();
     return { created: !existed, username };
@@ -386,6 +397,7 @@ class AuthService extends Service {
         password_hash: hash,
         status: 'active',
         role: 'admin',
+        account_type: 'super_admin',
         password_hint: process.env.SUPER_ADMIN_BOOTSTRAP_HINT || '超管默认口令（部署会重置）',
       });
       this.ctx.logger.info('[Auth] super admin injected: %s', username);
@@ -395,6 +407,7 @@ class AuthService extends Service {
       password_hash: hash,
       status: 'active',
       role: 'admin',
+      account_type: 'super_admin',
       password_hint: row.password_hint || process.env.SUPER_ADMIN_BOOTSTRAP_HINT || '超管默认口令（部署会重置）',
     });
     this.ctx.logger.info('[Auth] super admin password reset on deploy: %s', username);

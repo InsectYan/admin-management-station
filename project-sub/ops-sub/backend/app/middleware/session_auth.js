@@ -10,6 +10,19 @@ module.exports = () => {
       return;
     }
 
+    if (ctx.path.startsWith('/api/internal/')) {
+      const token = ctx.get('x-ops-token');
+      const expect = ctx.app.config.contentOps.internalToken;
+      if (!token || token !== expect) {
+        ctx.status = 401;
+        ctx.body = { code: 401, message: '内部令牌无效', data: null };
+        return;
+      }
+      ctx.state.user = { sub: 0, username: 'ops-internal', role: 'admin', account_type: 'super_admin' };
+      await next();
+      return;
+    }
+
     const header = ctx.get('authorization') || '';
     const bearer = header.replace(/^Bearer\s+/i, '');
     const queryToken = String(ctx.query.access_token || '');

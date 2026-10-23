@@ -155,6 +155,13 @@
           </el-button>
         </div>
       </header>
+      <div v-if="chapterId" class="novel-chapter-studio__plotlines">
+        <span>剧情线</span>
+        <el-select v-model="plotlineIds" multiple collapse-tags placeholder="绑定到本章" style="width: 280px">
+          <el-option v-for="line in plotlineOptions" :key="line.id" :label="line.name" :value="line.id" />
+        </el-select>
+        <el-button :loading="plotlineSaving" @click="savePlotlineBind">保存绑定</el-button>
+      </div>
       <AnomalyFixPanel
         v-if="anomalyReportId"
         :report-id="anomalyReportId"
@@ -218,9 +225,11 @@ import AnomalyFixPanel from '../AnomalyFixPanel.vue';
 import CharacterRelationGraph from '../create/CharacterRelationGraph.vue';
 import NovelMarkdown from '../markdown/NovelMarkdown.vue';
 import {
+  bindChapterPlotlines,
   fetchChapterBody,
   fetchChapterMeta,
   fetchEmptyChapters,
+  fetchPlotlines,
   runNovelReview,
   saveChapterBody,
 } from '../../../services/novelService.js';
@@ -849,13 +858,48 @@ watch(
       emit('chapter-change', next);
       return;
     }
-    if (chapterId.value) await loadBody(chapterId.value);
+    if (chapterId.value) {
+      await loadBody(chapterId.value);
+      await loadPlotlineBind(chapterId.value);
+    }
   },
   { immediate: true, deep: false },
 );
 
+const plotlineOptions = ref([]);
+const plotlineIds = ref([]);
+const plotlineSaving = ref(false);
+
+async function loadPlotlineBind(id) {
+  plotlineIds.value = [];
+  if (!resolvedNovelId.value || !id) return;
+  try {
+    const list = await fetchPlotlines(resolvedNovelId.value);
+    plotlineOptions.value = list || [];
+    plotlineIds.value = (list || [])
+      .filter(line => (line.events || []).some(event => event.chapter_id === id))
+      .map(line => line.id);
+  } catch {
+    plotlineOptions.value = [];
+  }
+}
+
+async function savePlotlineBind() {
+  if (!resolvedNovelId.value || !chapterId.value) return;
+  plotlineSaving.value = true;
+  try {
+    await bindChapterPlotlines(resolvedNovelId.value, chapterId.value, plotlineIds.value);
+    ElMessage.success('剧情线已绑定，正文没有改动');
+  } catch (err) {
+    ElMessage.error(err.message || '绑定失败');
+  } finally {
+    plotlineSaving.value = false;
+  }
+}
+
 watch(chapterId, (id) => {
   if (id) loadBody(id);
+  loadPlotlineBind(id);
 });
 
 watch(
@@ -1011,6 +1055,13 @@ watch(
   padding: 10px 12px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.56);
+}
+
+.novel-chapter-studio__plotlines {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
 }
 
 .novel-chapter-studio__body-head {

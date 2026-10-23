@@ -17,7 +17,13 @@ module.exports = () => {
       return;
     }
 
-    if (!ctx.state.user || ctx.state.user.role !== 'admin') {
+    if (!ctx.state.user) {
+      ctx.status = 401;
+      ctx.body = { code: 401, message: '未登录', data: null };
+      return;
+    }
+    const type = ctx.state.user.account_type || (ctx.state.user.role === 'admin' ? 'super_admin' : '');
+    if (type !== 'super_admin') {
       ctx.status = 403;
       ctx.body = { code: 403, message: '无权限', data: null };
       return;

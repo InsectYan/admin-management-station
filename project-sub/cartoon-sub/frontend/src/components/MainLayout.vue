@@ -13,10 +13,12 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { isQiankunEmbedded } from '../services/apiConfig.js';
+import { refreshAccess } from '../lib/appAccess.js';
 import NavMenu from './NavMenu.vue';
 import './MainLayout.css';
 
 const embedded = computed(() => isQiankunEmbedded());
+onMounted(() => { refreshAccess(); });
 </script>

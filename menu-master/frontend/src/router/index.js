@@ -25,6 +25,7 @@ const router = createRouter({
       children: [
         { path: '', name: 'home', component: HomeWelcome },
         { path: 'users', name: 'users', component: () => import('../views/UsersPage.vue'), meta: { admin: true } },
+        { path: 'roles', name: 'roles', component: () => import('../views/RolesPage.vue'), meta: { admin: true } },
         { path: 'audit', name: 'audit', component: () => import('../views/AuditLogPage.vue'), meta: { admin: true } },
         { path: 'settings', name: 'settings', component: () => import('../views/SettingsPage.vue') },
         { path: 'media/:pathMatch(.*)*', component: SubAppContainer },

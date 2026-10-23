@@ -6,7 +6,7 @@
         v-for="field in fields"
         :key="field.id"
         :label="field.label"
-        :class="{ 'precheck-preview-duration': field.type === 'duration' }"
+        :class="{ 'precheck-preview-duration': field.type === 'duration' || field.type === 'image' }"
       >
         <template v-if="field.type === 'duration'">
           <el-input-number
@@ -20,6 +20,10 @@
             placeholder="留空沿用工作流帧数"
           />
           <p class="precheck-preview-hint">{{ durationHint(field) }}</p>
+        </template>
+        <template v-else-if="field.type === 'image'">
+          <input :key="field.id" type="file" accept="image/png,image/jpeg,image/webp" @change="onImage(field, $event)" />
+          <p class="precheck-preview-hint">{{ field.spec }}{{ field.filename ? ` · 已选 ${field.filename}` : '' }}</p>
         </template>
         <el-input v-else-if="field.type === 'text'" v-model="field.value" type="textarea" :rows="3" />
         <el-input-number
@@ -90,6 +94,18 @@ function durationHint(field) {
   const frames = alignFrames(seconds * fps, sample ? frameAlign(sample.class_type) : field.align);
   const snap = field.align === '4n1' ? '，帧数取最接近的 4n+1' : '';
   return `将按 ${fps} fps 写成约 ${frames} 帧${snap}。`;
+}
+function onImage(field, event) {
+  const file = event.target.files?.[0];
+  field.filename = '';
+  field.data = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    field.filename = file.name;
+    field.data = String(reader.result || '');
+  };
+  reader.readAsDataURL(file);
 }
 function frameLocked(field) {
   return FRAME_KEYS.has(field.key) && Number(durationField()?.value) > 0;
@@ -174,6 +190,11 @@ async function refresh() {
 }
 async function generate() {
   if (!props.apiJson) return;
+  const missing = fields.value.filter(field => field.type === 'image' && !field.data);
+  if (missing.length) {
+    ElMessage.error(`请上传${missing.map(field => field.label).join('、')}`);
+    return;
+  }
   running.value = true;
   notice.value = '已提交到 ComfyUI';
   try {
@@ -200,7 +221,8 @@ onUnmounted(stop);
 
 <style scoped>
 .precheck-preview-form { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
-.precheck-preview-duration { grid-column: 1 / -1; }
+.precheck-preview-duration,
+.precheck-preview-form :deep(.el-form-item:has(input[type='file'])) { grid-column: 1 / -1; }
 .precheck-preview-hint { margin: 6px 0 0; color: #5c6b62; font-size: 13px; }
 .precheck-preview-note { color: #5c6b62; }
 .precheck-preview-media img,

@@ -36,6 +36,18 @@
           />
         </el-select>
       </el-form-item>
+      <el-form-item label="年龄">
+        <el-input v-model="character.age" @input="$emit('change')" />
+      </el-form-item>
+      <el-form-item label="身份">
+        <el-input v-model="character.identity" @input="$emit('change')" />
+      </el-form-item>
+      <el-form-item label="外貌">
+        <el-input v-model="character.appearance" type="textarea" :rows="2" placeholder="文字形象，图片放在视频资产里" @input="$emit('change')" />
+      </el-form-item>
+      <el-form-item label="语言风格">
+        <el-input v-model="character.speech_style" type="textarea" :rows="2" @input="$emit('change')" />
+      </el-form-item>
       <el-form-item label="性格">
         <el-input v-model="character.personality" type="textarea" :rows="2" @input="$emit('change')" />
       </el-form-item>
@@ -44,6 +56,9 @@
       </el-form-item>
       <el-form-item label="目标 / 动机">
         <el-input v-model="character.goal" type="textarea" :rows="2" @input="$emit('change')" />
+      </el-form-item>
+      <el-form-item label="人物弧光">
+        <el-input v-model="character.arc" type="textarea" :rows="2" @input="$emit('change')" />
       </el-form-item>
       <el-form-item label="人物关系（文本）">
         <el-input

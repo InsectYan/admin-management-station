@@ -1,0 +1,14 @@
+CREATE TABLE IF NOT EXISTS plotlines (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  kind VARCHAR(32) NOT NULL DEFAULT 'main',
+  status VARCHAR(20) NOT NULL DEFAULT 'open',
+  plant_chapter_id VARCHAR(80) NOT NULL DEFAULT '',
+  payoff_chapter_id VARCHAR(80) NOT NULL DEFAULT '',
+  events JSONB NOT NULL DEFAULT '[]',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_plotlines_novel ON plotlines (novel_id);

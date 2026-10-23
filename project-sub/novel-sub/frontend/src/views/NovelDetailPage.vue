@@ -49,11 +49,13 @@
         @touchstart.passive="onTouchStart"
         @touchend.passive="onTouchEnd"
       >
-        <DetailBasicInfo
-          v-if="currentTab === 1"
-          :form="basic"
-          :meta="novelMeta"
-        />
+        <template v-if="currentTab === 1">
+          <DetailBasicInfo
+            :form="basic"
+            :meta="novelMeta"
+          />
+          <DetailDownstreams :novel-id="novelId || novelMeta.id" />
+        </template>
         <DetailWorldSetting
           v-else-if="currentTab === 2"
           :form="worldForm"
@@ -101,6 +103,23 @@
           @export="onExportReader"
           @edit-chapter="goToStudioChapter"
         />
+        <DetailStoryPackages
+          v-else-if="currentTab === 9"
+          :novel-id="novelId || novelMeta.id"
+          :title="basic.title"
+        />
+        <DetailPlotlines
+          v-else-if="currentTab === 10"
+          :novel-id="novelId || novelMeta.id"
+        />
+        <DetailScripts
+          v-else-if="currentTab === 11"
+          :novel-id="novelId || novelMeta.id"
+        />
+        <DetailIntentShots
+          v-else-if="currentTab === 12"
+          :novel-id="novelId || novelMeta.id"
+        />
       </div>
 
       <template #footer>
@@ -123,6 +142,7 @@ import NovelDetailShell from '../components/novel/detail/NovelDetailShell.vue';
 import NovelDetailTabs from '../components/novel/detail/NovelDetailTabs.vue';
 import NovelDetailFooter from '../components/novel/detail/NovelDetailFooter.vue';
 import DetailBasicInfo from '../components/novel/detail/DetailBasicInfo.vue';
+import DetailDownstreams from '../components/novel/detail/DetailDownstreams.vue';
 import DetailWorldSetting from '../components/novel/detail/DetailWorldSetting.vue';
 import DetailFactions from '../components/novel/detail/DetailFactions.vue';
 import DetailCharacters from '../components/novel/detail/DetailCharacters.vue';
@@ -130,6 +150,10 @@ import DetailOutline from '../components/novel/detail/DetailOutline.vue';
 import DetailContentOrg from '../components/novel/detail/DetailContentOrg.vue';
 import DetailChapterStudio from '../components/novel/detail/DetailChapterStudio.vue';
 import DetailReader from '../components/novel/detail/DetailReader.vue';
+import DetailStoryPackages from '../components/novel/detail/DetailStoryPackages.vue';
+import DetailPlotlines from '../components/novel/detail/DetailPlotlines.vue';
+import DetailScripts from '../components/novel/detail/DetailScripts.vue';
+import DetailIntentShots from '../components/novel/detail/DetailIntentShots.vue';
 import { useNovelDetail } from '../composables/useNovelDetail.js';
 import { fetchNovelReader } from '../services/novelService.js';
 import { exportReader } from '../utils/novelExport.js';
@@ -198,7 +222,7 @@ function onExportReader(format) {
     return;
   }
   exportReader(reader.value, format);
-  ElMessage.success(format === 'txt' ? '已导出 TXT' : '已导出 Markdown');
+  ElMessage.success(format === 'txt' ? '已导出 TXT' : format === 'doc' ? '已导出 Word' : '已导出 Markdown');
 }
 
 watch(

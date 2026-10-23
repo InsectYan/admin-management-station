@@ -67,8 +67,8 @@ const job = ref(null);
 const loadError = ref('');
 const acting = ref(false);
 const title = computed(() => (job.value ? `任务 #${job.value.id}` : '失败诊断'));
-const canRetry = computed(() => job.value && (job.value.status === 'failed' || job.value.status === 'cancelled'));
-const canCancel = computed(() => job.value && [ 'pending', 'queued', 'running' ].includes(job.value.status));
+const canRetry = computed(() => job.value && job.value.retryable !== false && (job.value.status === 'failed' || job.value.status === 'cancelled'));
+const canCancel = computed(() => job.value && job.value.cancellable !== false && [ 'pending', 'queued', 'running' ].includes(job.value.status));
 const gapNodes = computed(() => (job.value?.precheck_gap?.missing_nodes || []).join('、'));
 const gapModels = computed(() => (job.value?.precheck_gap?.missing_models || []).join('、'));
 
@@ -80,6 +80,7 @@ function precheckHref(id) {
 function stageLabel(stage) {
   if (stage === 'precheck') return '预检';
   if (stage === 'comfy') return 'ComfyUI';
+  if (stage === 'narrative') return '叙事';
   return '未判定';
 }
 

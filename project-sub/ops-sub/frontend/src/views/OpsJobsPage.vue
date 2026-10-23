@@ -90,10 +90,10 @@ const filters = reactive({
 });
 
 function canRetry(row) {
-  return row.status === 'failed' || row.status === 'cancelled';
+  return row.retryable !== false && (row.status === 'failed' || row.status === 'cancelled');
 }
 function canCancel(row) {
-  return row.status === 'pending' || row.status === 'queued' || row.status === 'running';
+  return row.cancellable !== false && (row.status === 'pending' || row.status === 'queued' || row.status === 'running');
 }
 
 async function load() {
@@ -126,7 +126,7 @@ function apply() {
 }
 
 function openJob(row) {
-  router.push(`/jobs/cartoon/${row.id}`);
+  router.push(`/jobs/${row.biz_app || 'cartoon'}/${row.id}`);
 }
 
 async function onRetry(row) {

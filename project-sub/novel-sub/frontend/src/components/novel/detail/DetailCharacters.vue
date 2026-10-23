@@ -35,6 +35,22 @@
           </div>
           <dl class="novel-detail-fields">
             <div>
+              <dt>身份</dt>
+              <dd>{{ activeCharacter.identity || '未填写' }}</dd>
+            </div>
+            <div>
+              <dt>年龄</dt>
+              <dd>{{ activeCharacter.age || '未填写' }}</dd>
+            </div>
+            <div>
+              <dt>外貌</dt>
+              <dd><NovelMarkdown :source="activeCharacter.appearance" empty-text="未填写" /></dd>
+            </div>
+            <div>
+              <dt>语言风格</dt>
+              <dd><NovelMarkdown :source="activeCharacter.speech_style" empty-text="未填写" /></dd>
+            </div>
+            <div>
               <dt>性格</dt>
               <dd><NovelMarkdown :source="activeCharacter.personality" empty-text="未填写" /></dd>
             </div>
@@ -45,6 +61,10 @@
             <div>
               <dt>目标 / 动机</dt>
               <dd><NovelMarkdown :source="activeCharacter.goal" empty-text="未填写" /></dd>
+            </div>
+            <div>
+              <dt>人物弧光</dt>
+              <dd><NovelMarkdown :source="activeCharacter.arc" empty-text="未填写" /></dd>
             </div>
             <div>
               <dt>人物关系</dt>

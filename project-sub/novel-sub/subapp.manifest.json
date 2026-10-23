@@ -1,7 +1,7 @@
 {
   "app_key": "novel",
   "microapp_name": "novel-app",
-  "display_name": "小说创作平台",
+  "display_name": "叙事工作台",
   "route_prefix": "novel",
   "entry_dev": "http://localhost:5101",
   "entry_prod": "/subapps/novel-app/",

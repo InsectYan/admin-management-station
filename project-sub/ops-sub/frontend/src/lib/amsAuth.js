@@ -12,6 +12,7 @@ function userFromToken(token) {
       id: payload.sub,
       username: payload.username,
       role: payload.role,
+      account_type: payload.account_type,
     };
   } catch {
     return null;

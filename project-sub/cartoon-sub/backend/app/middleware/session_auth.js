@@ -23,7 +23,7 @@ module.exports = () => {
     const token = header.replace(/^Bearer\s+/i, '');
     if (!token) {
       if (optional) {
-        ctx.state.user = { sub: 0, username: 'local', role: 'operator' };
+        ctx.state.user = { sub: 0, username: 'local', account_type: 'super_admin' };
         await next();
         return;
       }
