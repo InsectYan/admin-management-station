@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS novels (
   length_id INTEGER,
   audience_id INTEGER,
   update_pace_id INTEGER,
+  style_preset VARCHAR(32),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -274,3 +275,82 @@ CREATE TABLE IF NOT EXISTS story_downstreams (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (video_project_id)
 );
+
+CREATE TABLE IF NOT EXISTS story_members (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  username VARCHAR(64) NOT NULL,
+  role VARCHAR(16) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (novel_id, username)
+);
+
+CREATE TABLE IF NOT EXISTS story_chapter_locks (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  chapter_id VARCHAR(80) NOT NULL,
+  holder VARCHAR(64) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (novel_id, chapter_id)
+);
+
+CREATE TABLE IF NOT EXISTS story_activity (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  actor VARCHAR(64) NOT NULL,
+  action VARCHAR(32) NOT NULL,
+  chapter_id VARCHAR(80) NOT NULL DEFAULT '',
+  detail JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE story_members ALTER COLUMN created_at SET DEFAULT NOW();
+ALTER TABLE story_members ALTER COLUMN updated_at SET DEFAULT NOW();
+ALTER TABLE story_chapter_locks ALTER COLUMN created_at SET DEFAULT NOW();
+ALTER TABLE story_chapter_locks ALTER COLUMN updated_at SET DEFAULT NOW();
+ALTER TABLE story_activity ALTER COLUMN created_at SET DEFAULT NOW();
+ALTER TABLE story_activity ALTER COLUMN updated_at SET DEFAULT NOW();
+
+CREATE TABLE IF NOT EXISTS story_dialogues (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  chapter_id VARCHAR(80) NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 1,
+  speaker VARCHAR(80) NOT NULL,
+  line TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_story_dialogues_chapter ON story_dialogues (novel_id, chapter_id, sort_order);
+
+ALTER TABLE story_dialogues ALTER COLUMN created_at SET DEFAULT NOW();
+ALTER TABLE story_dialogues ALTER COLUMN updated_at SET DEFAULT NOW();
+
+CREATE TABLE IF NOT EXISTS story_snapshots (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  label VARCHAR(80) NOT NULL,
+  payload JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE story_snapshots ALTER COLUMN created_at SET DEFAULT NOW();
+ALTER TABLE story_snapshots ALTER COLUMN updated_at SET DEFAULT NOW();
+
+CREATE TABLE IF NOT EXISTS story_dialogue_choices (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  dialogue_id INTEGER NOT NULL REFERENCES story_dialogues(id) ON DELETE CASCADE,
+  next_dialogue_id INTEGER NOT NULL REFERENCES story_dialogues(id) ON DELETE CASCADE,
+  label VARCHAR(120) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE story_dialogue_choices ALTER COLUMN created_at SET DEFAULT NOW();
+ALTER TABLE story_dialogue_choices ALTER COLUMN updated_at SET DEFAULT NOW();

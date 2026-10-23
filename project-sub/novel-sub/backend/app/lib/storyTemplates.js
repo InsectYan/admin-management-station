@@ -10,6 +10,7 @@ const TEMPLATES = [
   { id: 'web_serial', name: '网文连载', project_kind: 'novel', volume_title: '第一卷' },
   { id: 'short_drama', name: '短剧', project_kind: 'short_drama', volume_title: '第一季' },
   { id: 'comic_script', name: '漫剧剧本', project_kind: 'comic_script', volume_title: '第一部' },
+  { id: 'game_plot', name: '游戏剧情', project_kind: 'game_plot', volume_title: '主线' },
 ];
 
 function listStoryTemplates() {

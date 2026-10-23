@@ -1,5 +1,7 @@
 'use strict';
 
+const { stylePreset } = require('./stylePresets');
+
 const ID_KEYS = [
   'genre_path',
   'genre_category_id',
@@ -129,17 +131,17 @@ function hydrateBasicBlock(raw, catalog) {
 function mergeNovelIntoBoundContext(bound, novel) {
   if (!novel) return bound && typeof bound === 'object' ? { ...bound } : {};
   const fromNovel = novelToBasicSource(novel);
-  const next = bound && typeof bound === 'object' ? { ...bound } : {};
+  let next = bound && typeof bound === 'object' ? { ...bound } : {};
   if (next.basic && typeof next.basic === 'object') {
     next.basic = fillGaps(next.basic, fromNovel);
-    return next;
-  }
-  if (looksLikeBasic(next)) {
-    return fillGaps(next, fromNovel);
-  }
-  if (!isEmpty(fromNovel.title) || !isEmpty(fromNovel.genre) || fromNovel.theme_ids.length) {
+  } else if (looksLikeBasic(next)) {
+    next = fillGaps(next, fromNovel);
+  } else if (!isEmpty(fromNovel.title) || !isEmpty(fromNovel.genre) || fromNovel.theme_ids.length) {
     next.basic = fromNovel;
   }
+  const preset = stylePreset(novel.style_preset);
+  if (preset) next.style = { id: preset.id, name: preset.name, note: preset.note };
+  else delete next.style;
   return next;
 }
 

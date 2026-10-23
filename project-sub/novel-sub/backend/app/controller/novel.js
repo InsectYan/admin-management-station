@@ -33,6 +33,26 @@ class NovelController extends Controller {
     }
   }
 
+  async stylePresets() {
+    const { listStylePresets } = require('../lib/stylePresets');
+    this.ctx.body = { code: 0, message: 'ok', data: listStylePresets() };
+  }
+
+  async setStyle() {
+    try {
+      const row = await this.ctx.service.novel.setStyle(this.ctx.params.id, (this.ctx.request.body || {}).preset_id);
+      if (!row) {
+        this.ctx.status = 404;
+        this.ctx.body = { code: 404, message: '小说不存在' };
+        return;
+      }
+      this.ctx.body = { code: 0, message: 'ok', data: row };
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: err.status || 500, message: err.message, data: null };
+    }
+  }
+
   async create() {
     const payload = this.ctx.request.body || {};
     if (!payload.title?.trim()) {
@@ -158,6 +178,11 @@ class NovelController extends Controller {
 
   async updateChapterBody() {
     try {
+      await this.ctx.service.collaboration.assertCanWrite(
+        this.ctx.params.id,
+        this.ctx.params.chapterId,
+        this.ctx.request.body?.holder,
+      );
       const data = await this.ctx.service.novel.upsertChapterBody(
         this.ctx.params.id,
         this.ctx.params.chapterId,

@@ -6,8 +6,8 @@
     :style="{ '--novel-chapter-tree-width': `${treeWidth}px` }"
   >
     <aside class="novel-chapter-studio__tree">
-      <h3>章节目录</h3>
-      <el-empty v-if="!chapters.length" description="请先在章节目录添加章节" :image-size="48" />
+      <h3>{{ isGame ? '任务' : '章节目录' }}</h3>
+      <el-empty v-if="!chapters.length" :description="isGame ? '请先添加任务' : '请先在章节目录添加章节'" :image-size="48" />
       <el-tree
         v-else
         :data="tree"
@@ -150,7 +150,7 @@
           <el-button :disabled="queue.running" @click="$emit('open-reader')">全书预览</el-button>
           <el-button :disabled="!prevChapter" @click="goChapter(prevChapter?.id)">上一章</el-button>
           <el-button :disabled="!nextChapter" @click="goChapter(nextChapter?.id)">下一章</el-button>
-          <el-button type="primary" :disabled="!editable || !chapterId || !dirty" :loading="saving" @click="saveBody()">
+          <el-button type="primary" :disabled="!editable || !chapterId || !dirty || lockedByOther" :loading="saving" @click="saveBody()">
             保存正文
           </el-button>
         </div>
@@ -161,6 +161,33 @@
           <el-option v-for="line in plotlineOptions" :key="line.id" :label="line.name" :value="line.id" />
         </el-select>
         <el-button :loading="plotlineSaving" @click="savePlotlineBind">保存绑定</el-button>
+      </div>
+      <div v-if="chapterId" class="novel-chapter-studio__plotlines">
+        <span>{{ chapterLock ? `本章由 ${chapterLock.holder} 锁定` : '本章未锁定' }}</span>
+        <el-button v-if="!chapterLock" @click="onLockChapter">锁定本章</el-button>
+        <el-button v-else @click="onUnlockChapter">解锁本章</el-button>
+      </div>
+      <div v-if="isGame && chapterId" class="novel-chapter-studio__plotlines">
+        <span>任务对话</span>
+        <el-input v-model="dialogueForm.speaker" placeholder="说话人" style="width: 120px" />
+        <el-input v-model="dialogueForm.line" placeholder="台词" style="width: 280px" />
+        <el-button @click="addDialogue">添加台词</el-button>
+        <p v-if="!dialogues.length">这一任务还没有台词。没有选项时按顺序往下接。</p>
+        <div v-for="item in dialogues" :key="item.id">
+          <p>{{ item.speaker }}：{{ item.line }}</p>
+          <template v-if="item.choices?.length">
+            <p v-for="choice in item.choices" :key="choice.id">选项「{{ choice.label }}」跳到 {{ lineText(choice.next_dialogue_id) }}</p>
+          </template>
+          <p v-else-if="item.follows_id">没有选项，按顺序接到下一句</p>
+        </div>
+        <el-select v-if="dialogues.length > 1" v-model="choiceForm.from" placeholder="从哪一句" style="width: 160px">
+          <el-option v-for="item in dialogues" :key="`from-${item.id}`" :label="item.line" :value="item.id" />
+        </el-select>
+        <el-input v-if="dialogues.length > 1" v-model="choiceForm.label" placeholder="选项" style="width: 140px" />
+        <el-select v-if="dialogues.length > 1" v-model="choiceForm.next" placeholder="跳到" style="width: 160px">
+          <el-option v-for="item in dialogues" :key="`next-${item.id}`" :label="item.line" :value="item.id" />
+        </el-select>
+        <el-button v-if="dialogues.length > 1" @click="addChoice">添加分支</el-button>
       </div>
       <AnomalyFixPanel
         v-if="anomalyReportId"
@@ -216,7 +243,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import AiSceneTree from '../ai/AiSceneTree.vue';
@@ -229,9 +256,15 @@ import {
   fetchChapterBody,
   fetchChapterMeta,
   fetchEmptyChapters,
+  createDialogue,
+  createDialogueChoice,
+  fetchDialogues,
+  fetchLocks,
   fetchPlotlines,
+  lockChapter,
   runNovelReview,
   saveChapterBody,
+  unlockChapter,
 } from '../../../services/novelService.js';
 import { CHAPTER_AI_SCENES } from '../../../utils/aiScenes.js';
 import { buildChapterTree, neighborChapters, firstChapterId, firstEmptyChapterId } from '../../../utils/chapterTree.js';
@@ -249,6 +282,7 @@ const props = defineProps({
   initialChapterId: { type: String, default: '' },
   startQueue: { type: Boolean, default: false },
   fixAuto: { type: Boolean, default: false },
+  projectKind: { type: String, default: 'novel' },
 });
 
 const emit = defineEmits(['chapter-change', 'progress-change', 'queue-done', 'open-reader']);
@@ -861,6 +895,8 @@ watch(
     if (chapterId.value) {
       await loadBody(chapterId.value);
       await loadPlotlineBind(chapterId.value);
+      await loadChapterLock(chapterId.value);
+      await loadDialogues(chapterId.value);
     }
   },
   { immediate: true, deep: false },
@@ -869,6 +905,12 @@ watch(
 const plotlineOptions = ref([]);
 const plotlineIds = ref([]);
 const plotlineSaving = ref(false);
+const chapterLock = ref(null);
+const lockedByOther = computed(() => Boolean(chapterLock.value && chapterLock.value.holder !== 'local'));
+const isGame = computed(() => props.projectKind === 'game_plot');
+const dialogues = ref([]);
+const dialogueForm = reactive({ speaker: '', line: '' });
+const choiceForm = reactive({ from: undefined, label: '', next: undefined });
 
 async function loadPlotlineBind(id) {
   plotlineIds.value = [];
@@ -881,6 +923,81 @@ async function loadPlotlineBind(id) {
       .map(line => line.id);
   } catch {
     plotlineOptions.value = [];
+  }
+}
+
+async function loadChapterLock(id) {
+  chapterLock.value = null;
+  if (!resolvedNovelId.value || !id) return;
+  try {
+    const rows = await fetchLocks(resolvedNovelId.value);
+    chapterLock.value = (rows || []).find(item => item.chapter_id === id) || null;
+  } catch {
+    chapterLock.value = null;
+  }
+}
+
+async function loadDialogues(id) {
+  dialogues.value = [];
+  if (!isGame.value || !resolvedNovelId.value || !id) return;
+  try {
+    dialogues.value = await fetchDialogues(resolvedNovelId.value, id) || [];
+  } catch {
+    dialogues.value = [];
+  }
+}
+
+function lineText(id) {
+  return dialogues.value.find(item => item.id === id)?.line || '另一句';
+}
+
+async function addChoice() {
+  try {
+    await createDialogueChoice(resolvedNovelId.value, choiceForm.from, {
+      label: choiceForm.label,
+      next_dialogue_id: choiceForm.next,
+    });
+    choiceForm.label = '';
+    await loadDialogues(chapterId.value);
+    ElMessage.success('分支已记下');
+  } catch (err) {
+    ElMessage.error(err.message || '没有记下分支');
+  }
+}
+
+async function addDialogue() {
+  try {
+    await createDialogue(resolvedNovelId.value, {
+      chapter_id: chapterId.value,
+      speaker: dialogueForm.speaker,
+      line: dialogueForm.line,
+    });
+    dialogueForm.speaker = '';
+    dialogueForm.line = '';
+    await loadDialogues(chapterId.value);
+    ElMessage.success('台词已记下');
+  } catch (err) {
+    ElMessage.error(err.message || '没有记下台词');
+  }
+}
+
+async function onLockChapter() {
+  try {
+    await lockChapter(resolvedNovelId.value, chapterId.value);
+    await loadChapterLock(chapterId.value);
+    ElMessage.success('本章已锁定');
+  } catch (err) {
+    ElMessage.error(err.message || '没有锁定');
+  }
+}
+
+async function onUnlockChapter() {
+  try {
+    await unlockChapter(resolvedNovelId.value, chapterId.value);
+    await loadChapterLock(chapterId.value);
+    ElMessage.success('本章已解锁');
+  } catch (err) {
+    ElMessage.error(err.message || '没有解锁');
   }
 }
 
@@ -900,6 +1017,8 @@ async function savePlotlineBind() {
 watch(chapterId, (id) => {
   if (id) loadBody(id);
   loadPlotlineBind(id);
+  loadChapterLock(id);
+  loadDialogues(id);
 });
 
 watch(

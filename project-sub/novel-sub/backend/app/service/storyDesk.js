@@ -580,9 +580,66 @@ class StoryDeskService extends Service {
       const chapterId = String(event?.chapter_id || '').trim();
       if (!chapterId || seen.has(chapterId)) continue;
       seen.add(chapterId);
-      out.push({ chapter_id: chapterId, summary: String(event?.summary || '').trim() });
+      const item = { chapter_id: chapterId, summary: String(event?.summary || '').trim() };
+      const year = String(event?.year || '').trim();
+      if (year) item.year = year.slice(0, 40);
+      out.push(item);
     }
     return out;
+  }
+
+  async timeline(novelId) {
+    const novel = await this.requireNovel(novelId);
+    const chapters = this.ctx.service.novel.listSettingChapters(novel.setting_json);
+    const order = new Map(chapters.map(item => [ item.id, item.order ]));
+    const titles = new Map(chapters.map(item => [ item.id, item.title ]));
+    const lines = await this.listPlotlines(novelId);
+    const events = [];
+    for (const line of lines) {
+      for (const event of line.events) {
+        events.push({
+          plotline_id: line.id,
+          plotline_name: line.name,
+          kind: line.kind,
+          chapter_id: event.chapter_id,
+          chapter_title: titles.get(event.chapter_id) || '',
+          chapter_order: order.has(event.chapter_id) ? order.get(event.chapter_id) : null,
+          summary: event.summary || '',
+          year: event.year || '',
+        });
+      }
+    }
+    events.sort((a, b) => {
+      const left = a.chapter_order == null ? Number.MAX_SAFE_INTEGER : a.chapter_order;
+      const right = b.chapter_order == null ? Number.MAX_SAFE_INTEGER : b.chapter_order;
+      if (left !== right) return left - right;
+      return a.plotline_id - b.plotline_id;
+    });
+    const world = novel.setting_json?.world?.timeline;
+    const worldYears = Array.isArray(world)
+      ? world
+        .map(node => ({ year: String(node?.year || '').trim(), event: String(node?.event || '').trim() }))
+        .filter(node => node.year || node.event)
+      : [];
+    return { events, world_years: worldYears };
+  }
+
+  async setTimelineYear(novelId, payload) {
+    await this.requireNovel(novelId);
+    const plotlineId = Number(payload.plotline_id);
+    const chapterId = String(payload.chapter_id || '').trim();
+    if (!plotlineId || !chapterId) throw httpError(400, '需要剧情线和章节');
+    const row = await this.ctx.model.Plotline.findOne({ where: { id: plotlineId, novel_id: novelId } });
+    if (!row) throw httpError(404, '剧情线不存在');
+    const events = this.normalizeEvents(row.events);
+    const event = events.find(item => item.chapter_id === chapterId);
+    if (!event) throw httpError(404, '这个事件不在剧情线上');
+    const year = String(payload.year || '').trim();
+    if (year.length > 40) throw httpError(400, '年份太长');
+    if (year) event.year = year;
+    else delete event.year;
+    await row.update({ events });
+    return this.timeline(novelId);
   }
 
   async listPlotlines(novelId) {

@@ -111,6 +111,7 @@ class NovelService extends Service {
     delete next.health_score;
     delete next.health_status;
     delete next.health_summary;
+    delete next.style_preset;
     return { fields: next, themes };
   }
 
@@ -146,6 +147,25 @@ class NovelService extends Service {
     const { storyTemplateDraft } = require('../lib/storyTemplates');
     const draft = storyTemplateDraft(payload.template_id, payload.title);
     return this.create(draft);
+  }
+
+  async setStyle(id, presetId) {
+    const { stylePreset } = require('../lib/stylePresets');
+    const row = await this.ctx.model.Novel.findByPk(id);
+    if (!row) return null;
+    const key = String(presetId || '').trim();
+    if (!key) {
+      await row.update({ style_preset: null });
+      return { preset: null };
+    }
+    const preset = stylePreset(key);
+    if (!preset) {
+      const err = new Error('风格不存在');
+      err.status = 400;
+      throw err;
+    }
+    await row.update({ style_preset: preset.id });
+    return { preset };
   }
 
   async update(id, payload) {

@@ -26,6 +26,23 @@
       <el-button type="primary" :loading="saving" @click="save">{{ form.id ? '保存' : '添加' }}</el-button>
       <el-button v-if="form.id" @click="reset">取消</el-button>
     </el-form>
+    <h4>时间线</h4>
+    <p>按章节顺序排列这些事件。有年份就记在事件上，不另排一套时间坐标。</p>
+    <p v-if="worldYears.length">世界观年份：{{ worldYears.map(item => item.year).filter(Boolean).join('、') || '未标年份' }}</p>
+    <el-empty v-if="!timeline.length" description="还没有可排列的事件" />
+    <el-table v-else :data="timeline" size="small">
+      <el-table-column label="章节" min-width="140">
+        <template #default="{ row }">{{ row.chapter_title || row.chapter_id }}</template>
+      </el-table-column>
+      <el-table-column prop="plotline_name" label="剧情线" width="140" />
+      <el-table-column prop="summary" label="摘要" min-width="160" />
+      <el-table-column label="年份" width="220">
+        <template #default="{ row }">
+          <el-input v-model="row.year" placeholder="可空" style="width: 120px" />
+          <el-button link type="primary" @click="saveYear(row)">记下</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
     <el-empty v-if="!lines.length" description="还没有剧情线" />
     <el-table v-else :data="lines" size="small">
       <el-table-column label="名称" prop="name" width="140" />
@@ -56,6 +73,8 @@ import {
   deletePlotline,
   fetchChapterMeta,
   fetchPlotlines,
+  fetchTimeline,
+  saveTimelineYear,
   updatePlotline,
 } from '../../../services/novelService.js';
 
@@ -78,6 +97,8 @@ const statuses = [
 
 const lines = ref([]);
 const chapters = ref([]);
+const timeline = ref([]);
+const worldYears = ref([]);
 const saving = ref(false);
 const form = reactive(emptyForm());
 
@@ -91,6 +112,7 @@ function emptyForm() {
     plant_chapter_id: '',
     payoff_chapter_id: '',
     summaries: {},
+    years: {},
   };
 }
 
@@ -121,15 +143,19 @@ function edit(row) {
   form.plant_chapter_id = row.plant_chapter_id || '';
   form.payoff_chapter_id = row.payoff_chapter_id || '';
   form.summaries = Object.fromEntries((row.events || []).map(event => [ event.chapter_id, event.summary || '' ]));
+  form.years = Object.fromEntries((row.events || []).map(event => [ event.chapter_id, event.year || '' ]));
 }
 
 async function load() {
-  const [list, meta] = await Promise.all([
+  const [list, meta, view] = await Promise.all([
     fetchPlotlines(props.novelId),
     fetchChapterMeta(props.novelId),
+    fetchTimeline(props.novelId),
   ]);
   lines.value = list || [];
   chapters.value = meta || [];
+  timeline.value = view?.events || [];
+  worldYears.value = view?.world_years || [];
 }
 
 async function save() {
@@ -148,6 +174,7 @@ async function save() {
     events: form.chapterIds.map(chapterId => ({
       chapter_id: chapterId,
       summary: form.summaries[chapterId] || '',
+      year: form.years[chapterId] || '',
     })),
   };
   try {
@@ -159,6 +186,21 @@ async function save() {
     ElMessage.error(err.message || '保存失败');
   } finally {
     saving.value = false;
+  }
+}
+
+async function saveYear(row) {
+  try {
+    const view = await saveTimelineYear(props.novelId, {
+      plotline_id: row.plotline_id,
+      chapter_id: row.chapter_id,
+      year: row.year,
+    });
+    timeline.value = view?.events || [];
+    worldYears.value = view?.world_years || [];
+    ElMessage.success('年份已记下');
+  } catch (err) {
+    ElMessage.error(err.message || '没有记下年份');
   }
 }
 

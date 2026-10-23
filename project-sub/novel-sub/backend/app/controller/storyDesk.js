@@ -57,6 +57,22 @@ class StoryDeskController extends Controller {
     }
   }
 
+  async timeline() {
+    try {
+      ok(this.ctx, await this.ctx.service.storyDesk.timeline(this.ctx.params.id));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async setTimelineYear() {
+    try {
+      ok(this.ctx, await this.ctx.service.storyDesk.setTimelineYear(this.ctx.params.id, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async listPlotlines() {
     try {
       ok(this.ctx, await this.ctx.service.storyDesk.listPlotlines(this.ctx.params.id));

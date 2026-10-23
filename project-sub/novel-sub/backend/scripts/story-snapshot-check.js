@@ -122,7 +122,11 @@ assert.strictEqual(quiet.chapters.length, 0);
 
 const templates = require('../app/lib/storyTemplates');
 const listed = templates.listStoryTemplates();
-assert.deepStrictEqual(listed.map(item => item.id), [ 'web_serial', 'short_drama', 'comic_script' ]);
+assert.deepStrictEqual(listed.map(item => item.id), [ 'web_serial', 'short_drama', 'comic_script', 'game_plot' ]);
+const game = templates.storyTemplateDraft('game_plot', '任务稿');
+assert.strictEqual(game.project_kind, 'game_plot');
+assert.strictEqual(game.setting_json.outline.volumes[0].title, '主线');
+assert.strictEqual(game.setting_json.characters.length, 0);
 const draft = templates.storyTemplateDraft('short_drama', ' 季稿 ');
 assert.strictEqual(draft.project_kind, 'short_drama');
 assert.strictEqual(draft.title, '季稿');

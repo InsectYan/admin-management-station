@@ -1,0 +1,1 @@
+ALTER TABLE novels ADD COLUMN IF NOT EXISTS style_preset VARCHAR(32);

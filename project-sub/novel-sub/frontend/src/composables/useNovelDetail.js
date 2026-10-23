@@ -38,6 +38,7 @@ export function useNovelDetail() {
     created_at: '',
     updated_at: '',
     status: '',
+    project_kind: 'novel',
   });
 
   const tabMeta = computed(() => DETAIL_TABS.find((t) => t.step === currentTab.value));
@@ -72,6 +73,7 @@ export function useNovelDetail() {
     novelMeta.created_at = formatDateTime(novel.created_at);
     novelMeta.updated_at = formatDateTime(novel.updated_at);
     novelMeta.status = novel.status || '';
+    novelMeta.project_kind = novel.project_kind || 'novel';
   }
 
   async function loadNovel(id = novelId.value) {

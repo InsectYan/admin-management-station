@@ -90,6 +90,7 @@
           :initial-chapter-id="currentChapterId"
           :start-queue="startQueue"
           :fix-auto="fixBoot"
+          :project-kind="novelMeta.project_kind"
           @chapter-change="onChapterChange"
           @progress-change="loadNovel"
           @queue-done="clearQueueQuery"
@@ -118,6 +119,14 @@
         />
         <DetailIntentShots
           v-else-if="currentTab === 12"
+          :novel-id="novelId || novelMeta.id"
+        />
+        <DetailTeam
+          v-else-if="currentTab === 13"
+          :novel-id="novelId || novelMeta.id"
+        />
+        <DetailStyle
+          v-else-if="currentTab === 14"
           :novel-id="novelId || novelMeta.id"
         />
       </div>
@@ -154,6 +163,8 @@ import DetailStoryPackages from '../components/novel/detail/DetailStoryPackages.
 import DetailPlotlines from '../components/novel/detail/DetailPlotlines.vue';
 import DetailScripts from '../components/novel/detail/DetailScripts.vue';
 import DetailIntentShots from '../components/novel/detail/DetailIntentShots.vue';
+import DetailTeam from '../components/novel/detail/DetailTeam.vue';
+import DetailStyle from '../components/novel/detail/DetailStyle.vue';
 import { useNovelDetail } from '../composables/useNovelDetail.js';
 import { fetchNovelReader } from '../services/novelService.js';
 import { exportReader } from '../utils/novelExport.js';

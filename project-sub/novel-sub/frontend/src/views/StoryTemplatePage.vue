@@ -5,6 +5,7 @@
     <el-card v-for="item in rows" :key="item.id" class="novel-template-card" shadow="never">
       <h3>{{ item.name }}</h3>
       <p>预填 {{ item.volume_title }}，角色位是主角、配角、反派。</p>
+      <p v-if="item.project_kind === 'game_plot'">任务链仍用卷和章保存。台词可以加选项，跳到同一任务的另一句。</p>
       <el-button type="primary" @click="open(item)">用这个模板</el-button>
     </el-card>
     <el-dialog v-model="visible" title="从模板创建" width="420px">

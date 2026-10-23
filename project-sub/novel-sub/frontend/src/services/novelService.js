@@ -19,6 +19,14 @@ export function fetchNovels(params = {}) {
   return request(`/novels${q ? `?${q}` : ''}`);
 }
 
+export function fetchStylePresets() {
+  return request('/style-presets');
+}
+
+export function saveNovelStyle(id, presetId) {
+  return request(`/novels/${id}/style`, { method: 'PUT', data: { preset_id: presetId || '' } });
+}
+
 export function fetchNovel(id) {
   return request(`/novels/${id}`);
 }
@@ -76,6 +84,52 @@ export function saveChapterBody(id, chapterId, body) {
     method: 'PUT',
     data: { body },
   });
+}
+
+export function fetchMembers(id) {
+  return request(`/novels/${id}/members`);
+}
+
+export function addMember(id, data) {
+  return request(`/novels/${id}/members`, { method: 'POST', data });
+}
+
+export function removeMember(id, memberId) {
+  return request(`/novels/${id}/members/${memberId}`, { method: 'DELETE' });
+}
+
+export function fetchLocks(id) {
+  return request(`/novels/${id}/locks`);
+}
+
+export function lockChapter(id, chapterId, holder) {
+  return request(`/novels/${id}/chapters/${encodeURIComponent(chapterId)}/lock`, {
+    method: 'POST',
+    data: holder ? { holder } : {},
+  });
+}
+
+export function unlockChapter(id, chapterId, holder) {
+  return request(`/novels/${id}/chapters/${encodeURIComponent(chapterId)}/unlock`, {
+    method: 'POST',
+    data: holder ? { holder } : {},
+  });
+}
+
+export function fetchSnapshots(id) {
+  return request(`/novels/${id}/snapshots`);
+}
+
+export function createSnapshot(id, label) {
+  return request(`/novels/${id}/snapshots`, { method: 'POST', data: { label } });
+}
+
+export function restoreSnapshot(id, snapshotId) {
+  return request(`/novels/${id}/snapshots/${snapshotId}/restore`, { method: 'POST' });
+}
+
+export function fetchActivity(id) {
+  return request(`/novels/${id}/activity`);
 }
 
 export function generateCover(payload = {}) {
@@ -188,6 +242,27 @@ export function rejectPromotion(id, promotionId, reason) {
     method: 'POST',
     data: { reason },
   });
+}
+
+export function fetchDialogues(id, chapterId) {
+  const query = chapterId ? `?chapter_id=${encodeURIComponent(chapterId)}` : '';
+  return request(`/novels/${id}/dialogues${query}`);
+}
+
+export function createDialogue(id, data) {
+  return request(`/novels/${id}/dialogues`, { method: 'POST', data });
+}
+
+export function createDialogueChoice(id, dialogueId, data) {
+  return request(`/novels/${id}/dialogues/${dialogueId}/choices`, { method: 'POST', data });
+}
+
+export function fetchTimeline(id) {
+  return request(`/novels/${id}/timeline`);
+}
+
+export function saveTimelineYear(id, data) {
+  return request(`/novels/${id}/timeline`, { method: 'PUT', data });
 }
 
 export function fetchPlotlines(id) {

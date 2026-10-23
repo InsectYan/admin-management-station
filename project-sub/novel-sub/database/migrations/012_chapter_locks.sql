@@ -1,0 +1,37 @@
+CREATE TABLE IF NOT EXISTS story_members (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  username VARCHAR(64) NOT NULL,
+  role VARCHAR(16) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (novel_id, username)
+);
+
+CREATE TABLE IF NOT EXISTS story_chapter_locks (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  chapter_id VARCHAR(80) NOT NULL,
+  holder VARCHAR(64) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (novel_id, chapter_id)
+);
+
+CREATE TABLE IF NOT EXISTS story_activity (
+  id SERIAL PRIMARY KEY,
+  novel_id INTEGER NOT NULL REFERENCES novels(id) ON DELETE CASCADE,
+  actor VARCHAR(64) NOT NULL,
+  action VARCHAR(32) NOT NULL,
+  chapter_id VARCHAR(80) NOT NULL DEFAULT '',
+  detail JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE story_members ALTER COLUMN created_at SET DEFAULT NOW();
+ALTER TABLE story_members ALTER COLUMN updated_at SET DEFAULT NOW();
+ALTER TABLE story_chapter_locks ALTER COLUMN created_at SET DEFAULT NOW();
+ALTER TABLE story_chapter_locks ALTER COLUMN updated_at SET DEFAULT NOW();
+ALTER TABLE story_activity ALTER COLUMN created_at SET DEFAULT NOW();
+ALTER TABLE story_activity ALTER COLUMN updated_at SET DEFAULT NOW();
