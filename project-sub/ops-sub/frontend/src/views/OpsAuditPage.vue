@@ -30,6 +30,11 @@
           <el-table-column label="对象" min-width="160">
             <template #default="{ row }">{{ [row.external_type, row.external_id].filter(Boolean).join(' #') || '—' }}</template>
           </el-table-column>
+          <el-table-column label="提示词" width="120">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="openPrompt(row)">查看</el-button>
+            </template>
+          </el-table-column>
         </el-table>
       </template>
     </DataTablePanel>
@@ -40,7 +45,8 @@
 import { onMounted, ref } from 'vue';
 import PageShell from '../components/PageShell.vue';
 import DataTablePanel from '../components/DataTablePanel.vue';
-import { fetchContentAudit } from '../services/contentOpsService.js';
+import { ElMessage } from 'element-plus';
+import { fetchContentAudit, viewAuditPrompt } from '../services/contentOpsService.js';
 import { formatDateTime } from '../utils/opsMeta.js';
 
 const rows = ref([]);
@@ -68,6 +74,15 @@ function actionLabel(value) {
   return actionNames[value] || value;
 }
 const action = ref('');
+
+async function openPrompt(row) {
+  try {
+    const data = await viewAuditPrompt(row.id);
+    ElMessage.info(data.empty ? '这条记录没有提示词' : '已记下这次查看');
+  } catch (err) {
+    ElMessage.error(err.message);
+  }
+}
 const loading = ref(false);
 const loadError = ref('');
 

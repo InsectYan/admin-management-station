@@ -4,6 +4,12 @@ import SubAppContainer from '../components/SubAppContainer.vue';
 import HomeWelcome from '../components/HomeWelcome.vue';
 import { getAccessToken, isAdmin, loginPath } from '../lib/amsAuth.js';
 
+function mediaTarget(prefix, to) {
+  const rest = to.params.pathMatch;
+  const tail = Array.isArray(rest) ? rest.filter(Boolean).join('/') : String(rest || '');
+  return `/media/${prefix}${tail ? `/${tail}` : ''}`;
+}
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -28,9 +34,15 @@ const router = createRouter({
         { path: 'roles', name: 'roles', component: () => import('../views/RolesPage.vue'), meta: { admin: true } },
         { path: 'audit', name: 'audit', component: () => import('../views/AuditLogPage.vue'), meta: { admin: true } },
         { path: 'settings', name: 'settings', component: () => import('../views/SettingsPage.vue') },
+        { path: 'members', name: 'members', component: () => import('../views/ProjectMembersPage.vue'), meta: { admin: true } },
+        { path: 'media/video/:pathMatch(.*)*', redirect: to => mediaTarget('cartoon', to) },
+        { path: 'media/narrative/:pathMatch(.*)*', redirect: to => mediaTarget('novel', to) },
         { path: 'media/:pathMatch(.*)*', component: SubAppContainer },
       ],
     },
+    { path: '/video/:pathMatch(.*)*', redirect: to => mediaTarget('cartoon', to) },
+    { path: '/narrative/:pathMatch(.*)*', redirect: to => mediaTarget('novel', to) },
+    { path: '/ops/:pathMatch(.*)*', redirect: to => mediaTarget('ops', to) },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 });

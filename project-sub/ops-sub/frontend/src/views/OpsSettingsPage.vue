@@ -15,6 +15,15 @@
       <el-form-item label="失败率最少样本">
         <el-input-number v-model="form.fail_min_samples" :min="1" :max="100" />
       </el-form-item>
+      <el-form-item label="依赖探测间隔（秒）">
+        <el-input-number v-model="form.probe_interval_sec" :min="15" :max="3600" />
+      </el-form-item>
+      <el-form-item label="允许查看提示词">
+        <el-switch v-model="form.allow_prompt_view" />
+      </el-form-item>
+      <el-form-item label="存储水位（MB）">
+        <el-input-number v-model="form.storage_watermark_mb" :min="1" :max="1000000" />
+      </el-form-item>
       <el-form-item>
         <el-button type="primary" :loading="saving" @click="save">保存</el-button>
       </el-form-item>
@@ -35,6 +44,9 @@ const form = reactive({
   queue_backlog: 20,
   stuck_minutes: 30,
   fail_min_samples: 3,
+  probe_interval_sec: 15,
+  allow_prompt_view: false,
+  storage_watermark_mb: 10240,
 });
 
 async function load() {
@@ -43,6 +55,9 @@ async function load() {
     form.queue_backlog = data.queue_backlog;
     form.stuck_minutes = data.stuck_minutes;
     form.fail_min_samples = data.fail_min_samples;
+    form.probe_interval_sec = data.probe_interval_sec;
+    form.allow_prompt_view = Boolean(data.allow_prompt_view);
+    form.storage_watermark_mb = data.storage_watermark_mb;
     failPercent.value = Math.round(Number(data.fail_rate) * 100);
   } catch (err) {
     loadError.value = err.message;
@@ -57,6 +72,9 @@ async function save() {
       stuck_minutes: form.stuck_minutes,
       fail_min_samples: form.fail_min_samples,
       fail_rate: failPercent.value / 100,
+      probe_interval_sec: form.probe_interval_sec,
+      allow_prompt_view: form.allow_prompt_view,
+      storage_watermark_mb: form.storage_watermark_mb,
     });
     ElMessage.success('已保存');
   } catch (err) {

@@ -45,6 +45,8 @@ module.exports = app => {
   router.post('/api/content/alerts/:id/ack', controller.content.ack);
   router.post('/api/content/alerts/:id/resolve', controller.content.resolve);
   router.get('/api/content/audit', controller.content.audit);
+  router.post('/api/content/audit/:id/prompt', controller.content.viewPrompt);
+  router.get('/api/content/lineage', controller.content.lineage);
   router.get('/api/content/settings', controller.content.settings);
   router.put('/api/content/settings', controller.content.updateSettings);
   router.get('/api/profile/github', controller.profile.github);

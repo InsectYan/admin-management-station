@@ -1,0 +1,21 @@
+ALTER TABLE cartoon_type_panels ADD COLUMN IF NOT EXISTS payload TEXT NOT NULL DEFAULT '';
+
+CREATE TABLE IF NOT EXISTS cartoon_export_specs (
+  id SERIAL PRIMARY KEY,
+  project_id INTEGER NOT NULL REFERENCES cartoon_projects(id) ON DELETE CASCADE,
+  preset VARCHAR(32) NOT NULL,
+  width INTEGER NOT NULL,
+  height INTEGER NOT NULL,
+  fps INTEGER NOT NULL,
+  bitrate_kbps INTEGER NOT NULL,
+  format VARCHAR(16) NOT NULL DEFAULT 'mp4',
+  subtitle_mode VARCHAR(16) NOT NULL DEFAULT 'burn',
+  voice_track BOOLEAN NOT NULL DEFAULT TRUE,
+  bgm_track BOOLEAN NOT NULL DEFAULT FALSE,
+  cover_note TEXT NOT NULL DEFAULT '',
+  lang TEXT NOT NULL DEFAULT '',
+  status VARCHAR(32) NOT NULL DEFAULT 'waiting_master',
+  source_output_id INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

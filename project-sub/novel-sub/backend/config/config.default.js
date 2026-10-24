@@ -40,6 +40,10 @@ module.exports = appInfo => {
     },
   };
 
+  config.main = {
+    baseUrl: process.env.MAIN_API_ORIGIN || 'http://127.0.0.1:5200',
+  };
+
   config.cartoon = {
     baseUrl: process.env.CARTOON_API_ORIGIN || 'http://127.0.0.1:5205',
     opsToken: process.env.OPS_INTERNAL_TOKEN || 'ops-internal-dev',

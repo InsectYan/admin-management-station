@@ -18,6 +18,13 @@ class CollaborationController extends Controller {
     catch (err) { fail(this.ctx, err); }
   }
 
+  async shellMembers() {
+    try {
+      await this.ctx.service.collaboration.requireNovel(this.ctx.params.id);
+      ok(this.ctx, await this.ctx.service.shellRoster.list('novel', this.ctx.params.id));
+    } catch (err) { fail(this.ctx, err); }
+  }
+
   async addMember() {
     try { ok(this.ctx, await this.ctx.service.collaboration.addMember(this.ctx.params.id, this.ctx.request.body || {})); }
     catch (err) { fail(this.ctx, err); }

@@ -13,7 +13,7 @@
           <el-form-item label="项目名称">
             <el-input v-model="projectForm.name" />
           </el-form-item>
-          <el-form-item v-if="!isScience" label="来源小说">
+          <el-form-item v-if="!isLocal" label="来源小说">
             <el-select v-model="projectForm.source_novel_id" filterable clearable placeholder="从小说平台选择" style="width: 100%" @change="onNovelChange">
               <el-option v-for="item in novels" :key="item.id" :label="item.title" :value="String(item.id)" />
             </el-select>
@@ -26,15 +26,15 @@
         </div>
         <el-button type="primary" :disabled="!canMake()" @click="saveProject">保存设定</el-button>
       </el-form>
-      <NovelBriefPanel v-if="!isScience" :novel="novelBrief" :loading="novelLoading" />
+      <NovelBriefPanel v-if="!isLocal" :novel="novelBrief" :loading="novelLoading" />
     </section>
 
-    <section v-show="step === 2 && isScience" class="cartoon-module">
+    <section v-if="step === 2 && isLocal" class="cartoon-module">
       <h3 class="cartoon-module__title">本地文案</h3>
       <CopyBlocks :project-id="route.params.id" />
     </section>
 
-    <section v-show="step === 2 && !isScience">
+    <section v-show="step === 2 && !isLocal">
       <div class="cartoon-module">
         <h3 class="cartoon-module__title">从小说拉取</h3>
         <p class="cartoon-module__hint">新项目按叙事工作台已发布的故事包版本拉取。旧项目仍可直接拉章节，并标记为未钉扎。</p>
@@ -200,6 +200,7 @@ import NovelBriefPanel from '../components/NovelBriefPanel.vue';
 import CopyBlocks from '../components/CopyBlocks.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
+import { isLocalType } from '../lib/contentTypes.js';
 
 const props = defineProps({ forcedStep: { type: Number, default: 0 } });
 const route = useRoute();
@@ -225,7 +226,7 @@ const promoteBefore = ref('');
 const promoteAfter = ref('');
 const promoteShotId = ref(null);
 const pinRequired = computed(() => (detail.value?.project?.pin_mode || 'required') !== 'legacy');
-const isScience = computed(() => detail.value?.project?.content_type === 'ai_science' || detail.value?.project?.content_type === 'ai_commerce');
+const isLocal = computed(() => isLocalType(detail.value?.project?.content_type));
 const packageVersions = computed(() => packageDesk.value?.versions || []);
 const matchingImport = computed(() => (detail.value?.imports || []).find(item => (
   !item.deleted_at && String(item.chapter_id) === String(chapterId.value)
@@ -377,7 +378,7 @@ async function saveProject() {
       method: 'put',
       data: {
         name: projectForm.name,
-        source_novel_id: isScience.value ? null : (projectForm.source_novel_id || null),
+        source_novel_id: isLocal.value ? null : (projectForm.source_novel_id || null),
         visual_style: projectForm.visual_style || '',
       },
     });

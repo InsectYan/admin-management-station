@@ -28,6 +28,14 @@ export function isQiankunEmbedded() {
 
 export const api = axios.create({ timeout: 60000 });
 
+api.interceptors.request.use((config) => {
+  try {
+    const token = localStorage.getItem('ams_access_token') || '';
+    if (token && !config.headers.Authorization) config.headers.Authorization = `Bearer ${token}`;
+  } catch { /* 没有本地登录态时仍按未登录访问 */ }
+  return config;
+});
+
 api.interceptors.response.use(
   (res) => {
     const { code, message, data } = res.data ?? {};

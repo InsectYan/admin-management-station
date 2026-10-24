@@ -1,6 +1,7 @@
 'use strict';
 
-const CONTENT_TYPES = [ 'ai_comic', 'ai_short', 'ai_science', 'ai_commerce' ];
+const { contentType, assertKnown } = require('./contentCatalog');
+
 const MODEL_PROFILES = [ 'ollama-qwen', 'comfy-local' ];
 
 const FIXED = [
@@ -56,37 +57,37 @@ const AGENT_SPECS = [
   { role: 'review', label: '审核', skill_name: '', local: false, needs_model: true },
 ];
 
-function assertContentType(contentType) {
-  if (!CONTENT_TYPES.includes(contentType)) {
-    const err = new Error('这个内容类型还没开放');
-    err.status = 400;
-    throw err;
-  }
+function assertContentType(id) {
+  assertKnown(id);
 }
 
-function defaultNodes(contentType) {
-  assertContentType(contentType);
+function defaultNodes(id) {
+  assertContentType(id);
+  const type = contentType(id);
+  const localScript = type.copy || type.bind === 'optional';
   return FIXED.map(item => {
     const node = { ...item, kind: 'fixed', removable: false };
-    if ((contentType === 'ai_science' || contentType === 'ai_commerce') && item.node_key === 'script') {
+    if (localScript && item.node_key === 'script') {
       node.runner = 'local';
       node.skill_name = '';
     }
-    if (contentType === 'ai_science' && item.node_key === 'prompt') node.enabled = false;
-    if (contentType === 'ai_science' && item.node_key === 'storyboard') node.enabled = false;
-    if (contentType === 'ai_commerce' && item.node_key === 'prompt') node.enabled = false;
+    if (id === 'ai_science' && item.node_key === 'prompt') node.enabled = false;
+    if (id === 'ai_science' && item.node_key === 'storyboard') node.enabled = false;
+    if (id !== 'ai_science' && localScript && item.node_key === 'prompt') node.enabled = false;
     return node;
   });
 }
 
-function customCatalog(contentType) {
-  assertContentType(contentType);
-  return (CUSTOM[contentType] || []).map(item => ({ ...item }));
+function customCatalog(id) {
+  assertContentType(id);
+  const extra = contentType(id)?.custom || [];
+  return (CUSTOM[id] || []).concat(extra).map(item => ({ ...item }));
 }
 
-function defaultAgents(contentType) {
-  assertContentType(contentType);
-  const science = contentType === 'ai_science' || contentType === 'ai_commerce';
+function defaultAgents(id) {
+  assertContentType(id);
+  const type = contentType(id);
+  const science = type.copy || type.bind === 'optional';
   return AGENT_SPECS.map(spec => {
     const writer = spec.role === 'writer';
     const storyboard = spec.role === 'storyboard';

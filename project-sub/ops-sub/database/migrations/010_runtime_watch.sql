@@ -1,0 +1,3 @@
+ALTER TABLE ops_runtime_config ADD COLUMN IF NOT EXISTS probe_interval_sec INTEGER NOT NULL DEFAULT 15;
+ALTER TABLE ops_runtime_config ADD COLUMN IF NOT EXISTS allow_prompt_view BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE ops_runtime_config ADD COLUMN IF NOT EXISTS storage_watermark_mb INTEGER NOT NULL DEFAULT 10240;

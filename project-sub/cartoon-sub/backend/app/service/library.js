@@ -1,6 +1,7 @@
 'use strict';
 
 const Service = require('egg').Service;
+const { presetOf } = require('../lib/exportPresets');
 
 const ASSET_KINDS = {
   characters: 'character',
@@ -21,7 +22,10 @@ class LibraryService extends Service {
 
   async assets(kind) {
     if (kind && !ASSET_KINDS[kind]) this.ctx.throw(400, '资产分类不存在');
-    const where = kind ? { kind: ASSET_KINDS[kind] } : {};
+    const { Op } = this.app.Sequelize;
+    const where = !kind
+      ? {}
+      : (kind === 'materials' ? { kind: { [Op.in]: [ 'bgm', 'sfx', 'subtitle_style', 'transition' ] } } : { kind: ASSET_KINDS[kind] });
     const rows = await this.ctx.model.Asset.findAll({ where, order: [[ 'id', 'DESC' ]], limit: 100 });
     const projects = await this.names([ ...new Set(rows.map(row => row.project_id)) ]);
     return rows.map(row => ({
@@ -92,6 +96,20 @@ class LibraryService extends Service {
         status: job?.status || edit.status,
         width: edit.width,
         height: edit.height,
+      });
+    }
+    const specs = await this.ctx.model.ExportSpec.findAll({ order: [[ 'id', 'DESC' ]], limit: 100 });
+    const specProjects = await this.names([ ...new Set(specs.map(row => row.project_id)) ]);
+    for (const spec of specs) {
+      result.push({
+        id: spec.id,
+        project_id: spec.project_id,
+        project_name: specProjects.get(spec.project_id)?.name || '',
+        title: presetOf(spec.preset)?.label || spec.preset,
+        status: spec.status,
+        width: spec.width,
+        height: spec.height,
+        kind: 'spec',
       });
     }
     return result;

@@ -81,6 +81,14 @@ export function fetchContentAudit(params = {}) {
   return request('/content/audit', { method: 'get', params });
 }
 
+export function viewAuditPrompt(id) {
+  return request(`/content/audit/${id}/prompt`, { method: 'post' });
+}
+
+export function fetchLineage(outputId) {
+  return request('/content/lineage', { method: 'get', params: { output_id: outputId } });
+}
+
 export function fetchContentSettings() {
   return request('/content/settings', { method: 'get' });
 }

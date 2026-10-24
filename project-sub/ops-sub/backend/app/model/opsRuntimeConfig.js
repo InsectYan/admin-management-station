@@ -10,6 +10,9 @@ module.exports = app => {
     fail_min_samples: { type: INTEGER, allowNull: false, defaultValue: 3 },
     retention_days: { type: INTEGER, allowNull: false, defaultValue: 30 },
     require_moderation: { type: BOOLEAN, allowNull: false, defaultValue: false },
+    probe_interval_sec: { type: INTEGER, allowNull: false, defaultValue: 15 },
+    allow_prompt_view: { type: BOOLEAN, allowNull: false, defaultValue: false },
+    storage_watermark_mb: { type: INTEGER, allowNull: false, defaultValue: 10240 },
   }, {
     tableName: 'ops_runtime_config',
   });

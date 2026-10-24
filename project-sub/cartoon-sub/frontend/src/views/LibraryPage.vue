@@ -46,7 +46,7 @@ const page = computed(() => {
   if (route.name === 'assets') {
     return {
       title: titles[route.params.kind] || '资产',
-      hint: '按分类查看各项目登记的资产。素材和品牌还没有单独的登记类型时，这里是空的。',
+      hint: '按分类查看各项目登记的资产。素材包含背景音乐、音效、字幕样式和转场。品牌字体和视觉规范写在项目面板里。',
       api: `/library/assets/${route.params.kind}`,
       link: true,
       columns: [
@@ -54,6 +54,10 @@ const page = computed(() => {
         { prop: 'project_name', label: '项目' },
         { prop: 'reference_path', label: '参考图' },
         { prop: 'voice_key', label: '音色' },
+        { prop: 'prop_category', label: '道具分类' },
+        { prop: 'voice_lang', label: '语种' },
+        { prop: 'speaker_name', label: '发音人' },
+        { prop: 'angle_paths', label: '多角度' },
       ],
     };
   }
@@ -101,7 +105,7 @@ const page = computed(() => {
   }
   return {
     title: '导出',
-    hint: '已有成片工程和最近一次导出状态。',
+    hint: '已有成片工程，以及只登记、不重新编码的导出规格。',
     api: '/library/exports',
     link: true,
     columns: [

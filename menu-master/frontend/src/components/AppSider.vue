@@ -114,6 +114,7 @@ const adminMenus = [
   { key: '/users', icon: User, label: '用户管理' },
   { key: '/roles', icon: Document, label: '角色管理' },
   { key: '/audit', icon: Document, label: '审计日志' },
+  { key: '/members', icon: User, label: '项目成员' },
 ];
 
 async function onLogout() {
@@ -191,7 +192,7 @@ const menuItems = computed(() => {
   return items;
 });
 const selectedKey = computed(() => {
-  if ([ '/users', '/roles', '/audit', '/settings' ].includes(route.path)) return route.path;
+  if ([ '/users', '/roles', '/audit', '/settings', '/members' ].includes(route.path)) return route.path;
   return findSelectedKey(route.path, props.menus);
 });
 const openKeys = computed(() => findOpenKeys(route.path, props.menus));

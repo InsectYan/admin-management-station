@@ -21,20 +21,41 @@
       <ProjectDetailPage v-if="scriptStep" :forced-step="scriptStep" />
       <section v-else-if="node === 'assets'" class="cartoon-module cartoon-workbench__note">
         <h3 class="cartoon-module__title">资产</h3>
-        <p class="cartoon-module__hint">角色可以登记参考图路径。配音登记音色、语速和情绪。</p>
+        <p class="cartoon-module__hint">角色登记编号、三视图路径、表情、服装和 LoRA 引用，这里不生成图片。场景可以登记多角度路径。道具选择分类。配音登记语种和发音人。字幕样式和转场只记名称和说明。停用后记录还在。</p>
         <el-form inline>
           <el-input v-model="assetForm.name" placeholder="名称" style="width: 140px" />
-          <el-select v-model="assetForm.kind" style="width: 110px">
+          <el-select v-model="assetForm.kind" style="width: 120px">
             <el-option label="角色" value="character" />
             <el-option label="场景" value="scene" />
             <el-option label="道具" value="prop" />
             <el-option label="配音" value="voice" />
+            <el-option label="背景音乐" value="bgm" />
+            <el-option label="音效" value="sfx" />
+            <el-option label="字幕样式" value="subtitle_style" />
+            <el-option label="转场" value="transition" />
           </el-select>
           <el-input v-model="assetForm.description" placeholder="描述" style="width: 180px" />
-          <el-input v-if="assetForm.kind === 'character'" v-model="assetForm.reference_path" placeholder="参考图路径" style="width: 180px" />
+          <el-input v-if="assetForm.kind === 'character'" v-model="assetForm.character_id" placeholder="叙事人物编号" style="width: 140px" />
+          <el-input v-if="assetForm.kind === 'character'" v-model="assetForm.consistency_note" placeholder="一致性备注" style="width: 160px" />
+          <el-input v-if="assetForm.kind === 'character'" v-model="assetForm.front_path" placeholder="正面图路径" style="width: 140px" />
+          <el-input v-if="assetForm.kind === 'character'" v-model="assetForm.side_path" placeholder="侧面图路径" style="width: 140px" />
+          <el-input v-if="assetForm.kind === 'character'" v-model="assetForm.back_path" placeholder="背面图路径" style="width: 140px" />
+          <el-input v-if="assetForm.kind === 'character'" v-model="assetForm.expression_note" placeholder="表情" style="width: 120px" />
+          <el-input v-if="assetForm.kind === 'character'" v-model="assetForm.costume_note" placeholder="服装" style="width: 120px" />
+          <el-input v-if="assetForm.kind === 'character'" v-model="assetForm.lora_ref" placeholder="LoRA 引用" style="width: 140px" />
+          <el-input v-if="assetForm.kind === 'character' || assetForm.kind === 'bgm' || assetForm.kind === 'sfx'" v-model="assetForm.reference_path" :placeholder="assetForm.kind === 'character' ? '参考图路径' : '文件路径'" style="width: 180px" />
+          <el-select v-if="assetForm.kind === 'scene'" v-model="assetForm.scene_type" placeholder="场景类型" style="width: 120px">
+            <el-option v-for="item in sceneTypes" :key="item" :label="item" :value="item" />
+          </el-select>
+          <el-input v-if="assetForm.kind === 'scene'" v-model="assetForm.angle_paths" placeholder="多角度路径，一行一个" style="width: 220px" />
+          <el-select v-if="assetForm.kind === 'prop'" v-model="assetForm.prop_category" placeholder="道具分类" style="width: 120px">
+            <el-option v-for="item in propCategories" :key="item" :label="item" :value="item" />
+          </el-select>
           <el-input v-if="assetForm.kind === 'voice'" v-model="assetForm.voice_key" placeholder="音色标识" style="width: 120px" />
           <el-input v-if="assetForm.kind === 'voice'" v-model="assetForm.speech_rate" placeholder="语速" style="width: 80px" />
           <el-input v-if="assetForm.kind === 'voice'" v-model="assetForm.emotion" placeholder="情绪" style="width: 80px" />
+          <el-input v-if="assetForm.kind === 'voice'" v-model="assetForm.voice_lang" placeholder="语种" style="width: 100px" />
+          <el-input v-if="assetForm.kind === 'voice'" v-model="assetForm.speaker_name" placeholder="发音人" style="width: 100px" />
           <el-button type="primary" @click="addAsset">添加</el-button>
         </el-form>
         <el-empty v-if="!assets.length" description="还没有资产" />
@@ -44,8 +65,25 @@
           </el-table-column>
           <el-table-column prop="name" label="名称" width="140" />
           <el-table-column prop="description" label="描述" />
+          <el-table-column prop="character_id" label="人物编号" width="120" />
+          <el-table-column prop="scene_type" label="场景类型" width="100" />
+          <el-table-column prop="angle_paths" label="多角度" min-width="140" />
+          <el-table-column prop="prop_category" label="道具分类" width="100" />
+          <el-table-column prop="voice_lang" label="语种" width="80" />
+          <el-table-column prop="speaker_name" label="发音人" width="100" />
+          <el-table-column label="三视图" min-width="160">
+            <template #default="{ row }">{{ [ row.front_path, row.side_path, row.back_path ].filter(Boolean).join(' / ') }}</template>
+          </el-table-column>
           <el-table-column prop="reference_path" label="参考图" />
           <el-table-column prop="voice_key" label="音色" />
+          <el-table-column label="状态" width="90">
+            <template #default="{ row }">{{ row.disabled ? '已停用' : '使用中' }}</template>
+          </el-table-column>
+          <el-table-column label="" width="80">
+            <template #default="{ row }">
+              <el-button v-if="!row.disabled" link type="danger" @click="disableAsset(row)">停用</el-button>
+            </template>
+          </el-table-column>
         </el-table>
       </section>
       <template v-else-if="node === 'generate' || node === 'preview'">
@@ -66,7 +104,8 @@
         <ShotOutputsPage v-else :key="`preview-${shotQuery}`" />
       </template>
       <template v-else-if="node === 'compose' || node === 'export'">
-        <p v-if="node === 'export'" class="cartoon-module__hint cartoon-workbench__note">导出使用本页右上角「导出成片」。字幕和背景音乐这一期不会烧进成片。</p>
+        <ExportSpecs v-if="node === 'export'" class="cartoon-workbench__note" :project-id="projectId" />
+        <p v-if="node === 'export'" class="cartoon-module__hint cartoon-workbench__note">已有成片仍用本页右上角「导出成片」。下面的规格会重新编码，有台词时烧进画面，长版可以混入背景音乐。</p>
         <ProjectEditPage />
       </template>
     </main>
@@ -88,7 +127,9 @@ import ProjectDetailPage from './ProjectDetailPage.vue';
 import ShotGeneratePage from './ShotGeneratePage.vue';
 import ShotOutputsPage from './ShotOutputsPage.vue';
 import ProjectEditPage from './ProjectEditPage.vue';
+import ExportSpecs from '../components/ExportSpecs.vue';
 import { request } from '../services/apiConfig.js';
+import { isLocalType, typeLabel } from '../lib/contentTypes.js';
 
 const nodes = [
   { id: 'input', title: '输入与绑定' },
@@ -109,7 +150,13 @@ const bundle = ref(null);
 const episode = ref(null);
 const shots = ref([]);
 const error = ref('');
-const assetForm = reactive({ name: '', kind: 'character', description: '', reference_path: '', voice_key: '', speech_rate: '', emotion: '' });
+const sceneTypes = [ '室内', '室外', '城市', '自然', '古风', '品牌' ];
+const propCategories = [ '服饰', '器物', '食物', '文书', '交通', '其他' ];
+const assetForm = reactive({
+  name: '', kind: 'character', description: '', reference_path: '', character_id: '', voice_key: '', speech_rate: '', emotion: '',
+  consistency_note: '', scene_type: '', front_path: '', side_path: '', back_path: '', expression_note: '', costume_note: '', lora_ref: '',
+  angle_paths: '', prop_category: '', voice_lang: '', speaker_name: '',
+});
 const assets = computed(() => bundle.value?.assets || []);
 const nodeTitle = computed(() => nodes.find(item => item.id === node.value)?.title || '');
 
@@ -121,33 +168,29 @@ const node = computed(() => {
 const scriptStep = computed(() => stepByNode[node.value] || 0);
 const shotQuery = computed(() => String(route.query.shot || ''));
 const episodeTitle = computed(() => episode.value?.title || '第1集');
-const typeName = computed(() => ({
-  ai_comic: '漫剧',
-  ai_short: '短剧',
-  ai_science: '科普',
-  ai_commerce: '电商',
-}[project.value?.content_type] || '漫剧'));
+const typeName = computed(() => typeLabel(project.value?.content_type));
 const pinLabel = computed(() => {
   if (project.value?.package_version) return `故事包 v${project.value.package_version}`;
   if (project.value?.pin_mode === 'legacy') return '未钉扎';
   if (project.value?.pin_mode === 'local') return '本地文案';
+  if (project.value?.pin_mode === 'optional') return '可以不绑故事包';
   return '';
 });
 
 function assetKind(kind) {
-  return { character: '角色', scene: '场景', prop: '道具', voice: '配音' }[kind] || kind;
+  return { character: '角色', scene: '场景', prop: '道具', voice: '配音', bgm: '背景音乐', sfx: '音效', subtitle_style: '字幕样式', transition: '转场' }[kind] || kind;
 }
 function nodeMark(id) {
   const tasks = bundle.value?.tasks || [];
   const imports = (bundle.value?.imports || []).filter(item => !item.deleted_at);
   if (id === 'input') {
     if (project.value?.package_version) return 'ok';
-    if (project.value?.pin_mode === 'local') return 'ok';
+    if (project.value?.pin_mode === 'local' || project.value?.pin_mode === 'optional') return 'ok';
     if (project.value?.pin_mode === 'legacy') return 'warn';
     return 'idle';
   }
   if (id === 'script') {
-    if (project.value?.content_type === 'ai_science' || project.value?.content_type === 'ai_commerce') return (bundle.value?.copy_blocks || []).length ? 'ok' : 'idle';
+    if (isLocalType(project.value?.content_type)) return (bundle.value?.copy_blocks || []).length ? 'ok' : 'idle';
     return imports.length ? 'ok' : 'idle';
   }
   if (id === 'storyboard') return shots.value.length ? 'ok' : 'idle';
@@ -171,17 +214,47 @@ async function addAsset() {
       kind: assetForm.kind,
       description: assetForm.description,
       reference_path: assetForm.reference_path,
+      character_id: assetForm.character_id,
       voice_key: assetForm.voice_key,
       speech_rate: assetForm.speech_rate,
       emotion: assetForm.emotion,
+      consistency_note: assetForm.consistency_note,
+      scene_type: assetForm.scene_type,
+      front_path: assetForm.front_path,
+      side_path: assetForm.side_path,
+      back_path: assetForm.back_path,
+      expression_note: assetForm.expression_note,
+      costume_note: assetForm.costume_note,
+      lora_ref: assetForm.lora_ref,
+      angle_paths: assetForm.angle_paths,
+      prop_category: assetForm.prop_category,
+      voice_lang: assetForm.voice_lang,
+      speaker_name: assetForm.speaker_name,
     },
   });
   assetForm.name = '';
   assetForm.description = '';
   assetForm.reference_path = '';
+  assetForm.character_id = '';
   assetForm.voice_key = '';
   assetForm.speech_rate = '';
   assetForm.emotion = '';
+  assetForm.consistency_note = '';
+  assetForm.scene_type = '';
+  assetForm.front_path = '';
+  assetForm.side_path = '';
+  assetForm.back_path = '';
+  assetForm.expression_note = '';
+  assetForm.costume_note = '';
+  assetForm.lora_ref = '';
+  assetForm.angle_paths = '';
+  assetForm.prop_category = '';
+  assetForm.voice_lang = '';
+  assetForm.speaker_name = '';
+  await load();
+}
+async function disableAsset(row) {
+  await request(`/projects/${projectId.value}/assets/${row.id}/disable`, { method: 'post' });
   await load();
 }
 function selectNode(id) {

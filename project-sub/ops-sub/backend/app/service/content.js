@@ -9,7 +9,30 @@ const RULES = [
   { rule_key: 'task_stuck', name: '任务卡住', level: 'critical' },
   { rule_key: 'fail_rate', name: '失败率过高', level: 'warning' },
   { rule_key: 'dep_down', name: '依赖不可用', level: 'critical' },
+  { rule_key: 'storage_high', name: '存储水位', level: 'warning' },
 ];
+
+const PROMPT_KEYS = [ 'prompt', 'positive', 'positive_zh', 'negative', 'negative_zh', 'workflow_snapshot' ];
+
+function hidePrompts(value) {
+  if (!value || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map(hidePrompts);
+  const out = {};
+  Object.entries(value).forEach(([ key, item ]) => {
+    if (PROMPT_KEYS.includes(key)) return;
+    out[key] = hidePrompts(item);
+  });
+  return out;
+}
+
+function pickPrompts(detail) {
+  const source = detail && typeof detail === 'object' ? detail : {};
+  const picked = {};
+  PROMPT_KEYS.forEach(key => {
+    if (source[key] != null && source[key] !== '') picked[key] = source[key];
+  });
+  return picked;
+}
 
 function suggest(task) {
   const err = String(task?.error_message || '');
@@ -130,6 +153,9 @@ class ContentService extends Service {
       fail_rate: Number(row.fail_rate),
       fail_min_samples: row.fail_min_samples,
       retention_days: row.retention_days,
+      probe_interval_sec: row.probe_interval_sec,
+      allow_prompt_view: Boolean(row.allow_prompt_view),
+      storage_watermark_mb: row.storage_watermark_mb,
     };
   }
 
@@ -440,7 +466,45 @@ class ContentService extends Service {
       limit: pageSize,
       offset: (page - 1) * pageSize,
     });
-    return { list: rows, total: count, page, pageSize };
+    const list = rows.map(row => {
+      const plain = row.get({ plain: true });
+      plain.detail = hidePrompts(plain.detail);
+      return plain;
+    });
+    return { list, total: count, page, pageSize };
+  }
+
+  async viewPrompt(id) {
+    const config = await this.ensureConfig();
+    if (!config.allow_prompt_view) this.ctx.throw(403, '没有允许查看提示词');
+    const audit = await this.ctx.model.OpsAuditLog.findByPk(id);
+    if (!audit) this.ctx.throw(404, '记录不存在');
+    const prompts = pickPrompts(audit.detail);
+    await this.writeAudit({
+      action: 'audit.view_prompt',
+      external_type: 'audit',
+      external_id: audit.id,
+      detail: { source_action: audit.action },
+    });
+    return {
+      id: audit.id,
+      prompts,
+      empty: Object.keys(prompts).length === 0,
+    };
+  }
+
+  async lineage(outputId) {
+    const id = Number(outputId);
+    if (!Number.isInteger(id) || id <= 0) this.ctx.throw(400, '需要成片编号');
+    const data = await this.cartoon(`/api/internal/ops/outputs/${id}/lineage`);
+    await this.writeAudit({
+      action: 'lineage.view',
+      biz_app: 'video',
+      external_type: 'output',
+      external_id: id,
+      detail: { project_id: data?.project_id || null },
+    });
+    return data;
   }
 
   async getSettings() {
@@ -469,12 +533,20 @@ class ContentService extends Service {
     if (!Number.isFinite(rate) || rate <= 0 || rate > 1) this.ctx.throw(400, '失败率阈值应大于 0 且不超过 1');
     if (!Number.isInteger(samples) || samples < 1 || samples > 100) this.ctx.throw(400, '失败率样本数应为 1 到 100 的整数');
     const row = await this.ensureConfig();
+    const interval = body.probe_interval_sec === undefined ? row.probe_interval_sec : Number(body.probe_interval_sec);
+    const watermark = body.storage_watermark_mb === undefined ? row.storage_watermark_mb : Number(body.storage_watermark_mb);
+    const allowPrompt = body.allow_prompt_view === undefined ? row.allow_prompt_view : Boolean(body.allow_prompt_view);
+    if (!Number.isInteger(interval) || interval < 15 || interval > 3600) this.ctx.throw(400, '探测间隔应为 15 到 3600 秒');
+    if (!Number.isInteger(watermark) || watermark < 1 || watermark > 1000000) this.ctx.throw(400, '存储水位应为 1 到 1000000 MB');
     const before = this.toPublicConfig(row);
     await row.update({
       queue_backlog: queue,
       stuck_minutes: stuck,
       fail_rate: rate,
       fail_min_samples: samples,
+      probe_interval_sec: interval,
+      allow_prompt_view: allowPrompt,
+      storage_watermark_mb: watermark,
     });
     await this.writeAudit({
       action: 'config.update',
@@ -605,6 +677,23 @@ class ContentService extends Service {
     }
   }
 
+  async watchStorage(rules, config) {
+    if (rules.storage_high === false) return;
+    const summary = await this.ctx.service.usage.summary({});
+    const limit = Number(config.storage_watermark_mb) * 1024 * 1024;
+    if (Number(summary.storage_bytes) > limit) {
+      await this.openAlert({
+        rule_key: 'storage_high',
+        object_key: 'storage',
+        level: 'warning',
+        title: '存储超过水位',
+        detail: `已用 ${summary.storage_bytes} 字节，水位 ${config.storage_watermark_mb} MB`,
+      });
+      return;
+    }
+    await this.clearAlert('storage_high', 'storage');
+  }
+
   async tick() {
     const configRow = await this.ensureConfig();
     const config = this.toPublicConfig(configRow);
@@ -612,8 +701,9 @@ class ContentService extends Service {
     const enabled = Object.fromEntries(rules.map(item => [ item.rule_key, item.enabled ]));
     const deps = await this.watchDeps(enabled);
     await this.watchTasks(enabled, config);
+    await this.watchStorage(enabled, config);
     const openAlerts = await this.ctx.model.OpsAlert.count({ where: { status: 'open' } });
-    return { deps, open_alerts: openAlerts };
+    return { deps, open_alerts: openAlerts, probe_interval_sec: config.probe_interval_sec };
   }
 }
 

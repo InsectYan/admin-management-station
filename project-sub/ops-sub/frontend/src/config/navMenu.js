@@ -19,6 +19,7 @@ export const navGroups = [
       { path: '/alerts', title: '告警中心', icon: 'Bell' },
       { path: '/audit', title: '操作审计', icon: 'Notebook' },
       { path: '/compliance', title: '合规', icon: 'Warning' },
+      { path: '/lineage', title: '版权溯源', icon: 'Notebook' },
       { path: '/usage', title: '用量', icon: 'Coin' },
       { path: '/settings', title: '系统配置', icon: 'Setting', adminOnly: true },
       { path: '/models', title: '模型与路由', icon: 'Cpu', adminOnly: true },

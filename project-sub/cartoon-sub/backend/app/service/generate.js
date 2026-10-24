@@ -89,11 +89,18 @@ class GenerateService extends Service {
     }
     await this.ctx.service.project.updateShot(shot.id, { positive_zh: text });
 
+    const profileRow = project
+      ? await this.ctx.model.AgentConfig.findOne({ where: { content_type: project.content_type, role: 'video' } })
+      : null;
     const task = await this.ctx.model.Task.create({
       project_id: Number(projectId),
       shot_id: shot.id,
       kind,
       status: 'queued',
+      model_profile: profileRow?.model_profile || 'comfy-local',
+      package_version: project?.package_version || null,
+      node_name: '生成',
+      operator_name: String(this.ctx.state.user?.username || '').slice(0, 128),
     });
     await reportAudit(this.ctx, {
       action: 'video.generate',

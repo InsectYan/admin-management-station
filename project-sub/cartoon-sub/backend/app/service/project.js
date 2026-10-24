@@ -5,6 +5,15 @@ const { VISUAL_STYLES, SHOT_SIZES, CAMERA_MOVES, assertEnum } = require('../lib/
 const { sameBody, keepsProductionText, withOverride } = require('../lib/rebasePlan');
 const { reportAudit } = require('../lib/reportAudit');
 const { videoTemplateDraft, templateGaps } = require('../lib/videoTemplates');
+const {
+  contentType,
+  isLocal,
+  pinModeOf,
+  LEGACY_KEYS,
+  panelFields,
+  panelReady: fieldsReady,
+  normalizePanel,
+} = require('../lib/contentCatalog');
 function unwrap(json) {
   if (json && Object.prototype.hasOwnProperty.call(json, 'data')) return json.data;
   return json;
@@ -157,18 +166,18 @@ class ProjectService extends Service {
   }
 
   create(payload) {
-    const contentType = payload.content_type || 'ai_comic';
-    const local = contentType === 'ai_science' || contentType === 'ai_commerce';
-    if (![ 'ai_comic', 'ai_short', 'ai_science', 'ai_commerce' ].includes(contentType)) this.ctx.throw(400, '这个内容类型还没开放');
-    if (local && payload.source_novel_id) this.ctx.throw(400, '这个类型不绑定小说');
+    const contentTypeId = payload.content_type || 'ai_comic';
+    const type = contentType(contentTypeId);
+    if (!type) this.ctx.throw(400, '这个内容类型还没开放');
+    if (isLocal(contentTypeId) && payload.source_novel_id) this.ctx.throw(400, '这个类型不绑定小说');
     return this.ctx.model.Project.create({
       name: payload.name,
-      source_novel_id: local ? null : (payload.source_novel_id || null),
+      source_novel_id: isLocal(contentTypeId) ? null : (payload.source_novel_id || null),
       visual_style: assertEnum(payload.visual_style, VISUAL_STYLES, '画面风格'),
       summary: payload.summary || '',
       status: 'draft',
-      content_type: contentType,
-      pin_mode: local ? 'local' : 'required',
+      content_type: contentTypeId,
+      pin_mode: pinModeOf(contentTypeId),
     });
   }
 
@@ -183,7 +192,7 @@ class ProjectService extends Service {
       summary: draft.scene,
       status: 'draft',
       content_type: draft.content_type,
-      pin_mode: draft.content_type === 'ai_science' ? 'local' : 'required',
+      pin_mode: pinModeOf(draft.content_type),
       template_id: draft.id,
     });
     const episode = await this.ensureEpisode(project.id);
@@ -212,9 +221,8 @@ class ProjectService extends Service {
     if (payload.name != null) patch.name = String(payload.name).trim();
     if (payload.summary != null) patch.summary = payload.summary;
     if (payload.source_novel_id !== undefined) {
-      const local = project.content_type === 'ai_science' || project.content_type === 'ai_commerce';
-      if (local && payload.source_novel_id) this.ctx.throw(400, '这个类型不绑定小说');
-      patch.source_novel_id = local ? null : (payload.source_novel_id || null);
+      if (isLocal(project.content_type) && payload.source_novel_id) this.ctx.throw(400, '这个类型不绑定小说');
+      patch.source_novel_id = isLocal(project.content_type) ? null : (payload.source_novel_id || null);
     }
     if (payload.visual_style !== undefined) {
       patch.visual_style = assertEnum(payload.visual_style, VISUAL_STYLES, '画面风格');
@@ -353,6 +361,7 @@ class ProjectService extends Service {
     const chapterTitle = meta?.title || chapter?.chapter?.title || chapter?.title || '';
     const body = chapter?.body || chapter?.content || chapter?.text || '';
     if (!body) this.ctx.throw(400, '没有拿到章节正文。可以改用手工粘贴快照');
+    await this.ensureCharacterDrafts(projectId, setting.characters || []);
     const row = await this.addImport(projectId, {
       source_novel_id: String(payload.novel_id),
       chapter_title: formatSnapshotTitle(volume, chapterTitle),
@@ -415,6 +424,7 @@ class ProjectService extends Service {
         legacy_unpinned: false,
       });
     }
+    await this.ensureCharacterDrafts(project.id, pack.characters || []);
     await this.markRemovedChapters(project.id, pack);
     await project.update({
       source_novel_id: String(pack.narrative_project_id || payload.novel_id || project.source_novel_id || ''),
@@ -569,7 +579,8 @@ class ProjectService extends Service {
   async requireScience(projectId) {
     const project = await this.ctx.model.Project.findByPk(projectId);
     if (!project) this.ctx.throw(404, '项目不存在');
-    if (project.content_type !== 'ai_science' && project.content_type !== 'ai_commerce') this.ctx.throw(400, '这个类型使用本地文案');
+    const type = contentType(project.content_type);
+    if (!type?.copy) this.ctx.throw(400, '这个类型使用本地文案');
     return project;
   }
 
@@ -627,6 +638,7 @@ class ProjectService extends Service {
       shot_size: assertEnum(payload.shot_size || '中景', SHOT_SIZES, '景别') || '中景',
       camera_move: assertEnum(payload.camera_move || '固定', CAMERA_MOVES, '运镜') || '固定',
       description: payload.description || '',
+      dialogue: payload.dialogue || '',
     });
     if (payload.positive_zh || payload.negative_zh) {
       await this.ctx.model.Prompt.create({
@@ -642,10 +654,17 @@ class ProjectService extends Service {
     await this.show(projectId);
     const name = String(payload.name || '').trim();
     if (!name) this.ctx.throw(400, '需要资产名称');
-    const kinds = [ 'character', 'scene', 'prop', 'voice' ];
+    const kinds = [ 'character', 'scene', 'prop', 'voice', 'bgm', 'sfx', 'subtitle_style', 'transition' ];
     const kind = kinds.includes(payload.kind) ? payload.kind : 'character';
     const voiceKey = String(payload.voice_key || '').trim();
     if (kind === 'voice' && !voiceKey) this.ctx.throw(400, '需要音色标识');
+    const sceneTypes = [ '室内', '室外', '城市', '自然', '古风', '品牌' ];
+    const sceneType = String(payload.scene_type || '').trim();
+    if (kind === 'scene' && sceneType && !sceneTypes.includes(sceneType)) this.ctx.throw(400, '场景类型不存在');
+    const propCategories = [ '服饰', '器物', '食物', '文书', '交通', '其他' ];
+    const propCategory = String(payload.prop_category || '').trim();
+    if (kind === 'prop' && propCategory && !propCategories.includes(propCategory)) this.ctx.throw(400, '道具分类不存在');
+    const character = kind === 'character';
     return this.ctx.model.Asset.create({
       project_id: Number(projectId),
       kind,
@@ -655,7 +674,52 @@ class ProjectService extends Service {
       voice_key: voiceKey,
       speech_rate: String(payload.speech_rate || '').trim(),
       emotion: String(payload.emotion || '').trim(),
+      character_id: character ? String(payload.character_id || '').trim() : '',
+      consistency_note: character ? String(payload.consistency_note || '').trim() : '',
+      scene_type: kind === 'scene' ? sceneType : '',
+      front_path: character ? String(payload.front_path || '').trim() : '',
+      side_path: character ? String(payload.side_path || '').trim() : '',
+      back_path: character ? String(payload.back_path || '').trim() : '',
+      expression_note: character ? String(payload.expression_note || '').trim() : '',
+      costume_note: character ? String(payload.costume_note || '').trim() : '',
+      lora_ref: character ? String(payload.lora_ref || '').trim() : '',
+      angle_paths: kind === 'scene' ? String(payload.angle_paths || '').trim() : '',
+      prop_category: kind === 'prop' ? propCategory : '',
+      voice_lang: kind === 'voice' ? String(payload.voice_lang || '').trim() : '',
+      speaker_name: kind === 'voice' ? String(payload.speaker_name || '').trim() : '',
+      disabled: false,
     });
+  }
+
+  async disableAsset(projectId, assetId) {
+    const row = await this.ctx.model.Asset.findOne({ where: { id: assetId, project_id: projectId } });
+    if (!row) this.ctx.throw(404, '资产不存在');
+    await row.update({ disabled: true });
+    return row;
+  }
+
+  async ensureCharacterDrafts(projectId, characters) {
+    const list = Array.isArray(characters) ? characters : [];
+    for (const item of list) {
+      const name = String(typeof item === 'string' ? item : (item?.name || '')).trim();
+      if (!name) continue;
+      const characterId = String(typeof item === 'string' ? '' : (item.character_id || item.id || '')).trim();
+      const existing = await this.ctx.model.Asset.findOne({
+        where: { project_id: projectId, kind: 'character', name },
+      });
+      if (existing) {
+        if (characterId && !existing.character_id) await existing.update({ character_id: characterId });
+        continue;
+      }
+      await this.ctx.model.Asset.create({
+        project_id: Number(projectId),
+        kind: 'character',
+        name,
+        description: String(item?.appearance || item?.description || ''),
+        character_id: characterId,
+        disabled: false,
+      });
+    }
   }
 
   async updateShot(id, payload) {
@@ -690,22 +754,13 @@ class ProjectService extends Service {
   async savePanel(projectId, payload) {
     const project = await this.ctx.model.Project.findByPk(projectId);
     if (!project) this.ctx.throw(404, '项目不存在');
-    const text = key => String(payload[key] || '').trim();
-    let fields = null;
-    if (project.content_type === 'ai_short') {
-      fields = {
-        conflict: text('conflict'),
-        twist: text('twist'),
-        rhythm: text('rhythm'),
-        branches: text('branches'),
-      };
-    } else if (project.content_type === 'ai_commerce') {
-      fields = {
-        product_note: text('product_note'),
-        selling_points: text('selling_points'),
-        comparison: text('comparison'),
-      };
-    } else this.ctx.throw(400, '这个类型没有面板');
+    const type = contentType(project.content_type);
+    if (!type?.panel?.length) this.ctx.throw(400, '这个类型没有面板');
+    const stored = normalizePanel(type, payload);
+    const fields = { payload: JSON.stringify(stored) };
+    for (const key of LEGACY_KEYS) {
+      if (Object.prototype.hasOwnProperty.call(stored, key)) fields[key] = stored[key];
+    }
     const row = await this.ctx.model.TypePanel.findOne({ where: { project_id: project.id } });
     if (row) await row.update(fields);
     else await this.ctx.model.TypePanel.create({ project_id: project.id, ...fields });
@@ -715,10 +770,13 @@ class ProjectService extends Service {
   async panelOf(projectId) {
     const project = await this.ctx.model.Project.findByPk(projectId);
     if (!project) this.ctx.throw(404, '项目不存在');
+    const type = contentType(project.content_type);
     const row = await this.ctx.model.TypePanel.findOne({ where: { project_id: project.id } });
     return {
       content_type: project.content_type,
+      label: type?.label || '',
       ready: await this.panelReady(project),
+      fields: panelFields(type, row),
       panel: row,
     };
   }
@@ -728,11 +786,10 @@ class ProjectService extends Service {
       ? projectOrId
       : await this.ctx.model.Project.findByPk(projectOrId);
     if (!project) this.ctx.throw(404, '项目不存在');
-    if (project.content_type !== 'ai_short' && project.content_type !== 'ai_commerce') return true;
+    const type = contentType(project.content_type);
+    if (!type?.panel?.length) return true;
     const row = await this.ctx.model.TypePanel.findOne({ where: { project_id: project.id } });
-    const filled = key => Boolean(String(row?.[key] || '').trim());
-    if (project.content_type === 'ai_short') return filled('conflict') && filled('twist') && filled('rhythm') && filled('branches');
-    return filled('product_note') && filled('selling_points');
+    return fieldsReady(type, row);
   }
 }
 

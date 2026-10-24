@@ -13,5 +13,9 @@ module.exports = app => {
     workflow_snapshot: { type: JSONB, allowNull: true },
     precheck_workflow_id: { type: INTEGER, allowNull: true },
     precheck_gap: { type: JSONB, allowNull: true },
+    model_profile: { type: STRING(64), allowNull: false, defaultValue: '' },
+    package_version: { type: INTEGER, allowNull: true },
+    node_name: { type: STRING(64), allowNull: false, defaultValue: '' },
+    operator_name: { type: STRING(128), allowNull: false, defaultValue: '' },
   }, { tableName: 'cartoon_tasks' });
 };

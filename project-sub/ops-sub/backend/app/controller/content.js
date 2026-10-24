@@ -69,9 +69,29 @@ class ContentController extends Controller {
     }
   }
 
+  async lineage() {
+    try {
+      ok(this.ctx, await this.ctx.service.content.lineage(this.ctx.query.output_id));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async viewPrompt() {
+    try {
+      ok(this.ctx, await this.ctx.service.content.viewPrompt(this.ctx.params.id));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async deps() {
     try {
-      ok(this.ctx, await this.ctx.service.content.deps());
+      const config = await this.ctx.service.content.ensureConfig();
+      ok(this.ctx, {
+        deps: await this.ctx.service.content.deps(),
+        probe_interval_sec: config.probe_interval_sec,
+      });
     } catch (err) {
       fail(this.ctx, err);
     }

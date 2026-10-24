@@ -7,6 +7,7 @@ module.exports = app => {
   router.get('/api/internal/ops/summary', controller.opsInternal.summary);
   router.get('/api/internal/ops/tasks', controller.opsInternal.tasks);
   router.get('/api/internal/ops/tasks/:id', controller.opsInternal.show);
+  router.get('/api/internal/ops/outputs/:id/lineage', controller.opsInternal.lineage);
   router.post('/api/internal/ops/tasks/:id/retry', controller.opsInternal.retry);
   router.post('/api/internal/ops/tasks/:id/cancel', controller.opsInternal.cancel);
   router.get('/api/meta', controller.project.meta);
@@ -50,6 +51,15 @@ module.exports = app => {
   router.delete('/api/projects/:id/copy-blocks/:blockId', controller.project.removeCopyBlock);
   router.get('/api/projects/:id/panel', controller.project.showPanel);
   router.put('/api/projects/:id/panel', controller.project.savePanel);
+  router.get('/api/projects/:id/export-specs', controller.delivery.specs);
+  router.post('/api/projects/:id/export-specs', controller.delivery.createSpec);
+  router.get('/api/projects/:id/frame-diff', controller.delivery.frameDiff);
+  router.get('/api/export-specs/:id/file', controller.delivery.file);
+  router.get('/api/outputs/:id/preview-profiles', controller.delivery.previewProfiles);
+  router.post('/api/outputs/:id/face-check', controller.delivery.face);
+  router.get('/api/outputs/:id/lineage', controller.delivery.lineage);
+  router.get('/api/projects/:id/shell-members', controller.project.shellMembers);
+  router.post('/api/projects/:id/assets/:assetId/disable', controller.project.disableAsset);
   router.get('/api/projects/:id/reviews', controller.review.index);
   router.post('/api/projects/:id/reviews', controller.review.decide);
   router.get('/api/projects/:id/batches', controller.batch.index);

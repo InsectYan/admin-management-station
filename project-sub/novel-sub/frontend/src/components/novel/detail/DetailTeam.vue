@@ -26,6 +26,15 @@
       </el-table-column>
     </el-table>
 
+    <h4>壳上登记的成员</h4>
+    <p>名单来自壳，这里只展示。作品里的作者、编辑和审核仍用上面的协作名单。</p>
+    <el-alert v-if="shellNote" type="info" :title="shellNote" show-icon :closable="false" />
+    <el-empty v-else-if="!shellMembers.length" description="壳上还没有登记这部作品的成员" />
+    <el-table v-else :data="shellMembers" size="small">
+      <el-table-column prop="username" label="账号" />
+      <el-table-column prop="role_label" label="角色" width="120" />
+    </el-table>
+
     <h4>草稿快照</h4>
     <p>回退只恢复当前草稿，已发布的故事包不变。有章节锁着时不能回退。</p>
     <el-form inline @submit.prevent="saveSnapshot">
@@ -57,13 +66,15 @@
 <script setup>
 import { onMounted, reactive, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { addMember, createSnapshot, fetchActivity, fetchMembers, fetchSnapshots, removeMember, restoreSnapshot } from '../../../services/novelService.js';
+import { addMember, createSnapshot, fetchActivity, fetchMembers, fetchShellMembers, fetchSnapshots, removeMember, restoreSnapshot } from '../../../services/novelService.js';
 
 const props = defineProps({
   novelId: { type: [ Number, String ], default: '' },
 });
 
 const members = ref([]);
+const shellMembers = ref([]);
+const shellNote = ref('');
 const activity = ref([]);
 const snapshots = ref([]);
 const snapshotLabel = ref('');
@@ -91,6 +102,14 @@ function actionLabel(row) {
 async function load() {
   if (!props.novelId) return;
   members.value = await fetchMembers(props.novelId);
+  try {
+    const shell = await fetchShellMembers(props.novelId);
+    shellMembers.value = shell.rows || [];
+    shellNote.value = shell.note || '';
+  } catch (err) {
+    shellMembers.value = [];
+    shellNote.value = err.message || '壳上的成员名单暂时读不到';
+  }
   activity.value = await fetchActivity(props.novelId);
   snapshots.value = await fetchSnapshots(props.novelId);
 }

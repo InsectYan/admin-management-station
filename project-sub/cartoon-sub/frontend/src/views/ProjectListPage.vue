@@ -36,13 +36,11 @@
         </el-form-item>
         <el-form-item label="内容类型">
           <el-select v-model="form.content_type" style="width: 100%" @change="onType">
-            <el-option label="漫剧" value="ai_comic" />
-            <el-option label="短剧" value="ai_short" />
-            <el-option label="科普" value="ai_science" />
-            <el-option label="电商" value="ai_commerce" />
+            <el-option v-for="item in CONTENT_TYPES" :key="item.id" :label="item.label" :value="item.id" />
           </el-select>
         </el-form-item>
         <el-form-item v-if="!isLocalType(form.content_type)" label="来源小说">
+          <p v-if="isOptionalType(form.content_type)" class="cartoon-module__hint">可以不选。歌词写在面板里。</p>
           <el-select v-model="form.source_novel_id" filterable clearable placeholder="从小说平台选择" style="width: 100%">
             <el-option v-for="item in novels" :key="item.id" :label="item.title" :value="String(item.id)" />
           </el-select>
@@ -68,7 +66,7 @@ import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
-import { isLocalType, typeLabel } from '../lib/contentTypes.js';
+import { CONTENT_TYPES, isLocalType, isOptionalType, typeLabel } from '../lib/contentTypes.js';
 
 const router = useRouter();
 const rows = ref([]);

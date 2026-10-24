@@ -84,6 +84,12 @@ export function createAppRouter(basename) {
             meta: { title: '合规' },
           },
           {
+            path: 'lineage',
+            name: 'ops-lineage',
+            component: () => import('../views/OpsLineagePage.vue'),
+            meta: { title: '版权溯源' },
+          },
+          {
             path: 'models',
             name: 'ops-models',
             component: () => import('../views/OpsModelsPage.vue'),

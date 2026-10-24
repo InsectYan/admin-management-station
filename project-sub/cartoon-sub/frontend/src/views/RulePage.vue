@@ -3,10 +3,7 @@
     <p class="cartoon-module__hint">规则按内容类型保存。已经开始的批次仍用创建时的快照，之后的修改只影响新批次。</p>
     <div class="cartoon-module">
       <el-select v-model="contentType" style="width: 160px" @change="load">
-        <el-option label="漫剧" value="ai_comic" />
-        <el-option label="短剧" value="ai_short" />
-        <el-option label="科普" value="ai_science" />
-        <el-option label="电商" value="ai_commerce" />
+        <el-option v-for="item in CONTENT_TYPES" :key="item.id" :label="item.label" :value="item.id" />
       </el-select>
     </div>
     <div class="cartoon-module">
@@ -56,6 +53,7 @@ import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
+import { CONTENT_TYPES } from '../lib/contentTypes.js';
 
 const contentType = ref('ai_comic');
 const rows = ref([]);

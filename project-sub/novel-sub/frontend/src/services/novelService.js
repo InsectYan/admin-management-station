@@ -90,6 +90,10 @@ export function fetchMembers(id) {
   return request(`/novels/${id}/members`);
 }
 
+export function fetchShellMembers(id) {
+  return request(`/novels/${id}/shell-members`);
+}
+
 export function addMember(id, data) {
   return request(`/novels/${id}/members`, { method: 'POST', data });
 }

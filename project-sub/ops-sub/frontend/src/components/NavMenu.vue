@@ -87,7 +87,7 @@ const visibleGroups = computed(() => navGroups.map(group => ({
   items: group.items.filter(item => !item.adminOnly || isAdmin.value),
 })));
 const flatMenus = computed(() => visibleGroups.value.flatMap(group => group.items));
-const CONTENT_PATHS = [ '/overview', '/jobs', '/deps', '/alerts', '/audit', '/settings' ];
+const CONTENT_PATHS = [ '/overview', '/jobs', '/deps', '/alerts', '/audit', '/settings', '/lineage', '/compliance', '/usage', '/board', '/models' ];
 const activePath = computed(() => {
   const content = CONTENT_PATHS.find(path => route.path === path || route.path.startsWith(`${path}/`));
   if (content) return content;

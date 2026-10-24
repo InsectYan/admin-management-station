@@ -2,8 +2,7 @@
   <PageShell title="模板中心">
     <div class="cartoon-module cartoon-template-filters">
       <el-select v-model="contentType" clearable placeholder="内容类型" style="width: 160px">
-        <el-option label="科普" value="ai_science" />
-        <el-option label="漫剧" value="ai_comic" />
+        <el-option v-for="item in CONTENT_TYPES" :key="item.id" :label="item.label" :value="item.id" />
       </el-select>
       <el-select v-model="stage" clearable placeholder="生产阶段" style="width: 160px">
         <el-option label="脚本" value="script" />
@@ -73,6 +72,7 @@ import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
+import { CONTENT_TYPES } from '../lib/contentTypes.js';
 
 const router = useRouter();
 const rows = ref([]);

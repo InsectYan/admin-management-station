@@ -2,9 +2,11 @@
 
 const Service = require('egg').Service;
 
+const { contentTypeIds } = require('../lib/contentCatalog');
+
 const KINDS = [ 'style', 'brand', 'platform', 'banned', 'rating', 'cost' ];
 const RATINGS = [ '全年龄', '青少年', '成人' ];
-const TYPES = [ 'ai_comic', 'ai_short', 'ai_science', 'ai_commerce' ];
+const TYPES = contentTypeIds();
 
 class RuleService extends Service {
   normalize(payload, existing) {

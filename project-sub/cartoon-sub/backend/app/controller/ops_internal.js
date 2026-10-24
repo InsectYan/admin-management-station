@@ -40,6 +40,14 @@ class OpsInternalController extends Controller {
     }
   }
 
+  async lineage() {
+    try {
+      ok(this.ctx, await this.ctx.service.delivery.lineage(this.ctx.params.id));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async cancel() {
     try {
       ok(this.ctx, await this.ctx.service.opsInternal.cancel(this.ctx.params.id));

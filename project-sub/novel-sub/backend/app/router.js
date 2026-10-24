@@ -25,6 +25,7 @@ module.exports = (app) => {
   router.get('/api/novels/:id/chapters/:chapterId', controller.novel.showChapterBody);
   router.put('/api/novels/:id/chapters/:chapterId', controller.novel.updateChapterBody);
   router.get('/api/novels/:id/members', controller.collaboration.members);
+  router.get('/api/novels/:id/shell-members', controller.collaboration.shellMembers);
   router.post('/api/novels/:id/members', controller.collaboration.addMember);
   router.delete('/api/novels/:id/members/:memberId', controller.collaboration.removeMember);
   router.get('/api/novels/:id/locks', controller.collaboration.locks);

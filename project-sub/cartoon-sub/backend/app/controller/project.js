@@ -234,6 +234,14 @@ class ProjectController extends Controller {
     }
   }
 
+  async disableAsset() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.disableAsset(this.ctx.params.id, this.ctx.params.assetId));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async updateShot() {
     try {
       ok(this.ctx, await this.ctx.service.project.updateShot(this.ctx.params.id, this.ctx.request.body || {}));
@@ -260,6 +268,16 @@ class ProjectController extends Controller {
         this.ctx.request.body || {},
         kind,
       ));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async shellMembers() {
+    try {
+      const project = await this.ctx.model.Project.findByPk(this.ctx.params.id);
+      if (!project) this.ctx.throw(404, '项目不存在');
+      ok(this.ctx, await this.ctx.service.shellRoster.list('cartoon', project.id));
     } catch (err) {
       fail(this.ctx, err);
     }

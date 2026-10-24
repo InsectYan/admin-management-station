@@ -38,7 +38,9 @@ async function load() {
   loading.value = true;
   loadError.value = '';
   try {
-    deps.value = await fetchContentDeps();
+    const data = await fetchContentDeps();
+    deps.value = Array.isArray(data) ? data : (data.deps || []);
+    if (!Array.isArray(data)) arm(data.probe_interval_sec);
   } catch (err) {
     loadError.value = err.message;
   } finally {
@@ -60,9 +62,17 @@ async function watchNow() {
 }
 
 let timer;
+let currentInterval = 0;
+function arm(seconds) {
+  const next = Math.min(3600, Math.max(15, Number(seconds) || 15));
+  if (timer && next === currentInterval) return;
+  currentInterval = next;
+  clearInterval(timer);
+  timer = setInterval(load, next * 1000);
+}
 onMounted(() => {
   load();
-  timer = setInterval(load, 15000);
+  arm(15);
 });
 onBeforeUnmount(() => clearInterval(timer));
 </script>

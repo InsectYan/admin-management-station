@@ -1,6 +1,7 @@
 'use strict';
 
 const Service = require('egg').Service;
+const { contentTypeIds, contentType } = require('../lib/contentCatalog');
 
 const OPEN = [ 'queued', 'running', 'paused' ];
 const DONE = [ 'completed', 'failed', 'cancelled' ];
@@ -9,7 +10,7 @@ class BatchService extends Service {
   async requireProject(projectId) {
     const project = await this.ctx.model.Project.findByPk(projectId);
     if (!project) this.ctx.throw(404, '项目不存在');
-    if (![ 'ai_comic', 'ai_short', 'ai_science', 'ai_commerce' ].includes(project.content_type)) this.ctx.throw(400, '这个内容类型还没开放');
+    if (!contentTypeIds().includes(project.content_type)) this.ctx.throw(400, '这个内容类型还没开放');
     return project;
   }
 
@@ -114,7 +115,7 @@ class BatchService extends Service {
     if (!body) this.ctx.throw(400, '需要正文');
     const hit = this.hitRule(body, snapshot);
     if (hit) this.ctx.throw(400, `命中规则 ${hit}`);
-    if (project.content_type === 'ai_science' || project.content_type === 'ai_commerce') {
+    if (contentType(project.content_type)?.copy) {
       const count = await this.ctx.model.CopyBlock.count({ where: { project_id: project.id } });
       await this.ctx.model.CopyBlock.create({
         project_id: project.id,

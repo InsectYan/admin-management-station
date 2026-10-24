@@ -47,23 +47,34 @@
           <dl class="cartoon-overview__facts">
             <div><dt>项目名称</dt><dd>{{ detail.project.name }}</dd></div>
             <div><dt>画面风格</dt><dd>{{ styleLabel || '未选择' }}</dd></div>
-            <div v-if="isScience"><dt>文案</dt><dd>本地文案</dd></div>
+            <div v-if="isLocal"><dt>文案</dt><dd>本地文案</dd></div>
             <div v-else><dt>来源小说</dt><dd>{{ novelBrief?.title || '未绑定' }}</dd></div>
             <div><dt>章节快照</dt><dd>{{ liveImports.length }}</dd></div>
             <div><dt>分镜</dt><dd>{{ detail.shots.length }}</dd></div>
             <div><dt>生成记录</dt><dd>{{ detail.tasks.length }}</dd></div>
           </dl>
-          <NovelBriefPanel v-if="!isScience" :novel="novelBrief" :loading="novelLoading" />
-          <TypePanel v-if="isShort || isCommerce" :project-id="projectId" :commerce="isCommerce" />
+          <section class="cartoon-module">
+            <h3 class="cartoon-module__title">壳上登记的成员</h3>
+            <p class="cartoon-module__hint">名单来自壳，这里只展示，不在视频项目里另行邀请。</p>
+            <el-alert v-if="shellNote" type="info" :title="shellNote" show-icon :closable="false" />
+            <el-empty v-else-if="!shellMembers.length" description="壳上还没有登记这个项目的成员" />
+            <el-table v-else :data="shellMembers" size="small">
+              <el-table-column prop="username" label="账号" />
+              <el-table-column prop="role_label" label="角色" width="120" />
+            </el-table>
+          </section>
+          <NovelBriefPanel v-if="!isLocal" :novel="novelBrief" :loading="novelLoading" />
+          <TypePanel v-if="showPanel" :project-id="projectId" />
+          <ExportSpecs :project-id="projectId" />
           <ReviewBox :project-id="projectId" />
         </section>
 
-        <section v-show="tab === 2 && isScience" class="cartoon-module">
+        <section v-if="tab === 2 && isLocal" class="cartoon-module">
           <h3 class="cartoon-module__title">本地文案</h3>
           <CopyBlocks :project-id="projectId" />
         </section>
 
-        <section v-show="tab === 2 && !isScience" class="cartoon-module">
+        <section v-show="tab === 2 && !isLocal" class="cartoon-module">
           <h3 class="cartoon-module__title">章节快照</h3>
           <el-empty v-if="!liveImports.length" description="还没有章节快照" />
           <article v-for="item in liveImports" :key="item.id" class="cartoon-overview__snap">
@@ -114,7 +125,7 @@
 
         <section v-show="tab === 4" class="cartoon-module">
           <h3 class="cartoon-module__title">批量选题</h3>
-          <BatchPanel :project-id="projectId" :science="isScience" />
+          <BatchPanel :project-id="projectId" :science="isLocal" />
         </section>
       </div>
     </div>
@@ -128,19 +139,20 @@ import NovelBriefPanel from '../components/NovelBriefPanel.vue';
 import CopyBlocks from '../components/CopyBlocks.vue';
 import BatchPanel from '../components/BatchPanel.vue';
 import TypePanel from '../components/TypePanel.vue';
+import ExportSpecs from '../components/ExportSpecs.vue';
 import ReviewBox from '../components/ReviewBox.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
+import { hasPanel, isLocalType } from '../lib/contentTypes.js';
 
 const route = useRoute();
 const router = useRouter();
 const projectId = computed(() => route.params.id);
-const isScience = computed(() => detail.value?.project?.content_type === 'ai_science' || detail.value?.project?.content_type === 'ai_commerce');
-const isShort = computed(() => detail.value?.project?.content_type === 'ai_short');
-const isCommerce = computed(() => detail.value?.project?.content_type === 'ai_commerce');
+const isLocal = computed(() => isLocalType(detail.value?.project?.content_type));
+const showPanel = computed(() => hasPanel(detail.value?.project?.content_type));
 const tabs = computed(() => [
   { step: 1, title: '概览' },
-  { step: 2, title: isScience.value ? '本地文案' : '章节快照' },
+  { step: 2, title: isLocal.value ? '本地文案' : '章节快照' },
   { step: 3, title: '分镜' },
   { step: 4, title: '批量' },
 ]);
@@ -149,6 +161,8 @@ const detail = ref(null);
 const styles = ref([]);
 const novelBrief = ref(null);
 const novelLoading = ref(false);
+const shellMembers = ref([]);
+const shellNote = ref('');
 const selectedImportKey = ref('');
 
 const tabTitle = computed(() => tabs.value.find(item => item.step === tab.value)?.title || '概览');
@@ -221,10 +235,21 @@ async function loadNovel(novelId) {
     novelLoading.value = false;
   }
 }
+async function loadShell() {
+  try {
+    const data = await request(`/projects/${projectId.value}/shell-members`);
+    shellMembers.value = data.rows || [];
+    shellNote.value = data.note || '';
+  } catch (err) {
+    shellMembers.value = [];
+    shellNote.value = err.message || '壳上的成员名单暂时读不到';
+  }
+}
 async function load() {
   detail.value = await request(`/projects/${projectId.value}`);
   ensureBoard();
   await loadNovel(detail.value?.project?.source_novel_id);
+  await loadShell();
 }
 watch(tab, value => {
   router.replace({ query: { ...route.query, tab: String(value) } });

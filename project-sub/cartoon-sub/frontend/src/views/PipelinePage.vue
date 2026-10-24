@@ -3,10 +3,7 @@
     <p class="cartoon-module__hint">这里只保存节点和模型参数。运行仍走原来的 Skill、预检和 ComfyUI，不会把生产稿写进故事包。</p>
     <div class="cartoon-module">
       <el-select v-model="contentType" style="width: 180px" @change="load">
-        <el-option label="漫剧" value="ai_comic" />
-        <el-option label="短剧" value="ai_short" />
-        <el-option label="科普" value="ai_science" />
-        <el-option label="电商" value="ai_commerce" />
+        <el-option v-for="item in CONTENT_TYPES" :key="item.id" :label="item.label" :value="item.id" />
       </el-select>
     </div>
 
@@ -81,6 +78,7 @@ import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
+import { CONTENT_TYPES } from '../lib/contentTypes.js';
 
 const route = useRoute();
 const contentType = ref(route.params.contentType || 'ai_comic');
