@@ -3,6 +3,7 @@
 const Service = require('egg').Service;
 const { Op } = require('sequelize');
 const { formatDateTime } = require('../lib/formatDateTime');
+const { CHAPTER_MIN, planChapters, bookWordsFromContext } = require('../lib/chapterPlan');
 
 const NOVEL_INCLUDES = [
   { association: 'genreCategory', attributes: ['id', 'name'] },
@@ -99,6 +100,7 @@ class NovelService extends Service {
       themes = ids.length ? await ThemeCategory.findAll({ where: { id: { [Op.in]: ids } } }) : [];
     }
 
+    delete next.ai_record;
     delete next.theme_ids;
     delete next.themes;
     delete next.genre_path;
@@ -137,9 +139,13 @@ class NovelService extends Service {
   }
 
   async create(payload) {
+    const aiRecord = payload?.ai_record;
     const { fields, themes } = await this.resolveEnumFields(payload);
     const row = await this.ctx.model.Novel.create(fields);
     if (themes) await row.setThemes(themes);
+    if (aiRecord?.source === 'ai') {
+      await this.ctx.service.generationRecord.captureBasic(row.id, {}, fields);
+    }
     return this.findById(row.id);
   }
 
@@ -171,9 +177,21 @@ class NovelService extends Service {
   async update(id, payload) {
     const row = await this.ctx.model.Novel.findByPk(id);
     if (!row) return null;
-    const { fields, themes } = await this.resolveEnumFields(payload);
+    const aiRecord = payload?.ai_record;
+    const clean = { ...(payload || {}) };
+    delete clean.ai_record;
+    const before = {
+      title: row.title,
+      creative_intent: row.creative_intent,
+      summary: row.summary,
+      story_overview: row.story_overview,
+    };
+    const { fields, themes } = await this.resolveEnumFields(clean);
     await row.update(fields);
     if (themes) await row.setThemes(themes);
+    if (aiRecord?.source === 'ai') {
+      await this.ctx.service.generationRecord.captureBasic(id, before, { ...before, ...fields });
+    }
     return this.findById(id);
   }
 
@@ -215,8 +233,15 @@ class NovelService extends Service {
   async updateSetting(id, patch) {
     const row = await this.ctx.model.Novel.findByPk(id);
     if (!row) return null;
-    const next = this.mergeSettingJson(row.setting_json, patch);
+    const aiRecord = patch?.ai_record;
+    const clean = { ...(patch || {}) };
+    delete clean.ai_record;
+    const before = row.setting_json || {};
+    const next = this.mergeSettingJson(before, clean);
     await row.update({ setting_json: next });
+    if (aiRecord?.source === 'ai') {
+      await this.ctx.service.generationRecord.captureSetting(id, before, next, Object.keys(clean));
+    }
     return next;
   }
 
@@ -284,12 +309,21 @@ class NovelService extends Service {
     }
     const outlineTarget = this.outlineWordTarget(setting);
     const target = outlineTarget > 0 ? outlineTarget : this.estimateBookWordTarget(novelRow);
-    const percent = target > 0 ? Math.min(100, Math.max(0, Math.round((written / target) * 100))) : 0;
+    const plan = planChapters(bookWordsFromContext({
+      basic: { length: novelRow?.lengthCategory || {} },
+      outline: setting?.outline,
+    }));
+    const qualified = chapters.filter((ch) => (byId.get(ch.id) || 0) >= CHAPTER_MIN).length;
+    const denominator = chapters.length || plan.count;
+    const percent = denominator > 0 ? Math.min(100, Math.round((qualified / denominator) * 100)) : 0;
     return {
       word_count: written,
       word_target: target,
       chapter_written: done,
-      chapter_total: chapters.length,
+      chapter_qualified: qualified,
+      chapter_total: chapters.length || plan.count,
+      chapter_plan: plan.count,
+      chapter_words: plan.per_chapter,
       progress_percent: percent,
     };
   }
@@ -432,13 +466,17 @@ class NovelService extends Service {
 
   estimateChapterWordTarget(novelRow, chapterCount, outlineNode) {
     const fromOutline = Number(outlineNode?.word_target) || 0;
-    if (fromOutline > 0) return fromOutline;
+    if (fromOutline >= CHAPTER_MIN && fromOutline <= 3500) return fromOutline;
     const length = novelRow?.lengthCategory;
     const min = Number(length?.min_words) || 0;
     const max = Number(length?.max_words) || 0;
     const mid = min && max ? Math.round((min + max) / 2) : (min || max || 80000);
-    const n = Math.max(Number(chapterCount) || 1, 1);
-    return Math.max(1500, Math.round(mid / n));
+    const plan = planChapters(mid);
+    const count = Math.max(Number(chapterCount) || plan.count || 1, 1);
+    const per = Math.round(mid / count);
+    if (per < CHAPTER_MIN) return CHAPTER_MIN;
+    if (per > 3500) return 3500;
+    return per;
   }
 
   formatNextOutline(next) {
@@ -576,7 +614,7 @@ class NovelService extends Service {
     return this.getChapterWriteContext(novelId, chapterId);
   }
 
-  async upsertChapterBody(novelId, chapterId, body) {
+  async upsertChapterBody(novelId, chapterId, body, options = {}) {
     const row = await this.ctx.model.Novel.findByPk(novelId);
     if (!row) return null;
     const chapters = this.listSettingChapters(row.setting_json);
@@ -593,9 +631,18 @@ class NovelService extends Service {
       where: { novel_id: novelId, chapter_id: chapterId },
       defaults: { body: text, word_count: wordCount },
     });
+    const beforeText = record.body || '';
     if (record.body !== text || record.word_count !== wordCount) {
       await record.update({ body: text, word_count: wordCount });
     }
+    if (options.aiRecord?.source === 'ai' && beforeText !== text) {
+      await this.ctx.service.generationRecord.captureBody(novelId, current, beforeText, text);
+    }
+    await this.ctx.service.novelAnomaly.syncShortChapter(novelId, {
+      id: current.id,
+      title: current.title,
+      word_count: wordCount,
+    });
     return this.getChapterWriteContext(novelId, chapterId);
   }
 }

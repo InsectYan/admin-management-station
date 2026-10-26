@@ -25,6 +25,7 @@ const {
   slimCatalogForAgent,
 } = require('../lib/aiBoundContext');
 const { enrichWriterContext } = require('../lib/writerContext');
+const { planChapters, bookWordsFromContext, alignGeneratedChapters } = require('../lib/chapterPlan');
 
 function toPublicMessage(row) {
   return withFormattedTimes(row);
@@ -57,6 +58,14 @@ function throwIfEmptyTargets(targetFields) {
 }
 
 class AiTurnService extends require('egg').Service {
+  noteChapterPlan(patch, notices, boundContext, targetFields) {
+    const wantsChapters = (targetFields || []).some((field) => String(field).includes('chapters'));
+    if (!wantsChapters || !Array.isArray(patch?.chapters)) return;
+    const aligned = alignGeneratedChapters(patch.chapters, boundContext.chapter_plan);
+    patch.chapters = aligned.chapters;
+    if (aligned.notice) notices.push(aligned.notice);
+  }
+
   async prepare(sessionId, body = {}) {
     const session = await this.ctx.service.aiSession.get(sessionId);
     const spec = resolveScene(body.scene);
@@ -105,19 +114,47 @@ class AiTurnService extends require('egg').Service {
 
     const lengthId = pickLengthId(boundContext);
     boundContext = hydrateBoundContext(boundContext, catalog);
+    const chapterPlan = planChapters(bookWordsFromContext(boundContext));
+    boundContext.chapter_plan = chapterPlan;
+    if (spec.feature_key === 'chapter') {
+      const current = Number(boundContext.word_target) || 0;
+      if (current < chapterPlan.min || current > chapterPlan.max) {
+        boundContext.word_target = chapterPlan.per_chapter;
+      }
+    }
 
     if (spec.feature_key === 'orchestrate') {
       let coverage = boundContext.coverage;
-      if (!coverage && session.novel_id) {
+      if (session.novel_id) {
         const novel = await this.ctx.service.novel.findById(session.novel_id);
         const setting = novel ? await this.ctx.service.novel.getSetting(session.novel_id) : {};
         const meta = novel ? await this.ctx.service.novel.listChapterMeta(session.novel_id) : [];
         const bodiesComplete = Array.isArray(meta) && meta.length > 0
           && meta.every((row) => Number(row.word_count) > 0);
-        coverage = coverageFromNovel(novel, setting || {}, { bodiesComplete });
+        const [plotlineCount, scriptCount, intentCount] = await Promise.all([
+          this.ctx.model.Plotline.count({ where: { novel_id: session.novel_id } }),
+          this.ctx.model.StoryScript.count({ where: { novel_id: session.novel_id } }),
+          this.ctx.model.StoryIntentShot.count({ where: { novel_id: session.novel_id } }),
+        ]);
+        coverage = coverageFromNovel(novel, setting || {}, {
+          bodiesComplete,
+          plotlineCount,
+          scriptCount,
+          intentCount,
+        });
       }
       boundContext.coverage = coverage || {
-        basic: false, world: false, factions: false, characters: false, outline: false, content: false, bodies: false,
+        basic: false,
+        world: false,
+        factions: false,
+        characters: false,
+        style: false,
+        plotline: false,
+        outline: false,
+        script: false,
+        intent: false,
+        content: false,
+        bodies: false,
       };
     }
 
@@ -237,6 +274,7 @@ class AiTurnService extends require('egg').Service {
     const patch = sanitizePatch(writer.patch, catalog, targetFields, notices, {
       coverage: boundContext.coverage,
     });
+    this.noteChapterPlan(patch, notices, boundContext, targetFields);
     const wordWarn = outlineWordWarning(patch.volumes, catalog, lengthId);
     if (wordWarn) notices.push(wordWarn);
     const thinkingText = [brainstorm.thinking, writer.thinking].filter(Boolean).join('\n\n').trim();
@@ -333,6 +371,7 @@ class AiTurnService extends require('egg').Service {
     const patch = sanitizePatch(writer.patch, catalog, targetFields, notices, {
       coverage: boundContext.coverage,
     });
+    this.noteChapterPlan(patch, notices, boundContext, targetFields);
     const wordWarn = outlineWordWarning(patch.volumes, catalog, lengthId);
     if (wordWarn) notices.push(wordWarn);
     const thinkingText = [brainstorm.thinking, writer.thinking].filter(Boolean).join('\n\n').trim()

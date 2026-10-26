@@ -3,9 +3,17 @@ export const WIZARD_STEPS = [
   { step: 2, key: 'world', title: '世界观设定' },
   { step: 3, key: 'factions', title: '门派组织' },
   { step: 4, key: 'characters', title: '人物设定' },
-  { step: 5, key: 'outline', title: '篇幅大纲' },
-  { step: 6, key: 'content', title: '章节目录', hint: '编排章节标题、顺序与场次倾向，不含门派设定' },
+  { step: 5, key: 'style', title: '风格' },
+  { step: 6, key: 'plotline', title: '剧情线' },
+  { step: 7, key: 'outline', title: '篇幅大纲' },
+  { step: 8, key: 'script', title: '剧本' },
+  { step: 9, key: 'intent', title: '叙事分镜' },
+  { step: 10, key: 'content', title: '章节目录', hint: '编排章节标题、顺序与场次倾向，不含门派设定' },
 ];
+
+export function wizardStepOf(key) {
+  return WIZARD_STEPS.find((item) => item.key === key)?.step || 1;
+}
 
 export const WIZARD_STEP_MAX = WIZARD_STEPS.length;
 
@@ -286,19 +294,20 @@ export function buildSettingPatch({
 }
 
 export function buildStepSettingPatch(step, forms) {
-  switch (step) {
-    case 2:
+  const key = WIZARD_STEPS.find((item) => item.step === step)?.key;
+  switch (key) {
+    case 'world':
       return { world: { ...forms.worldForm } };
-    case 3:
+    case 'factions':
       return { factions: [...(forms.factions || [])] };
-    case 4:
+    case 'characters':
       return {
         characters: [...forms.characters],
         character_edges: [...(forms.characterEdges || [])],
       };
-    case 5:
+    case 'outline':
       return { outline: { volumes: forms.outlineForm.volumes || [] } };
-    case 6:
+    case 'content':
       return { chapters: [...(forms.contentForm.chapters || [])] };
     default:
       return {};

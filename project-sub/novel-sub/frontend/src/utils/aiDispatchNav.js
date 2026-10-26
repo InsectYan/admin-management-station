@@ -1,9 +1,11 @@
+import { STUDIO_TAB } from './novelDetail.js';
+
 export function routeAfterDispatch(result = {}) {
   const novelId = result.novel_id;
   if (novelId == null) return null;
   const planSession = result.plan_session_id ? String(result.plan_session_id) : '';
-  if (result.tab === 7 || result.feature_key === 'chapter') {
-    const query = { tab: '7', ai: '1' };
+  if (result.tab === STUDIO_TAB || result.feature_key === 'chapter') {
+    const query = { tab: String(STUDIO_TAB), ai: '1' };
     if (result.chapter_id) query.chapter = String(result.chapter_id);
     if (planSession) query.plan_session = planSession;
     return {

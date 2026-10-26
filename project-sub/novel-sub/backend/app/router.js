@@ -17,6 +17,7 @@ module.exports = (app) => {
   router.put('/api/novels/:id', controller.novel.update);
   router.put('/api/novels/:id/style', controller.novel.setStyle);
   router.delete('/api/novels/:id', controller.novel.destroy);
+  router.get('/api/novels/:id/generation-records', controller.novel.generationRecords);
   router.get('/api/novels/:id/setting', controller.novel.getSetting);
   router.put('/api/novels/:id/setting', controller.novel.updateSetting);
   router.get('/api/novels/:id/chapters', controller.novel.listChapterMeta);

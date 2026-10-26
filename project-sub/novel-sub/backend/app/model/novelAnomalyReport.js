@@ -22,6 +22,8 @@ module.exports = (app) => {
     app.model.NovelAnomalyReport.belongsTo(app.model.Novel, {
       foreignKey: 'novel_id',
       as: 'novel',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
     });
   };
 

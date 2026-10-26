@@ -67,7 +67,9 @@ const page = ref(1);
 const pageSize = ref(20);
 
 function modeLabel(mode) {
-  return mode === 'full' ? '全面检测' : '粗略检测';
+  if (mode === 'full') return '全面检测';
+  if (mode === 'chapter_length') return '章节字数';
+  return '粗略检测';
 }
 
 function statusLabel(status) {

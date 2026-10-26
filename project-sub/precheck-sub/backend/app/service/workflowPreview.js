@@ -184,14 +184,134 @@ class WorkflowPreviewService extends Service {
     }
     const state = {
       status: 'running',
+      phase: 'queued',
       prompt_id: submitted.prompt_id,
       error: '',
       media_kind: '',
       file_name: '',
+      progress_percent: 0,
+      progress_value: 0,
+      progress_max: 0,
+      queue_ahead: 0,
+      node: '',
+      submitted: this.summarizeValues(values),
       updated_at: new Date().toISOString(),
     };
     await this.writeState(workflowId, draftKey, state);
+    this.ensureWatcher();
     return state;
+  }
+
+  summarizeValues(values) {
+    return (values || []).map((field) => {
+      if (field?.type === 'image') {
+        return { label: field.label || '图片', type: 'image', text: field.filename || '已上传图片' };
+      }
+      const text = String(field?.value ?? '').trim();
+      if (!text) return null;
+      return {
+        label: field.label || field.key || '参数',
+        type: field.type || 'text',
+        text: text.length > 180 ? `${text.slice(0, 180)}…` : text,
+      };
+    }).filter(Boolean);
+  }
+
+  progressStore() {
+    if (!this.app.precheckPromptProgress) this.app.precheckPromptProgress = new Map();
+    return this.app.precheckPromptProgress;
+  }
+
+  ensureWatcher() {
+    if (this.app.precheckComfyWatch) return;
+    const WS = global.WebSocket;
+    if (typeof WS !== 'function') {
+      this.app.precheckComfyWatch = { disabled: true };
+      return;
+    }
+    const store = this.progressStore();
+    const url = `${this.comfyBase().replace(/^http/, 'ws')}/ws?clientId=precheck-watch`;
+    const open = () => {
+      let socket;
+      try {
+        socket = new WS(url);
+      } catch (err) {
+        this.app.logger.warn('[precheck] progress socket %s', err.message);
+        setTimeout(open, 5000);
+        return;
+      }
+      socket.addEventListener('message', (event) => {
+        let msg;
+        try { msg = JSON.parse(event.data); } catch { return; }
+        const data = msg?.data || {};
+        const promptId = data.prompt_id;
+        if (!promptId) return;
+        const current = store.get(promptId) || { value: 0, max: 0, node: '', phase: 'running' };
+        if (msg.type === 'progress') {
+          store.set(promptId, {
+            ...current,
+            value: Number(data.value) || 0,
+            max: Number(data.max) || 0,
+            node: data.node || current.node,
+            phase: 'running',
+          });
+        } else if (msg.type === 'executing') {
+          store.set(promptId, {
+            ...current,
+            node: data.node || '',
+            phase: data.node ? 'running' : current.phase,
+          });
+        }
+      });
+      socket.addEventListener('close', () => setTimeout(open, 3000));
+      this.app.precheckComfySocket = socket;
+    };
+    this.app.precheckComfyWatch = { started: true };
+    open();
+  }
+
+  async queueOf(promptId) {
+    try {
+      const res = await fetch(`${this.comfyBase()}/queue`, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) return null;
+      const body = await res.json();
+      const running = body.queue_running || [];
+      const pending = body.queue_pending || [];
+      if (running.some((row) => row?.[1] === promptId)) return { phase: 'running', ahead: 0 };
+      const index = pending.findIndex((row) => row?.[1] === promptId);
+      if (index >= 0) return { phase: 'queued', ahead: index + 1 };
+      return { phase: 'unknown', ahead: 0 };
+    } catch (err) {
+      this.ctx.logger.warn('[precheck] queue %s', err.message);
+      return null;
+    }
+  }
+
+  async decorate(state, workflowId, draftKey) {
+    if (!state || state.status !== 'running' || !state.prompt_id) return state;
+    this.ensureWatcher();
+    const live = this.progressStore().get(state.prompt_id);
+    const queue = await this.queueOf(state.prompt_id);
+    const max = live && Number(live.max) > 0 ? Number(live.max) : (Number(state.progress_max) || 0);
+    const value = live && Number.isFinite(Number(live.value)) ? Number(live.value) : (Number(state.progress_value) || 0);
+    const percent = max > 0 ? Math.min(99, Math.round((value / max) * 100)) : 0;
+    const phase = queue?.phase === 'queued' ? 'queued' : (live?.phase || (queue?.phase === 'running' ? 'running' : state.phase || 'running'));
+    const next = {
+      ...state,
+      phase,
+      queue_ahead: queue?.ahead || 0,
+      progress_value: value,
+      progress_max: max,
+      progress_percent: percent,
+      node: live?.node || state.node || '',
+    };
+    const changed = next.phase !== state.phase
+      || next.queue_ahead !== state.queue_ahead
+      || next.progress_value !== state.progress_value
+      || next.progress_max !== state.progress_max
+      || next.node !== state.node;
+    if (changed) await this.writeState(workflowId, draftKey, next);
+    return next;
   }
 
   async writeState(workflowId, draftKey, state) {
@@ -217,7 +337,7 @@ class WorkflowPreviewService extends Service {
     if (state.status === 'running' && state.prompt_id) {
       state = await this.settle(workflowId, draftKey, state);
     }
-    return state;
+    return this.decorate(state, workflowId, draftKey);
   }
 
   async settle(workflowId, draftKey, state) {

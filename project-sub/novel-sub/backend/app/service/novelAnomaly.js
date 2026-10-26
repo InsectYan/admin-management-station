@@ -8,6 +8,7 @@ const {
   normalizeChapterOrder,
   relinkOutline,
 } = require('../lib/novelInspect');
+const { STUDIO_TAB } = require('../lib/aiPlan');
 
 class NovelAnomalyService extends Service {
   serialize(row) {
@@ -142,6 +143,73 @@ class NovelAnomalyService extends Service {
     task.status = status === 'done' ? 'done' : 'failed';
     task.error = status === 'done' ? '' : String(error || '').slice(0, 300);
     await this.saveTasks(row, tasks);
+    return this.findById(row.id);
+  }
+
+  async syncShortChapter(novelId, chapter) {
+    const wordCount = Number(chapter?.word_count) || 0;
+    const chapterId = String(chapter?.id || '');
+    if (!chapterId) return null;
+    const existing = await this.ctx.model.NovelAnomalyReport.findOne({
+      where: { novel_id: novelId, mode: 'chapter_length', status: 'open' },
+      order: [['id', 'DESC']],
+    });
+    let findings = Array.isArray(existing?.findings_json) ? existing.findings_json.filter((item) => item.chapter_id !== chapterId) : [];
+    if (wordCount > 0 && wordCount < 2500) {
+      findings.push({
+        id: `f_word_short_${chapterId}`,
+        code: 'word_short',
+        severity: 'error',
+        chapter_id: chapterId,
+        chapter_title: chapter.title || '未命名章节',
+        message: `「${chapter.title || '未命名章节'}」不足 2500 字`,
+        detail: `单章应在 2500–3500 字。当前 ${wordCount} 字，记为工作异常。`,
+        evidence: String(wordCount),
+      });
+    }
+    const tasks = findings.map((item) => ({
+      id: `task_rewrite_${item.chapter_id}`,
+      action: 'rewrite_chapter',
+      module: 'studio',
+      tab: STUDIO_TAB,
+      chapter_id: item.chapter_id,
+      label: `重写「${item.chapter_title || '未命名章节'}」`,
+      detail: item.detail,
+      status: 'pending',
+    }));
+    if (!findings.length) {
+      if (!existing) return null;
+      await existing.update({
+        status: 'done',
+        issue_count: 0,
+        findings_json: [],
+        tasks_json: [],
+        summary: '章节字数已回到 2500 字以上',
+      });
+      return this.findById(existing.id);
+    }
+    const summary = `${findings.length} 章不足 2500 字，已记入小说异常`;
+    if (existing) {
+      await existing.update({
+        status: 'open',
+        issue_count: findings.length,
+        word_floor: 2500,
+        findings_json: findings,
+        tasks_json: tasks,
+        summary,
+      });
+      return this.findById(existing.id);
+    }
+    const row = await this.ctx.model.NovelAnomalyReport.create({
+      novel_id: novelId,
+      mode: 'chapter_length',
+      status: 'open',
+      summary,
+      issue_count: findings.length,
+      word_floor: 2500,
+      findings_json: findings,
+      tasks_json: tasks,
+    });
     return this.findById(row.id);
   }
 

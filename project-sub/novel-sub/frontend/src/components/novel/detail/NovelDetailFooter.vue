@@ -11,10 +11,11 @@
         :show-text="false"
         color="#2F8A5B"
       />
-      <p class="novel-detail-footer__note">百分比是已写字数 / 大纲规划字数，不是已写章数。连载中是书的进度标记。</p>
+      <p class="novel-detail-footer__note">进度是已达到 2500 字的章节占章节目录的比例。章节数按全书字数划分，每章 2500–3500 字。</p>
     </div>
     <div class="novel-detail-footer__stats">
-      <span>已写 {{ progress.chapterWritten || 0 }}/{{ progress.chapterCount || 0 }} 章</span>
+      <span>达标 {{ progress.chapterQualified || 0 }}/{{ progress.chapterCount || 0 }} 章</span>
+      <span v-if="progress.chapterPlan">按字数应有 {{ progress.chapterPlan }} 章</span>
       <span>{{ (progress.wordCount || 0).toLocaleString() }} 字</span>
       <span v-if="progress.wordTarget">规划 {{ progress.wordTarget.toLocaleString() }} 字</span>
     </div>

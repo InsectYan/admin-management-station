@@ -1,15 +1,19 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { fetchNovel } from '../services/novelService.js';
+import { fetchIntentShots, fetchNovel, fetchPlotlines, fetchScripts } from '../services/novelService.js';
 import {
   createBasicInfoForm,
   createContentForm,
   createOutlineForm,
   createWorldForm,
+  WIZARD_STEP_MAX,
+  wizardStepOf,
 } from '../utils/novelCreateSchema.js';
 import {
   DETAIL_TABS,
   DETAIL_TAB_MAX,
+  READER_TAB,
+  STUDIO_TAB,
   parseNovelDetail,
   buildProgressMeta,
   tabFilled,
@@ -39,6 +43,7 @@ export function useNovelDetail() {
     updated_at: '',
     status: '',
     project_kind: 'novel',
+    style_preset: '',
   });
 
   const tabMeta = computed(() => DETAIL_TABS.find((t) => t.step === currentTab.value));
@@ -48,9 +53,18 @@ export function useNovelDetail() {
     contentForm,
   }));
 
+  const storyMarks = ref({ plotline: false, script: false, intent: false });
+
   const filledMap = computed(() => {
     const snapshot = {
-      basic, worldForm, factions: factions.value, characters: characters.value, outlineForm, contentForm,
+      basic,
+      worldForm,
+      factions: factions.value,
+      characters: characters.value,
+      outlineForm,
+      contentForm,
+      stylePreset: novelMeta.style_preset,
+      story: storyMarks.value,
     };
     return Object.fromEntries(DETAIL_TABS.map((t) => [t.key, tabFilled(t.key, snapshot)]));
   });
@@ -63,6 +77,9 @@ export function useNovelDetail() {
     basic.word_target = Number(novel.word_target) || 0;
     basic.chapter_written = Number(novel.chapter_written) || 0;
     basic.chapter_total = Number(novel.chapter_total) || 0;
+    basic.chapter_qualified = Number(novel.chapter_qualified) || 0;
+    basic.chapter_plan = Number(novel.chapter_plan) || 0;
+    basic.chapter_words = Number(novel.chapter_words) || 0;
     Object.assign(worldForm, parsed.worldForm);
     factions.value = parsed.factions || [];
     characters.value = parsed.characters;
@@ -74,6 +91,24 @@ export function useNovelDetail() {
     novelMeta.updated_at = formatDateTime(novel.updated_at);
     novelMeta.status = novel.status || '';
     novelMeta.project_kind = novel.project_kind || 'novel';
+    novelMeta.style_preset = novel.style_preset || '';
+  }
+
+  async function loadStoryMarks(id) {
+    try {
+      const [lines, scripts, shots] = await Promise.all([
+        fetchPlotlines(id),
+        fetchScripts(id),
+        fetchIntentShots(id),
+      ]);
+      storyMarks.value = {
+        plotline: (lines || []).length > 0,
+        script: (scripts || []).length > 0,
+        intent: (shots || []).length > 0,
+      };
+    } catch {
+      storyMarks.value = { plotline: false, script: false, intent: false };
+    }
   }
 
   async function loadNovel(id = novelId.value) {
@@ -86,6 +121,7 @@ export function useNovelDetail() {
     try {
       const novel = await fetchNovel(id);
       applyNovel(novel);
+      loadStoryMarks(id);
     } catch (e) {
       loadError.value = e.message || '加载详情失败';
     } finally {
@@ -103,12 +139,12 @@ export function useNovelDetail() {
       tab: String(currentTab.value),
       ...extra,
     };
-    if (currentTab.value === 7 && currentChapterId.value) {
+    if (currentTab.value === STUDIO_TAB && currentChapterId.value) {
       query.chapter = currentChapterId.value;
     } else {
       delete query.chapter;
     }
-    if (currentTab.value !== 7) delete query.queue;
+    if (currentTab.value !== STUDIO_TAB) delete query.queue;
     router.replace({ query });
   }
 
@@ -132,7 +168,7 @@ export function useNovelDetail() {
 
   function goToWizard(step = currentTab.value, extra = {}) {
     if (!novelId.value) return;
-    const wizardStep = step >= 7 ? 6 : step;
+    const wizardStep = step > WIZARD_STEP_MAX ? wizardStepOf('content') : step;
     router.push({
       name: 'novel-create',
       query: {
@@ -140,7 +176,7 @@ export function useNovelDetail() {
         step: String(wizardStep),
         from: 'detail',
         detailTab: String(currentTab.value),
-        ...(currentTab.value === 7 && currentChapterId.value
+        ...(currentTab.value === STUDIO_TAB && currentChapterId.value
           ? { detailChapter: currentChapterId.value }
           : {}),
         ...extra,
@@ -150,12 +186,12 @@ export function useNovelDetail() {
 
   function goToStudioChapter(id) {
     currentChapterId.value = id || '';
-    currentTab.value = 7;
+    currentTab.value = STUDIO_TAB;
     syncQuery();
   }
 
   function goToReader() {
-    currentTab.value = 8;
+    currentTab.value = READER_TAB;
     syncQuery();
   }
 
@@ -165,7 +201,7 @@ export function useNovelDetail() {
   }
 
   const startQueue = computed(() => (
-    currentTab.value === 7 && String(route.query.queue || '') === '1'
+    currentTab.value === STUDIO_TAB && String(route.query.queue || '') === '1'
   ));
 
   function clearQueueQuery() {
@@ -189,7 +225,7 @@ export function useNovelDetail() {
 
   function onChapterChange(id) {
     currentChapterId.value = id || '';
-    if (currentTab.value === 7) syncQuery();
+    if (currentTab.value === STUDIO_TAB) syncQuery();
   }
 
   watch(

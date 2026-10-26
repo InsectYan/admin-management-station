@@ -58,8 +58,18 @@ async function choose(presetId) {
   }
 }
 
+async function applyFromPatch(patch) {
+  const id = String(patch?.style_preset || patch?.style?.id || '').trim();
+  if (!id) {
+    ElMessage.info('这一轮没有可选的风格');
+    return;
+  }
+  await choose(id);
+}
+
 watch(() => props.novelId, () => load().catch(err => ElMessage.error(err.message)));
 onMounted(() => load().catch(err => ElMessage.error(err.message)));
+defineExpose({ applyFromPatch });
 </script>
 
 <style scoped>

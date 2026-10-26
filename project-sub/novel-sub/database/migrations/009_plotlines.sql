@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS plotlines (
   name VARCHAR(100) NOT NULL,
   kind VARCHAR(32) NOT NULL DEFAULT 'main',
   status VARCHAR(20) NOT NULL DEFAULT 'open',
+  summary VARCHAR(800) NOT NULL DEFAULT '',
   plant_chapter_id VARCHAR(80) NOT NULL DEFAULT '',
   payoff_chapter_id VARCHAR(80) NOT NULL DEFAULT '',
   events JSONB NOT NULL DEFAULT '[]',

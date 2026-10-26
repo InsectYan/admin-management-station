@@ -26,6 +26,14 @@ const FACTION_KINDS = new Set(['sect', 'clan', 'nation', 'force', 'other']);
 const FACTION_ALIGNMENTS = new Set(['righteous', 'evil', 'neutral']);
 const CHAPTER_BODY_FIELDS = ['body'];
 const PLAN_FIELDS = ['tasks'];
+const STYLE_FIELDS = ['style_preset'];
+const PLOTLINE_FIELDS = ['plotlines'];
+const SCRIPT_FIELDS = ['script'];
+const INTENT_FIELDS = ['intent_shots'];
+const STYLE_IDS = new Set(['serious', 'power', 'sweet', 'suspense', 'comedy']);
+const PLOTLINE_KINDS = new Set(['main', 'side', 'foreshadow', 'emotion']);
+const PLOTLINE_STATUSES = new Set(['open', 'active', 'resolved', 'dropped']);
+const SCRIPT_VARIANTS = new Set(['comic', 'short_drama']);
 const CHAR_NESTED_RE = /^characters\[([^\]]+)\]\.(name|role|personality|background|goal|relations)$/;
 const GENERATABLE_FIELDS = [
   ...BASIC_FIELDS,
@@ -36,6 +44,10 @@ const GENERATABLE_FIELDS = [
   ...FACTION_FIELDS,
   ...CHAPTER_BODY_FIELDS,
   ...PLAN_FIELDS,
+  ...STYLE_FIELDS,
+  ...PLOTLINE_FIELDS,
+  ...SCRIPT_FIELDS,
+  ...INTENT_FIELDS,
 ];
 
 function slimCatalog(tree = {}) {
@@ -322,6 +334,85 @@ function nestedAllowMeta(allowedFields) {
   return { ids, fields };
 }
 
+function sanitizeStylePreset(value) {
+  const id = String(value || '').trim();
+  return STYLE_IDS.has(id) ? id : '';
+}
+
+function sanitizePlotlines(raw) {
+  if (!Array.isArray(raw)) return undefined;
+  const list = [];
+  const seen = new Set();
+  for (const row of raw) {
+    const name = clipText(row?.name, 100);
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    list.push({
+      name,
+      kind: PLOTLINE_KINDS.has(row?.kind) ? row.kind : 'main',
+      status: PLOTLINE_STATUSES.has(row?.status) ? row.status : 'open',
+      summary: clipText(row?.summary, 800),
+    });
+    if (list.length >= 12) break;
+  }
+  return list.length ? list : undefined;
+}
+
+function sanitizeScriptPatch(raw) {
+  const script = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : null;
+  if (!script) return undefined;
+  const scenes = [];
+  for (const scene of Array.isArray(script.scenes) ? script.scenes : []) {
+    const location = clipText(scene?.location, 80);
+    const dialogue = clipText(scene?.dialogue, 2000);
+    const action = clipText(scene?.action, 2000);
+    const characters = clipText(
+      Array.isArray(scene?.characters) ? scene.characters.join('、') : scene?.characters,
+      200,
+    );
+    if (!location && !dialogue && !action && !characters) continue;
+    scenes.push({
+      interior: scene?.interior === 'out' || scene?.interior === '外' ? 'out' : 'in',
+      location,
+      characters,
+      dialogue,
+      action,
+    });
+    if (scenes.length >= 24) break;
+  }
+  if (!scenes.length) return undefined;
+  return {
+    title: clipText(script.title, 80) || '大纲剧本',
+    variant: SCRIPT_VARIANTS.has(script.variant) ? script.variant : 'comic',
+    scenes,
+  };
+}
+
+function sanitizeIntentShots(raw) {
+  if (!Array.isArray(raw)) return undefined;
+  const list = [];
+  for (const row of raw) {
+    const intent = clipText(row?.intent, 400);
+    const dialogue = clipText(row?.dialogue, 800);
+    const location = clipText(row?.location, 80);
+    if (!intent && !dialogue && !location) continue;
+    const names = Array.isArray(row?.characters)
+      ? row.characters.map((name) => clipText(name, 40)).filter(Boolean)
+      : clipText(row?.characters, 200).split(/[、,，]/).map((item) => item.trim()).filter(Boolean);
+    list.push({
+      sort_order: Number(row?.sort_order) || list.length + 1,
+      scene_order: Number(row?.scene_order) || 1,
+      intent,
+      dialogue,
+      emotion: clipText(row?.emotion, 40),
+      location,
+      characters: names.slice(0, 8),
+    });
+    if (list.length >= 40) break;
+  }
+  return list.length ? list : undefined;
+}
+
 function sanitizePatch(raw, _catalog, allowedFields, notices = [], options = {}) {
   const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const requested = allowedFields && allowedFields.length ? allowedFields : GENERATABLE_FIELDS;
@@ -391,6 +482,23 @@ function sanitizePatch(raw, _catalog, allowedFields, notices = [], options = {})
     const coverage = options.coverage || {};
     const tasks = sanitizeTasks(source.tasks, coverage);
     if (tasks.length) out.tasks = tasks;
+  }
+
+  if (allow.has('style_preset')) {
+    const preset = sanitizeStylePreset(source.style_preset || source.style?.id);
+    if (preset) out.style_preset = preset;
+  }
+  if (allow.has('plotlines')) {
+    const plotlines = sanitizePlotlines(source.plotlines);
+    if (plotlines) out.plotlines = plotlines;
+  }
+  if (allow.has('script')) {
+    const script = sanitizeScriptPatch(source.script);
+    if (script) out.script = script;
+  }
+  if (allow.has('intent_shots')) {
+    const shots = sanitizeIntentShots(source.intent_shots || source.shots);
+    if (shots) out.intent_shots = shots;
   }
   return out;
 }
@@ -582,6 +690,10 @@ module.exports = {
   FACTION_FIELDS,
   CHAPTER_BODY_FIELDS,
   PLAN_FIELDS,
+  STYLE_FIELDS,
+  PLOTLINE_FIELDS,
+  SCRIPT_FIELDS,
+  INTENT_FIELDS,
   GENERATABLE_FIELDS,
   isCharacterNestedPath,
   filterGeneratableFields,

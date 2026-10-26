@@ -7,8 +7,8 @@
         <p>{{ report?.summary || '加载中' }}</p>
       </div>
       <div class="anomaly-detail__actions">
-        <el-tag :type="report?.mode === 'full' ? 'warning' : 'info'" effect="light">
-          {{ report?.mode === 'full' ? '全面检测' : '粗略检测' }}
+        <el-tag :type="report?.mode === 'full' ? 'warning' : (report?.mode === 'chapter_length' ? 'danger' : 'info')" effect="light">
+          {{ report?.mode === 'full' ? '全面检测' : (report?.mode === 'chapter_length' ? '章节字数' : '粗略检测') }}
         </el-tag>
         <el-button v-if="report?.novel_id" @click="goNovel">打开小说</el-button>
         <el-button type="primary" :disabled="!tasks.length" @click="startFix">修正</el-button>
@@ -57,6 +57,8 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { fetchAnomalyReport } from '../services/novelService.js';
+import { READER_TAB, STUDIO_TAB } from '../utils/novelDetail.js';
+import { wizardStepOf } from '../utils/novelCreateSchema.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -82,7 +84,7 @@ function goList() {
 }
 
 function goNovel() {
-  router.push({ name: 'novel-detail', params: { id: report.value.novel_id }, query: { tab: '8' } });
+  router.push({ name: 'novel-detail', params: { id: report.value.novel_id }, query: { tab: String(READER_TAB) } });
 }
 
 async function startFix() {
@@ -107,7 +109,7 @@ async function startFix() {
       name: 'novel-create',
       query: {
         id: String(report.value.novel_id),
-        step: '6',
+        step: String(wizardStepOf('content')),
         anomaly: String(report.value.id),
         fix: '1',
       },
@@ -118,7 +120,7 @@ async function startFix() {
     name: 'novel-detail',
     params: { id: String(report.value.novel_id) },
     query: {
-      tab: '7',
+      tab: String(STUDIO_TAB),
       chapter: first.chapter_id || '',
       anomaly: String(report.value.id),
       fix: '1',

@@ -8,6 +8,7 @@ module.exports = (app) => {
     name: { type: STRING(100), allowNull: false },
     kind: { type: STRING(32), allowNull: false, defaultValue: 'main' },
     status: { type: STRING(20), allowNull: false, defaultValue: 'open' },
+    summary: { type: STRING(800), allowNull: false, defaultValue: '' },
     plant_chapter_id: { type: STRING(80), allowNull: false, defaultValue: '' },
     payoff_chapter_id: { type: STRING(80), allowNull: false, defaultValue: '' },
     events: { type: JSONB, allowNull: false, defaultValue: [] },

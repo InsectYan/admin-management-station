@@ -233,6 +233,46 @@ export function buildCharacterScenes(activeCharacter) {
   ];
 }
 
+export const STYLE_AI_SCENES = [
+  {
+    id: 'style',
+    title: '风格',
+    icon: 'MagicStick',
+    scene: 'style',
+    placeholder: '按已有立意和概要，从严肃、爽文、甜宠、悬疑、搞笑里选一个语气…',
+  },
+];
+
+export const PLOTLINE_AI_SCENES = [
+  {
+    id: 'plotline',
+    title: '剧情线',
+    icon: 'Share',
+    scene: 'plotline',
+    placeholder: '按人物和立意整理主线、支线、伏笔和情感线…',
+  },
+];
+
+export const SCRIPT_AI_SCENES = [
+  {
+    id: 'script',
+    title: '剧本',
+    icon: 'Film',
+    scene: 'script',
+    placeholder: '按大纲、人物和剧情线写场次，先不等正文…',
+  },
+];
+
+export const INTENT_AI_SCENES = [
+  {
+    id: 'intent',
+    title: '叙事分镜',
+    icon: 'Picture',
+    scene: 'intent',
+    placeholder: '按剧本场次整理意图、台词、情绪和人物…',
+  },
+];
+
 export const OUTLINE_AI_SCENES = [
   {
     id: 'outline',
@@ -354,13 +394,49 @@ export const ORCHESTRATE_AI_SCENES = [
         placeholder: '门派齐了再拆人物…',
       },
       {
+        id: 'plan-style',
+        title: '风格',
+        icon: 'MagicStick',
+        scene: 'orchestrate.style',
+        path: 'tasks',
+        taskPath: 'plan.style',
+        placeholder: '人物齐了再定语气…',
+      },
+      {
+        id: 'plan-plotline',
+        title: '剧情线',
+        icon: 'Share',
+        scene: 'orchestrate.plotline',
+        path: 'tasks',
+        taskPath: 'plan.plotline',
+        placeholder: '风格定了再拆剧情线…',
+      },
+      {
         id: 'plan-outline',
         title: '大纲',
         icon: 'Reading',
         scene: 'orchestrate.outline',
         path: 'tasks',
         taskPath: 'plan.outline',
-        placeholder: '人物齐了再拆大纲…',
+        placeholder: '剧情线齐了再拆大纲…',
+      },
+      {
+        id: 'plan-script',
+        title: '剧本',
+        icon: 'Film',
+        scene: 'orchestrate.script',
+        path: 'tasks',
+        taskPath: 'plan.script',
+        placeholder: '大纲齐了再写剧本…',
+      },
+      {
+        id: 'plan-intent',
+        title: '叙事分镜',
+        icon: 'Picture',
+        scene: 'orchestrate.intent',
+        path: 'tasks',
+        taskPath: 'plan.intent',
+        placeholder: '剧本齐了再拆叙事分镜…',
       },
       {
         id: 'plan-content',
@@ -369,7 +445,7 @@ export const ORCHESTRATE_AI_SCENES = [
         scene: 'orchestrate.content',
         path: 'tasks',
         taskPath: 'plan.content',
-        placeholder: '大纲齐了再拆章节…',
+        placeholder: '叙事分镜齐了再拆章节目录…',
       },
       {
         id: 'plan-bodies',

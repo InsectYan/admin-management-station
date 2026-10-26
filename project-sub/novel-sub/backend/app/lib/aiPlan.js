@@ -1,5 +1,9 @@
 'use strict';
 
+// 与前端 novelCreateSchema.WIZARD_STEPS、novelDetail.STUDIO_TAB 对齐：章节目录是第 10 步，单章开发是第 11 页。
+const CONTENT_STEP = 10;
+const STUDIO_TAB = 11;
+
 const PLAN_STEPS = [
   {
     id: 't_basic',
@@ -42,29 +46,69 @@ const PLAN_STEPS = [
     label: '人物',
   },
   {
+    id: 't_style',
+    path: 'plan.style',
+    step: 5,
+    feature_key: 'style',
+    writer_action: 'fill_style',
+    scene: 'style',
+    depends_on: ['t_characters'],
+    label: '风格',
+  },
+  {
+    id: 't_plotline',
+    path: 'plan.plotline',
+    step: 6,
+    feature_key: 'plotline',
+    writer_action: 'fill_plotlines',
+    scene: 'plotline',
+    depends_on: ['t_style'],
+    label: '剧情线',
+  },
+  {
     id: 't_outline',
     path: 'plan.outline',
-    step: 5,
+    step: 7,
     feature_key: 'outline',
     writer_action: 'fill_outline',
     scene: 'outline',
-    depends_on: ['t_characters'],
+    depends_on: ['t_plotline'],
     label: '大纲',
+  },
+  {
+    id: 't_script',
+    path: 'plan.script',
+    step: 8,
+    feature_key: 'script',
+    writer_action: 'fill_script',
+    scene: 'script',
+    depends_on: ['t_outline'],
+    label: '剧本',
+  },
+  {
+    id: 't_intent',
+    path: 'plan.intent',
+    step: 9,
+    feature_key: 'intent',
+    writer_action: 'fill_intent_shots',
+    scene: 'intent',
+    depends_on: ['t_script'],
+    label: '叙事分镜',
   },
   {
     id: 't_content',
     path: 'plan.content',
-    step: 6,
+    step: CONTENT_STEP,
     feature_key: 'content',
     writer_action: 'fill_chapters',
     scene: 'content',
-    depends_on: ['t_outline'],
+    depends_on: ['t_intent'],
     label: '章节目录',
   },
   {
     id: 't_bodies',
     path: 'plan.bodies',
-    step: 7,
+    step: STUDIO_TAB,
     feature_key: 'chapter',
     coverage_key: 'bodies',
     writer_action: 'fill_chapter_body',
@@ -87,7 +131,11 @@ function coverageFromNovel(novel, setting = {}, extras = {}) {
     world: Boolean(world.era || world.power_system || world.geography),
     factions: factions.some((row) => row && String(row.name || '').trim()),
     characters: Array.isArray(setting.characters) && setting.characters.length > 0,
+    style: Boolean(String(novel?.style_preset || '').trim()),
+    plotline: Number(extras.plotlineCount) > 0,
     outline: Array.isArray(setting.outline?.volumes) && setting.outline.volumes.length > 0,
+    script: Number(extras.scriptCount) > 0,
+    intent: Number(extras.intentCount) > 0,
     content: Array.isArray(setting.chapters) && setting.chapters.length > 0,
     bodies: extras.bodiesComplete === true,
   };
@@ -168,25 +216,29 @@ function markTaskStatus(tasks, taskId, status) {
 }
 
 function ensurePlanTasks(raw) {
-  const list = Array.isArray(raw) ? [...raw] : [];
-  const have = new Set(list.map((row) => row.path).filter(Boolean));
-  for (const def of PLAN_STEPS) {
-    if (have.has(def.path)) continue;
-    list.push({
+  const incoming = new Map();
+  for (const row of Array.isArray(raw) ? raw : []) {
+    if (!row || typeof row !== 'object' || !row.path) continue;
+    incoming.set(row.path, row);
+  }
+  return PLAN_STEPS.map((def) => {
+    const row = incoming.get(def.path) || {};
+    return {
       id: def.id,
       path: def.path,
       step: def.step,
       feature_key: def.feature_key,
       writer_action: def.writer_action,
       depends_on: [...def.depends_on],
-      reason: `待补${def.label}`,
-      status: 'pending',
-    });
-  }
-  return list;
+      reason: clipReason(row.reason, `待补${def.label}`),
+      status: PLAN_STATUSES.has(row.status) ? row.status : 'pending',
+    };
+  });
 }
 
 module.exports = {
+  CONTENT_STEP,
+  STUDIO_TAB,
   PLAN_STEPS,
   PLAN_BY_PATH,
   PLAN_BY_ID,

@@ -7,6 +7,9 @@
     <el-form label-position="top" class="novel-entry-form" @submit.prevent>
       <div class="novel-entry-grid">
         <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
+        <el-form-item class="is-wide" label="概要">
+          <el-input v-model="form.summary" type="textarea" :rows="2" placeholder="这条线要推进什么" />
+        </el-form-item>
         <el-form-item label="类型">
           <el-select v-model="form.kind" style="width: 100%">
             <el-option v-for="item in kinds" :key="item.value" :label="item.label" :value="item.value" />
@@ -115,11 +118,13 @@ const timeline = ref([]);
 const worldYears = ref([]);
 const saving = ref(false);
 const form = reactive(emptyForm());
+const pending = ref([]);
 
 function emptyForm() {
   return {
     id: null,
     name: '',
+    summary: '',
     kind: 'main',
     status: 'open',
     chapterIds: [],
@@ -151,6 +156,7 @@ function reset() {
 function edit(row) {
   form.id = row.id;
   form.name = row.name;
+  form.summary = row.summary || '';
   form.kind = row.kind;
   form.status = row.status;
   form.chapterIds = (row.events || []).map(event => event.chapter_id);
@@ -181,6 +187,7 @@ async function save() {
   saving.value = true;
   const payload = {
     name,
+    summary: form.summary.trim(),
     kind: form.kind,
     status: form.status,
     plant_chapter_id: form.kind === 'foreshadow' ? form.plant_chapter_id : '',
@@ -194,6 +201,18 @@ async function save() {
   try {
     if (form.id) await updatePlotline(props.novelId, form.id, payload);
     else await createPlotline(props.novelId, payload);
+    for (const item of pending.value) {
+      const extraName = String(item?.name || '').trim();
+      if (!extraName) continue;
+      await createPlotline(props.novelId, {
+        name: extraName,
+        summary: String(item.summary || '').trim(),
+        kind: item.kind,
+        status: item.status,
+        events: [],
+      });
+    }
+    pending.value = [];
     reset();
     await load();
   } catch (err) {
@@ -228,6 +247,28 @@ async function remove(row) {
   if (form.id === row.id) reset();
   await load();
 }
+
+function hasDraft() {
+  return Boolean(form.name.trim());
+}
+
+function applyFromPatch(patch) {
+  const list = Array.isArray(patch?.plotlines) ? patch.plotlines.filter(row => String(row?.name || '').trim()) : [];
+  if (!list.length) {
+    ElMessage.info('这一轮没有可填入的剧情线');
+    return;
+  }
+  const [first, ...rest] = list;
+  reset();
+  form.name = String(first.name).trim();
+  form.summary = String(first.summary || '').trim();
+  form.kind = first.kind || 'main';
+  form.status = first.status || 'open';
+  pending.value = rest;
+  ElMessage.success(rest.length ? `已填入「${form.name}」，保存时一并写入其余 ${rest.length} 条` : '已填入表单，点添加后才会写入');
+}
+
+defineExpose({ applyFromPatch, hasDraft, save });
 
 onMounted(() => {
   load().catch(err => ElMessage.error(err.message || '剧情线加载失败'));

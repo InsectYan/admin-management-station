@@ -90,6 +90,17 @@ class NovelController extends Controller {
     this.ctx.body = { code: 0, message: 'ok', data: { count } };
   }
 
+  async generationRecords() {
+    const novel = await this.ctx.service.novel.findById(this.ctx.params.id);
+    if (!novel) {
+      this.ctx.status = 404;
+      this.ctx.body = { code: 404, message: '小说不存在' };
+      return;
+    }
+    const list = await this.ctx.service.generationRecord.list(novel.id);
+    this.ctx.body = { code: 0, message: 'ok', data: { list } };
+  }
+
   async getSetting() {
     const setting = await this.ctx.service.novel.getSetting(this.ctx.params.id);
     if (setting === null) {
@@ -187,6 +198,7 @@ class NovelController extends Controller {
         this.ctx.params.id,
         this.ctx.params.chapterId,
         this.ctx.request.body?.body,
+        { aiRecord: this.ctx.request.body?.ai_record },
       );
       if (data === null) {
         this.ctx.status = 404;

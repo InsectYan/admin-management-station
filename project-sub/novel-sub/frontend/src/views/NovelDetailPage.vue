@@ -22,7 +22,7 @@
       :cover-url="basic.cover_url"
       :progress-status="basic.progress_status"
       :tab-title="tabMeta?.title"
-      :fill-pane="currentTab === 7 || currentTab === 8"
+      :fill-pane="tabKey === 'chapter' || tabKey === 'reader'"
       @back="goBackToList"
       @edit="goToWizard()"
       @plan="goToPlan"
@@ -38,18 +38,18 @@
         />
       </template>
 
-      <div v-if="currentTab < 7" class="novel-detail-page__ai">
+      <div v-if="isSettingTab" class="novel-detail-page__ai">
         <el-button type="primary" plain @click="goToAiComplete">用 AI 补全本模块</el-button>
         <span class="novel-detail-page__ai-hint">打开对应设定步并展开林间写手，不自动发送</span>
       </div>
 
       <div
         class="novel-detail-page__pane"
-        :class="{ 'is-studio': currentTab === 7 || currentTab === 8 }"
+        :class="{ 'is-studio': tabKey === 'chapter' || tabKey === 'reader' }"
         @touchstart.passive="onTouchStart"
         @touchend.passive="onTouchEnd"
       >
-        <template v-if="currentTab === 1">
+        <template v-if="tabKey === 'basic'">
           <DetailBasicInfo
             :form="basic"
             :meta="novelMeta"
@@ -57,29 +57,45 @@
           <DetailDownstreams :novel-id="novelId || novelMeta.id" />
         </template>
         <DetailWorldSetting
-          v-else-if="currentTab === 2"
+          v-else-if="tabKey === 'world'"
           :form="worldForm"
         />
         <DetailFactions
-          v-else-if="currentTab === 3"
+          v-else-if="tabKey === 'factions'"
           :factions="factions"
           :characters="characters"
         />
         <DetailCharacters
-          v-else-if="currentTab === 4"
+          v-else-if="tabKey === 'characters'"
           :characters="characters"
           :edges="characterEdges"
         />
+        <DetailStyle
+          v-else-if="tabKey === 'style'"
+          :novel-id="novelId || novelMeta.id"
+        />
+        <DetailPlotlines
+          v-else-if="tabKey === 'plotline'"
+          :novel-id="novelId || novelMeta.id"
+        />
         <DetailOutline
-          v-else-if="currentTab === 5"
+          v-else-if="tabKey === 'outline'"
           :form="outlineForm"
         />
+        <DetailScripts
+          v-else-if="tabKey === 'script'"
+          :novel-id="novelId || novelMeta.id"
+        />
+        <DetailIntentShots
+          v-else-if="tabKey === 'intent'"
+          :novel-id="novelId || novelMeta.id"
+        />
         <DetailContentOrg
-          v-else-if="currentTab === 6"
+          v-else-if="tabKey === 'content'"
           :form="contentForm"
         />
         <DetailChapterStudio
-          v-else-if="currentTab === 7"
+          v-else-if="tabKey === 'chapter'"
           :novel-id="novelId || novelMeta.id"
           :chapters="contentForm.chapters"
           :volumes="outlineForm.volumes"
@@ -97,7 +113,7 @@
           @open-reader="goToReader"
         />
         <DetailReader
-          v-else-if="currentTab === 8"
+          v-else-if="tabKey === 'reader'"
           :reader="reader"
           :novel-id="novelId || novelMeta.id"
           :error="readerError"
@@ -105,28 +121,16 @@
           @edit-chapter="goToStudioChapter"
         />
         <DetailStoryPackages
-          v-else-if="currentTab === 9"
+          v-else-if="tabKey === 'package'"
           :novel-id="novelId || novelMeta.id"
           :title="basic.title"
         />
-        <DetailPlotlines
-          v-else-if="currentTab === 10"
-          :novel-id="novelId || novelMeta.id"
-        />
-        <DetailScripts
-          v-else-if="currentTab === 11"
-          :novel-id="novelId || novelMeta.id"
-        />
-        <DetailIntentShots
-          v-else-if="currentTab === 12"
-          :novel-id="novelId || novelMeta.id"
-        />
         <DetailTeam
-          v-else-if="currentTab === 13"
+          v-else-if="tabKey === 'team'"
           :novel-id="novelId || novelMeta.id"
         />
-        <DetailStyle
-          v-else-if="currentTab === 14"
+        <DetailGenerationRecords
+          v-else-if="tabKey === 'record'"
           :novel-id="novelId || novelMeta.id"
         />
       </div>
@@ -145,7 +149,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import NovelDetailShell from '../components/novel/detail/NovelDetailShell.vue';
 import NovelDetailTabs from '../components/novel/detail/NovelDetailTabs.vue';
@@ -165,7 +169,9 @@ import DetailScripts from '../components/novel/detail/DetailScripts.vue';
 import DetailIntentShots from '../components/novel/detail/DetailIntentShots.vue';
 import DetailTeam from '../components/novel/detail/DetailTeam.vue';
 import DetailStyle from '../components/novel/detail/DetailStyle.vue';
+import DetailGenerationRecords from '../components/novel/detail/DetailGenerationRecords.vue';
 import { useNovelDetail } from '../composables/useNovelDetail.js';
+import { WIZARD_STEPS } from '../utils/novelCreateSchema.js';
 import { fetchNovelReader } from '../services/novelService.js';
 import { exportReader } from '../utils/novelExport.js';
 import { ElMessage } from 'element-plus';
@@ -206,6 +212,9 @@ const {
   loadNovel,
 } = useNovelDetail();
 
+const settingKeys = new Set(WIZARD_STEPS.map((item) => item.key));
+const tabKey = computed(() => tabMeta.value?.key || '');
+const isSettingTab = computed(() => settingKeys.has(tabKey.value));
 const route = useRoute();
 const fixBoot = ref(false);
 const reader = ref({ volumes: [] });
@@ -239,7 +248,7 @@ function onExportReader(format) {
 watch(
   () => currentTab.value,
   (tab) => {
-    if (tab === 8) loadReader();
+    if (tabMeta.value?.key === 'reader') loadReader();
   },
   { immediate: true },
 );

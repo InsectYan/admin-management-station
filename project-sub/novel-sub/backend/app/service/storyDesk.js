@@ -567,6 +567,7 @@ class StoryDeskService extends Service {
       name: row.name,
       kind: row.kind,
       status: row.status,
+      summary: row.summary || '',
       plant_chapter_id: row.plant_chapter_id || '',
       payoff_chapter_id: row.payoff_chapter_id || '',
       events: Array.isArray(row.events) ? row.events : [],
@@ -662,6 +663,7 @@ class StoryDeskService extends Service {
       name,
       kind: kinds.includes(payload.kind) ? payload.kind : 'main',
       status: statuses.includes(payload.status) ? payload.status : 'open',
+      summary: String(payload.summary || '').trim().slice(0, 800),
       plant_chapter_id: String(payload.plant_chapter_id || ''),
       payoff_chapter_id: String(payload.payoff_chapter_id || ''),
       events: this.normalizeEvents(payload.events),
@@ -728,7 +730,6 @@ class StoryDeskService extends Service {
   async suggestScript(novelId, payload) {
     const novel = await this.requireNovel(novelId);
     const chapterIds = [ ...new Set((payload.chapter_ids || []).map(id => String(id || '').trim()).filter(Boolean)) ];
-    if (!chapterIds.length) throw httpError(400, '先选择章节');
     const known = new Set(this.ctx.service.novel.listSettingChapters(novel.setting_json).map(item => item.id));
     if (chapterIds.some(id => !known.has(id))) throw httpError(400, '剧本里有不存在的章节');
     const chapters = [];
@@ -744,10 +745,21 @@ class StoryDeskService extends Service {
     }
     const terms = await this.loadTerms(novelId);
     const variant = payload.variant === 'short_drama' ? 'short_drama' : 'comic';
-    const boundContext = enrichWriterContext({ chapters, variant }, {
+    const setting = novel.setting_json || {};
+    const plotlines = chapterIds.length ? [] : await this.listPlotlines(novelId);
+    const boundContext = enrichWriterContext(chapterIds.length ? { chapters, variant } : {
+      variant,
+      outline: setting.outline || {},
+      plotlines: plotlines.map(row => ({
+        name: row.name,
+        kind: row.kind,
+        status: row.status,
+        summary: row.summary || '',
+      })),
+    }, {
       novel,
       terms,
-      characters: novel.setting_json?.characters || [],
+      characters: setting.characters || [],
     });
     let invoked;
     try {
@@ -755,7 +767,11 @@ class StoryDeskService extends Service {
         skill: 'novel-writer-skill',
         action: 'fill_script',
         payload: {
-          user_message: String(payload.user_message || '').trim() || '根据所选章节正文整理成剧本建议',
+          user_message: String(payload.user_message || '').trim() || (
+            chapterIds.length
+              ? '根据所选章节正文整理成剧本建议'
+              : '根据已有大纲、人物和剧情线写剧本，先不要等正文'
+          ),
           target_fields: [ 'script' ],
           variant,
           bound_context: boundContext,

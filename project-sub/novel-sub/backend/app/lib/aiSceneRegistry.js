@@ -14,6 +14,10 @@ const {
   FACTION_FIELDS,
   CHAPTER_BODY_FIELDS,
   PLAN_FIELDS,
+  STYLE_FIELDS,
+  PLOTLINE_FIELDS,
+  SCRIPT_FIELDS,
+  INTENT_FIELDS,
 } = require('./aiPatchSanitize');
 
 function step(skill, action, extra = {}) {
@@ -143,6 +147,31 @@ const REGISTRY = {
     require_novel_id: true,
   },
 
+  style: {
+    pipeline: [step(WRITER, 'fill_style')],
+    feature_key: 'style',
+    default_target_fields: [...STYLE_FIELDS],
+    require_novel_id: true,
+  },
+  plotline: {
+    pipeline: [step(WRITER, 'fill_plotlines')],
+    feature_key: 'plotline',
+    default_target_fields: [...PLOTLINE_FIELDS],
+    require_novel_id: true,
+  },
+  script: {
+    pipeline: [step(WRITER, 'fill_script')],
+    feature_key: 'script',
+    default_target_fields: [...SCRIPT_FIELDS],
+    require_novel_id: true,
+  },
+  intent: {
+    pipeline: [step(WRITER, 'fill_intent_shots')],
+    feature_key: 'intent',
+    default_target_fields: [...INTENT_FIELDS],
+    require_novel_id: true,
+  },
+
   outline: {
     pipeline: [
       step(BRAINSTORM, 'ideate', { focus: 'plot' }),
@@ -234,7 +263,27 @@ const REGISTRY = {
     feature_key: 'orchestrate',
     default_target_fields: [...PLAN_FIELDS],
   },
+  'orchestrate.style': {
+    pipeline: [step(ORCHESTRATOR, 'plan')],
+    feature_key: 'orchestrate',
+    default_target_fields: [...PLAN_FIELDS],
+  },
+  'orchestrate.plotline': {
+    pipeline: [step(ORCHESTRATOR, 'plan')],
+    feature_key: 'orchestrate',
+    default_target_fields: [...PLAN_FIELDS],
+  },
   'orchestrate.outline': {
+    pipeline: [step(ORCHESTRATOR, 'plan')],
+    feature_key: 'orchestrate',
+    default_target_fields: [...PLAN_FIELDS],
+  },
+  'orchestrate.script': {
+    pipeline: [step(ORCHESTRATOR, 'plan')],
+    feature_key: 'orchestrate',
+    default_target_fields: [...PLAN_FIELDS],
+  },
+  'orchestrate.intent': {
     pipeline: [step(ORCHESTRATOR, 'plan')],
     feature_key: 'orchestrate',
     default_target_fields: [...PLAN_FIELDS],

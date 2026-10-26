@@ -419,6 +419,7 @@ const resolvedNovelId = computed(() => (
 const chapterId = ref('');
 const draft = ref('');
 const dirty = ref(false);
+const aiBody = ref(false);
 const editable = ref(false);
 const saving = ref(false);
 const loading = ref(false);
@@ -560,6 +561,7 @@ async function loadBody(id) {
     if (seq !== bodyLoadSeq || chapterId.value !== id) return;
     draft.value = data?.body || '';
     dirty.value = false;
+    aiBody.value = false;
     writeContext.value = {
       prev_ending: data?.prev_ending || '',
       next_outline: data?.next_outline || '',
@@ -576,12 +578,14 @@ async function loadBody(id) {
 }
 
 /** 按指定章节 id 落盘，不依赖当前浏览中的 chapterId */
-async function persistChapterBody(targetChapterId, body, { silent = false } = {}) {
+async function persistChapterBody(targetChapterId, body, { silent = false, ai = false } = {}) {
   if (!resolvedNovelId.value || !targetChapterId) return false;
   const text = String(body ?? '');
+  const fromAi = ai || aiBody.value;
   saving.value = true;
   try {
-    const data = await saveChapterBody(resolvedNovelId.value, targetChapterId, text);
+    const data = await saveChapterBody(resolvedNovelId.value, targetChapterId, text, fromAi ? { ai_record: { source: 'ai', kind: 'body' } } : {});
+    aiBody.value = false;
     await refreshMeta();
     emit('progress-change');
     if (chapterId.value === targetChapterId) {
@@ -707,7 +711,7 @@ async function writeOneEmptyChapter(targetId) {
   if (!patch || typeof patch.body !== 'string' || !patch.body.trim()) {
     throw new Error('模型没有写出本章正文（本地模型常见于 JSON 被截断）。可点「写下一空章」或续写重试本章，已保存的章节不会被覆盖。');
   }
-  const saved = await persistChapterBody(boundChapterId, patch.body, { silent: true });
+  const saved = await persistChapterBody(boundChapterId, patch.body, { silent: true, ai: true });
   if (!saved) throw new Error('保存失败');
   // 写完即核检，绑定同一 chapter_id；error 则抛出让队列暂停
   try {
@@ -861,7 +865,7 @@ async function onEditableChange(next) {
   persistEditable(false);
 }
 
-function onApplyBody(patch) {
+async function onApplyBody(patch) {
   const text = patch?.body;
   if (typeof text !== 'string' || !text.trim()) {
     ElMessage.info('这一轮没有可应用的正文');
@@ -870,6 +874,8 @@ function onApplyBody(patch) {
   enterEdit();
   draft.value = text;
   dirty.value = true;
+  aiBody.value = true;
+  if (autoApplyAndSave.value) await saveBody();
 }
 
 watch(

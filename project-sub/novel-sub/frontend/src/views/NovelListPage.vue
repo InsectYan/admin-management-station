@@ -126,7 +126,7 @@
                 </el-tooltip>
               </div>
               <p class="novel-card__stats">
-                {{ (item.word_count || 0).toLocaleString() }} 字 · {{ item.chapter_written || 0 }}/{{ item.chapter_total || 0 }} 章
+                {{ (item.word_count || 0).toLocaleString() }} 字 · 达标 {{ item.chapter_qualified || 0 }}/{{ item.chapter_total || 0 }} 章
                 <template v-if="item.health_score != null">
                   · 健康度
                   <el-tag size="small" :type="healthTagType(item.health_status)" effect="plain">
@@ -325,7 +325,7 @@
               label="章节"
               width="90"
             >
-              <template #default="{ row }">{{ row.chapter_written || 0 }}/{{ row.chapter_total || 0 }}</template>
+              <template #default="{ row }">{{ row.chapter_qualified || 0 }}/{{ row.chapter_total || 0 }}</template>
             </el-table-column>
             <el-table-column
               v-if="visibleColumns.includes('updated_at')"
@@ -424,6 +424,7 @@ import { healthStatusLabel, healthTagType } from '../utils/novelQa.js';
 import { formatDateTime } from '../utils/formatDateTime.js';
 import { useNovelEnums } from '../composables/useNovelEnums.js';
 import { firstChapterId, hasChapters } from '../utils/chapterTree.js';
+import { STUDIO_TAB } from '../utils/novelDetail.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -437,8 +438,8 @@ const viewOptions = [
 function progressTip(item) {
   const words = Number(item?.word_count) || 0;
   const target = Number(item?.word_target) || 0;
-  const chapters = `${item?.chapter_written || 0}/${item?.chapter_total || 0}`;
-  return `连载状态是书的进度标记。${item?.progress_percent || 0}% = 已写 ${words.toLocaleString()} 字 / 大纲规划 ${target.toLocaleString()} 字，不是已写章节 ${chapters}。`;
+  const chapters = `${item?.chapter_qualified || 0}/${item?.chapter_total || 0}`;
+  return `连载进度按已达到 2500 字的章节计算。${item?.progress_percent || 0}% ，已写 ${words.toLocaleString()} 字 / 规划 ${target.toLocaleString()} 字，达标 ${chapters} 章。每章应按 2500–3500 字划分。`;
 }
 
 const loading = ref(false);
@@ -612,7 +613,7 @@ function openWriteBody(row) {
   router.push({
     name: 'novel-detail',
     params: { id: String(row.id) },
-    query: { tab: '7', ...(first ? { chapter: first } : {}) },
+    query: { tab: String(STUDIO_TAB), ...(first ? { chapter: first } : {}) },
   });
 }
 
@@ -624,7 +625,7 @@ function openQueue(row) {
   router.push({
     name: 'novel-detail',
     params: { id: String(row.id) },
-    query: { tab: '7', queue: '1' },
+    query: { tab: String(STUDIO_TAB), queue: '1' },
   });
 }
 

@@ -16,16 +16,24 @@ export const DETAIL_SETTING_TABS = WIZARD_STEPS.map((item) => ({
   title: item.title.replace(/设定$/, ''),
 }));
 
-export const DETAIL_STUDIO_TAB = { step: 7, key: 'chapter', title: '单章开发' };
-export const DETAIL_READER_TAB = { step: 8, key: 'reader', title: '全书预览' };
-export const DETAIL_PACKAGE_TAB = { step: 9, key: 'package', title: '发布' };
-export const DETAIL_PLOTLINE_TAB = { step: 10, key: 'plotline', title: '剧情线' };
-export const DETAIL_SCRIPT_TAB = { step: 11, key: 'script', title: '剧本' };
-export const DETAIL_INTENT_TAB = { step: 12, key: 'intent', title: '叙事分镜' };
-export const DETAIL_TEAM_TAB = { step: 13, key: 'team', title: '协作' };
-export const DETAIL_STYLE_TAB = { step: 14, key: 'style', title: '风格' };
+export const DETAIL_STUDIO_TAB = { step: WIZARD_STEPS.length + 1, key: 'chapter', title: '单章开发' };
+export const DETAIL_READER_TAB = { step: WIZARD_STEPS.length + 2, key: 'reader', title: '全书预览' };
+export const DETAIL_PACKAGE_TAB = { step: WIZARD_STEPS.length + 3, key: 'package', title: '发布' };
+export const DETAIL_TEAM_TAB = { step: WIZARD_STEPS.length + 4, key: 'team', title: '协作' };
+export const DETAIL_RECORD_TAB = { step: WIZARD_STEPS.length + 5, key: 'record', title: '记录' };
 
-export const DETAIL_TABS = [...DETAIL_SETTING_TABS, DETAIL_STUDIO_TAB, DETAIL_READER_TAB, DETAIL_PACKAGE_TAB, DETAIL_PLOTLINE_TAB, DETAIL_SCRIPT_TAB, DETAIL_INTENT_TAB, DETAIL_TEAM_TAB, DETAIL_STYLE_TAB];
+// 单章开发是向导最后一步的下一页。后端 aiPlan.STUDIO_TAB / CONTENT_STEP 要和这里保持同一套数字。
+export const STUDIO_TAB = DETAIL_STUDIO_TAB.step;
+export const READER_TAB = DETAIL_READER_TAB.step;
+
+export const DETAIL_TABS = [
+  ...DETAIL_SETTING_TABS,
+  DETAIL_STUDIO_TAB,
+  DETAIL_READER_TAB,
+  DETAIL_PACKAGE_TAB,
+  DETAIL_TEAM_TAB,
+  DETAIL_RECORD_TAB,
+];
 
 export const DETAIL_TAB_MAX = DETAIL_TABS.length;
 
@@ -99,7 +107,7 @@ export function characterRoleStats(characters = []) {
 }
 
 export function tabFilled(tabKey, {
-  basic, worldForm, characters, outlineForm, contentForm, factions,
+  basic, worldForm, characters, outlineForm, contentForm, factions, stylePreset, story,
 }) {
   switch (tabKey) {
     case 'basic':
@@ -114,8 +122,16 @@ export function tabFilled(tabKey, {
       return Boolean(factions?.length);
     case 'characters':
       return Boolean(characters?.length);
+    case 'style':
+      return Boolean(stylePreset);
+    case 'plotline':
+      return Boolean(story?.plotline);
     case 'outline':
       return Boolean(outlineForm?.volumes?.length);
+    case 'script':
+      return Boolean(story?.script);
+    case 'intent':
+      return Boolean(story?.intent);
     case 'content':
       return Boolean(contentForm?.chapters?.length);
     case 'chapter':
@@ -140,7 +156,10 @@ export function buildProgressMeta({ basic, outlineForm, contentForm }) {
     wordCount: Number(basic?.word_count) || 0,
     wordTarget,
     chapterWritten: Number(basic?.chapter_written) || 0,
+    chapterQualified: Number(basic?.chapter_qualified) || 0,
     chapterCount,
+    chapterPlan: Number(basic?.chapter_plan) || 0,
+    chapterWords: Number(basic?.chapter_words) || 0,
     outlineChapters,
   };
 }

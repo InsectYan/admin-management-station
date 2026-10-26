@@ -212,6 +212,45 @@ async function save() {
   }
 }
 
+function hasSuggestion() {
+  return Boolean(suggestion.value?.shots?.length);
+}
+
+function applyFromPatch(patch) {
+  const rows = Array.isArray(patch?.intent_shots) ? patch.intent_shots : [];
+  if (!rows.length) {
+    ElMessage.info('这一轮没有可填入的叙事分镜');
+    return;
+  }
+  const byName = new Map((characters.value || []).map(person => [ person.name, String(person.id) ]));
+  suggestion.value = {
+    shots: rows.map((row, index) => {
+      const names = Array.isArray(row.characters)
+        ? row.characters
+        : String(row.characters || '').split(/[、,，]/);
+      const ids = (Array.isArray(row.character_ids) ? row.character_ids : []).map(id => String(id));
+      names.forEach(name => {
+        const id = byName.get(String(name || '').trim());
+        if (id && !ids.includes(id)) ids.push(id);
+      });
+      return {
+        script_id: form.script_id || row.script_id || null,
+        sort_order: Number(row.sort_order) || index + 1,
+        scene_order: Number(row.scene_order) || 1,
+        intent: row.intent || '',
+        dialogue: row.dialogue || '',
+        emotion: row.emotion || '',
+        location: row.location || '',
+        character_ids: ids,
+      };
+    }),
+    reply: '',
+  };
+  ElMessage.success(`已整理 ${rows.length} 条，点写入后才会保存`);
+}
+
+defineExpose({ applyFromPatch, hasSuggestion, writeSuggestion });
+
 async function remove(row) {
   try {
     await ElMessageBox.confirm('删除这条叙事分镜？已发布的故事包不会变。', '删除分镜', { type: 'warning' });

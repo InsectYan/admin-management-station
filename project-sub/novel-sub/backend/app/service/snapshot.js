@@ -47,6 +47,7 @@ class SnapshotService extends Service {
         name: row.name,
         kind: row.kind,
         status: row.status,
+        summary: row.summary || '',
         plant_chapter_id: row.plant_chapter_id || '',
         payoff_chapter_id: row.payoff_chapter_id || '',
         events: clone(row.events || []),

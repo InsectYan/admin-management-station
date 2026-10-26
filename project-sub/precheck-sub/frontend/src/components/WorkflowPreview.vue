@@ -52,6 +52,13 @@
       </el-form-item>
     </el-form>
     <el-button type="primary" :loading="running" :disabled="!apiJson" @click="generate">生成产物</el-button>
+    <div v-if="preview && preview.status === 'running'" class="precheck-preview-progress">
+      <el-progress :percentage="preview.progress_percent || 0" :stroke-width="8" color="#2f8a5b" />
+      <p class="precheck-preview-note">{{ progressText }}</p>
+    </div>
+    <ul v-if="preview?.submitted?.length" class="precheck-preview-submitted">
+      <li v-for="item in preview.submitted" :key="item.label">{{ item.label }}：{{ item.text }}</li>
+    </ul>
     <p v-if="notice" class="precheck-preview-note">{{ notice }}</p>
     <div v-if="preview && preview.status === 'success'" class="precheck-preview-media">
       <video v-if="preview.media_kind === 'video'" :src="fileUrl" controls></video>
@@ -81,6 +88,21 @@ const notice = ref('');
 const preview = ref(null);
 const fileUrl = ref('');
 let timer = null;
+
+const progressText = computed(() => {
+  const state = preview.value;
+  if (!state || state.status !== 'running') return '';
+  if (state.phase === 'queued') {
+    return state.queue_ahead > 0
+      ? `已离开页面也会继续生成。当前在排队，前面还有 ${state.queue_ahead} 个。`
+      : '已离开页面也会继续生成。当前在排队。';
+  }
+  const node = state.node ? `节点 ${state.node}` : 'ComfyUI';
+  if (state.progress_max > 0) {
+    return `正在生成，离开页面不会中断。${node} ${state.progress_value}/${state.progress_max}`;
+  }
+  return `正在生成，离开页面不会中断。${node} 还没有回报节点进度。`;
+});
 
 function alignFrames(raw, align) {
   const count = Math.max(1, Math.round(Number(raw)));
@@ -217,6 +239,12 @@ function stop() {
   if (timer) clearInterval(timer);
   timer = null;
 }
+function follow(state) {
+  if (state?.status !== 'running') return;
+  running.value = true;
+  if (timer) return;
+  timer = setInterval(() => { refresh().catch(() => {}); }, 2000);
+}
 async function loadFields() {
   loaded.value = false;
   fields.value = [];
@@ -235,7 +263,11 @@ async function loadFields() {
 async function refresh() {
   const state = await request(statusPath());
   preview.value = state;
-  if (!state) return;
+  if (!state) {
+    running.value = false;
+    stop();
+    return;
+  }
   if (state.status === 'success') {
     fileUrl.value = mediaPath(state.updated_at);
     notice.value = '已保留最新一次产物';
@@ -246,7 +278,8 @@ async function refresh() {
     running.value = false;
     stop();
   } else if (state.status === 'running') {
-    notice.value = '正在生成，完成后只保留这一次的产物';
+    notice.value = state.phase === 'queued' ? '已提交，正在排队' : '正在生成，完成后只保留这一次的产物';
+    follow(state);
   }
 }
 async function generate() {
@@ -266,8 +299,7 @@ async function generate() {
       await request(`/workflows/drafts/${draftKey()}/preview`, { method: 'post', data });
     }
     await refresh();
-    stop();
-    timer = setInterval(refresh, 2000);
+    follow(preview.value);
   } catch (err) {
     notice.value = err.message;
     running.value = false;
@@ -276,7 +308,7 @@ async function generate() {
 
 watch(durationWatch, () => { if (loaded.value) syncFrames(); });
 watch(() => props.apiJson, () => { loadFields(); }, { immediate: true });
-watch(() => props.workflowId, () => { if (props.workflowId) refresh().catch(() => {}); }, { immediate: true });
+watch(() => props.workflowId, () => { refresh().catch(() => {}); }, { immediate: true });
 onUnmounted(stop);
 </script>
 
@@ -290,6 +322,8 @@ onUnmounted(stop);
   border-color: rgba(47, 138, 91, 0.16);
 }
 .precheck-preview-hint { margin: 6px 0 0; color: #5c6b62; font-size: 13px; }
+.precheck-preview-progress { max-width: 420px; margin-top: 12px; }
+.precheck-preview-submitted { margin: 8px 0 0; padding-left: 18px; color: #5c6b62; font-size: 13px; }
 .precheck-preview-note { color: #5c6b62; }
 .precheck-preview-media img,
 .precheck-preview-media video { max-width: 480px; display: block; margin-top: 12px; }

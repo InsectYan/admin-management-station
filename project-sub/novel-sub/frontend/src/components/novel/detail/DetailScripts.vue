@@ -150,10 +150,6 @@ async function load() {
 }
 
 async function suggest() {
-  if (!form.chapter_ids.length) {
-    ElMessage.warning('先选择章节');
-    return;
-  }
   suggesting.value = true;
   suggestion.value = null;
   try {
@@ -214,6 +210,31 @@ async function remove(row) {
   if (form.id === row.id) reset();
   await load();
 }
+
+function hasDraft() {
+  return Boolean(form.title.trim() || form.scenes.some(scene => scene.location || scene.dialogue || scene.action));
+}
+
+function applyFromPatch(patch) {
+  const script = patch?.script;
+  const scenes = Array.isArray(script?.scenes) ? script.scenes : [];
+  if (!scenes.length) {
+    ElMessage.info('这一轮没有可填入的剧本');
+    return;
+  }
+  form.id = null;
+  form.title = script.title || form.title || '大纲剧本';
+  form.variant = script.variant === 'short_drama' ? 'short_drama' : (form.variant || 'comic');
+  form.scenes = scenes.map(scene => ({
+    ...blankScene(),
+    ...scene,
+    interior: scene.interior === 'out' || scene.interior === '外' ? 'out' : 'in',
+    characters: Array.isArray(scene.characters) ? scene.characters.join('、') : (scene.characters || ''),
+  }));
+  ElMessage.success('已填入表单，点保存后才会写入');
+}
+
+defineExpose({ applyFromPatch, hasDraft, save });
 
 onMounted(() => {
   load().catch(err => ElMessage.error(err.message || '剧本加载失败'));

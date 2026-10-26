@@ -1,6 +1,6 @@
 'use strict';
 
-const { PLAN_BY_PATH, findTask, isBodyTask, assertDependencies, markTaskStatus, ensurePlanTasks } = require('../lib/aiPlan');
+const { PLAN_BY_PATH, STUDIO_TAB, findTask, isBodyTask, assertDependencies, markTaskStatus, ensurePlanTasks } = require('../lib/aiPlan');
 
 class AiDispatchService extends require('egg').Service {
   async lastPlan(session) {
@@ -156,7 +156,7 @@ class AiDispatchService extends require('egg').Service {
     return {
       novel_id: novelId,
       step: def.step,
-      tab: def.feature_key === 'chapter' ? 7 : undefined,
+      tab: def.feature_key === 'chapter' ? STUDIO_TAB : undefined,
       chapter_id: chapterId,
       feature_key: def.feature_key,
       task: { ...task, status: nextStatus },

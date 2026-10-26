@@ -79,11 +79,15 @@ export function fetchChapterBody(id, chapterId) {
   return request(`/novels/${id}/chapters/${encodeURIComponent(chapterId)}`);
 }
 
-export function saveChapterBody(id, chapterId, body) {
+export function saveChapterBody(id, chapterId, body, extra = {}) {
   return request(`/novels/${id}/chapters/${encodeURIComponent(chapterId)}`, {
     method: 'PUT',
-    data: { body },
+    data: { body, ...extra },
   });
+}
+
+export function fetchGenerationRecords(id) {
+  return request(`/novels/${id}/generation-records`);
 }
 
 export function fetchMembers(id) {

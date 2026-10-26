@@ -1,5 +1,7 @@
 'use strict';
 
+const { CONTENT_STEP, STUDIO_TAB } = require('./aiPlan');
+
 const CN_DIGIT = {
   零: 0, 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9,
 };
@@ -91,11 +93,8 @@ function outlineWordTarget(setting) {
   return total;
 }
 
-function wordFloor(setting, chapterCount) {
-  const target = outlineWordTarget(setting);
-  const count = Math.max(Number(chapterCount) || 0, 1);
-  if (target > 0) return Math.max(800, Math.round((target / count) * 0.5));
-  return 1500;
+function wordFloor() {
+  return 2500;
 }
 
 function titleTokens(title) {
@@ -207,7 +206,7 @@ function inspectWords(chapters, bodyById, floor) {
         chapter_title: ch.title,
         order: ch.order,
         message: `「${ch.title}」没有正文`,
-        detail: `按大纲规划均摊，本章至少应有 ${floor} 字。当前 0 字。`,
+        detail: `单章应在 ${floor}–3500 字。当前还没有正文。`,
         evidence: '0',
       }));
       continue;
@@ -220,7 +219,7 @@ function inspectWords(chapters, bodyById, floor) {
         chapter_title: ch.title,
         order: ch.order,
         message: `「${ch.title}」字数不够`,
-        detail: `按大纲规划均摊，本章至少应有 ${floor} 字。当前 ${wc} 字。`,
+        detail: `单章应在 ${floor}–3500 字。当前 ${wc} 字，记为工作异常。`,
         evidence: String(wc),
       }));
     }
@@ -304,7 +303,7 @@ function buildTasks(findings) {
       id: 'task_order',
       action: 'normalize_order',
       module: 'content',
-      step: 6,
+      step: CONTENT_STEP,
       label: '整理章节目录顺序',
       detail: '打开编辑页「章节目录」，按标题序号重排并重新编号。',
       status: 'pending',
@@ -317,7 +316,7 @@ function buildTasks(findings) {
       id: 'task_relink',
       action: 'relink_outline',
       module: 'content',
-      step: 6,
+      step: CONTENT_STEP,
       label: `补上 ${relink.length} 章的大纲关联`,
       detail: '在章节目录里按标题把悬空或缺失的大纲关联补到最接近的大纲节点。',
       status: 'pending',
@@ -337,7 +336,7 @@ function buildTasks(findings) {
         id: `task_rewrite_${row.chapter_id}`,
         action: 'rewrite_chapter',
         module: 'studio',
-        tab: 7,
+        tab: STUDIO_TAB,
         chapter_id: row.chapter_id,
         label: `重写「${row.chapter_title || '未命名章节'}」`,
         detail: reasons.join('；'),

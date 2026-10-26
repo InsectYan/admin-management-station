@@ -19,10 +19,16 @@ import {
   settingToForms,
   validateBasicStep,
   WIZARD_STEPS,
+  wizardStepOf,
 } from '../utils/novelCreateSchema.js';
 import {
+  createIntentShot,
   createNovel,
+  createPlotline,
+  createScript,
   fetchNovel,
+  fetchScripts,
+  saveNovelStyle,
   updateNovel,
   updateNovelSetting,
 } from '../services/novelService.js';
@@ -36,7 +42,7 @@ import {
   applyChaptersPatch,
 } from '../utils/aiApplyPatch.js';
 import { SETTING_FEATURE_LABELS } from '../utils/aiSettingAutorun.js';
-import { DETAIL_TAB_MAX } from '../utils/novelDetail.js';
+import { DETAIL_TAB_MAX, STUDIO_TAB } from '../utils/novelDetail.js';
 import { firstChapterId } from '../utils/chapterTree.js';
 
 export function useNovelCreateWizard() {
@@ -48,6 +54,7 @@ export function useNovelCreateWizard() {
   const saving = ref(false);
   const loading = ref(false);
   const dirty = ref(false);
+  const aiSaveKind = ref('');
   const loadError = ref('');
   const autorunActive = ref(false);
   const autorunLabel = ref('');
@@ -78,6 +85,18 @@ export function useNovelCreateWizard() {
       delete query.id;
     }
     router.replace({ query });
+  }
+
+  function takeAiRecord() {
+    if (!aiSaveKind.value) return null;
+    const kind = aiSaveKind.value;
+    aiSaveKind.value = '';
+    return { source: 'ai', kind };
+  }
+
+  function markAiSave(kind) {
+    aiSaveKind.value = kind || 'adjust';
+    markDirty();
   }
 
   function markDirty() {
@@ -134,8 +153,10 @@ export function useNovelCreateWizard() {
     }
 
     saving.value = true;
+    const aiRecord = takeAiRecord();
     try {
       const payload = basicFormToPayload(basicForm);
+      if (aiRecord) payload.ai_record = aiRecord;
       if (novelId.value) {
         await updateNovel(novelId.value, payload);
       } else {
@@ -147,6 +168,7 @@ export function useNovelCreateWizard() {
       if (showMessage) ElMessage.success('草稿已保存');
       return true;
     } catch (e) {
+      if (aiRecord) aiSaveKind.value = aiRecord.kind;
       ElMessage.error(e.message || '保存失败，请重试');
       return false;
     } finally {
@@ -164,13 +186,16 @@ export function useNovelCreateWizard() {
     }
 
     saving.value = true;
+    const aiRecord = takeAiRecord();
     try {
       const patch = buildStepSettingPatch(currentStep.value, getFormsSnapshot());
+      if (aiRecord) patch.ai_record = aiRecord;
       await updateNovelSetting(novelId.value, patch);
       dirty.value = false;
       if (showMessage) ElMessage.success('草稿已保存');
       return true;
     } catch (e) {
+      if (aiRecord) aiSaveKind.value = aiRecord.kind;
       ElMessage.error(e.message || '保存失败，请重试');
       return false;
     } finally {
@@ -186,11 +211,15 @@ export function useNovelCreateWizard() {
     if (step === 1) return persistBasic(false);
     if (!novelId.value) return true;
     saving.value = true;
+    const aiRecord = takeAiRecord();
     try {
       const patch = buildStepSettingPatch(step, getFormsSnapshot());
+      if (!Object.keys(patch).length && !aiRecord) return true;
+      if (aiRecord) patch.ai_record = aiRecord;
       await updateNovelSetting(novelId.value, patch);
       return true;
     } catch (e) {
+      if (aiRecord) aiSaveKind.value = aiRecord.kind;
       ElMessage.error(e.message || '保存失败，请重试');
       return false;
     } finally {
@@ -233,7 +262,13 @@ export function useNovelCreateWizard() {
     syncQuery({ step: String(n), ai: '1' });
   }
 
-  function applyDispatchPatch(featureKey, patch) {
+  function characterIdByName(name) {
+    const key = String(name || '').trim();
+    const hit = characters.value.find((row) => row.name === key || String(row.id) === key);
+    return hit?.id ? String(hit.id) : '';
+  }
+
+  async function applyDispatchPatch(featureKey, patch) {
     if (!patch || typeof patch !== 'object') return;
     if (featureKey === 'basic') applyBasicPatch(basicForm, patch);
     else if (featureKey === 'world') applyWorldPatch(worldForm, patch);
@@ -241,6 +276,43 @@ export function useNovelCreateWizard() {
     else if (featureKey === 'characters') applyCharacterPatch(characters.value, characterEdges.value, patch);
     else if (featureKey === 'outline') applyOutlinePatch(outlineForm, patch);
     else if (featureKey === 'content') applyChaptersPatch(contentForm, patch);
+    else if (featureKey === 'style' && novelId.value && patch.style_preset) {
+      await saveNovelStyle(novelId.value, patch.style_preset);
+    } else if (featureKey === 'plotline' && novelId.value) {
+      for (const row of patch.plotlines || []) {
+        if (!row?.name) continue;
+        await createPlotline(novelId.value, {
+          name: row.name,
+          kind: row.kind,
+          status: row.status,
+          summary: row.summary || '',
+          events: [],
+        });
+      }
+    } else if (featureKey === 'script' && novelId.value && patch.script?.scenes?.length) {
+      await createScript(novelId.value, {
+        title: patch.script.title || '大纲剧本',
+        variant: patch.script.variant || 'comic',
+        chapter_ids: [],
+        scenes: patch.script.scenes,
+      });
+    } else if (featureKey === 'intent' && novelId.value) {
+      const scripts = await fetchScripts(novelId.value);
+      const scriptId = scripts?.[0]?.id || null;
+      for (const row of patch.intent_shots || []) {
+        const names = Array.isArray(row.characters) ? row.characters : [];
+        await createIntentShot(novelId.value, {
+          script_id: scriptId,
+          sort_order: row.sort_order,
+          scene_order: row.scene_order,
+          intent: row.intent,
+          dialogue: row.dialogue,
+          emotion: row.emotion,
+          location: row.location,
+          character_ids: names.map(characterIdByName).filter(Boolean),
+        });
+      }
+    }
   }
 
   async function resolvePlanSessionId(preferred) {
@@ -280,7 +352,7 @@ export function useNovelCreateWizard() {
         if (autorunToken !== token) return;
         if (result?.done || result?.feature_key === 'chapter') {
           ElMessage.success('设定已连续执行到章节目录，正文请到单章开发写');
-          revealStep(6);
+          revealStep(wizardStepOf('content'));
           break;
         }
         bindNovelId(result.novel_id);
@@ -288,7 +360,7 @@ export function useNovelCreateWizard() {
         const step = Number(result.step) || 1;
         const label = SETTING_FEATURE_LABELS[feature] || feature;
         autorunLabel.value = `正在写入「${label}」并保存草稿`;
-        applyDispatchPatch(feature, result.turn?.patch || {});
+        await applyDispatchPatch(feature, result.turn?.patch || {});
         if (feature === 'basic' && !basicForm.title?.trim()) {
           basicForm.title = String(result.turn?.patch?.title || '未命名开书');
         }
@@ -395,7 +467,7 @@ export function useNovelCreateWizard() {
     }
     const tab = Math.min(DETAIL_TAB_MAX, Math.max(1, Number(route.query.detailTab) || 1));
     const query = { tab: String(tab) };
-    if (tab === 7 && route.query.detailChapter) {
+    if (tab === STUDIO_TAB && route.query.detailChapter) {
       query.chapter = String(route.query.detailChapter);
     }
     router.push({
@@ -457,7 +529,7 @@ export function useNovelCreateWizard() {
     router.push({
       name: 'novel-detail',
       params: { id: String(novelId.value) },
-      query: { tab: '7', chapter: first },
+      query: { tab: String(STUDIO_TAB), chapter: first },
     });
   }
 
@@ -576,6 +648,7 @@ export function useNovelCreateWizard() {
     finishLabel,
     canStartWriting,
     markDirty,
+    markAiSave,
     saveDraft,
     goNext,
     goPrev,

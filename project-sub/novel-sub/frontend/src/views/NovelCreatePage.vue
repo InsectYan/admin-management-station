@@ -91,7 +91,33 @@
           @apply="onApplyCharacters"
         />
       </template>
-      <template v-else-if="currentStep === 5" #dock>
+      <template v-else-if="stepKey === 'style'" #dock>
+        <AiFormDock
+          :scenes="STYLE_AI_SCENES"
+          feature-key="style"
+          session-title="风格"
+          :novel-id="novelId"
+          :start-expanded="expandDock"
+          require-novel-id
+          :form-snapshot="basicForm"
+          :session-locked="autorunActive"
+          @apply="onApplyStyle"
+        />
+      </template>
+      <template v-else-if="stepKey === 'plotline'" #dock>
+        <AiFormDock
+          :scenes="PLOTLINE_AI_SCENES"
+          feature-key="plotline"
+          session-title="剧情线"
+          :novel-id="novelId"
+          :start-expanded="expandDock"
+          require-novel-id
+          :form-snapshot="outlineSnapshot"
+          :session-locked="autorunActive"
+          @apply="onApplyPlotline"
+        />
+      </template>
+      <template v-else-if="stepKey === 'outline'" #dock>
         <AiFormDock
           :scenes="OUTLINE_AI_SCENES"
           feature-key="outline"
@@ -104,7 +130,33 @@
           @apply="onApplyOutline"
         />
       </template>
-      <template v-else-if="currentStep === 6" #dock>
+      <template v-else-if="stepKey === 'script'" #dock>
+        <AiFormDock
+          :scenes="SCRIPT_AI_SCENES"
+          feature-key="script"
+          session-title="剧本"
+          :novel-id="novelId"
+          :start-expanded="expandDock"
+          require-novel-id
+          :form-snapshot="outlineSnapshot"
+          :session-locked="autorunActive"
+          @apply="onApplyScript"
+        />
+      </template>
+      <template v-else-if="stepKey === 'intent'" #dock>
+        <AiFormDock
+          :scenes="INTENT_AI_SCENES"
+          feature-key="intent"
+          session-title="叙事分镜"
+          :novel-id="novelId"
+          :start-expanded="expandDock"
+          require-novel-id
+          :form-snapshot="outlineSnapshot"
+          :session-locked="autorunActive"
+          @apply="onApplyIntent"
+        />
+      </template>
+      <template v-else-if="stepKey === 'content'" #dock>
         <AiFormDock
           :scenes="CONTENT_AI_SCENES"
           feature-key="content"
@@ -170,13 +222,33 @@
         @add="addCharacter"
         @remove="removeCharacter"
       />
+      <DetailStyle
+        v-else-if="stepKey === 'style'"
+        ref="styleRef"
+        :novel-id="novelId"
+      />
+      <DetailPlotlines
+        v-else-if="stepKey === 'plotline'"
+        ref="plotlineRef"
+        :novel-id="novelId"
+      />
       <StepOutline
-        v-else-if="currentStep === 5"
+        v-else-if="stepKey === 'outline'"
         :form="outlineForm"
         @change="markDirty"
         @add-volume="addOutlineVolume"
       />
-      <template v-else-if="currentStep === 6">
+      <DetailScripts
+        v-else-if="stepKey === 'script'"
+        ref="scriptRef"
+        :novel-id="novelId"
+      />
+      <DetailIntentShots
+        v-else-if="stepKey === 'intent'"
+        ref="intentRef"
+        :novel-id="novelId"
+      />
+      <template v-else-if="stepKey === 'content'">
         <AnomalyFixPanel
           v-if="route.query.anomaly"
           :report-id="route.query.anomaly"
@@ -199,9 +271,9 @@
           :finish-label="finishLabel"
           :can-start-writing="canStartWriting"
           :autorun-active="autorunActive"
-          @save-draft="saveDraft"
+          @save-draft="saveCurrentDraft"
           @prev="goPrev"
-          @next="goNext"
+          @next="nextStep"
           @finish="finishWizard"
           @start-writing="goStartWriting"
           @cancel-autorun="cancelSettingAutorun"
@@ -226,8 +298,14 @@ import StepOutline from '../components/novel/create/StepOutline.vue';
 import StepContentOrg from '../components/novel/create/StepContentOrg.vue';
 import AiFormDock from '../components/novel/ai/AiFormDock.vue';
 import AnomalyFixPanel from '../components/novel/AnomalyFixPanel.vue';
+import DetailStyle from '../components/novel/detail/DetailStyle.vue';
+import DetailPlotlines from '../components/novel/detail/DetailPlotlines.vue';
+import DetailScripts from '../components/novel/detail/DetailScripts.vue';
+import DetailIntentShots from '../components/novel/detail/DetailIntentShots.vue';
 import { useNovelCreateWizard } from '../composables/useNovelCreateWizard.js';
-import { BASIC_AI_SCENES, WORLD_AI_SCENES, OUTLINE_AI_SCENES, CONTENT_AI_SCENES, ORCHESTRATE_AI_SCENES, buildCharacterScenes, buildFactionScenes } from '../utils/aiScenes.js';
+import { BASIC_AI_SCENES, WORLD_AI_SCENES, STYLE_AI_SCENES, PLOTLINE_AI_SCENES, OUTLINE_AI_SCENES, SCRIPT_AI_SCENES, INTENT_AI_SCENES, CONTENT_AI_SCENES, ORCHESTRATE_AI_SCENES, buildCharacterScenes, buildFactionScenes } from '../utils/aiScenes.js';
+import { wizardStepOf } from '../utils/novelCreateSchema.js';
+import { STUDIO_TAB } from '../utils/novelDetail.js';
 import { applyBasicPatch, applyWorldPatch, applyFactionPatch, applyCharacterPatch, applyOutlinePatch, applyChaptersPatch, flattenOutlineTitles } from '../utils/aiApplyPatch.js';
 import { dispatchAiPlan } from '../services/aiService.js';
 import { routeAfterDispatch } from '../utils/aiDispatchNav.js';
@@ -256,6 +334,7 @@ const {
   finishLabel,
   canStartWriting,
   markDirty,
+  markAiSave,
   saveDraft,
   goNext,
   goPrev,
@@ -278,12 +357,17 @@ const {
   cancelSettingAutorun,
 } = useNovelCreateWizard();
 
+const stepKey = computed(() => stepMeta.value?.key || '');
+const styleRef = ref(null);
+const plotlineRef = ref(null);
+const scriptRef = ref(null);
+const intentRef = ref(null);
 const route = useRoute();
 const router = useRouter();
 const fixBoot = ref(false);
 
 watch(loading, (busy, prev) => {
-  if (prev && !busy && route.query.fix === '1' && String(route.query.step || '') === '6') {
+  if (prev && !busy && route.query.fix === '1' && String(route.query.step || '') === String(wizardStepOf('content'))) {
     fixBoot.value = true;
   }
 });
@@ -413,39 +497,76 @@ const orchestrateSnapshot = computed(() => ({
     factions: factions.value.length > 0,
     characters: characters.value.length > 0,
     outline: (outlineForm.volumes || []).length > 0,
+    style: false,
+    plotline: false,
+    script: false,
+    intent: false,
     content: (contentForm.chapters || []).length > 0,
+    bodies: false,
   },
   basic: basicAgentContext.value,
 }));
 
 function onApplyBasic(patch) {
   applyBasicPatch(basicForm, patch);
-  markDirty();
+  markAiSave('basic');
 }
 
 function onApplyWorld(patch) {
   applyWorldPatch(worldForm, patch);
-  markDirty();
+  markAiSave('world');
 }
 
 function onApplyFactions(patch, paths = []) {
   applyFactionPatch(factions.value, patch, { paths, characters: characters.value });
-  markDirty();
+  markAiSave('faction');
 }
 
 function onApplyCharacters(patch, paths = []) {
   applyCharacterPatch(characters.value, characterEdges.value, patch, { paths });
-  markDirty();
+  markAiSave('character');
 }
 
 function onApplyOutline(patch, paths = []) {
   applyOutlinePatch(outlineForm, patch, { paths });
-  markDirty();
+  markAiSave('outline');
 }
 
 function onApplyContent(patch, paths = []) {
   applyChaptersPatch(contentForm, patch, { paths });
-  markDirty();
+  markAiSave('chapter_list');
+}
+
+async function saveOpenModule() {
+  if (stepKey.value === 'plotline' && plotlineRef.value?.hasDraft?.()) await plotlineRef.value.save();
+  else if (stepKey.value === 'script' && scriptRef.value?.hasDraft?.()) await scriptRef.value.save();
+  else if (stepKey.value === 'intent' && intentRef.value?.hasSuggestion?.()) await intentRef.value.writeSuggestion();
+}
+
+async function saveCurrentDraft() {
+  await saveOpenModule();
+  return saveDraft();
+}
+
+async function nextStep() {
+  await saveOpenModule();
+  return goNext();
+}
+
+function onApplyStyle(patch) {
+  styleRef.value?.applyFromPatch?.(patch);
+}
+
+function onApplyPlotline(patch) {
+  plotlineRef.value?.applyFromPatch?.(patch);
+}
+
+function onApplyScript(patch) {
+  scriptRef.value?.applyFromPatch?.(patch);
+}
+
+function onApplyIntent(patch) {
+  intentRef.value?.applyFromPatch?.(patch);
 }
 
 async function onApplyPlan(_patch, _paths, meta = {}) {
@@ -464,7 +585,7 @@ async function onApplyPlan(_patch, _paths, meta = {}) {
       ElMessage.error('执行成功但缺少小说 ID');
       return;
     }
-    ElMessage.success(result.tab === 7 ? '已执行，正在打开单章开发' : '已执行，正在打开对应步骤');
+    ElMessage.success(result.tab === STUDIO_TAB ? '已执行，正在打开单章开发' : '已执行，正在打开对应步骤');
     if (dest.name === 'novel-detail') {
       router.push(dest);
       return;

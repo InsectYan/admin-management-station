@@ -249,6 +249,17 @@ async function syncSchemaOnStartup(app) {
 
   await sequelize.sync({ alter: true });
   logger.info('[SchemaSync] Sequelize sync completed');
+  // sync({ alter: true }) 会按模型重建外键；异常报告原先被改成不能随小说删除
+  await sequelize.query(`
+    ALTER TABLE novel_anomaly_reports DROP CONSTRAINT IF EXISTS novel_anomaly_reports_novel_id_fkey;
+    ALTER TABLE novel_anomaly_reports
+      ADD CONSTRAINT novel_anomaly_reports_novel_id_fkey
+      FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE ON UPDATE CASCADE;
+    ALTER TABLE novel_generation_records DROP CONSTRAINT IF EXISTS novel_generation_records_novel_id_fkey;
+    ALTER TABLE novel_generation_records
+      ADD CONSTRAINT novel_generation_records_novel_id_fkey
+      FOREIGN KEY (novel_id) REFERENCES novels(id) ON DELETE CASCADE ON UPDATE CASCADE;
+  `);
 
   await dropOrphanTables(sequelize, collectModelTableNames(app), logger);
   await seedNovelEnums(app);

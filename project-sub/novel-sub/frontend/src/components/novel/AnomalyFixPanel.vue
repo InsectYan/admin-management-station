@@ -29,6 +29,8 @@ import {
   runAnomalyTask,
   setAnomalyTaskStatus,
 } from '../../services/novelService.js';
+import { STUDIO_TAB } from '../../utils/novelDetail.js';
+import { wizardStepOf } from '../../utils/novelCreateSchema.js';
 
 const props = defineProps({
   reportId: { type: [String, Number], required: true },
@@ -67,7 +69,7 @@ function routeFor(task) {
       name: 'novel-create',
       query: {
         id: String(novelId),
-        step: '6',
+        step: String(wizardStepOf('content')),
         anomaly: String(props.reportId),
         fix: '1',
       },
@@ -77,7 +79,7 @@ function routeFor(task) {
     name: 'novel-detail',
     params: { id: String(novelId) },
     query: {
-      tab: '7',
+      tab: String(STUDIO_TAB),
       chapter: task.chapter_id || '',
       anomaly: String(props.reportId),
       fix: '1',

@@ -34,6 +34,7 @@ import AiFormDock from './AiFormDock.vue';
 import { ORCHESTRATE_AI_SCENES } from '../../../utils/aiScenes.js';
 import { dispatchAiPlan } from '../../../services/aiService.js';
 import { routeAfterDispatch } from '../../../utils/aiDispatchNav.js';
+import { STUDIO_TAB } from '../../../utils/novelDetail.js';
 
 defineProps({
   modelValue: { type: Boolean, default: false },
@@ -47,7 +48,11 @@ const snapshot = {
     world: false,
     factions: false,
     characters: false,
+    style: false,
+    plotline: false,
     outline: false,
+    script: false,
+    intent: false,
     content: false,
     bodies: false,
   },
@@ -74,7 +79,7 @@ async function onApply(patch, _paths, meta = {}) {
       ElMessage.error('执行成功但缺少小说 ID');
       return;
     }
-    ElMessage.success(result.tab === 7 ? '已执行，正在打开单章开发' : '已执行，正在打开向导');
+    ElMessage.success(result.tab === STUDIO_TAB ? '已执行，正在打开单章开发' : '已执行，正在打开向导');
     emit('update:modelValue', false);
     router.push(dest);
   } catch (err) {
