@@ -1,13 +1,15 @@
 <template>
   <div class="cartoon-panel">
     <h3 class="cartoon-module__title">{{ title }}</h3>
-    <el-form label-position="top">
+    <el-form label-position="top" class="cartoon-entry-form">
       <el-form-item v-for="field in fields" :key="field.key" :label="field.label">
         <el-input v-model="form[field.key]" type="textarea" :rows="2" />
       </el-form-item>
-      <el-button type="primary" :disabled="!canMake() || !fields.length" @click="save">保存面板</el-button>
-      <span v-if="ready">可以生成</span>
-      <span v-else>面板填完后才能生成</span>
+      <div class="cartoon-entry-actions">
+        <el-button type="primary" :disabled="!canMake() || !fields.length" @click="save">保存面板</el-button>
+        <span v-if="ready">可以生成</span>
+        <span v-else>面板填完后才能生成</span>
+      </div>
     </el-form>
   </div>
 </template>

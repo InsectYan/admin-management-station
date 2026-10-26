@@ -1,9 +1,14 @@
 <template>
   <PageShell title="版权溯源">
+    <section class="ops-section">
     <p class="ops-lineage-note">按成片编号查出故事包版本、资产编号、模型档位、工作流和操作者。这里不保存成片文件。</p>
-    <el-form inline @submit.prevent="load">
-      <el-input v-model="outputId" placeholder="成片编号" style="width: 180px" />
-      <el-button type="primary" :loading="loading" @click="load">查询</el-button>
+    <el-form label-position="top" class="ops-entry-form" @submit.prevent="load">
+      <div class="ops-entry-grid">
+        <el-form-item label="成片编号"><el-input v-model="outputId" /></el-form-item>
+      </div>
+      <div class="ops-entry-actions">
+        <el-button type="primary" :loading="loading" @click="load">查询</el-button>
+      </div>
     </el-form>
     <el-alert v-if="error" type="error" :title="error" show-icon :closable="false" />
     <dl v-else-if="row" class="ops-lineage-facts">
@@ -16,6 +21,7 @@
       <div><dt>工作流</dt><dd>{{ row.workflow_id ?? '未记录' }}</dd></div>
       <div><dt>操作者</dt><dd>{{ row.operator_name || '未记录' }}</dd></div>
     </dl>
+    </section>
   </PageShell>
 </template>
 

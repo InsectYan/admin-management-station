@@ -137,6 +137,14 @@ class ContentController extends Controller {
     }
   }
 
+  async combinedAudit() {
+    try {
+      ok(this.ctx, await this.ctx.service.content.combinedAudit(this.ctx.query));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async recordAudit() {
     try {
       ok(this.ctx, await this.ctx.service.content.recordAudit(this.ctx.request.body || {}));

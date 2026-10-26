@@ -18,45 +18,82 @@
       </button>
     </aside>
     <main class="cartoon-workbench__main">
+      <section v-if="customNodes.length || episode?.warning" class="cartoon-module cartoon-workbench__note">
+        <h3 class="cartoon-module__title">专项检查</h3>
+        <p v-if="episode?.warning" class="cartoon-module__hint">{{ episode.warning }}</p>
+        <div class="cartoon-toolbar">
+          <el-button v-for="item in customNodes" :key="item.node_key" @click="runCustom(item)">运行{{ item.title }}</el-button>
+        </div>
+        <p v-if="customNote" class="cartoon-module__hint">{{ customNote }}</p>
+      </section>
       <ProjectDetailPage v-if="scriptStep" :forced-step="scriptStep" />
       <section v-else-if="node === 'assets'" class="cartoon-module cartoon-workbench__note">
         <h3 class="cartoon-module__title">资产</h3>
         <p class="cartoon-module__hint">角色登记编号、三视图路径、表情、服装和 LoRA 引用，这里不生成图片。场景可以登记多角度路径。道具选择分类。配音登记语种和发音人。字幕样式和转场只记名称和说明。停用后记录还在。</p>
-        <el-form inline>
-          <el-input v-model="assetForm.name" placeholder="名称" style="width: 140px" />
-          <el-select v-model="assetForm.kind" style="width: 120px">
-            <el-option label="角色" value="character" />
-            <el-option label="场景" value="scene" />
-            <el-option label="道具" value="prop" />
-            <el-option label="配音" value="voice" />
-            <el-option label="背景音乐" value="bgm" />
-            <el-option label="音效" value="sfx" />
-            <el-option label="字幕样式" value="subtitle_style" />
-            <el-option label="转场" value="transition" />
-          </el-select>
-          <el-input v-model="assetForm.description" placeholder="描述" style="width: 180px" />
-          <el-input v-if="assetForm.kind === 'character'" v-model="assetForm.character_id" placeholder="叙事人物编号" style="width: 140px" />
-          <el-input v-if="assetForm.kind === 'character'" v-model="assetForm.consistency_note" placeholder="一致性备注" style="width: 160px" />
-          <el-input v-if="assetForm.kind === 'character'" v-model="assetForm.front_path" placeholder="正面图路径" style="width: 140px" />
-          <el-input v-if="assetForm.kind === 'character'" v-model="assetForm.side_path" placeholder="侧面图路径" style="width: 140px" />
-          <el-input v-if="assetForm.kind === 'character'" v-model="assetForm.back_path" placeholder="背面图路径" style="width: 140px" />
-          <el-input v-if="assetForm.kind === 'character'" v-model="assetForm.expression_note" placeholder="表情" style="width: 120px" />
-          <el-input v-if="assetForm.kind === 'character'" v-model="assetForm.costume_note" placeholder="服装" style="width: 120px" />
-          <el-input v-if="assetForm.kind === 'character'" v-model="assetForm.lora_ref" placeholder="LoRA 引用" style="width: 140px" />
-          <el-input v-if="assetForm.kind === 'character' || assetForm.kind === 'bgm' || assetForm.kind === 'sfx'" v-model="assetForm.reference_path" :placeholder="assetForm.kind === 'character' ? '参考图路径' : '文件路径'" style="width: 180px" />
-          <el-select v-if="assetForm.kind === 'scene'" v-model="assetForm.scene_type" placeholder="场景类型" style="width: 120px">
-            <el-option v-for="item in sceneTypes" :key="item" :label="item" :value="item" />
-          </el-select>
-          <el-input v-if="assetForm.kind === 'scene'" v-model="assetForm.angle_paths" placeholder="多角度路径，一行一个" style="width: 220px" />
-          <el-select v-if="assetForm.kind === 'prop'" v-model="assetForm.prop_category" placeholder="道具分类" style="width: 120px">
-            <el-option v-for="item in propCategories" :key="item" :label="item" :value="item" />
-          </el-select>
-          <el-input v-if="assetForm.kind === 'voice'" v-model="assetForm.voice_key" placeholder="音色标识" style="width: 120px" />
-          <el-input v-if="assetForm.kind === 'voice'" v-model="assetForm.speech_rate" placeholder="语速" style="width: 80px" />
-          <el-input v-if="assetForm.kind === 'voice'" v-model="assetForm.emotion" placeholder="情绪" style="width: 80px" />
-          <el-input v-if="assetForm.kind === 'voice'" v-model="assetForm.voice_lang" placeholder="语种" style="width: 100px" />
-          <el-input v-if="assetForm.kind === 'voice'" v-model="assetForm.speaker_name" placeholder="发音人" style="width: 100px" />
-          <el-button type="primary" @click="addAsset">添加</el-button>
+        <el-form label-position="top" class="cartoon-entry-form" @submit.prevent="addAsset">
+          <div class="cartoon-entry-grid">
+            <el-form-item label="名称"><el-input v-model="assetForm.name" /></el-form-item>
+            <el-form-item label="类型">
+              <el-select v-model="assetForm.kind" style="width: 100%">
+                <el-option label="角色" value="character" />
+                <el-option label="场景" value="scene" />
+                <el-option label="道具" value="prop" />
+                <el-option label="配音" value="voice" />
+                <el-option label="背景音乐" value="bgm" />
+                <el-option label="音效" value="sfx" />
+                <el-option label="字幕样式" value="subtitle_style" />
+                <el-option label="转场" value="transition" />
+              </el-select>
+            </el-form-item>
+            <el-form-item class="is-wide" label="描述">
+              <el-input v-model="assetForm.description" type="textarea" :rows="2" />
+            </el-form-item>
+            <template v-if="assetForm.kind === 'character'">
+              <p class="cartoon-entry-label">角色</p>
+              <el-form-item label="叙事人物编号"><el-input v-model="assetForm.character_id" /></el-form-item>
+              <el-form-item label="一致性备注"><el-input v-model="assetForm.consistency_note" /></el-form-item>
+              <el-form-item label="正面图路径"><el-input v-model="assetForm.front_path" /></el-form-item>
+              <el-form-item label="侧面图路径"><el-input v-model="assetForm.side_path" /></el-form-item>
+              <el-form-item label="背面图路径"><el-input v-model="assetForm.back_path" /></el-form-item>
+              <el-form-item label="参考图路径"><el-input v-model="assetForm.reference_path" /></el-form-item>
+              <el-form-item label="表情"><el-input v-model="assetForm.expression_note" /></el-form-item>
+              <el-form-item label="服装"><el-input v-model="assetForm.costume_note" /></el-form-item>
+              <el-form-item class="is-wide" label="LoRA 引用"><el-input v-model="assetForm.lora_ref" /></el-form-item>
+            </template>
+            <template v-else-if="assetForm.kind === 'scene'">
+              <p class="cartoon-entry-label">场景</p>
+              <el-form-item label="场景类型">
+                <el-select v-model="assetForm.scene_type" placeholder="选择类型" style="width: 100%">
+                  <el-option v-for="item in sceneTypes" :key="item" :label="item" :value="item" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="多角度路径">
+                <el-input v-model="assetForm.angle_paths" type="textarea" :rows="2" placeholder="一行一个路径" />
+              </el-form-item>
+            </template>
+            <template v-else-if="assetForm.kind === 'prop'">
+              <p class="cartoon-entry-label">道具</p>
+              <el-form-item label="道具分类">
+                <el-select v-model="assetForm.prop_category" placeholder="选择分类" style="width: 100%">
+                  <el-option v-for="item in propCategories" :key="item" :label="item" :value="item" />
+                </el-select>
+              </el-form-item>
+            </template>
+            <template v-else-if="assetForm.kind === 'voice'">
+              <p class="cartoon-entry-label">配音</p>
+              <el-form-item label="音色标识"><el-input v-model="assetForm.voice_key" /></el-form-item>
+              <el-form-item label="语速"><el-input v-model="assetForm.speech_rate" /></el-form-item>
+              <el-form-item label="情绪"><el-input v-model="assetForm.emotion" /></el-form-item>
+              <el-form-item label="语种"><el-input v-model="assetForm.voice_lang" /></el-form-item>
+              <el-form-item label="发音人"><el-input v-model="assetForm.speaker_name" /></el-form-item>
+            </template>
+            <template v-else-if="assetForm.kind === 'bgm' || assetForm.kind === 'sfx'">
+              <el-form-item class="is-wide" label="文件路径"><el-input v-model="assetForm.reference_path" /></el-form-item>
+            </template>
+          </div>
+          <div class="cartoon-entry-actions">
+            <el-button type="primary" @click="addAsset">添加</el-button>
+          </div>
         </el-form>
         <el-empty v-if="!assets.length" description="还没有资产" />
         <el-table v-else :data="assets" size="small">
@@ -84,6 +121,67 @@
               <el-button v-if="!row.disabled" link type="danger" @click="disableAsset(row)">停用</el-button>
             </template>
           </el-table-column>
+        </el-table>
+        <p v-if="staleShots.length" class="cartoon-module__hint">资产已更新，这些镜头已经出过画面，不会自动重跑：{{ staleShots.map(item => item.id).join('、') }}</p>
+        <el-form label-position="top" class="cartoon-entry-form" @submit.prevent="linkShared">
+          <div class="cartoon-entry-grid">
+            <el-form-item label="共享资产编号"><el-input v-model="sharedAssetId" /></el-form-item>
+          </div>
+          <div class="cartoon-entry-actions">
+            <el-button @click="linkShared">引用共享资产</el-button>
+            <el-button @click="matchAssets">同名匹配</el-button>
+            <el-button @click="suggestAssets">请技能建议</el-button>
+            <el-button type="primary" :disabled="!assetSuggestions.length" @click="applyAssets">写入绑定</el-button>
+          </div>
+        </el-form>
+        <p v-if="actionNote" class="cartoon-module__hint">{{ actionNote }}</p>
+        <el-table v-if="assetSuggestions.length" :data="assetSuggestions" size="small">
+          <el-table-column prop="shot_id" label="镜头" width="80" />
+          <el-table-column prop="asset_id" label="资产" width="80" />
+          <el-table-column prop="reason" label="原因" />
+        </el-table>
+        <el-table v-if="bindings.length" :data="bindings" size="small">
+          <el-table-column prop="shot_id" label="已绑定镜头" width="120" />
+          <el-table-column prop="asset_id" label="资产" width="80" />
+          <el-table-column prop="reason" label="原因" />
+        </el-table>
+      </section>
+      <section v-else-if="node === 'voice'" class="cartoon-module cartoon-workbench__note">
+        <h3 class="cartoon-module__title">配音</h3>
+        <p class="cartoon-module__hint">需要已登记音色，并且配音节点和档位都已启用。建议先出现在这里，确认后才写入时间轴。</p>
+        <div class="cartoon-toolbar">
+          <el-button @click="suggestVoice">请技能建议</el-button>
+          <el-checkbox v-model="requestAudio">档位能出音频时再生成</el-checkbox>
+          <el-button type="primary" :disabled="!voiceSuggestions.length" @click="applyVoice">写入时间轴</el-button>
+        </div>
+        <p v-if="actionNote" class="cartoon-module__hint">{{ actionNote }}</p>
+        <el-table v-if="voiceSuggestions.length" :data="voiceSuggestions" size="small">
+          <el-table-column prop="shot_id" label="镜头" width="80" />
+          <el-table-column prop="text" label="台词" />
+          <el-table-column prop="start_ms" label="开始" width="80" />
+          <el-table-column prop="end_ms" label="结束" width="80" />
+        </el-table>
+      </section>
+      <section v-else-if="node === 'subtitle'" class="cartoon-module cartoon-workbench__note">
+        <h3 class="cartoon-module__title">字幕</h3>
+        <p class="cartoon-module__hint">用镜头台词和已登记的字幕样式排时间轴，不调用技能。节点未启用时不能排。</p>
+        <div class="cartoon-toolbar">
+          <el-button type="primary" @click="buildSubtitles">按台词排时间轴</el-button>
+        </div>
+        <p v-if="actionNote" class="cartoon-module__hint">{{ actionNote }}</p>
+      </section>
+      <section v-else-if="node === 'review'" class="cartoon-module cartoon-workbench__note">
+        <h3 class="cartoon-module__title">AI 初审</h3>
+        <p class="cartoon-module__hint">初审只列出问题。通过或驳回仍在人工确认里完成。</p>
+        <div class="cartoon-toolbar">
+          <el-button @click="suggestReview">请技能建议</el-button>
+          <el-button type="primary" :disabled="!reviewSuggestions.length" @click="applyReview">记下问题</el-button>
+        </div>
+        <p v-if="actionNote" class="cartoon-module__hint">{{ actionNote }}</p>
+        <el-table v-if="findings.length" :data="findings" size="small">
+          <el-table-column prop="level" label="级别" width="90" />
+          <el-table-column prop="message" label="问题" />
+          <el-table-column prop="node" label="回到" width="100" />
         </el-table>
       </section>
       <template v-else-if="node === 'generate' || node === 'preview'">
@@ -137,6 +235,9 @@ const nodes = [
   { id: 'storyboard', title: '分镜' },
   { id: 'assets', title: '资产' },
   { id: 'generate', title: '生成' },
+  { id: 'voice', title: '配音' },
+  { id: 'subtitle', title: '字幕' },
+  { id: 'review', title: '初审' },
   { id: 'compose', title: '合成' },
   { id: 'preview', title: '预览' },
   { id: 'export', title: '导出' },
@@ -158,6 +259,17 @@ const assetForm = reactive({
   angle_paths: '', prop_category: '', voice_lang: '', speaker_name: '',
 });
 const assets = computed(() => bundle.value?.assets || []);
+const bindings = computed(() => bundle.value?.bindings || []);
+const staleShots = computed(() => (bundle.value?.shots || []).filter(item => item.asset_stale));
+const findings = computed(() => bundle.value?.review_findings || []);
+const assetSuggestions = ref([]);
+const voiceSuggestions = ref([]);
+const reviewSuggestions = ref([]);
+const actionNote = ref('');
+const customNodes = ref([]);
+const customNote = ref('');
+const sharedAssetId = ref('');
+const requestAudio = ref(false);
 const nodeTitle = computed(() => nodes.find(item => item.id === node.value)?.title || '');
 
 const projectId = computed(() => route.params.id);
@@ -179,6 +291,27 @@ const pinLabel = computed(() => {
 
 function assetKind(kind) {
   return { character: '角色', scene: '场景', prop: '道具', voice: '配音', bgm: '背景音乐', sfx: '音效', subtitle_style: '字幕样式', transition: '转场' }[kind] || kind;
+}
+async function runCustom(item) {
+  customNote.value = '';
+  try {
+    const data = await request(`/projects/${projectId.value}/nodes/${item.node_key}/run`, { method: 'post', data: {} });
+    const count = data?.findings?.length || 0;
+    customNote.value = data?.warning || data?.note || (count ? `记下 ${count} 条问题` : '这项检查没有发现问题');
+    if (data?.warning) await load();
+  } catch (err) {
+    customNote.value = err.message;
+  }
+}
+async function linkShared() {
+  await runAction(async () => {
+    await request(`/projects/${projectId.value}/assets/link`, {
+      method: 'post',
+      data: { library_asset_id: Number(sharedAssetId.value) },
+    });
+    sharedAssetId.value = '';
+    actionNote.value = '已引用共享资产';
+  });
 }
 function nodeMark(id) {
   const tasks = bundle.value?.tasks || [];
@@ -253,6 +386,72 @@ async function addAsset() {
   assetForm.speaker_name = '';
   await load();
 }
+async function runAction(work) {
+  actionNote.value = '';
+  try {
+    await work();
+    await load();
+  } catch (err) {
+    actionNote.value = err.message || '没有完成';
+  }
+}
+async function matchAssets() {
+  await runAction(async () => {
+    await request(`/projects/${projectId.value}/assets/match`, { method: 'post' });
+    actionNote.value = '已按名称写入绑定';
+  });
+}
+async function suggestAssets() {
+  await runAction(async () => {
+    const data = await request(`/projects/${projectId.value}/assets/suggest`, { method: 'post' });
+    assetSuggestions.value = data?.suggestions || [];
+    actionNote.value = assetSuggestions.value.length ? '建议还没有写入' : '没有可绑定的资产';
+  });
+}
+async function applyAssets() {
+  await runAction(async () => {
+    await request(`/projects/${projectId.value}/assets/apply`, { method: 'post', data: { suggestions: assetSuggestions.value } });
+    assetSuggestions.value = [];
+    actionNote.value = '绑定已写入';
+  });
+}
+async function suggestVoice() {
+  await runAction(async () => {
+    const data = await request(`/projects/${projectId.value}/voice/suggest`, { method: 'post' });
+    voiceSuggestions.value = data?.cues || [];
+    actionNote.value = '时间轴还没有写入';
+  });
+}
+async function applyVoice() {
+  await runAction(async () => {
+    const data = await request(`/projects/${projectId.value}/voice/apply`, {
+      method: 'post',
+      data: { cues: voiceSuggestions.value, request_audio: requestAudio.value },
+    });
+    voiceSuggestions.value = [];
+    actionNote.value = data?.audio_note || '时间轴已写入';
+  });
+}
+async function buildSubtitles() {
+  await runAction(async () => {
+    const data = await request(`/projects/${projectId.value}/subtitles/build`, { method: 'post' });
+    actionNote.value = data?.style ? `已按「${data.style}」排好字幕` : '已按台词排好字幕';
+  });
+}
+async function suggestReview() {
+  await runAction(async () => {
+    const data = await request(`/projects/${projectId.value}/review-findings/suggest`, { method: 'post' });
+    reviewSuggestions.value = data?.issues || [];
+    actionNote.value = '问题还没有记下';
+  });
+}
+async function applyReview() {
+  await runAction(async () => {
+    await request(`/projects/${projectId.value}/review-findings/apply`, { method: 'post', data: { issues: reviewSuggestions.value } });
+    reviewSuggestions.value = [];
+    actionNote.value = '问题已记下';
+  });
+}
 async function disableAsset(row) {
   await request(`/projects/${projectId.value}/assets/${row.id}/disable`, { method: 'post' });
   await load();
@@ -294,13 +493,22 @@ async function load() {
   bundle.value = detail;
   episode.value = current || null;
   shots.value = (detail.shots || []).filter(item => !item.deleted_at);
+  try {
+    const pipe = await request('/pipelines', { params: { content_type: detail.project.content_type } });
+    customNodes.value = (pipe.nodes || []).filter(item => item.kind === 'custom' && item.enabled);
+  } catch {
+    customNodes.value = [];
+  }
   if (episode.value && !route.query.node && episode.value.current_node) {
     await router.replace({ query: { ...route.query, node: episode.value.current_node } });
   }
   await persistNode(node.value);
 }
 
-watch(node, (value) => { persistNode(value); });
+watch(node, (value) => {
+  actionNote.value = '';
+  persistNode(value);
+});
 watch(() => route.params.taskId, () => {
   load().catch((err) => { error.value = err.message || '打不开工作台'; });
 });
@@ -321,8 +529,12 @@ onMounted(() => {
   top: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 16px 12px;
+  gap: 8px;
+  margin: 16px 12px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(240, 247, 242, 0.72);
+  border: 1px solid rgba(47, 138, 91, 0.12);
 }
 .cartoon-workbench__nav h1 {
   margin: 8px 0 0;
@@ -336,16 +548,22 @@ onMounted(() => {
 }
 .cartoon-workbench__pin { margin-bottom: 12px; }
 .cartoon-workbench__node {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  border: 0;
+  gap: 10px;
+  min-height: 44px;
+  border: 1px solid rgba(47, 138, 91, 0.12);
   background: transparent;
   text-align: left;
-  padding: 8px 10px;
-  border-radius: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
   cursor: pointer;
-  color: var(--cartoon-color-deep);
+  color: var(--cartoon-color-muted);
+  font-weight: 600;
+}
+.cartoon-workbench__node:hover {
+  background: rgba(255, 255, 255, 0.62);
 }
 .cartoon-workbench__dot {
   width: 8px;
@@ -372,9 +590,20 @@ onMounted(() => {
 }
 .cartoon-workbench__side p { margin: 0 0 6px; }
 .cartoon-workbench__node.is-active {
-  background: #fff;
-  color: var(--cartoon-color-primary);
-  font-weight: 600;
+  background: rgba(255, 255, 255, 0.86);
+  border-color: rgba(47, 138, 91, 0.32);
+  color: var(--cartoon-color-deep);
+  box-shadow: 0 1px 2px rgba(31, 61, 44, 0.04);
+}
+.cartoon-workbench__node.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 2px;
+  background: #2f8a5b;
 }
 .cartoon-workbench__main { min-width: 0; }
 .cartoon-workbench__note { margin: 16px 20px 0; }

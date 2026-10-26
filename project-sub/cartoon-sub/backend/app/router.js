@@ -25,6 +25,8 @@ module.exports = app => {
   router.get('/api/library/reviews/:id', controller.library.review);
   router.get('/api/library/versions', controller.library.versions);
   router.get('/api/library/exports', controller.library.exports);
+  router.post('/api/library/shared', controller.library.createShared);
+  router.put('/api/library/shared/:id', controller.library.updateShared);
   router.get('/api/rules', controller.rule.index);
   router.post('/api/rules', controller.rule.create);
   router.put('/api/rules/:id', controller.rule.update);
@@ -43,7 +45,10 @@ module.exports = app => {
   router.delete('/api/projects/:id/imports/:importId', controller.project.removeImport);
   router.post('/api/projects/:id/imports/from-novel', controller.project.pullNovel);
   router.post('/api/projects/:id/rebase', controller.project.rebase);
+  router.post('/api/projects/:id/imports/:importId/draft/suggest', controller.project.draftSuggest);
+  router.post('/api/projects/:id/imports/:importId/draft/apply', controller.project.draftApply);
   router.post('/api/projects/:id/imports/:importId/draft', controller.project.draft);
+  router.post('/api/projects/:id/nodes/:nodeKey/run', controller.customNode.run);
   router.post('/api/projects/:id/shots', controller.project.addShot);
   router.get('/api/projects/:id/copy-blocks', controller.project.listCopyBlocks);
   router.post('/api/projects/:id/copy-blocks', controller.project.addCopyBlock);
@@ -60,6 +65,15 @@ module.exports = app => {
   router.get('/api/outputs/:id/lineage', controller.delivery.lineage);
   router.get('/api/projects/:id/shell-members', controller.project.shellMembers);
   router.post('/api/projects/:id/assets/:assetId/disable', controller.project.disableAsset);
+  router.post('/api/projects/:id/assets/link', controller.library.linkShared);
+  router.post('/api/projects/:id/assets/match', controller.skillSuggest.matchAssets);
+  router.post('/api/projects/:id/assets/suggest', controller.skillSuggest.suggestAssets);
+  router.post('/api/projects/:id/assets/apply', controller.skillSuggest.applyAssets);
+  router.post('/api/projects/:id/voice/suggest', controller.skillSuggest.suggestVoice);
+  router.post('/api/projects/:id/voice/apply', controller.skillSuggest.applyVoice);
+  router.post('/api/projects/:id/review-findings/suggest', controller.skillSuggest.suggestReview);
+  router.post('/api/projects/:id/review-findings/apply', controller.skillSuggest.applyReview);
+  router.post('/api/projects/:id/subtitles/build', controller.skillSuggest.buildSubtitles);
   router.get('/api/projects/:id/reviews', controller.review.index);
   router.post('/api/projects/:id/reviews', controller.review.decide);
   router.get('/api/projects/:id/batches', controller.batch.index);

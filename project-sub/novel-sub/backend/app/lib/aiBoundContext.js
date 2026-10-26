@@ -194,6 +194,8 @@ function collectContextLabels(bound = {}) {
   addLabel(labels, bound.word_target != null && bound.word_target !== '', '目标字数');
   addLabel(labels, !isEmpty(bound.volumes), '大纲');
   addLabel(labels, !isEmpty(bound.chapters), '章节');
+  addLabel(labels, !isEmpty(bound.terms), '术语');
+  addLabel(labels, !isEmpty(bound.style_preset || bound.style), '风格');
   addLabel(labels, !isEmpty(bound.outline_titles), '大纲小节');
   return labels;
 }

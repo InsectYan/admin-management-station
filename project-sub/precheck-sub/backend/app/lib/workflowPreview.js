@@ -61,6 +61,7 @@ function isVideoWorkflow(graph) {
 }
 
 function frameAlign(classType) {
+  if (/minimax/i.test(classType || '')) return '17k5';
   if (/wan|hunyuan|mochi/i.test(classType || '')) return '4n1';
   if (/ltx/i.test(classType || '')) return '8n1';
   return 'round';
@@ -85,6 +86,11 @@ function alignFrames(raw, align) {
   const count = Math.max(1, Math.round(Number(raw)));
   if (align === '4n1') return Math.max(1, 4 * Math.round((count - 1) / 4) + 1);
   if (align === '8n1') return Math.max(1, 8 * Math.round((count - 1) / 8) + 1);
+  if (align === '17k5') {
+    let frames = Math.max(5, count);
+    while (frames % 17 !== 5) frames += 1;
+    return frames;
+  }
   return count;
 }
 
@@ -128,7 +134,8 @@ function listPreviewFields(apiJson) {
     });
   });
   if (isVideoWorkflow(apiJson)) {
-    const wan = fields.some(field => FRAME_KEYS.has(field.key) && frameAlign(field.class_type) === '4n1');
+    const frameField = fields.find(field => FRAME_KEYS.has(field.key));
+    const align = frameField ? frameAlign(frameField.class_type) : 'round';
     fields.unshift({
       id: 'duration_sec',
       node_id: '',
@@ -138,7 +145,7 @@ function listPreviewFields(apiJson) {
       label: '生成时间（秒）',
       value: null,
       fps: readFps(apiJson),
-      align: wan ? '4n1' : 'round',
+      align,
     });
   }
   return fields;

@@ -3,8 +3,32 @@
 const Service = require('egg').Service;
 const { parseApiWorkflow } = require('../lib/workflowParse');
 const { buildSupplies } = require('../lib/supplyCatalog');
+const { H3_TEMPLATES } = require('../lib/h3Templates');
 
 class WorkflowService extends Service {
+  async ensureTemplates() {
+    for (const item of H3_TEMPLATES) {
+      const parsed = parseApiWorkflow(item.api_json);
+      const existing = await this.ctx.model.Workflow.findOne({ where: { name: item.name } });
+      const fields = {
+        name: item.name,
+        category: item.category,
+        api_json: item.api_json,
+        required_nodes: parsed.required_nodes,
+        required_models: parsed.required_models,
+        suggested_vram_gb: item.suggested_vram_gb,
+      };
+      if (!existing) {
+        await this.ctx.model.Workflow.create(fields);
+        continue;
+      }
+      const sameNodes = JSON.stringify(existing.required_nodes) === JSON.stringify(parsed.required_nodes);
+      const sameModels = JSON.stringify(existing.required_models) === JSON.stringify(parsed.required_models);
+      const sameMeta = existing.category === item.category && existing.suggested_vram_gb === item.suggested_vram_gb;
+      if (!sameNodes || !sameModels || !sameMeta) await existing.update(fields);
+    }
+  }
+
   async list() {
     const rows = await this.ctx.model.Workflow.findAll({
       order: [[ 'id', 'DESC' ]],

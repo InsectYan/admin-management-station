@@ -21,8 +21,24 @@
         </el-form-item>
         <p v-if="contractError" class="cartoon-module__hint">{{ contractError }}</p>
         <el-form-item v-for="slot in slots" :key="slot.id" :label="slot.label">
-          <input :key="`${kind}-${slot.id}`" type="file" accept="image/png,image/jpeg,image/webp" @change="onImage(slot, $event)" />
-          <p class="cartoon-module__hint">{{ slot.spec }}{{ files[slot.id]?.filename ? ` · 已选 ${files[slot.id].filename}` : '' }}</p>
+          <div class="cartoon-image-field">
+            <el-upload
+              :key="`${kind}-${slot.id}`"
+              v-model:file-list="imageLists[slot.id]"
+              class="cartoon-image-upload"
+              action="#"
+              list-type="picture"
+              accept="image/png,image/jpeg,image/webp"
+              :auto-upload="false"
+              :limit="1"
+              :on-change="file => onImage(slot, file)"
+              :on-remove="() => clearImage(slot)"
+              :on-exceed="files => replaceImage(slot, files)"
+            >
+              <el-button type="primary" plain>选择图片</el-button>
+            </el-upload>
+            <p class="cartoon-module__hint">{{ slot.spec }}</p>
+          </div>
         </el-form-item>
         <el-button type="primary" :disabled="!canMake()" :loading="generating" @click="generate">生成</el-button>
       </el-form>
@@ -45,7 +61,9 @@ const chapterTitle = ref('');
 const promptText = ref('');
 const kind = ref('image');
 const contracts = ref({});
+const IMAGE_TYPES = new Set([ 'image/png', 'image/jpeg', 'image/webp' ]);
 const files = reactive({});
+const imageLists = reactive({});
 const kinds = [
   { value: 'image', label: '文生图' },
   { value: 'video', label: '首尾帧视频' },
@@ -93,16 +111,43 @@ function stopPoll() {
 }
 function resetFiles() {
   Object.keys(files).forEach(key => { delete files[key]; });
+  Object.keys(imageLists).forEach(key => { delete imageLists[key]; });
 }
-function onImage(slot, event) {
-  const file = event.target.files?.[0];
-  delete files[slot.id];
+function ensureList(slotId) {
+  if (!imageLists[slotId]) imageLists[slotId] = [];
+}
+function readImage(slot, file) {
   if (!file) return;
+  if (file.type && !IMAGE_TYPES.has(file.type)) {
+    ElMessage.warning('请上传 png、jpg 或 webp');
+    imageLists[slot.id] = [];
+    delete files[slot.id];
+    return;
+  }
   const reader = new FileReader();
   reader.onload = () => {
     files[slot.id] = { filename: file.name, data_base64: String(reader.result || '') };
   };
   reader.readAsDataURL(file);
+}
+function onImage(slot, uploadFile) {
+  ensureList(slot.id);
+  readImage(slot, uploadFile?.raw);
+}
+function clearImage(slot) {
+  delete files[slot.id];
+}
+function replaceImage(slot, picked) {
+  const file = picked?.[0];
+  if (!file) return;
+  imageLists[slot.id] = [{
+    name: file.name,
+    url: URL.createObjectURL(file),
+    status: 'ready',
+    uid: Date.now(),
+    raw: file,
+  }];
+  readImage(slot, file);
 }
 async function load() {
   const detail = await request(`/projects/${projectId.value}`);
@@ -168,6 +213,18 @@ async function generate() {
   }
 }
 watch(kind, resetFiles);
+watch(slots, next => {
+  (next || []).forEach(slot => ensureList(slot.id));
+}, { immediate: true });
 onMounted(load);
 onUnmounted(stopPoll);
 </script>
+
+<style scoped>
+.cartoon-image-field { width: 100%; max-width: 420px; }
+.cartoon-image-upload { display: block; }
+.cartoon-image-upload :deep(.el-upload-list--picture .el-upload-list__item) {
+  border-radius: 10px;
+  border-color: rgba(47, 138, 91, 0.16);
+}
+</style>

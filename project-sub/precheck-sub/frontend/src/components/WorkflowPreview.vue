@@ -22,8 +22,24 @@
           <p class="precheck-preview-hint">{{ durationHint(field) }}</p>
         </template>
         <template v-else-if="field.type === 'image'">
-          <input :key="field.id" type="file" accept="image/png,image/jpeg,image/webp" @change="onImage(field, $event)" />
-          <p class="precheck-preview-hint">{{ field.spec }}{{ field.filename ? ` · 已选 ${field.filename}` : '' }}</p>
+          <div class="precheck-image-field">
+            <el-upload
+              :key="field.id"
+              v-model:file-list="imageLists[field.id]"
+              class="precheck-image-upload"
+              action="#"
+              list-type="picture"
+              accept="image/png,image/jpeg,image/webp"
+              :auto-upload="false"
+              :limit="1"
+              :on-change="file => onImage(field, file)"
+              :on-remove="() => clearImage(field)"
+              :on-exceed="files => replaceImage(field, files)"
+            >
+              <el-button type="primary" plain>选择图片</el-button>
+            </el-upload>
+            <p class="precheck-preview-hint">{{ field.spec }}</p>
+          </div>
         </template>
         <el-input v-else-if="field.type === 'text'" v-model="field.value" type="textarea" :rows="3" />
         <el-input-number
@@ -45,7 +61,7 @@
 </template>
 
 <script setup>
-import { computed, onUnmounted, ref, watch } from 'vue';
+import { computed, onUnmounted, reactive, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 
@@ -55,7 +71,9 @@ const props = defineProps({
 });
 
 const FRAME_KEYS = new Set([ 'length', 'frames', 'num_frames', 'frame_count' ]);
+const IMAGE_TYPES = new Set([ 'image/png', 'image/jpeg', 'image/webp' ]);
 const fields = ref([]);
+const imageLists = reactive({});
 const loaded = ref(false);
 const frameBackup = ref(null);
 const running = ref(false);
@@ -68,9 +86,15 @@ function alignFrames(raw, align) {
   const count = Math.max(1, Math.round(Number(raw)));
   if (align === '4n1') return Math.max(1, 4 * Math.round((count - 1) / 4) + 1);
   if (align === '8n1') return Math.max(1, 8 * Math.round((count - 1) / 8) + 1);
+  if (align === '17k5') {
+    let frames = Math.max(5, count);
+    while (frames % 17 !== 5) frames += 1;
+    return frames;
+  }
   return count;
 }
 function frameAlign(classType) {
+  if (/minimax/i.test(classType || '')) return '17k5';
   if (/wan|hunyuan|mochi/i.test(classType || '')) return '4n1';
   if (/ltx/i.test(classType || '')) return '8n1';
   return 'round';
@@ -92,20 +116,55 @@ function durationHint(field) {
   }
   const sample = fields.value.find(item => FRAME_KEYS.has(item.key));
   const frames = alignFrames(seconds * fps, sample ? frameAlign(sample.class_type) : field.align);
-  const snap = field.align === '4n1' ? '，帧数取最接近的 4n+1' : '';
+  const snap = field.align === '4n1'
+    ? '，帧数取最接近的 4n+1'
+    : field.align === '17k5'
+      ? '，帧数向上对齐到 17k+5'
+      : '';
   return `将按 ${fps} fps 写成约 ${frames} 帧${snap}。`;
 }
-function onImage(field, event) {
-  const file = event.target.files?.[0];
-  field.filename = '';
-  field.data = '';
+function syncImageLists(next) {
+  const ids = new Set((next || []).filter(field => field.type === 'image').map(field => field.id));
+  Object.keys(imageLists).forEach(key => {
+    if (!ids.has(key)) delete imageLists[key];
+  });
+  ids.forEach(id => {
+    if (!imageLists[id]) imageLists[id] = [];
+  });
+}
+function readImage(field, file) {
   if (!file) return;
+  if (file.type && !IMAGE_TYPES.has(file.type)) {
+    ElMessage.warning('请上传 png、jpg 或 webp');
+    imageLists[field.id] = [];
+    clearImage(field);
+    return;
+  }
   const reader = new FileReader();
   reader.onload = () => {
     field.filename = file.name;
     field.data = String(reader.result || '');
   };
   reader.readAsDataURL(file);
+}
+function onImage(field, uploadFile) {
+  readImage(field, uploadFile?.raw);
+}
+function clearImage(field) {
+  field.filename = '';
+  field.data = '';
+}
+function replaceImage(field, files) {
+  const file = files?.[0];
+  if (!file) return;
+  imageLists[field.id] = [{
+    name: file.name,
+    url: URL.createObjectURL(file),
+    status: 'ready',
+    uid: Date.now(),
+    raw: file,
+  }];
+  readImage(field, file);
 }
 function frameLocked(field) {
   return FRAME_KEYS.has(field.key) && Number(durationField()?.value) > 0;
@@ -164,7 +223,9 @@ async function loadFields() {
   if (!props.apiJson) return;
   try {
     frameBackup.value = null;
-    fields.value = await request('/workflows/fields', { method: 'post', data: { api_json: props.apiJson } }) || [];
+    const next = await request('/workflows/fields', { method: 'post', data: { api_json: props.apiJson } }) || [];
+    syncImageLists(next);
+    fields.value = next;
   } catch (err) {
     ElMessage.error(err.message);
   } finally {
@@ -221,8 +282,13 @@ onUnmounted(stop);
 
 <style scoped>
 .precheck-preview-form { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
-.precheck-preview-duration,
-.precheck-preview-form :deep(.el-form-item:has(input[type='file'])) { grid-column: 1 / -1; }
+.precheck-preview-duration { grid-column: 1 / -1; }
+.precheck-image-field { width: 100%; max-width: 420px; }
+.precheck-image-upload { display: block; }
+.precheck-image-upload :deep(.el-upload-list--picture .el-upload-list__item) {
+  border-radius: 10px;
+  border-color: rgba(47, 138, 91, 0.16);
+}
 .precheck-preview-hint { margin: 6px 0 0; color: #5c6b62; font-size: 13px; }
 .precheck-preview-note { color: #5c6b62; }
 .precheck-preview-media img,

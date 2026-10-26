@@ -161,6 +161,22 @@ class ProjectController extends Controller {
     }
   }
 
+  async draftSuggest() {
+    try {
+      ok(this.ctx, await this.ctx.service.draft.suggest(this.ctx.params.id, this.ctx.params.importId));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async draftApply() {
+    try {
+      ok(this.ctx, await this.ctx.service.draft.apply(this.ctx.params.id, this.ctx.params.importId, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async draft() {
     try {
       ok(this.ctx, await this.ctx.service.draft.run(this.ctx.params.id, this.ctx.params.importId));

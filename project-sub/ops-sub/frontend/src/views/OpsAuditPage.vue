@@ -38,6 +38,17 @@
         </el-table>
       </template>
     </DataTablePanel>
+    <h4 class="ops-block-title">壳上的审计</h4>
+    <el-button @click="loadShell">同时查看</el-button>
+    <p v-if="shellNote">{{ shellNote }}</p>
+    <el-table v-if="shellRows.length" :data="shellRows" row-key="id">
+      <el-table-column label="时间" width="180">
+        <template #default="{ row }">{{ formatDateTime(row.created_at) }}</template>
+      </el-table-column>
+      <el-table-column prop="actor_username" label="操作者" width="140" />
+      <el-table-column prop="action" label="动作" min-width="160" />
+      <el-table-column prop="target_username" label="对象" min-width="140" />
+    </el-table>
   </PageShell>
 </template>
 
@@ -46,10 +57,12 @@ import { onMounted, ref } from 'vue';
 import PageShell from '../components/PageShell.vue';
 import DataTablePanel from '../components/DataTablePanel.vue';
 import { ElMessage } from 'element-plus';
-import { fetchContentAudit, viewAuditPrompt } from '../services/contentOpsService.js';
+import { fetchCombinedAudit, fetchContentAudit, viewAuditPrompt } from '../services/contentOpsService.js';
 import { formatDateTime } from '../utils/opsMeta.js';
 
 const rows = ref([]);
+const shellRows = ref([]);
+const shellNote = ref('');
 const total = ref(0);
 const page = ref(1);
 const pageSize = ref(20);
@@ -108,6 +121,22 @@ async function load() {
 function apply() {
   page.value = 1;
   load();
+}
+
+async function loadShell() {
+  shellNote.value = '';
+  try {
+    const data = await fetchCombinedAudit({
+      actor: actor.value || undefined,
+      action: action.value || undefined,
+      page: page.value,
+      pageSize: pageSize.value,
+    });
+    shellRows.value = data?.shell?.list || [];
+    shellNote.value = data?.shell?.note || (shellRows.value.length ? '' : '壳上还没有审计记录');
+  } catch (err) {
+    shellNote.value = err.message;
+  }
 }
 
 onMounted(load);

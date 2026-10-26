@@ -34,6 +34,7 @@
         <div v-for="output in task.outputs" :key="output.id">
           <video v-if="output.media_kind === 'video'" :src="fileUrl(output.id)" controls class="cartoon-media"></video>
           <img v-else :src="fileUrl(output.id)" :alt="task.shot_description" class="cartoon-media" />
+          <p class="cartoon-module__hint">{{ stageLabel(output.version_stage) }}</p>
           <p class="cartoon-module__hint">串脸由人工标记，这里不自动检测。</p>
           <p>{{ faceLabel(output) }}</p>
           <el-button size="small" @click="markFace(output, true)">画面正常</el-button>
@@ -89,6 +90,9 @@ function precheckHref(id) {
   return `${origin.replace(/\/$/, '')}/workflows?id=${id}`;
 }
 function fileUrl(id) { return `${resolveApiBase()}/outputs/${id}/file`; }
+function stageLabel(stage) {
+  return { draft: '草稿', generated: '生成版', revised: '修改版', final: '最终交付版' }[stage] || '生成版';
+}
 function faceLabel(output) {
   if (!output.face_checked) return '还没有标记串脸';
   return output.face_ok ? '已标记：画面正常' : '已标记：有串脸';

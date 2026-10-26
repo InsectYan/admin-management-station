@@ -2,12 +2,20 @@
   <div class="cartoon-panel">
     <h3 class="cartoon-module__title">导出规格</h3>
     <p class="cartoon-module__hint">有成片时按规格重新编码，不改原来的成片。分镜里有台词时，横屏、竖屏、平板、短版和长版会烧进画面。无字幕不烧录，多语种写外挂字幕。长版会混入未停用的背景音乐，没有音乐文件时保留原声。运维打开 AI 标识时，成片右上角会写上「AI生成」，文件信息里也会写上「AI生成」。</p>
-    <el-form inline>
-      <el-select v-model="preset" style="width: 160px">
-        <el-option v-for="item in presets" :key="item.id" :label="item.label" :value="item.id" />
-      </el-select>
-      <el-input v-if="preset === 'multi_lang'" v-model="lang" placeholder="语言，例如 中文、英语" style="width: 220px" />
-      <el-button type="primary" :disabled="!canMake()" @click="save">导出此规格</el-button>
+    <el-form label-position="top" class="cartoon-entry-form" @submit.prevent="save">
+      <div class="cartoon-entry-grid">
+        <el-form-item label="规格">
+          <el-select v-model="preset" style="width: 100%">
+            <el-option v-for="item in presets" :key="item.id" :label="item.label" :value="item.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="preset === 'multi_lang'" label="语言">
+          <el-input v-model="lang" placeholder="例如 中文、英语" />
+        </el-form-item>
+      </div>
+      <div class="cartoon-entry-actions">
+        <el-button type="primary" :disabled="!canMake()" @click="save">导出此规格</el-button>
+      </div>
     </el-form>
     <el-empty v-if="loaded && !rows.length" description="还没有登记规格" />
     <el-table v-else-if="rows.length" :data="rows" size="small">

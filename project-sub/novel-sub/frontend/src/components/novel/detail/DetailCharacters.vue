@@ -67,6 +67,17 @@
               <dd><NovelMarkdown :source="activeCharacter.arc" empty-text="未填写" /></dd>
             </div>
             <div>
+              <dt>视频资产</dt>
+              <dd>{{ activeCharacter.video_asset_id || '未填写' }}</dd>
+            </div>
+            <div>
+              <dt>状态轨迹</dt>
+              <dd>
+                <p v-if="!(activeCharacter.states || []).length">未填写</p>
+                <p v-for="(item, index) in activeCharacter.states || []" :key="index">{{ item.chapter_id }} {{ item.note }}</p>
+              </dd>
+            </div>
+            <div>
               <dt>人物关系</dt>
               <dd><NovelMarkdown :source="activeCharacter.relations" empty-text="未填写" /></dd>
             </div>
@@ -76,6 +87,7 @@
 
       <section class="novel-detail-card">
         <h3 class="novel-detail-card__title">人物关系网</h3>
+        <el-button @click="downloadCards">导出人物卡</el-button>
         <CharacterRelationGraph
           :characters="characters"
           :edges="edges"
@@ -118,6 +130,16 @@ watch(
   },
   { immediate: true },
 );
+
+function downloadCards() {
+  const blob = new Blob([ JSON.stringify(props.characters, null, 2) ], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'characters.json';
+  link.click();
+  URL.revokeObjectURL(url);
+}
 </script>
 
 <style scoped>

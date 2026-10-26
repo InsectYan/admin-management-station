@@ -121,6 +121,9 @@ class ProjectService extends Service {
         shot_description: shotById.get(task.shot_id)?.description || '',
         outputs: outputs.filter(item => item.task_id === task.id),
       })),
+      bindings: await this.ctx.model.ShotBinding.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] }),
+      voice_cues: await this.ctx.model.VoiceCue.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] }),
+      review_findings: await this.ctx.model.ReviewFinding.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] }),
       episodes: [ episode ],
     };
   }
@@ -147,7 +150,7 @@ class ProjectService extends Service {
   }
 
   async touchNode(projectId, taskId, currentNode) {
-    const allowed = [ 'input', 'script', 'storyboard', 'assets', 'generate', 'compose', 'preview', 'export' ];
+    const allowed = [ 'input', 'script', 'storyboard', 'assets', 'generate', 'voice', 'subtitle', 'compose', 'preview', 'review', 'export' ];
     if (!allowed.includes(currentNode)) {
       const err = new Error('节点不存在');
       err.status = 400;
@@ -722,9 +725,19 @@ class ProjectService extends Service {
     }
   }
 
+  async markRevised(shotId) {
+    const tasks = await this.ctx.model.Task.findAll({ where: { shot_id: shotId, status: 'success' } });
+    if (!tasks.length) return;
+    const outputs = await this.ctx.model.Output.findAll({ where: { task_id: tasks.map(item => item.id) } });
+    for (const output of outputs) {
+      if (output.version_stage !== 'revised') await output.update({ version_stage: 'revised' });
+    }
+  }
+
   async updateShot(id, payload) {
     const shot = await this.ctx.model.Shot.findByPk(id);
     if (!shot) this.ctx.throw(404, '分镜不存在');
+    const before = shot.toJSON();
     await shot.update({
       shot_size: payload.shot_size ?? shot.shot_size,
       camera_move: payload.camera_move ?? shot.camera_move,
@@ -748,6 +761,10 @@ class ProjectService extends Service {
         });
       }
     }
+    const changed = [ 'description', 'shot_size', 'camera_move', 'dialogue' ].some(key => (
+      payload[key] != null && String(payload[key]) !== String(before[key] ?? '')
+    ));
+    if (changed || payload.positive_zh != null || payload.negative_zh != null) await this.markRevised(shot.id);
     return shot;
   }
 

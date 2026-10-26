@@ -90,10 +90,31 @@ class PublishService extends Service {
     if (status !== 'success' && status !== 'failed') this.ctx.throw(400, '发布结果只能是成功或失败');
     const reason = String(body.reason || '').trim();
     if (status === 'failed' && !reason) this.ctx.throw(400, '失败需要填写原因');
+    const counts = this.counts(body, status, row.status);
     row.status = status;
     row.reason = reason;
+    if (counts) {
+      row.play_count = counts.play_count;
+      row.finish_count = counts.finish_count;
+      row.conversion_count = counts.conversion_count;
+    }
     await row.save();
     return row.toJSON();
+  }
+
+  counts(body, status, current) {
+    const keys = [ 'play_count', 'finish_count', 'conversion_count' ];
+    const present = keys.some(key => body[key] != null && body[key] !== '');
+    if (!present) return null;
+    if (status !== 'success' || current !== 'success') this.ctx.throw(400, '只有发布成功才能记播放');
+    const counts = {};
+    for (const key of keys) {
+      const raw = body[key];
+      const value = raw == null || raw === '' ? 0 : Number(raw);
+      if (!Number.isInteger(value) || value < 0) this.ctx.throw(400, '播放数据需要是非负整数');
+      counts[key] = value;
+    }
+    return counts;
   }
 
   async takedown(id, body) {

@@ -1,5 +1,8 @@
 <template>
   <div class="novel-detail-world">
+    <div>
+      <el-button @click="downloadWorld">导出世界观</el-button>
+    </div>
     <div class="novel-detail-world__grid">
       <section
         v-for="block in blocks"
@@ -49,6 +52,16 @@ const blocks = computed(() => [
 ]);
 
 const timeline = computed(() => props.form.timeline || []);
+
+function downloadWorld() {
+  const blob = new Blob([ JSON.stringify({ ...props.form, timeline: timeline.value }, null, 2) ], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'world.json';
+  link.click();
+  URL.revokeObjectURL(url);
+}
 </script>
 
 <style scoped>

@@ -4,14 +4,20 @@
       <h3>协作</h3>
       <p>成员账号来自登录身份。这里只记录谁在这部作品里担任作者、编辑或审核。还没有成员时，章节可以照常修改。加入成员后，只有成员能锁章。</p>
     </header>
-    <el-form inline @submit.prevent="save">
-      <el-input v-model="form.username" placeholder="成员账号" style="width: 180px" />
-      <el-select v-model="form.role" style="width: 120px">
-        <el-option label="作者" value="author" />
-        <el-option label="编辑" value="editor" />
-        <el-option label="审核" value="reviewer" />
-      </el-select>
-      <el-button type="primary" :loading="saving" @click="save">添加成员</el-button>
+    <el-form label-position="top" class="novel-entry-form" @submit.prevent="save">
+      <div class="novel-entry-grid">
+        <el-form-item label="成员账号"><el-input v-model="form.username" /></el-form-item>
+        <el-form-item label="角色">
+          <el-select v-model="form.role" style="width: 100%">
+            <el-option label="作者" value="author" />
+            <el-option label="编辑" value="editor" />
+            <el-option label="审核" value="reviewer" />
+          </el-select>
+        </el-form-item>
+      </div>
+      <div class="novel-entry-actions">
+        <el-button type="primary" :loading="saving" @click="save">添加成员</el-button>
+      </div>
     </el-form>
     <el-empty v-if="!members.length" description="还没有成员" />
     <el-table v-else :data="members" size="small">
@@ -37,9 +43,13 @@
 
     <h4>草稿快照</h4>
     <p>回退只恢复当前草稿，已发布的故事包不变。有章节锁着时不能回退。</p>
-    <el-form inline @submit.prevent="saveSnapshot">
-      <el-input v-model="snapshotLabel" placeholder="快照名称" style="width: 180px" />
-      <el-button :loading="snapshotSaving" @click="saveSnapshot">记下快照</el-button>
+    <el-form label-position="top" class="novel-entry-form" @submit.prevent="saveSnapshot">
+      <div class="novel-entry-grid">
+        <el-form-item label="快照名称"><el-input v-model="snapshotLabel" /></el-form-item>
+      </div>
+      <div class="novel-entry-actions">
+        <el-button :loading="snapshotSaving" @click="saveSnapshot">记下快照</el-button>
+      </div>
     </el-form>
     <el-empty v-if="!snapshots.length" description="还没有快照" />
     <el-table v-else :data="snapshots" size="small">

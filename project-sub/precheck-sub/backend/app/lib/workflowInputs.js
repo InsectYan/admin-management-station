@@ -37,6 +37,7 @@ function findPositive(graph) {
   const seeds = [];
   Object.values(graph || {}).forEach(node => {
     if (Array.isArray(node?.inputs?.positive)) seeds.push(node.inputs.positive);
+    if (Array.isArray(node?.inputs?.conditioning)) seeds.push(node.inputs.conditioning);
   });
   for (const seed of seeds) {
     let currentId = String(seed[0]);
@@ -86,8 +87,13 @@ function describeCallInputs(apiJson) {
       });
     };
     if (Array.isArray(inputs.end_image)) mark(inputs.end_image, 'end');
+    if (Array.isArray(inputs.last_frame)) mark(inputs.last_frame, 'end');
     if (Array.isArray(inputs.start_image)) mark(inputs.start_image, 'start');
+    if (Array.isArray(inputs.first_frame)) mark(inputs.first_frame, 'start');
     if (node?.class_type === 'TextEncodeQwenImageEdit' && Array.isArray(inputs.image)) mark(inputs.image, 'reference');
+    Object.entries(inputs).forEach(([ key, value ]) => {
+      if (Array.isArray(value) && /^ref_images\.ref_image_\d+$/.test(key)) mark(value, 'reference');
+    });
   });
 
   const images = [];

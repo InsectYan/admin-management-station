@@ -6,7 +6,9 @@
       <h3>{{ item.name }}</h3>
       <p>预填 {{ item.volume_title }}，角色位是主角、配角、反派。</p>
       <p v-if="item.project_kind === 'game_plot'">任务链仍用卷和章保存。台词可以加选项，跳到同一任务的另一句。</p>
-      <el-button type="primary" @click="open(item)">用这个模板</el-button>
+      <div class="novel-template-actions">
+        <el-button size="small" type="primary" plain @click="open(item)">用这个模板</el-button>
+      </div>
     </el-card>
     <el-dialog v-model="visible" title="从模板创建" width="420px">
       <el-form label-width="72px">
@@ -65,5 +67,41 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.novel-template-card { margin-top: 12px; }
+.novel-template-card {
+  position: relative;
+  margin-top: 12px;
+  overflow: hidden;
+}
+.novel-template-card :deep(.el-card__body) {
+  padding-bottom: 56px;
+}
+.novel-template-actions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(transparent, rgba(243, 248, 244, 0.92));
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.novel-template-card:hover .novel-template-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (hover: none) {
+  .novel-template-actions {
+    position: static;
+    opacity: 1;
+    margin-top: 12px;
+    background: none;
+    pointer-events: auto;
+  }
+}
 </style>

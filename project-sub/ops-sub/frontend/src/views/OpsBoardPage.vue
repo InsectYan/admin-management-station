@@ -31,6 +31,12 @@
       <el-statistic title="驳回率" :value="rate(board?.quality?.reject_rate)" />
       <el-statistic title="未关闭一致性问题" :value="count(board?.quality?.open_consistency)" />
     </div>
+    <h4 class="ops-block-title">分发</h4>
+    <div class="ops-summary-row">
+      <el-statistic title="播放量" :value="board?.distribution?.play_count ?? 0" />
+      <el-statistic title="完播" :value="board?.distribution?.finish_count ?? 0" />
+      <el-statistic title="渠道转化" :value="board?.distribution?.conversion_count ?? 0" />
+    </div>
   </PageShell>
 </template>
 

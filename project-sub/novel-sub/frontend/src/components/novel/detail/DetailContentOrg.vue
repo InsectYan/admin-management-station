@@ -33,6 +33,7 @@
           <div class="novel-detail-chapter__meta">
             <el-tag size="small" effect="plain">{{ factionLabel(ch.faction) }}</el-tag>
             <span v-if="ch.outline_ref" class="is-muted">关联：{{ ch.outline_ref }}</span>
+            <span v-if="ch.location" class="is-muted">地点：{{ ch.location }}</span>
           </div>
         </div>
       </li>

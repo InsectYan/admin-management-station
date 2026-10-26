@@ -7,5 +7,6 @@ module.exports = app => {
     await syncSchemaOnStartup(app);
     const ctx = app.createAnonymousContext();
     await ctx.service.runtime.ensureDefault();
+    await ctx.service.workflow.ensureTemplates();
   });
 };

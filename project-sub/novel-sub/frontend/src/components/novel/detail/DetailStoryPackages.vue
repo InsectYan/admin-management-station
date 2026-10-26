@@ -2,15 +2,21 @@
   <div class="novel-story-desk">
     <section class="novel-detail-card">
       <h3>术语</h3>
-      <el-form inline>
-        <el-input v-model="term.name" placeholder="名称" style="width: 140px" />
-        <el-input v-model="term.aliases" placeholder="别名，用逗号分隔" style="width: 180px" />
-        <el-select v-model="term.category" style="width: 120px">
-          <el-option label="术语" value="term" />
-          <el-option label="专名" value="proper" />
-          <el-option label="禁用词" value="banned" />
-        </el-select>
-        <el-button type="primary" @click="addTerm">添加</el-button>
+      <el-form label-position="top" class="novel-entry-form" @submit.prevent="addTerm">
+        <div class="novel-entry-grid">
+          <el-form-item label="名称"><el-input v-model="term.name" /></el-form-item>
+          <el-form-item label="别名"><el-input v-model="term.aliases" placeholder="用逗号分隔" /></el-form-item>
+          <el-form-item label="类别">
+            <el-select v-model="term.category" style="width: 100%">
+              <el-option label="术语" value="term" />
+              <el-option label="专名" value="proper" />
+              <el-option label="禁用词" value="banned" />
+            </el-select>
+          </el-form-item>
+        </div>
+        <div class="novel-entry-actions">
+          <el-button type="primary" @click="addTerm">添加</el-button>
+        </div>
       </el-form>
       <el-table :data="desk.terms" empty-text="还没有术语" size="small">
         <el-table-column prop="name" label="名称" width="140" />

@@ -13,5 +13,6 @@ module.exports = app => {
     height: { type: INTEGER, allowNull: true },
     face_checked: { type: BOOLEAN, allowNull: false, defaultValue: false },
     face_ok: { type: BOOLEAN, allowNull: false, defaultValue: false },
+    version_stage: { type: STRING(16), allowNull: false, defaultValue: 'generated' },
   }, { tableName: 'cartoon_outputs' });
 };

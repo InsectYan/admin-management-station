@@ -4,6 +4,30 @@
     <p v-if="route.name === 'assets'" class="cartoon-module__hint">
       <router-link v-for="item in assetLinks" :key="item.kind" :to="`/assets/${item.kind}`">{{ item.label }}</router-link>
     </p>
+    <div v-if="route.name === 'assets'" class="cartoon-module">
+      <h3 class="cartoon-module__title">共享资产</h3>
+      <p class="cartoon-module__hint">改描述后，还没出画面的镜头跟着改。已经出过画面的镜头标成资产已更新，不会自动重跑。</p>
+      <el-form label-position="top" class="cartoon-entry-form" @submit.prevent="createShared">
+        <div class="cartoon-entry-grid">
+          <el-form-item label="名称"><el-input v-model="shared.name" /></el-form-item>
+          <el-form-item label="类型">
+            <el-select v-model="shared.kind" style="width: 100%">
+              <el-option label="角色" value="character" />
+              <el-option label="场景" value="scene" />
+              <el-option label="道具" value="prop" />
+              <el-option label="配音" value="voice" />
+              <el-option label="品牌" value="brand" />
+            </el-select>
+          </el-form-item>
+          <el-form-item class="is-wide" label="描述">
+            <el-input v-model="shared.description" type="textarea" :rows="2" />
+          </el-form-item>
+        </div>
+        <div class="cartoon-entry-actions">
+          <el-button type="primary" @click="createShared">登记</el-button>
+        </div>
+      </el-form>
+    </div>
     <el-empty v-if="!rows.length" description="还没有记录" />
     <el-table v-else :data="rows">
       <el-table-column v-for="column in page.columns" :key="column.prop" :prop="column.prop" :label="column.label" />
@@ -18,7 +42,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
@@ -26,6 +50,7 @@ import { request } from '../services/apiConfig.js';
 
 const route = useRoute();
 const rows = ref([]);
+const shared = reactive({ name: '', kind: 'character', description: '' });
 const assetLinks = [
   { kind: 'characters', label: '角色' },
   { kind: 'scenes', label: '场景' },
@@ -58,6 +83,7 @@ const page = computed(() => {
         { prop: 'voice_lang', label: '语种' },
         { prop: 'speaker_name', label: '发音人' },
         { prop: 'angle_paths', label: '多角度' },
+        { prop: 'shared_label', label: '共享' },
       ],
     };
   }
@@ -100,6 +126,7 @@ const page = computed(() => {
         { prop: 'content_type', label: '类型' },
         { prop: 'pin_mode', label: '钉扎' },
         { prop: 'package_version', label: '版本' },
+        { prop: 'stage_summary', label: '成片阶段' },
       ],
     };
   }
@@ -118,6 +145,16 @@ const page = computed(() => {
   };
 });
 
+async function createShared() {
+  try {
+    const row = await request('/library/shared', { method: 'post', data: { ...shared } });
+    shared.name = '';
+    shared.description = '';
+    ElMessage.success(row?.id ? `已登记，编号 ${row.id}` : '已登记');
+  } catch (err) {
+    ElMessage.error(err.message);
+  }
+}
 async function load() {
   try {
     rows.value = await request(page.value.api) || [];

@@ -39,7 +39,7 @@
           />
         </el-select>
         <a
-          v-if="pickedSlot(family, slot)"
+          v-if="pickedSlot(family, slot)?.url"
           class="precheck-supply__link"
           :href="pickedSlot(family, slot).url"
           target="_blank"
@@ -165,7 +165,10 @@ function prefer(options, filename) {
   const base = fileName(filename);
   if (!base) return null;
   const hits = (options || []).filter(option => option.name === base);
-  return hits.find(option => option.site === 'Hugging Face') || hits[0] || null;
+  return hits.find(option => option.site === '本机成套包')
+    || hits.find(option => option.site === 'Hugging Face')
+    || hits[0]
+    || null;
 }
 
 function lockedGroups(family, picks = slotPicks) {
@@ -221,8 +224,9 @@ function summarize() {
         option.name,
         `配套：${family.label} / ${slot.label}`,
         slot.asked && slot.asked !== option.name ? `工作流原文件名：${slot.asked}` : '',
+        option.source ? `复制自：${option.source}` : '',
         `目录：${option.place}`,
-        already ? '' : `页面：${option.url}`,
+        !already && option.url ? `页面：${option.url}` : '',
       ].filter(Boolean).join('\n'));
     });
   });

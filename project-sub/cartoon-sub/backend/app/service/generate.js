@@ -369,6 +369,7 @@ class GenerateService extends Service {
       task_id: task.id,
       file_path: relative.split(path.sep).join('/'),
       media_kind: file.media_kind || 'image',
+      version_stage: 'generated',
     });
   }
 

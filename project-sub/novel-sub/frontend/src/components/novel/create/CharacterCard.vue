@@ -69,19 +69,44 @@
           @input="$emit('change')"
         />
       </el-form-item>
+      <el-form-item label="视频资产编号">
+        <el-input v-model="character.video_asset_id" placeholder="对应视频项目里的资产编号" @input="$emit('change')" />
+      </el-form-item>
+      <el-form-item label="状态轨迹">
+        <el-input
+          :model-value="statesText"
+          type="textarea"
+          :rows="3"
+          placeholder="一行一章：章节编号 说明"
+          @input="onStates"
+        />
+      </el-form-item>
     </el-form>
   </div>
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { CHARACTER_ROLE_OPTIONS } from '../../../utils/novelCreateSchema.js';
 
-defineProps({
+const props = defineProps({
   character: { type: Object, required: true },
   factions: { type: Array, default: () => [] },
 });
 
-defineEmits(['change', 'remove']);
+const emit = defineEmits(['change', 'remove']);
+const statesText = computed(() => (props.character.states || [])
+  .map(item => `${item.chapter_id || ''} ${item.note || ''}`.trim())
+  .filter(Boolean)
+  .join('\n'));
+
+function onStates(value) {
+  props.character.states = String(value || '').split('\n').map(line => line.trim()).filter(Boolean).map(line => {
+    const parts = line.split(/\s+/);
+    return { chapter_id: parts.shift() || '', note: parts.join(' ') };
+  });
+  emit('change');
+}
 </script>
 
 <style scoped>

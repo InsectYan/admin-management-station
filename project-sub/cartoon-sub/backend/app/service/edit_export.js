@@ -151,6 +151,7 @@ class EditExportService extends Service {
         duration_ms: edit.duration_ms,
         width,
         height,
+        version_stage: 'final',
       });
       await job.update({ status: 'success', progress: 100, output_id: output.id, error_message: null });
       await edit.update({ status: 'exported' });

@@ -875,10 +875,28 @@ onMounted(() => {
   bottom: 0;
   padding: 12px;
   display: flex;
-  justify-content: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
   background: linear-gradient(transparent, rgba(243, 248, 244, 0.92));
   opacity: 0;
   transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.novel-card:hover .novel-card__actions {
+  pointer-events: auto;
+}
+.novel-card__actions :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+@media (hover: none) {
+  .novel-card__actions {
+    position: static;
+    opacity: 1;
+    background: none;
+    pointer-events: auto;
+  }
 }
 
 .novel-board-footer {

@@ -8,13 +8,13 @@ const FIXED = [
   { node_key: 'input', title: '输入', runner: 'local', skill_name: '', enabled: true, locked: true },
   { node_key: 'script', title: '脚本', runner: 'skill', skill_name: 'cartoon-script-skill', enabled: true, locked: false },
   { node_key: 'storyboard', title: '分镜', runner: 'skill', skill_name: 'cartoon-storyboard-skill', enabled: true, locked: false },
-  { node_key: 'assets', title: '资产匹配', runner: 'local', skill_name: '', enabled: false, locked: false },
+  { node_key: 'assets', title: '资产匹配', runner: 'local', skill_name: 'cartoon-asset-skill', enabled: false, locked: false },
   { node_key: 'prompt', title: '提示词', runner: 'skill', skill_name: 'cartoon-prompt-skill', enabled: true, locked: false },
   { node_key: 'generate', title: '图生视频', runner: 'comfy', skill_name: '', enabled: true, locked: false },
-  { node_key: 'voice', title: '配音', runner: 'local', skill_name: '', enabled: false, locked: false },
+  { node_key: 'voice', title: '配音', runner: 'skill', skill_name: 'cartoon-voice-skill', enabled: false, locked: false },
   { node_key: 'subtitle', title: '字幕', runner: 'local', skill_name: '', enabled: false, locked: false },
   { node_key: 'compose', title: '剪辑', runner: 'ffmpeg', skill_name: '', enabled: true, locked: false },
-  { node_key: 'review', title: 'AI 初审', runner: 'local', skill_name: '', enabled: false, locked: false },
+  { node_key: 'review', title: 'AI 初审', runner: 'skill', skill_name: 'cartoon-review-skill', enabled: false, locked: false },
   { node_key: 'confirm', title: '人工确认', runner: 'local', skill_name: '', enabled: true, locked: true },
   { node_key: 'export', title: '导出', runner: 'ffmpeg', skill_name: '', enabled: true, locked: true },
 ];
@@ -50,11 +50,11 @@ const CUSTOM = {
 const AGENT_SPECS = [
   { role: 'writer', label: '编剧', skill_name: 'cartoon-script-skill', local: false, needs_model: true },
   { role: 'storyboard', label: '分镜', skill_name: 'cartoon-storyboard-skill', local: false, needs_model: true },
-  { role: 'asset', label: '资产', skill_name: '', local: false, needs_model: true },
+  { role: 'asset', label: '资产', skill_name: 'cartoon-asset-skill', local: false, needs_model: true },
   { role: 'video', label: '视频生成', skill_name: '', local: true, needs_model: true },
-  { role: 'voice', label: '配音', skill_name: '', local: false, needs_model: true },
+  { role: 'voice', label: '配音', skill_name: 'cartoon-voice-skill', local: false, needs_model: true },
   { role: 'edit', label: '剪辑', skill_name: '', local: true, needs_model: false },
-  { role: 'review', label: '审核', skill_name: '', local: false, needs_model: true },
+  { role: 'review', label: '审核', skill_name: 'cartoon-review-skill', local: false, needs_model: true },
 ];
 
 function assertContentType(id) {
@@ -101,8 +101,8 @@ function defaultAgents(id) {
       local: spec.local,
       needs_model: spec.needs_model,
       writes_package: false,
-      input_text: writer ? (science ? '本地文案' : '已钉扎的故事包章节') : (storyboard ? '生产剧本' : ''),
-      output_text: writer || storyboard ? '生产稿，不写故事包' : (video ? '镜头画面' : (edit ? '成片' : '')),
+      input_text: writer ? (science ? '本地文案' : '已钉扎的故事包章节') : (storyboard ? '生产剧本' : (spec.role === 'asset' ? '镜头和未停用资产' : (spec.role === 'voice' ? '台词和已登记音色' : (spec.role === 'review' ? '镜头和合规规则' : '')))),
+      output_text: writer || storyboard ? '生产稿，不写故事包' : (video ? '镜头画面' : (edit ? '成片' : (spec.role === 'asset' ? '绑定建议' : (spec.role === 'voice' ? '配音时间轴' : (spec.role === 'review' ? '初审问题' : ''))))),
       model_profile: ready ? 'ollama-qwen' : (video ? 'comfy-local' : ''),
       rule_text: '',
       retry_count: 1,

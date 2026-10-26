@@ -1,33 +1,37 @@
 <template>
   <PageShell title="系统配置">
+    <section class="ops-section">
     <el-alert v-if="loadError" type="error" :title="loadError" show-icon :closable="false" />
-    <el-form v-else label-width="160px" class="ops-settings-form" @submit.prevent="save">
-      <el-form-item label="队列堆积阈值">
-        <el-input-number v-model="form.queue_backlog" :min="1" :max="10000" />
-      </el-form-item>
-      <el-form-item label="卡住判定（分钟）">
-        <el-input-number v-model="form.stuck_minutes" :min="1" :max="1440" />
-      </el-form-item>
-      <el-form-item label="失败率阈值">
-        <el-input-number v-model="failPercent" :min="1" :max="100" />
-        <span class="ops-settings-hint">近一小时失败占比，按百分比填写</span>
-      </el-form-item>
-      <el-form-item label="失败率最少样本">
-        <el-input-number v-model="form.fail_min_samples" :min="1" :max="100" />
-      </el-form-item>
-      <el-form-item label="依赖探测间隔（秒）">
-        <el-input-number v-model="form.probe_interval_sec" :min="15" :max="3600" />
-      </el-form-item>
-      <el-form-item label="允许查看提示词">
-        <el-switch v-model="form.allow_prompt_view" />
-      </el-form-item>
-      <el-form-item label="存储水位（MB）">
-        <el-input-number v-model="form.storage_watermark_mb" :min="1" :max="1000000" />
-      </el-form-item>
-      <el-form-item>
+    <el-form v-else label-position="top" class="ops-entry-form ops-settings-form" @submit.prevent="save">
+      <div class="ops-entry-grid">
+        <el-form-item label="队列堆积阈值">
+          <el-input-number v-model="form.queue_backlog" :min="1" :max="10000" />
+        </el-form-item>
+        <el-form-item label="卡住判定（分钟）">
+          <el-input-number v-model="form.stuck_minutes" :min="1" :max="1440" />
+        </el-form-item>
+        <el-form-item label="失败率阈值">
+          <el-input-number v-model="failPercent" :min="1" :max="100" />
+          <p class="ops-settings-hint">近一小时失败占比，按百分比填写</p>
+        </el-form-item>
+        <el-form-item label="失败率最少样本">
+          <el-input-number v-model="form.fail_min_samples" :min="1" :max="100" />
+        </el-form-item>
+        <el-form-item label="依赖探测间隔（秒）">
+          <el-input-number v-model="form.probe_interval_sec" :min="15" :max="3600" />
+        </el-form-item>
+        <el-form-item label="存储水位（MB）">
+          <el-input-number v-model="form.storage_watermark_mb" :min="1" :max="1000000" />
+        </el-form-item>
+        <el-form-item label="允许查看提示词">
+          <el-switch v-model="form.allow_prompt_view" />
+        </el-form-item>
+      </div>
+      <div class="ops-entry-actions">
         <el-button type="primary" :loading="saving" @click="save">保存</el-button>
-      </el-form-item>
+      </div>
     </el-form>
+    </section>
   </PageShell>
 </template>
 
@@ -92,7 +96,7 @@ onMounted(load);
   max-width: 640px;
 }
 .ops-settings-hint {
-  margin-left: 12px;
+  margin: 8px 0 0;
   color: #8a968e;
   font-size: 13px;
 }

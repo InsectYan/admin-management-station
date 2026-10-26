@@ -13,6 +13,7 @@ const {
   scoreFromFindings,
   moduleStatuses,
 } = require('../lib/novelQa');
+const { modelIssueRows } = require('../lib/modelFindings');
 
 class AiReviewService extends Service {
   async loadBundle(novelId) {
@@ -31,6 +32,25 @@ class AiReviewService extends Service {
     const qa = setting?.qa;
     if (!qa || typeof qa !== 'object') return null;
     return qa;
+  }
+
+  async replaceModelIssues(novelId, findings) {
+    const terms = await this.ctx.model.NovelTerm.findAll({ where: { novel_id: novelId } });
+    const rows = modelIssueRows(findings, terms);
+    await this.ctx.model.ConsistencyIssue.destroy({
+      where: { novel_id: novelId, status: 'open', source: 'model' },
+    });
+    if (!rows.length) return [];
+    await this.ctx.model.ConsistencyIssue.bulkCreate(rows.map(item => ({
+      novel_id: novelId,
+      chapter_id: item.chapter_id,
+      rule: item.rule,
+      level: item.level,
+      status: 'open',
+      message: item.message,
+      source: 'model',
+    })));
+    return rows;
   }
 
   async persistQa(novelId, report, ignoredIds = []) {
@@ -220,6 +240,7 @@ class AiReviewService extends Service {
       });
       if (Array.isArray(llmFindings)) {
         report = this.mergeLlmFindings(report, llmFindings, ignoredIds);
+        if (persist) await this.replaceModelIssues(novelId, llmFindings);
       }
     }
 

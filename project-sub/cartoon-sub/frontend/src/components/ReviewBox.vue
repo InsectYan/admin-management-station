@@ -2,18 +2,22 @@
   <div class="cartoon-review">
     <h3 class="cartoon-module__title">审核</h3>
     <p class="cartoon-module__hint">通过后进入导出，不会发到站外。驳回会回到选定节点。</p>
-    <el-form label-position="top">
-      <el-form-item label="问题"><el-input v-model="issues" /></el-form-item>
-      <el-form-item label="原因"><el-input v-model="note" /></el-form-item>
-      <el-form-item label="驳回后回到">
-        <el-select v-model="node" style="width: 180px">
-          <el-option label="脚本" value="script" />
-          <el-option label="分镜" value="storyboard" />
-          <el-option label="生成" value="generate" />
-        </el-select>
-      </el-form-item>
-      <el-button type="primary" :disabled="!canMake()" @click="decide('pass')">通过</el-button>
-      <el-button :disabled="!canMake()" @click="decide('reject')">驳回</el-button>
+    <el-form label-position="top" class="cartoon-entry-form">
+      <div class="cartoon-entry-grid">
+        <el-form-item label="问题"><el-input v-model="issues" /></el-form-item>
+        <el-form-item label="原因"><el-input v-model="note" /></el-form-item>
+        <el-form-item label="驳回后回到">
+          <el-select v-model="node" style="width: 100%">
+            <el-option label="脚本" value="script" />
+            <el-option label="分镜" value="storyboard" />
+            <el-option label="生成" value="generate" />
+          </el-select>
+        </el-form-item>
+      </div>
+      <div class="cartoon-entry-actions">
+        <el-button type="primary" :disabled="!canMake()" @click="decide('pass')">通过</el-button>
+        <el-button :disabled="!canMake()" @click="decide('reject')">驳回</el-button>
+      </div>
     </el-form>
     <p v-if="latest">最近一次：{{ latest.decision === 'pass' ? '通过' : '驳回' }} · {{ latest.node }}</p>
   </div>

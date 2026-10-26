@@ -7,16 +7,25 @@
       <el-select v-model="stage" clearable placeholder="生产阶段" style="width: 160px">
         <el-option label="脚本" value="script" />
         <el-option label="分镜" value="storyboard" />
+        <el-option label="镜头" value="shot" />
+        <el-option label="字幕" value="subtitle" />
+        <el-option label="配音" value="voice" />
       </el-select>
       <el-select v-model="industry" clearable placeholder="行业" style="width: 160px">
         <el-option label="教育" value="education" />
         <el-option label="故事" value="story" />
+        <el-option label="品牌" value="brand" />
+        <el-option label="音乐" value="music" />
+        <el-option label="新闻" value="news" />
+        <el-option label="旅游" value="travel" />
+        <el-option label="健身" value="fitness" />
+        <el-option label="助眠" value="sleep" />
       </el-select>
     </div>
 
     <el-empty v-if="!filtered.length" description="没有符合条件的模板" />
     <div v-else class="cartoon-template-grid">
-      <el-card v-for="item in filtered" :key="item.id" shadow="never">
+      <el-card v-for="item in filtered" :key="item.id" class="cartoon-template-card" shadow="never">
         <h3>{{ item.name }}</h3>
         <p>{{ item.scene }}</p>
         <div class="cartoon-template-tags">
@@ -25,8 +34,8 @@
           <el-tag size="small" effect="plain">{{ item.industry_label }}</el-tag>
         </div>
         <div class="cartoon-template-actions">
-          <el-button @click="openPreview(item)">预览</el-button>
-          <el-button type="primary" :disabled="!canMake()" @click="openCreate(item)">用这个模板</el-button>
+          <el-button size="small" plain @click="openPreview(item)">预览</el-button>
+          <el-button size="small" type="primary" plain :disabled="!canMake()" @click="openCreate(item)">用这个模板</el-button>
         </div>
       </el-card>
     </div>
@@ -150,12 +159,67 @@ onMounted(() => {
 .cartoon-template-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+  gap: 16px;
 }
-.cartoon-template-tags,
-.cartoon-template-actions {
-  display: flex;
-  gap: 8px;
+.cartoon-sub-root .cartoon-template-grid > .cartoon-template-card {
+  position: relative;
+  height: 100%;
   margin-top: 12px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.cartoon-template-card:hover {
+  transform: translateY(-4px);
+}
+.cartoon-template-card :deep(.el-card__body) {
+  padding-bottom: 56px;
+}
+.cartoon-template-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.cartoon-template-actions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(transparent, rgba(243, 248, 244, 0.92));
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.cartoon-template-card:hover .cartoon-template-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+.cartoon-template-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+.cartoon-template-actions :deep(.el-button) {
+  background-color: rgba(255, 255, 255, 0.72) !important;
+  border-color: rgba(47, 138, 91, 0.22);
+  color: #1f3d2c !important;
+  border-radius: 6px;
+}
+.cartoon-template-actions :deep(.el-button--primary) {
+  background-color: rgba(47, 138, 91, 0.22) !important;
+  border-color: rgba(47, 138, 91, 0.42);
+}
+@media (hover: none) {
+  .cartoon-template-actions {
+    position: static;
+    opacity: 1;
+    margin-top: 12px;
+    background: none;
+    pointer-events: auto;
+  }
 }
 </style>

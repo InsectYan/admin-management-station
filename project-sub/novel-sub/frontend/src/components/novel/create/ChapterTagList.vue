@@ -26,6 +26,12 @@
           style="width: 140px"
           @input="$emit('change')"
         />
+        <el-input
+          v-model="ch.location"
+          placeholder="地点"
+          style="width: 140px"
+          @input="$emit('change')"
+        />
         <div class="novel-chapter-tag__actions">
           <el-button link type="danger" @click="remove(index)">删除</el-button>
         </div>
@@ -113,7 +119,7 @@ watch(
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 12px 16px;
   padding: 12px 14px;
   border-radius: var(--novel-radius-base);
   border: var(--novel-border-default);

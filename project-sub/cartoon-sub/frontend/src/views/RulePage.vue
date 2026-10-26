@@ -7,32 +7,36 @@
       </el-select>
     </div>
     <div class="cartoon-module">
-      <el-form label-position="top">
-        <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
-        <el-form-item label="类型">
-          <el-select v-model="form.kind" style="width: 100%">
-            <el-option label="风格" value="style" />
-            <el-option label="品牌" value="brand" />
-            <el-option label="平台规格" value="platform" />
-            <el-option label="敏感词" value="banned" />
-            <el-option label="内容分级" value="rating" />
-            <el-option label="成本上限" value="cost" />
-          </el-select>
-        </el-form-item>
-        <el-form-item v-if="form.kind === 'cost'" label="上限">
-          <el-input-number v-model="form.cost_cap" :min="1" />
-        </el-form-item>
-        <el-form-item v-else-if="form.kind === 'rating'" label="分级">
-          <el-select v-model="form.body" style="width: 100%">
-            <el-option label="全年龄" value="全年龄" />
-            <el-option label="青少年" value="青少年" />
-            <el-option label="成人" value="成人" />
-          </el-select>
-        </el-form-item>
-        <el-form-item v-else label="内容">
-          <el-input v-model="form.body" type="textarea" :rows="3" placeholder="敏感词一行一个" />
-        </el-form-item>
-        <el-button type="primary" :disabled="!canMake()" @click="create">添加规则</el-button>
+      <el-form label-position="top" class="cartoon-entry-form" @submit.prevent="create">
+        <div class="cartoon-entry-grid">
+          <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
+          <el-form-item label="类型">
+            <el-select v-model="form.kind" style="width: 100%">
+              <el-option label="风格" value="style" />
+              <el-option label="品牌" value="brand" />
+              <el-option label="平台规格" value="platform" />
+              <el-option label="敏感词" value="banned" />
+              <el-option label="内容分级" value="rating" />
+              <el-option label="成本上限" value="cost" />
+            </el-select>
+          </el-form-item>
+          <el-form-item v-if="form.kind === 'cost'" label="上限">
+            <el-input-number v-model="form.cost_cap" :min="1" />
+          </el-form-item>
+          <el-form-item v-else-if="form.kind === 'rating'" label="分级">
+            <el-select v-model="form.body" style="width: 100%">
+              <el-option label="全年龄" value="全年龄" />
+              <el-option label="青少年" value="青少年" />
+              <el-option label="成人" value="成人" />
+            </el-select>
+          </el-form-item>
+          <el-form-item v-else class="is-wide" label="内容">
+            <el-input v-model="form.body" type="textarea" :rows="3" placeholder="敏感词一行一个" />
+          </el-form-item>
+        </div>
+        <div class="cartoon-entry-actions">
+          <el-button type="primary" :disabled="!canMake()" @click="create">添加规则</el-button>
+        </div>
       </el-form>
       <el-table :data="rows" class="cartoon-rule-table">
         <el-table-column prop="name" label="名称" />

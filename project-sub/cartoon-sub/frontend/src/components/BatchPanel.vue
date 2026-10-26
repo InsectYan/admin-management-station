@@ -1,10 +1,12 @@
 <template>
   <div>
     <p class="cartoon-module__hint">{{ hint }}</p>
-    <el-form label-position="top">
+    <el-form label-position="top" class="cartoon-entry-form" @submit.prevent="addDraft">
       <el-form-item label="标题"><el-input v-model="draft.title" /></el-form-item>
       <el-form-item label="正文"><el-input v-model="draft.body" type="textarea" :rows="3" /></el-form-item>
-      <el-button :disabled="!canMake()" @click="addDraft">加入选题</el-button>
+      <div class="cartoon-entry-actions">
+        <el-button :disabled="!canMake()" @click="addDraft">加入选题</el-button>
+      </div>
     </el-form>
     <ul v-if="drafts.length" class="cartoon-batch-drafts">
       <li v-for="(item, index) in drafts" :key="index">{{ item.title || '未命名选题' }}</li>

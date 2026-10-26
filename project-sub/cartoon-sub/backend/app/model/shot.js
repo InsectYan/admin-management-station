@@ -18,5 +18,6 @@ module.exports = app => {
     upstream_version: { type: INTEGER, allowNull: true },
     overridden_fields: { type: JSONB, allowNull: false, defaultValue: [] },
     upstream_stale: { type: BOOLEAN, allowNull: false, defaultValue: false },
+    asset_stale: { type: BOOLEAN, allowNull: false, defaultValue: false },
   }, { tableName: 'cartoon_shots' });
 };

@@ -1,9 +1,14 @@
 <template>
   <PageShell title="用量">
+    <section class="ops-section">
     <p class="ops-usage-hint">这里只记次数、时长和存储，不收款。视频生成超过项目的成本上限时会拒绝新任务。</p>
-    <el-form inline>
-      <el-input v-model="projectId" placeholder="项目编号" style="width: 160px" />
-      <el-button @click="load">查询</el-button>
+    <el-form label-position="top" class="ops-entry-form" @submit.prevent="load">
+      <div class="ops-entry-grid">
+        <el-form-item label="项目编号"><el-input v-model="projectId" /></el-form-item>
+      </div>
+      <div class="ops-entry-actions">
+        <el-button type="primary" @click="load">查询</el-button>
+      </div>
     </el-form>
     <p>次数 {{ summary.call_count }} · 秒数 {{ summary.media_seconds }} · 存储 {{ summary.storage_bytes }}</p>
     <el-table :data="summary.events">
@@ -13,6 +18,7 @@
       <el-table-column prop="call_count" label="次数" width="90" />
       <el-table-column prop="media_seconds" label="秒数" width="90" />
     </el-table>
+    </section>
   </PageShell>
 </template>
 

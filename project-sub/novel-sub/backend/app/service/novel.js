@@ -241,6 +241,7 @@ class NovelService extends Service {
         order: Number(ch?.order) || idx + 1,
         faction: ch?.faction || 'hero',
         outline_ref: ch?.outline_ref || '',
+        location: ch?.location || '',
       }))
       .filter((ch) => ch.id)
       .sort((a, b) => a.order - b.order);

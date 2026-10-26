@@ -4,27 +4,41 @@
       <h3>剧情线</h3>
       <p>主线、支线、伏笔和情感线记在这里。绑到章节只改这条线，不改正文。</p>
     </header>
-    <el-form inline @submit.prevent>
-      <el-input v-model="form.name" placeholder="名称" style="width: 160px" />
-      <el-select v-model="form.kind" style="width: 110px">
-        <el-option v-for="item in kinds" :key="item.value" :label="item.label" :value="item.value" />
-      </el-select>
-      <el-select v-model="form.status" style="width: 120px">
-        <el-option v-for="item in statuses" :key="item.value" :label="item.label" :value="item.value" />
-      </el-select>
-      <el-select v-model="form.chapterIds" multiple collapse-tags placeholder="出现章节" style="width: 220px">
-        <el-option v-for="chapter in chapters" :key="chapter.chapter_id" :label="chapter.title" :value="chapter.chapter_id" />
-      </el-select>
-      <template v-if="form.kind === 'foreshadow'">
-        <el-select v-model="form.plant_chapter_id" clearable placeholder="埋设章节" style="width: 160px">
-          <el-option v-for="chapter in chapters" :key="`p-${chapter.chapter_id}`" :label="chapter.title" :value="chapter.chapter_id" />
-        </el-select>
-        <el-select v-model="form.payoff_chapter_id" clearable placeholder="计划回收" style="width: 160px">
-          <el-option v-for="chapter in chapters" :key="`o-${chapter.chapter_id}`" :label="chapter.title" :value="chapter.chapter_id" />
-        </el-select>
-      </template>
-      <el-button type="primary" :loading="saving" @click="save">{{ form.id ? '保存' : '添加' }}</el-button>
-      <el-button v-if="form.id" @click="reset">取消</el-button>
+    <el-form label-position="top" class="novel-entry-form" @submit.prevent>
+      <div class="novel-entry-grid">
+        <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
+        <el-form-item label="类型">
+          <el-select v-model="form.kind" style="width: 100%">
+            <el-option v-for="item in kinds" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="form.status" style="width: 100%">
+            <el-option v-for="item in statuses" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="出现章节">
+          <el-select v-model="form.chapterIds" multiple placeholder="选择章节" style="width: 100%">
+            <el-option v-for="chapter in chapters" :key="chapter.chapter_id" :label="chapter.title" :value="chapter.chapter_id" />
+          </el-select>
+        </el-form-item>
+        <template v-if="form.kind === 'foreshadow'">
+          <el-form-item label="埋设章节">
+            <el-select v-model="form.plant_chapter_id" clearable placeholder="选择章节" style="width: 100%">
+              <el-option v-for="chapter in chapters" :key="`p-${chapter.chapter_id}`" :label="chapter.title" :value="chapter.chapter_id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="计划回收">
+            <el-select v-model="form.payoff_chapter_id" clearable placeholder="选择章节" style="width: 100%">
+              <el-option v-for="chapter in chapters" :key="`o-${chapter.chapter_id}`" :label="chapter.title" :value="chapter.chapter_id" />
+            </el-select>
+          </el-form-item>
+        </template>
+      </div>
+      <div class="novel-entry-actions">
+        <el-button type="primary" :loading="saving" @click="save">{{ form.id ? '保存' : '添加' }}</el-button>
+        <el-button v-if="form.id" @click="reset">取消</el-button>
+      </div>
     </el-form>
     <h4>时间线</h4>
     <p>按章节顺序排列这些事件。有年份就记在事件上，不另排一套时间坐标。</p>

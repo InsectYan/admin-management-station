@@ -259,7 +259,20 @@ class ContentService extends Service {
         reject_rate: judged ? reject / judged : null,
         open_consistency: narrative ? narrative.open_issues : null,
       },
+      distribution: await this.distribution(),
     };
+  }
+
+  async distribution() {
+    const rows = await this.ctx.model.OpsPublishJob.findAll({
+      where: { status: 'success' },
+      attributes: [ 'play_count', 'finish_count', 'conversion_count' ],
+    });
+    return rows.reduce((sum, row) => ({
+      play_count: sum.play_count + (Number(row.play_count) || 0),
+      finish_count: sum.finish_count + (Number(row.finish_count) || 0),
+      conversion_count: sum.conversion_count + (Number(row.conversion_count) || 0),
+    }), { play_count: 0, finish_count: 0, conversion_count: 0 });
   }
 
   async jobs(query) {
@@ -472,6 +485,39 @@ class ContentService extends Service {
       return plain;
     });
     return { list, total: count, page, pageSize };
+  }
+
+  async combinedAudit(query) {
+    const content = await this.listAudit(query);
+    const shell = await this.shellAudit(query);
+    return { content, shell };
+  }
+
+  async shellAudit(query) {
+    const auth = this.ctx.get('authorization');
+    if (!auth) return { list: [], note: '登录后才能看到壳上的审计' };
+    const configured = String(this.config.menuMaster?.baseUrl || 'http://127.0.0.1:5200').replace(/\/$/, '');
+    const bases = [ configured ];
+    if (/127\.0\.0\.1|localhost/.test(configured)) {
+      bases.push(configured.replace(/127\.0\.0\.1|localhost/, 'host.docker.internal'));
+    }
+    const params = new URLSearchParams({ page: '1', pageSize: '20' });
+    if (query.q) params.set('q', String(query.q).slice(0, 64));
+    let last = '';
+    for (const base of bases) {
+      try {
+        const res = await fetch(`${base}/api/audit-logs?${params}`, {
+          headers: { authorization: auth },
+          signal: AbortSignal.timeout(8000),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok) return { list: [], note: json?.message || '壳上的审计暂时读不到' };
+        return { list: json?.data?.list || [], note: '' };
+      } catch (err) {
+        last = err.message;
+      }
+    }
+    return { list: [], note: last || '壳上的审计暂时读不到' };
   }
 
   async viewPrompt(id) {

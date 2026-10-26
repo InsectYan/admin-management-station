@@ -26,5 +26,7 @@ module.exports = app => {
     prop_category: { type: STRING(32), allowNull: false, defaultValue: '' },
     voice_lang: { type: STRING(64), allowNull: false, defaultValue: '' },
     speaker_name: { type: STRING(80), allowNull: false, defaultValue: '' },
+    library_asset_id: { type: INTEGER, allowNull: true },
+    library_revision: { type: INTEGER, allowNull: false, defaultValue: 0 },
   }, { tableName: 'cartoon_assets' });
 };

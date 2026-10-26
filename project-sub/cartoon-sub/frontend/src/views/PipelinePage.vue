@@ -49,19 +49,21 @@
     </div>
 
     <el-dialog v-model="agentVisible" :title="agentForm.label || '模型参数'" width="520px">
-      <el-form label-position="top">
+      <el-form label-position="top" class="cartoon-entry-form">
         <p v-if="agentForm.role === 'writer'" class="cartoon-module__hint">编剧只产出生产稿，不写故事包。</p>
-        <el-form-item label="输入"><el-input v-model="agentForm.input_text" /></el-form-item>
-        <el-form-item label="输出"><el-input v-model="agentForm.output_text" /></el-form-item>
-        <el-form-item label="模型档位">
-          <el-select v-model="agentForm.model_profile" clearable placeholder="选择档位" style="width: 100%">
-            <el-option v-for="item in profiles" :key="item" :label="item" :value="item" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="规则"><el-input v-model="agentForm.rule_text" type="textarea" :rows="3" /></el-form-item>
-        <el-form-item label="重试次数"><el-input-number v-model="agentForm.retry_count" :min="0" :max="5" /></el-form-item>
-        <el-form-item label="人工确认"><el-switch v-model="agentForm.human_confirm" /></el-form-item>
-        <el-form-item label="启用"><el-switch v-model="agentForm.enabled" /></el-form-item>
+        <div class="cartoon-entry-grid">
+          <el-form-item label="输入"><el-input v-model="agentForm.input_text" /></el-form-item>
+          <el-form-item label="输出"><el-input v-model="agentForm.output_text" /></el-form-item>
+          <el-form-item label="模型档位">
+            <el-select v-model="agentForm.model_profile" clearable placeholder="选择档位" style="width: 100%">
+              <el-option v-for="item in profiles" :key="item" :label="item" :value="item" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="重试次数"><el-input-number v-model="agentForm.retry_count" :min="0" :max="5" /></el-form-item>
+          <el-form-item class="is-wide" label="规则"><el-input v-model="agentForm.rule_text" type="textarea" :rows="3" /></el-form-item>
+          <el-form-item label="人工确认"><el-switch v-model="agentForm.human_confirm" /></el-form-item>
+          <el-form-item label="启用"><el-switch v-model="agentForm.enabled" /></el-form-item>
+        </div>
       </el-form>
       <template #footer>
         <el-button @click="agentVisible = false">取消</el-button>

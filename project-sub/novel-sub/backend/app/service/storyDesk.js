@@ -19,6 +19,7 @@ const {
 } = require('../lib/storySnapshot');
 const { reportAudit } = require('../lib/reportAudit');
 const { invokeSkill } = require('../lib/agentProxy');
+const { enrichWriterContext } = require('../lib/writerContext');
 
 function httpError(status, message, extra) {
   const err = new Error(message);
@@ -220,7 +221,7 @@ class StoryDeskService extends Service {
     });
     const ignoredKeys = new Set(ignored.map(row => `${row.chapter_id}|${row.rule}|${row.message}`));
     const fresh = issues.filter(item => !ignoredKeys.has(`${item.chapter_id}|${item.rule}|${item.message}`));
-    await this.ctx.model.ConsistencyIssue.destroy({ where: { novel_id: novelId, status: 'open' } });
+    await this.ctx.model.ConsistencyIssue.destroy({ where: { novel_id: novelId, status: 'open', source: 'rule' } });
     if (fresh.length) {
       await this.ctx.model.ConsistencyIssue.bulkCreate(fresh.map(item => ({
         novel_id: novelId,
@@ -741,11 +742,13 @@ class StoryDeskService extends Service {
         body: body.slice(0, 4000),
       });
     }
-    const characters = (novel.setting_json?.characters || []).map(item => ({
-      name: item.name || '',
-      appearance: item.appearance || '',
-    })).filter(item => item.name);
+    const terms = await this.loadTerms(novelId);
     const variant = payload.variant === 'short_drama' ? 'short_drama' : 'comic';
+    const boundContext = enrichWriterContext({ chapters, variant }, {
+      novel,
+      terms,
+      characters: novel.setting_json?.characters || [],
+    });
     let invoked;
     try {
       invoked = await invokeSkill(this.ctx, {
@@ -755,7 +758,7 @@ class StoryDeskService extends Service {
           user_message: String(payload.user_message || '').trim() || '根据所选章节正文整理成剧本建议',
           target_fields: [ 'script' ],
           variant,
-          bound_context: { chapters, characters, variant },
+          bound_context: boundContext,
         },
       });
     } catch (err) {
@@ -857,10 +860,14 @@ class StoryDeskService extends Service {
     if (!script) throw httpError(404, '剧本不存在');
     const scenes = normalizeScenes(script.scenes);
     if (!scenes.length) throw httpError(400, '这份剧本还没有场次');
-    const characters = (novel.setting_json?.characters || []).map(item => ({
-      id: String(item.id || ''),
-      name: item.name || '',
-    })).filter(item => item.id && item.name);
+    const terms = await this.loadTerms(novelId);
+    const boundContext = enrichWriterContext({
+      script: { id: script.id, title: script.title, scenes },
+    }, {
+      novel,
+      terms,
+      characters: novel.setting_json?.characters || [],
+    });
     let invoked;
     try {
       invoked = await invokeSkill(this.ctx, {
@@ -869,10 +876,7 @@ class StoryDeskService extends Service {
         payload: {
           user_message: String(payload.user_message || '').trim() || '根据剧本场次整理成叙事分镜建议',
           target_fields: [ 'intent_shots' ],
-          bound_context: {
-            script: { id: script.id, title: script.title, scenes },
-            characters,
-          },
+          bound_context: boundContext,
         },
       });
     } catch (err) {
@@ -884,7 +888,7 @@ class StoryDeskService extends Service {
     const suggestion = intentSuggestion({
       reply: output.reply || envelope.reply || '',
       intent_shots: patch.intent_shots || patch.shots || [],
-    }, { script_id: scriptId, characters });
+    }, { script_id: scriptId, characters: boundContext.characters || [] });
     if (!suggestion.shots.length) throw httpError(502, '没有得到可用的叙事分镜建议');
     return suggestion;
   }

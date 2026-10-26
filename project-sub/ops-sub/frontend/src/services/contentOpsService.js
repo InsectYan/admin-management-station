@@ -81,6 +81,10 @@ export function fetchContentAudit(params = {}) {
   return request('/content/audit', { method: 'get', params });
 }
 
+export function fetchCombinedAudit(params = {}) {
+  return request('/content/audit/combined', { method: 'get', params });
+}
+
 export function viewAuditPrompt(id) {
   return request(`/content/audit/${id}/prompt`, { method: 'post' });
 }

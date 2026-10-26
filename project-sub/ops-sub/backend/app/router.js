@@ -4,6 +4,7 @@ module.exports = app => {
   const { router, controller } = app;
   router.get('/api/health', controller.health.index);
   router.post('/api/internal/audit', controller.content.recordAudit);
+  router.get('/api/internal/compliance/rules', controller.compliance.rules);
   router.post('/api/internal/compliance/check', controller.compliance.check);
   router.post('/api/internal/compliance/rules', controller.compliance.create);
   router.put('/api/internal/compliance/rules/:id', controller.compliance.update);
@@ -45,6 +46,7 @@ module.exports = app => {
   router.post('/api/content/alerts/:id/ack', controller.content.ack);
   router.post('/api/content/alerts/:id/resolve', controller.content.resolve);
   router.get('/api/content/audit', controller.content.audit);
+  router.get('/api/content/audit/combined', controller.content.combinedAudit);
   router.post('/api/content/audit/:id/prompt', controller.content.viewPrompt);
   router.get('/api/content/lineage', controller.content.lineage);
   router.get('/api/content/settings', controller.content.settings);

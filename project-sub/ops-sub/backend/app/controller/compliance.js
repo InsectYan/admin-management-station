@@ -35,6 +35,14 @@ class ComplianceController extends Controller {
     }
   }
 
+  async rules() {
+    try {
+      ok(this.ctx, await this.ctx.service.compliance.list());
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async check() {
     try {
       ok(this.ctx, await this.ctx.service.compliance.check(this.ctx.request.body || {}));

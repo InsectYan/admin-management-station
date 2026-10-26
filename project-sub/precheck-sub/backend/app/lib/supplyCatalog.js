@@ -1,6 +1,7 @@
 'use strict';
 
 const PACK_MODELS = 'E:\\AI Tools\\projects\\private-project\\ComfyUI.V7\\0.11.1\\ComfyUI\\models';
+const H3_PACK = 'F:\\成套大模型-可直接用';
 const PLUGIN_ROOT = 'E:\\AI Tools\\projects\\private-project\\ComfyUI.V7\\ComfyUI\\custom_nodes';
 
 const UI_ONLY = new Set([ 'Note', 'MarkdownNote', 'Reroute', 'PrimitiveNode', 'GetNode', 'SetNode' ]);
@@ -245,6 +246,73 @@ const FAMILIES = [
       qwenVaeSlot(),
     ],
   },
+  {
+    id: 'h3-fl2va-int8',
+    label: '轻量 H3 文生视频 / 首尾帧',
+    slots: [
+      {
+        id: 'unet',
+        label: '扩散模型',
+        folder: 'diffusion_models',
+        anchor: true,
+        match: /minimax_h3_fl2va_pruned_int8/i,
+        options: [
+          h3Local('minimax_h3_fl2va_pruned_int8_convrot.safetensors', 'diffusion_models', 'diffusion_models\\minimax_h3_fl2va_pruned_int8_convrot.safetensors'),
+        ],
+      },
+      h3ClipSlot(),
+      h3VideoVaeSlot(),
+      h3AudioVaeSlot(),
+    ],
+  },
+  {
+    id: 'h3-fl2va-bf16',
+    label: '满血 H3 文生视频 / 首尾帧',
+    slots: [
+      {
+        id: 'unet',
+        label: '满血扩散模型',
+        folder: 'diffusion_models',
+        anchor: true,
+        match: /minimax_h3_fl2va_bf16/i,
+        options: [
+          h3Local('minimax_h3_fl2va_bf16.safetensors', 'diffusion_models', 'H3-满血文生视频-显存不足\\diffusion_models\\minimax_h3_fl2va_bf16.safetensors'),
+        ],
+      },
+      h3ClipBf16Slot(),
+      h3VideoVaeSlot(),
+      h3AudioVaeSlot(),
+      {
+        id: 'lora',
+        label: '写实人物 LoRA',
+        folder: 'loras',
+        optional: true,
+        match: /h3-realism-people/i,
+        options: [
+          h3Local('h3-realism-people-t2v-i2v-r2v.safetensors', 'loras', 'H3-满血首尾帧视频-lora控制-显存不足\\loras\\h3-realism-people-t2v-i2v-r2v.safetensors'),
+        ],
+      },
+    ],
+  },
+  {
+    id: 'h3-ref2va-int8',
+    label: '轻量 H3 参考生视频',
+    slots: [
+      {
+        id: 'unet',
+        label: '参考扩散模型',
+        folder: 'diffusion_models',
+        anchor: true,
+        match: /minimax_h3_ref2va_pruned_int8/i,
+        options: [
+          h3Local('minimax_h3_ref2va_pruned_int8_convrot.safetensors', 'diffusion_models', 'H3轻量-探索风格一致性等\\diffusion_models\\minimax_h3_ref2va_pruned_int8_convrot.safetensors'),
+        ],
+      },
+      h3ClipSlot(),
+      h3VideoVaeSlot(),
+      h3AudioVaeSlot(),
+    ],
+  },
 ];
 
 function pluginOption(id, name, url) {
@@ -257,7 +325,7 @@ function pluginOption(id, name, url) {
   };
 }
 
-function modelOption(variant, site, name, folder, url) {
+function modelOption(variant, site, name, folder, url, source) {
   return {
     id: `${variant || 'file'}-${site}-${name}`,
     variant,
@@ -266,6 +334,7 @@ function modelOption(variant, site, name, folder, url) {
     name,
     directory: `models/${folder}`,
     place: `${PACK_MODELS}\\${folder}`,
+    source: source || '',
     url,
   };
 }
@@ -303,6 +372,61 @@ function qwenClipSlot() {
   };
 }
 
+function h3Local(name, folder, relative) {
+  const option = modelOption('', '本机成套包', name, folder, '', `${H3_PACK}\\${relative}`);
+  option.directory = `models/${folder}/minimax`;
+  option.place = `${PACK_MODELS}\\${folder}\\minimax`;
+  return option;
+}
+
+function h3ClipSlot() {
+  return {
+    id: 'clip',
+    label: '文本编码器',
+    folder: 'text_encoders',
+    match: /qwen3vl_32b_minimax_h3_nvfp4/i,
+    options: [
+      h3Local('qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors', 'text_encoders', 'text_encoders\\qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors'),
+    ],
+  };
+}
+
+function h3ClipBf16Slot() {
+  return {
+    id: 'clip',
+    label: '满血文本编码器',
+    folder: 'text_encoders',
+    match: /qwen3vl_32b_minimax_h3_bf16/i,
+    options: [
+      h3Local('qwen3vl_32b_minimax_h3_bf16.safetensors', 'text_encoders', 'H3-满血首尾帧生视频-显存不足\\text_encoders\\qwen3vl_32b_minimax_h3_bf16.safetensors'),
+    ],
+  };
+}
+
+function h3VideoVaeSlot() {
+  return {
+    id: 'vae',
+    label: '视频 VAE',
+    folder: 'vae',
+    match: /minimax_h3_video_vae/i,
+    options: [
+      h3Local('minimax_h3_video_vae_fp16.safetensors', 'vae', 'vae\\minimax_h3_video_vae_fp16.safetensors'),
+    ],
+  };
+}
+
+function h3AudioVaeSlot() {
+  return {
+    id: 'audio_vae',
+    label: '音频 VAE',
+    folder: 'vae',
+    match: /minimax_h3_audio_vae/i,
+    options: [
+      h3Local('minimax_h3_audio_vae_fp32.safetensors', 'vae', 'vae\\minimax_h3_audio_vae_fp32.safetensors'),
+    ],
+  };
+}
+
 function qwenVaeSlot() {
   return {
     id: 'vae',
@@ -335,7 +459,7 @@ function guessFolder(name) {
   if (/vae/.test(text)) return 'vae';
   if (/clip_vision|clip-vision/.test(text)) return 'clip_vision';
   if (/controlnet|control_/.test(text)) return 'controlnet';
-  if (/umt5|t5xxl|clip_l|clip_g|qwen_2\.5_vl/.test(text)) return 'text_encoders';
+  if (/umt5|t5xxl|clip_l|clip_g|qwen_2\.5_vl|qwen3vl/.test(text)) return 'text_encoders';
   if (/\.gguf$/.test(text)) return 'unet';
   if (/ckpt|xl_|sdxl|sd15|v1-5/.test(text)) return 'checkpoints';
   return 'diffusion_models';

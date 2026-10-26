@@ -521,6 +521,7 @@ watch(() => route.query, () => {
 }
 
 .ops-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   background: var(--ops-color-surface);
@@ -585,10 +586,37 @@ watch(() => route.query, () => {
   min-height: 36px;
 }
 
+.ops-card:hover .ops-card__actions {
+  opacity: 1;
+  pointer-events: auto;
+}
 .ops-card__actions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
   gap: 8px;
-  padding: 0 16px 14px;
+  background: linear-gradient(transparent, rgba(243, 248, 244, 0.92));
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.ops-card__actions :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+@media (hover: none) {
+  .ops-card__actions {
+    position: static;
+    opacity: 1;
+    margin-top: 8px;
+    background: none;
+    pointer-events: auto;
+  }
 }
 
 .ops-import-msg,

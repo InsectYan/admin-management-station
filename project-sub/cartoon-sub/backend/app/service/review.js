@@ -3,7 +3,7 @@
 const Service = require('egg').Service;
 const { reportAudit } = require('../lib/reportAudit');
 
-const NODES = [ 'input', 'script', 'storyboard', 'assets', 'generate', 'compose', 'preview' ];
+const NODES = [ 'input', 'script', 'storyboard', 'assets', 'generate', 'voice', 'subtitle', 'compose', 'preview', 'review' ];
 
 class ReviewService extends Service {
   async list(projectId) {

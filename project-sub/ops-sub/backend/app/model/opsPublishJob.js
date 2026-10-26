@@ -16,6 +16,9 @@ module.exports = app => {
     scheduled_at: { type: DATE, allowNull: false },
     status: { type: STRING(32), allowNull: false, defaultValue: 'scheduled' },
     reason: { type: TEXT, allowNull: false, defaultValue: '' },
+    play_count: { type: INTEGER, allowNull: false, defaultValue: 0 },
+    finish_count: { type: INTEGER, allowNull: false, defaultValue: 0 },
+    conversion_count: { type: INTEGER, allowNull: false, defaultValue: 0 },
   }, {
     tableName: 'ops_publish_jobs',
   });

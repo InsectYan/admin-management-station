@@ -58,6 +58,30 @@ class LibraryController extends Controller {
       fail(this.ctx, err);
     }
   }
+
+  async createShared() {
+    try {
+      ok(this.ctx, await this.ctx.service.library.createShared(this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async updateShared() {
+    try {
+      ok(this.ctx, await this.ctx.service.library.updateShared(this.ctx.params.id, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async linkShared() {
+    try {
+      ok(this.ctx, await this.ctx.service.library.linkShared(this.ctx.params.id, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
 }
 
 module.exports = LibraryController;

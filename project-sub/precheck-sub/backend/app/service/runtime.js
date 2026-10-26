@@ -12,10 +12,11 @@ class RuntimeService extends Service {
         base_url: baseUrl,
         expected_version: expectedVersion,
       });
-      return;
-    }
-    if (row.base_url !== baseUrl || row.expected_version !== expectedVersion) {
+    } else if (row.base_url !== baseUrl || row.expected_version !== expectedVersion) {
       await row.update({ base_url: baseUrl, expected_version: expectedVersion });
+    }
+    if (this.ctx.service.workflow?.ensureTemplates) {
+      await this.ctx.service.workflow.ensureTemplates();
     }
   }
 

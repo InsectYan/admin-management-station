@@ -4,33 +4,39 @@
       <h3>叙事分镜</h3>
       <p>顺序、意图、台词、情绪、出场人物、地点和来源场次。这里不写运镜和画面提示词。</p>
     </header>
-    <el-form label-width="88px">
-      <el-form-item label="来源剧本">
-        <el-select v-model="form.script_id" clearable placeholder="先有剧本再挂分镜" style="width: 240px">
-          <el-option v-for="script in scripts" :key="script.id" :label="script.title" :value="script.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="顺序 / 场次">
-        <el-input-number v-model="form.sort_order" :min="1" />
-        <el-input-number v-model="form.scene_order" :min="0" style="margin-left: 8px" />
-      </el-form-item>
-      <el-form-item label="意图">
-        <el-input v-model="form.intent" placeholder="这一镜讲什么" />
-      </el-form-item>
-      <el-form-item label="台词">
-        <el-input v-model="form.dialogue" />
-      </el-form-item>
-      <el-form-item label="情绪 / 地点">
-        <el-input v-model="form.emotion" placeholder="情绪" style="width: 140px" />
-        <el-input v-model="form.location" placeholder="地点" style="width: 180px; margin-left: 8px" />
-      </el-form-item>
-      <el-form-item label="出场人物">
-        <el-select v-model="form.character_ids" multiple collapse-tags style="width: 280px">
-          <el-option v-for="person in characters" :key="person.id" :label="person.name" :value="String(person.id)" />
-        </el-select>
-      </el-form-item>
+    <el-form label-position="top" class="novel-entry-form">
+      <div class="novel-entry-grid">
+        <el-form-item class="is-wide" label="来源剧本">
+          <el-select v-model="form.script_id" clearable placeholder="先有剧本再挂分镜" style="width: 100%">
+            <el-option v-for="script in scripts" :key="script.id" :label="script.title" :value="script.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="顺序">
+          <el-input-number v-model="form.sort_order" :min="1" />
+        </el-form-item>
+        <el-form-item label="场次">
+          <el-input-number v-model="form.scene_order" :min="0" />
+        </el-form-item>
+        <el-form-item class="is-wide" label="意图">
+          <el-input v-model="form.intent" placeholder="这一镜讲什么" />
+        </el-form-item>
+        <el-form-item class="is-wide" label="台词">
+          <el-input v-model="form.dialogue" type="textarea" :rows="2" />
+        </el-form-item>
+        <el-form-item label="情绪">
+          <el-input v-model="form.emotion" />
+        </el-form-item>
+        <el-form-item label="地点">
+          <el-input v-model="form.location" />
+        </el-form-item>
+        <el-form-item class="is-wide" label="出场人物">
+          <el-select v-model="form.character_ids" multiple style="width: 100%">
+            <el-option v-for="person in characters" :key="person.id" :label="person.name" :value="String(person.id)" />
+          </el-select>
+        </el-form-item>
+      </div>
     </el-form>
-    <div>
+    <div class="novel-entry-actions">
       <el-button :loading="suggesting" @click="suggest">生成建议</el-button>
       <el-button type="primary" :loading="saving" @click="save">{{ form.id ? '保存分镜' : '添加分镜' }}</el-button>
       <el-button v-if="form.id" @click="reset">取消</el-button>

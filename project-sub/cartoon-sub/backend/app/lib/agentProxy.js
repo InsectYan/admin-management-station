@@ -40,4 +40,28 @@ async function invokeSkill(ctx, { skill, action, payload, timeoutMs }) {
   return data;
 }
 
-module.exports = { invokeSkill };
+function agentBases(ctx) {
+  const configured = String(ctx.app.config.agentPlatform?.baseUrl || '').replace(/\/$/, '');
+  if (!configured) return [];
+  const list = [ configured ];
+  if (/127\.0\.0\.1|localhost/.test(configured)) {
+    list.push(configured.replace(/127\.0\.0\.1|localhost/, 'host.docker.internal'));
+  }
+  return list;
+}
+
+async function listMediaProfiles(ctx) {
+  for (const base of agentBases(ctx)) {
+    try {
+      const res = await fetch(`${base}/api/media/profiles`, { signal: AbortSignal.timeout(2500) });
+      if (!res.ok) continue;
+      const data = await res.json().catch(() => ({}));
+      return Array.isArray(data.profiles) ? data.profiles : [];
+    } catch {
+      // 换一个地址再读
+    }
+  }
+  return [];
+}
+
+module.exports = { invokeSkill, listMediaProfiles };

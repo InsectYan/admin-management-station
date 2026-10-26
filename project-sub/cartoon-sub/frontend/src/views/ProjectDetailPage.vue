@@ -71,7 +71,14 @@
           <p>{{ item.body }}</p>
           <p v-if="item.script_data && item.script_data.summary">{{ item.script_data.summary }}</p>
           <div class="cartoon-snap__actions">
-            <el-button type="primary" :disabled="!canMake()" :loading="draftingId === item.id" @click="draft(item)">起草分镜</el-button>
+            <el-button type="primary" :disabled="!canMake()" :loading="draftingId === item.id" @click="draft(item)">生成建议</el-button>
+            <el-button
+              type="primary"
+              plain
+              :disabled="!canMake() || pendingDraft?.importId !== item.id"
+              :loading="applyingId === item.id"
+              @click="applyDraft(item)"
+            >写入生产稿</el-button>
             <el-button type="danger" plain :disabled="!canMake()" @click="removeSnapshot(item)">删除快照</el-button>
           </div>
         </el-card>
@@ -110,23 +117,34 @@
               :disabled="!canMake()"
               :loading="draftingId === selectedBoard.raw.id"
               @click="draft(selectedBoard.raw)"
-            >起草分镜</el-button>
+            >生成建议</el-button>
+            <el-button
+              v-if="selectedBoard.raw"
+              type="primary"
+              :disabled="!canMake() || pendingDraft?.importId !== selectedBoard.raw.id"
+              :loading="applyingId === selectedBoard.raw.id"
+              @click="applyDraft(selectedBoard.raw)"
+            >写入生产稿</el-button>
           </div>
           <p v-else class="cartoon-module__hint">先在左侧选择一条章节快照。</p>
-      <el-form v-if="selectedBoard" label-position="top">
-        <el-form-item label="景别">
-          <el-select v-model="shot.shot_size" style="width: 220px">
-            <el-option v-for="item in meta.shot_sizes" :key="item" :label="item" :value="item" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="运镜">
-          <el-select v-model="shot.camera_move" style="width: 220px">
-            <el-option v-for="item in meta.camera_moves" :key="item" :label="item" :value="item" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="描述"><el-input v-model="shot.description" type="textarea" :rows="3" /></el-form-item>
-        <el-form-item label="提示词"><el-input v-model="shot.positive_zh" type="textarea" :rows="2" /></el-form-item>
-        <el-button type="primary" :disabled="!canMake()" @click="addShot">添加分镜</el-button>
+      <el-form v-if="selectedBoard" label-position="top" class="cartoon-entry-form">
+        <div class="cartoon-entry-grid">
+          <el-form-item label="景别">
+            <el-select v-model="shot.shot_size" style="width: 100%">
+              <el-option v-for="item in meta.shot_sizes" :key="item" :label="item" :value="item" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="运镜">
+            <el-select v-model="shot.camera_move" style="width: 100%">
+              <el-option v-for="item in meta.camera_moves" :key="item" :label="item" :value="item" />
+            </el-select>
+          </el-form-item>
+          <el-form-item class="is-wide" label="描述"><el-input v-model="shot.description" type="textarea" :rows="3" /></el-form-item>
+          <el-form-item class="is-wide" label="提示词"><el-input v-model="shot.positive_zh" type="textarea" :rows="2" /></el-form-item>
+        </div>
+        <div class="cartoon-entry-actions">
+          <el-button type="primary" :disabled="!canMake()" @click="addShot">添加分镜</el-button>
+        </div>
       </el-form>
       <el-table v-if="selectedBoard" :data="boardShots" style="margin-top: 12px">
         <el-table-column prop="sort_order" label="#" width="60" />
@@ -251,6 +269,8 @@ const shot = reactive({ shot_size: '中景', camera_move: '固定', description:
 const novelBrief = ref(null);
 const novelLoading = ref(false);
 const draftingId = ref(null);
+const applyingId = ref(null);
+const pendingDraft = ref(null);
 const selectedImportKey = ref('');
 const notice = ref('');
 const noticeType = ref('info');
@@ -479,10 +499,33 @@ async function saveShot(row) {
 }
 async function draft(item) {
   draftingId.value = item.id;
-  notice.value = '正在起草，这一步不出图';
+  notice.value = '正在生成建议，确认前不会写入';
   noticeType.value = 'info';
   try {
-    await request(`/projects/${route.params.id}/imports/${item.id}/draft`, { method: 'post', timeout: 600000 });
+    const data = await request(`/projects/${route.params.id}/imports/${item.id}/draft/suggest`, { method: 'post', timeout: 600000 });
+    pendingDraft.value = { importId: item.id, ...data };
+    notice.value = '建议已返回，确认后才写入';
+    noticeType.value = 'success';
+  } catch (err) {
+    notice.value = err.message;
+    noticeType.value = 'error';
+  } finally {
+    draftingId.value = null;
+  }
+}
+async function applyDraft(item) {
+  if (!pendingDraft.value || pendingDraft.value.importId !== item.id) return;
+  applyingId.value = item.id;
+  try {
+    await request(`/projects/${route.params.id}/imports/${item.id}/draft/apply`, {
+      method: 'post',
+      data: {
+        script_data: pendingDraft.value.script_data,
+        shots: pendingDraft.value.shots,
+        prompts: pendingDraft.value.prompts,
+      },
+    });
+    pendingDraft.value = null;
     notice.value = '分镜已写入，可以再改';
     noticeType.value = 'success';
     selectedImportKey.value = String(item.id);
@@ -492,7 +535,7 @@ async function draft(item) {
     notice.value = err.message;
     noticeType.value = 'error';
   } finally {
-    draftingId.value = null;
+    applyingId.value = null;
   }
 }
 async function addShot() {
@@ -529,10 +572,18 @@ onMounted(async () => {
 .cartoon-setting-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px 16px;
+  column-gap: 24px;
+  row-gap: 0;
 }
 .cartoon-snap { margin-bottom: 12px; }
-.cartoon-snap__actions { display: flex; gap: 8px; }
+.cartoon-snap__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+.cartoon-snap__actions :deep(.el-button + .el-button) { margin-left: 0; }
 .cartoon-board { display: flex; gap: 16px; align-items: flex-start; width: 100%; min-width: 0; }
 .cartoon-board__snaps { flex: 0 0 240px; display: flex; flex-direction: column; gap: 8px; }
 .cartoon-board__label { margin: 0; color: #5c6b62; font-size: 13px; }

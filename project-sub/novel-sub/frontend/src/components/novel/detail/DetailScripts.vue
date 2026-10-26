@@ -4,38 +4,49 @@
       <h3>剧本</h3>
       <p>场次、内外景、地点、人物、对白和动作。景别、秒数和运镜留在视频生产分镜。</p>
     </header>
-    <el-form label-width="72px">
-      <el-form-item label="标题">
-        <el-input v-model="form.title" placeholder="例如 第一章漫剧稿" style="max-width: 320px" />
-      </el-form-item>
-      <el-form-item label="改写">
-        <el-select v-model="form.variant" style="width: 160px">
-          <el-option label="漫剧改写" value="comic" />
-          <el-option label="短剧改写" value="short_drama" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="章节">
-        <el-select v-model="form.chapter_ids" multiple collapse-tags placeholder="来源章节" style="width: 320px">
-          <el-option v-for="chapter in chapters" :key="chapter.chapter_id" :label="chapter.title" :value="chapter.chapter_id" />
-        </el-select>
-      </el-form-item>
+    <el-form label-position="top" class="novel-entry-form">
+      <div class="novel-entry-grid">
+        <el-form-item label="标题">
+          <el-input v-model="form.title" placeholder="例如 第一章漫剧稿" />
+        </el-form-item>
+        <el-form-item label="改写">
+          <el-select v-model="form.variant" style="width: 100%">
+            <el-option label="漫剧改写" value="comic" />
+            <el-option label="短剧改写" value="short_drama" />
+          </el-select>
+        </el-form-item>
+        <el-form-item class="is-wide" label="章节">
+          <el-select v-model="form.chapter_ids" multiple placeholder="来源章节" style="width: 100%">
+            <el-option v-for="chapter in chapters" :key="chapter.chapter_id" :label="chapter.title" :value="chapter.chapter_id" />
+          </el-select>
+        </el-form-item>
+      </div>
     </el-form>
     <div v-for="(scene, index) in form.scenes" :key="index" class="novel-scripts__scene">
-      <strong>第 {{ index + 1 }} 场</strong>
-      <el-select v-model="scene.interior" style="width: 88px">
-        <el-option label="内" value="in" />
-        <el-option label="外" value="out" />
-      </el-select>
-      <el-input v-model="scene.location" placeholder="地点" style="width: 140px" />
-      <el-input v-model="scene.characters" placeholder="人物" style="width: 140px" />
-      <el-input v-model="scene.dialogue" placeholder="对白" />
-      <el-input v-model="scene.action" placeholder="动作" />
-      <el-button link type="danger" @click="form.scenes.splice(index, 1)">删除这场</el-button>
+      <div class="novel-scripts__scene-head">
+        <strong>第 {{ index + 1 }} 场</strong>
+        <el-button link type="danger" @click="form.scenes.splice(index, 1)">删除这场</el-button>
+      </div>
+      <el-form label-position="top" class="novel-entry-form">
+        <div class="novel-entry-grid">
+          <el-form-item label="内外">
+            <el-select v-model="scene.interior" style="width: 100%">
+              <el-option label="内" value="in" />
+              <el-option label="外" value="out" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="地点"><el-input v-model="scene.location" /></el-form-item>
+          <el-form-item label="人物"><el-input v-model="scene.characters" /></el-form-item>
+          <el-form-item class="is-wide" label="对白"><el-input v-model="scene.dialogue" type="textarea" :rows="2" /></el-form-item>
+          <el-form-item class="is-wide" label="动作"><el-input v-model="scene.action" type="textarea" :rows="2" /></el-form-item>
+        </div>
+      </el-form>
     </div>
-    <div>
+    <div class="novel-entry-actions">
       <el-button @click="form.scenes.push(blankScene())">加一场</el-button>
       <el-button :loading="suggesting" @click="suggest">生成建议</el-button>
       <el-button type="primary" :loading="saving" @click="save">{{ form.id ? '保存剧本' : '添加剧本' }}</el-button>
+      <el-button :disabled="!scripts.length" @click="downloadScripts">导出剧本</el-button>
       <el-button v-if="form.id" @click="reset">取消</el-button>
     </div>
     <p v-if="suggestion" class="novel-scripts__hint">{{ suggestion.reply || '建议已返回。填入表单后还要再点保存。' }}</p>
@@ -108,6 +119,25 @@ function edit(row) {
   form.chapter_ids = [ ...(row.chapter_ids || []) ];
   form.scenes = (row.scenes || []).map(scene => ({ ...blankScene(), ...scene }));
   if (!form.scenes.length) form.scenes = [ blankScene() ];
+}
+
+function downloadScripts() {
+  const text = scripts.value.map(script => {
+    const scenes = (script.scenes || []).map((scene, index) => [
+      `第${index + 1}场 ${scene.interior === 'out' ? '外' : '内'} ${scene.location || ''}`,
+      `人物：${scene.characters || ''}`,
+      `对白：${scene.dialogue || ''}`,
+      `动作：${scene.action || ''}`,
+    ].join('\n')).join('\n\n');
+    return `${script.title || '未命名剧本'}\n${scenes}`;
+  }).join('\n\n');
+  const blob = new Blob([ text ], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'scripts.txt';
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 async function load() {
@@ -191,7 +221,18 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.novel-scripts { display: flex; flex-direction: column; gap: 12px; }
+.novel-scripts { display: flex; flex-direction: column; gap: 16px; }
 .novel-scripts header p { margin: 4px 0 0; color: var(--el-text-color-secondary); }
-.novel-scripts__scene { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.novel-scripts__scene {
+  padding: 16px;
+  border: 1px solid rgba(47, 138, 91, 0.18);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.55);
+}
+.novel-scripts__scene-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
 </style>

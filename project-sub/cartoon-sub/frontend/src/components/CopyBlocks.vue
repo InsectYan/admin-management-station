@@ -1,11 +1,13 @@
 <template>
   <div>
     <p class="cartoon-module__hint">文案只存在这个视频项目里，不会在叙事工作台新建作品。</p>
-    <el-form label-position="top">
+    <el-form label-position="top" class="cartoon-entry-form" @submit.prevent="save">
       <el-form-item label="标题"><el-input v-model="form.title" /></el-form-item>
       <el-form-item label="正文"><el-input v-model="form.body" type="textarea" :rows="5" /></el-form-item>
-      <el-button type="primary" :disabled="!canMake()" @click="save">{{ form.id ? '保存文案' : '添加文案' }}</el-button>
-      <el-button v-if="form.id" @click="reset">取消编辑</el-button>
+      <div class="cartoon-entry-actions">
+        <el-button type="primary" :disabled="!canMake()" @click="save">{{ form.id ? '保存文案' : '添加文案' }}</el-button>
+        <el-button v-if="form.id" @click="reset">取消编辑</el-button>
+      </div>
     </el-form>
     <el-empty v-if="!blocks.length" description="还没有本地文案" />
     <el-card v-for="item in blocks" :key="item.id" shadow="never" class="cartoon-snap">

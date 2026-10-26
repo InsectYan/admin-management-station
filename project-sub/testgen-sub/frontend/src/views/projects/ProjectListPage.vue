@@ -195,8 +195,12 @@ onMounted(load);
   border-top: 1px solid #ebeef5;
   padding-top: 8px;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
   gap: 8px;
 }
+.project-card-actions :deep(.el-button + .el-button) { margin-left: 0; }
 .project-pagination {
   margin-top: 20px;
   display: flex;

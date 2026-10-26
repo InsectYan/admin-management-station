@@ -254,6 +254,13 @@
   font-weight: 500;
 }
 
+.ops-sub-root .el-card {
+  --el-card-border-color: rgba(47, 138, 91, 0.12);
+  border-radius: var(--ops-radius-base);
+  border: var(--ops-border-subtle);
+  background: var(--ops-color-surface);
+  box-shadow: var(--ops-shadow-soft);
+}
 .ops-sub-root .el-table {
   --el-table-header-bg-color: rgba(240, 247, 242, 0.72);
   --el-table-tr-bg-color: rgba(255, 255, 255, 0.42);
@@ -261,7 +268,13 @@
   --el-table-border-color: rgba(47, 138, 91, 0.1);
   --el-table-header-text-color: var(--ops-color-deep);
   --el-table-text-color: var(--ops-color-text);
+  border-radius: var(--ops-radius-base);
+  overflow: hidden;
+  border: var(--ops-border-subtle);
   background: transparent;
+}
+.ops-sub-root .el-table .el-table__inner-wrapper::before {
+  display: none;
 }
 
 .ops-sub-root .el-table th.el-table__cell {

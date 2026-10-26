@@ -20,10 +20,11 @@ const { coverageFromNovel } = require('../lib/aiPlan');
 const {
   hydrateBoundContext,
   mergeNovelIntoBoundContext,
+  collectContextLabels,
   pickLengthId,
   slimCatalogForAgent,
-  collectContextLabels,
 } = require('../lib/aiBoundContext');
+const { enrichWriterContext } = require('../lib/writerContext');
 
 function toPublicMessage(row) {
   return withFormattedTimes(row);
@@ -92,6 +93,14 @@ class AiTurnService extends require('egg').Service {
     if (session.novel_id) {
       const novel = await this.ctx.service.novel.findById(session.novel_id);
       if (novel) boundContext = mergeNovelIntoBoundContext(boundContext, novel);
+      const terms = await this.ctx.model.NovelTerm.findAll({ where: { novel_id: session.novel_id } });
+      boundContext = enrichWriterContext(boundContext, {
+        novel,
+        terms,
+        characters: novel?.setting_json?.characters || [],
+        feature: spec.feature_key,
+        chapterId: boundContext.chapter?.id || boundContext.chapter_id,
+      });
     }
 
     const lengthId = pickLengthId(boundContext);

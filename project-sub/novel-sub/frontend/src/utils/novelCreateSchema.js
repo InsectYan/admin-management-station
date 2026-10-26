@@ -142,6 +142,11 @@ export function createCharacter(data = {}) {
     appearance: data.appearance || '',
     speech_style: data.speech_style || '',
     arc: data.arc || '',
+    video_asset_id: data.video_asset_id || '',
+    states: Array.isArray(data.states) ? data.states.map(item => ({
+      chapter_id: String(item?.chapter_id || ''),
+      note: String(item?.note || ''),
+    })) : [],
   };
 }
 
@@ -228,6 +233,7 @@ export function createChapterItem(data = {}) {
     order: data.order ?? 1,
     status: data.status || 'draft',
     outline_ref: data.outline_ref || '',
+    location: data.location || '',
   };
 }
 
