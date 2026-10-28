@@ -767,6 +767,8 @@ class StoryDeskService extends Service {
         skill: 'novel-writer-skill',
         action: 'fill_script',
         payload: {
+          novel_id: novelId,
+          work_id: String(novelId),
           user_message: String(payload.user_message || '').trim() || (
             chapterIds.length
               ? '根据所选章节正文整理成剧本建议'
@@ -890,6 +892,8 @@ class StoryDeskService extends Service {
         skill: 'novel-writer-skill',
         action: 'fill_intent_shots',
         payload: {
+          novel_id: novelId,
+          work_id: String(novelId),
           user_message: String(payload.user_message || '').trim() || '根据剧本场次整理成叙事分镜建议',
           target_fields: [ 'intent_shots' ],
           bound_context: boundContext,

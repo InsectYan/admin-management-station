@@ -93,7 +93,7 @@
             v-model="form.summary"
             type="textarea"
             :rows="4"
-            maxlength="500"
+            maxlength="1000"
             show-word-limit
             placeholder="短简介：列表与封面用，突出卖点即可（不必写完全书走向）"
             @input="$emit('change')"

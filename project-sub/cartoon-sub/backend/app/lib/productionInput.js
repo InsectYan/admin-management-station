@@ -14,6 +14,10 @@ function productionInput(project, extra = {}) {
     throw err;
   }
   const fields = { content_type: project?.content_type || '' };
+  if (project?.id != null && String(project.id).trim() !== '') {
+    fields.project_id = project.id;
+    fields.work_id = String(project.id);
+  }
   if (hasPackage) {
     fields.package_id = packageId;
     if (hasVersion) fields.package_version = Number(rawVersion);

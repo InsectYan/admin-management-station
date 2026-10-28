@@ -123,6 +123,7 @@ class AiReviewService extends Service {
         action: payload.action || 'check_consistency',
         payload: {
           ...payload,
+          work_id: payload.novel_id ? String(payload.novel_id) : '',
           trace_id: newTraceId(),
         },
         timeoutMs: 180000,

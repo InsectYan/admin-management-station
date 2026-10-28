@@ -236,6 +236,8 @@ class AiTurnService extends require('egg').Service {
         timeoutMs,
         payload: {
           trace_id: `${traceId}-brainstorm`,
+          novel_id: session.novel_id || null,
+          work_id: session.novel_id ? String(session.novel_id) : '',
           topic: message,
           user_message: message,
           scene: spec.scene,
@@ -256,6 +258,8 @@ class AiTurnService extends require('egg').Service {
       timeoutMs,
       payload: {
         trace_id: `${traceId}-writer`,
+        novel_id: session.novel_id || null,
+        work_id: session.novel_id ? String(session.novel_id) : '',
         topic: message,
         user_message: message,
         scene: spec.scene,
@@ -329,6 +333,8 @@ class AiTurnService extends require('egg').Service {
         timeoutMs,
         payload: {
           trace_id: `${traceId}-brainstorm`,
+          novel_id: session.novel_id || null,
+          work_id: session.novel_id ? String(session.novel_id) : '',
           topic: message,
           user_message: message,
           scene: spec.scene,
@@ -352,6 +358,8 @@ class AiTurnService extends require('egg').Service {
       timeoutMs,
       payload: {
         trace_id: `${traceId}-writer`,
+        novel_id: session.novel_id || null,
+        work_id: session.novel_id ? String(session.novel_id) : '',
         topic: message,
         user_message: message,
         scene: spec.scene,
