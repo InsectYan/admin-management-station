@@ -84,6 +84,8 @@ module.exports = (app) => {
   router.post('/api/ai/sessions/:id/turns/stream', controller.aiSession.turnsStream);
   router.post('/api/ai/sessions/:id/apply', controller.aiSession.apply);
   router.post('/api/ai/dispatch', controller.aiSession.dispatch);
+  router.get('/api/ai/cover/workflows', controller.aiCover.workflows);
+  router.get('/api/ai/cover/jobs/:id', controller.aiCover.job);
   router.post('/api/ai/cover/generate', controller.aiCover.generate);
 
   router.get('/api/ai/review/modules', controller.aiReview.modules);

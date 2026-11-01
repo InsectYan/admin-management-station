@@ -97,6 +97,9 @@ class ProjectService extends Service {
       where: { project_id: id },
       order: [[ 'id', 'DESC' ]],
     });
+    const live = await this.ctx.service.generate.liveProgress(
+      tasks.filter(item => item.prompt_id && [ 'queued', 'running', 'saving' ].includes(item.status)).map(item => item.prompt_id),
+    );
     const taskIds = tasks.map(item => item.id);
     const outputs = taskIds.length
       ? await this.ctx.model.Output.findAll({ where: { task_id: taskIds }, order: [[ 'id', 'ASC' ]] })
@@ -118,6 +121,7 @@ class ProjectService extends Service {
       })),
       tasks: tasks.map(task => ({
         ...task.toJSON(),
+        ...(live[task.prompt_id] || {}),
         shot_description: shotById.get(task.shot_id)?.description || '',
         outputs: outputs.filter(item => item.task_id === task.id),
       })),

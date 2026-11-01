@@ -91,19 +91,6 @@
           @apply="onApplyCharacters"
         />
       </template>
-      <template v-else-if="stepKey === 'style'" #dock>
-        <AiFormDock
-          :scenes="STYLE_AI_SCENES"
-          feature-key="style"
-          session-title="风格"
-          :novel-id="novelId"
-          :start-expanded="expandDock"
-          require-novel-id
-          :form-snapshot="basicForm"
-          :session-locked="autorunActive"
-          @apply="onApplyStyle"
-        />
-      </template>
       <template v-else-if="stepKey === 'plotline'" #dock>
         <AiFormDock
           :scenes="PLOTLINE_AI_SCENES"
@@ -222,11 +209,6 @@
         @add="addCharacter"
         @remove="removeCharacter"
       />
-      <DetailStyle
-        v-else-if="stepKey === 'style'"
-        ref="styleRef"
-        :novel-id="novelId"
-      />
       <DetailPlotlines
         v-else-if="stepKey === 'plotline'"
         ref="plotlineRef"
@@ -298,12 +280,11 @@ import StepOutline from '../components/novel/create/StepOutline.vue';
 import StepContentOrg from '../components/novel/create/StepContentOrg.vue';
 import AiFormDock from '../components/novel/ai/AiFormDock.vue';
 import AnomalyFixPanel from '../components/novel/AnomalyFixPanel.vue';
-import DetailStyle from '../components/novel/detail/DetailStyle.vue';
 import DetailPlotlines from '../components/novel/detail/DetailPlotlines.vue';
 import DetailScripts from '../components/novel/detail/DetailScripts.vue';
 import DetailIntentShots from '../components/novel/detail/DetailIntentShots.vue';
 import { useNovelCreateWizard } from '../composables/useNovelCreateWizard.js';
-import { BASIC_AI_SCENES, WORLD_AI_SCENES, STYLE_AI_SCENES, PLOTLINE_AI_SCENES, OUTLINE_AI_SCENES, SCRIPT_AI_SCENES, INTENT_AI_SCENES, CONTENT_AI_SCENES, ORCHESTRATE_AI_SCENES, buildCharacterScenes, buildFactionScenes } from '../utils/aiScenes.js';
+import { BASIC_AI_SCENES, WORLD_AI_SCENES, PLOTLINE_AI_SCENES, OUTLINE_AI_SCENES, SCRIPT_AI_SCENES, INTENT_AI_SCENES, CONTENT_AI_SCENES, ORCHESTRATE_AI_SCENES, buildCharacterScenes, buildFactionScenes } from '../utils/aiScenes.js';
 import { wizardStepOf } from '../utils/novelCreateSchema.js';
 import { STUDIO_TAB } from '../utils/novelDetail.js';
 import { applyBasicPatch, applyWorldPatch, applyFactionPatch, applyCharacterPatch, applyOutlinePatch, applyChaptersPatch, flattenOutlineTitles } from '../utils/aiApplyPatch.js';
@@ -358,7 +339,6 @@ const {
 } = useNovelCreateWizard();
 
 const stepKey = computed(() => stepMeta.value?.key || '');
-const styleRef = ref(null);
 const plotlineRef = ref(null);
 const scriptRef = ref(null);
 const intentRef = ref(null);
@@ -497,7 +477,7 @@ const orchestrateSnapshot = computed(() => ({
     factions: factions.value.length > 0,
     characters: characters.value.length > 0,
     outline: (outlineForm.volumes || []).length > 0,
-    style: false,
+    style: Boolean(basicForm.style_preset),
     plotline: false,
     script: false,
     intent: false,
@@ -551,10 +531,6 @@ async function saveCurrentDraft() {
 async function nextStep() {
   await saveOpenModule();
   return goNext();
-}
-
-function onApplyStyle(patch) {
-  styleRef.value?.applyFromPatch?.(patch);
 }
 
 function onApplyPlotline(patch) {

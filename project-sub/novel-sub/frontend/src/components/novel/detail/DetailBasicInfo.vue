@@ -77,6 +77,16 @@
             <span v-else class="is-muted">未填写</span>
           </dd>
         </div>
+        <div class="novel-detail-fields__row">
+          <dt>风格</dt>
+          <dd>
+            <template v-if="stylePreset">
+              <el-tag size="small" effect="plain">{{ stylePreset.name }}</el-tag>
+              <p v-if="stylePreset.note" class="novel-detail-style-note">{{ stylePreset.note }}</p>
+            </template>
+            <span v-else class="is-muted">未填写</span>
+          </dd>
+        </div>
         <div class="novel-detail-fields__row novel-detail-fields__row--split">
           <div>
             <dt>更新节奏</dt>
@@ -116,12 +126,17 @@ import NovelMarkdown from '../markdown/NovelMarkdown.vue';
 import { displayText, SUMMARY_PREVIEW_LEN } from '../../../utils/novelDetail.js';
 import { formatDateTime } from '../../../utils/formatDateTime.js';
 import { formatGenreLabel, progressLabel } from '../../../utils/novelMeta.js';
+import { useStylePresets } from '../../../composables/useStylePresets.js';
 
 const props = defineProps({
   form: { type: Object, required: true },
   meta: { type: Object, default: () => ({}) },
 });
 
+const { presets: stylePresets } = useStylePresets();
+const stylePreset = computed(() => (
+  stylePresets.value.find((item) => item.id === props.form.style_preset) || null
+));
 const expanded = ref(false);
 const overviewExpanded = ref(false);
 
@@ -179,6 +194,13 @@ const needOverviewToggle = computed(() => (props.form.story_overview || '').leng
   font-size: 14px;
   color: var(--novel-color-text, #2f3d34);
   line-height: 1.6;
+}
+
+.novel-detail-style-note {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--novel-color-text-secondary, #5c6b62);
 }
 
 .novel-detail-summary.is-collapsed {

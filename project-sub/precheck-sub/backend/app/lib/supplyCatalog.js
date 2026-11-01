@@ -1,7 +1,9 @@
 'use strict';
 
 const PACK_MODELS = 'E:\\AI Tools\\projects\\private-project\\ComfyUI.V7\\0.11.1\\ComfyUI\\models';
+const AITV_MODELS = 'E:\\AI Tools\\projects\\private-project\\ComfyUI.V7\\AI TV\\ComfyUI\\models';
 const H3_PACK = 'F:\\成套大模型-可直接用';
+const REMIX_PACK = '【35】MiniMax Remix Easy H3 + Qwen Image多角度 + RefMod创建工作流\\models';
 const PLUGIN_ROOT = 'E:\\AI Tools\\projects\\private-project\\ComfyUI.V7\\ComfyUI\\custom_nodes';
 
 const UI_ONLY = new Set([ 'Note', 'MarkdownNote', 'Reroute', 'PrimitiveNode', 'GetNode', 'SetNode' ]);
@@ -226,6 +228,41 @@ const FAMILIES = [
     ],
   },
   {
+    id: 'qwen-image-21',
+    label: 'Qwen-Image 2.1 文生图',
+    slots: [
+      {
+        id: 'unet',
+        label: '扩散模型',
+        folder: 'diffusion_models',
+        anchor: true,
+        match: /qwen_image_2\.1_(?!vae)/i,
+        options: [
+          qwen21File('qwen_image_2.1_bf16.safetensors', 'diffusion_models', 'diffusion_models'),
+          qwen21File('qwen_image_2.1_turbo_bf16.safetensors', 'diffusion_models', 'diffusion_models'),
+        ],
+      },
+      {
+        id: 'clip',
+        label: '文本编码器',
+        folder: 'text_encoders',
+        match: /qwen3vl_8b_int8_convrot/i,
+        options: [
+          qwen21File('qwen3vl_8b_int8_convrot.safetensors', 'text_encoders', 'text_encoders'),
+        ],
+      },
+      {
+        id: 'vae',
+        label: 'VAE',
+        folder: 'vae',
+        match: /qwen_image_2\.1_vae/i,
+        options: [
+          qwen21File('qwen_image_2.1_vae_bf16.safetensors', 'vae', 'vae'),
+        ],
+      },
+    ],
+  },
+  {
     id: 'qwen-t2i',
     label: '千问文生图',
     slots: [
@@ -234,7 +271,7 @@ const FAMILIES = [
         label: '文生图模型',
         folder: 'diffusion_models',
         anchor: true,
-        match: /qwen_image_(?!edit|vae)/i,
+        match: /qwen_image_(?!edit|vae|2\.1)/i,
         options: [
           modelOption('fp8', 'Hugging Face', 'qwen_image_fp8_e4m3fn.safetensors', 'diffusion_models', `${HF_QWEN}/diffusion_models/qwen_image_fp8_e4m3fn.safetensors`),
           modelOption('fp8', 'ModelScope', 'qwen_image_fp8_e4m3fn.safetensors', 'diffusion_models', MS_QWEN),
@@ -244,6 +281,34 @@ const FAMILIES = [
       },
       qwenClipSlot(),
       qwenVaeSlot(),
+    ],
+  },
+  {
+    id: 'h3-remix',
+    label: 'H3 Remix 文生视频',
+    slots: [
+      {
+        id: 'unet',
+        label: '扩散模型',
+        folder: 'diffusion_models',
+        anchor: true,
+        match: /FeiHou_MiniMax-H3_Remix/i,
+        options: [
+          h3Pack('FeiHou_MiniMax-H3_Remix_HSA_turbo_v0.8_int8_convrotHQ.safetensors', 'diffusion_models'),
+          h3Pack('FeiHou_MiniMax-H3_Remix_HSA_turbo_v0.8_int8_convrotHQ_pruned.safetensors', 'diffusion_models'),
+        ],
+      },
+      {
+        id: 'clip',
+        label: '文本编码器',
+        folder: 'text_encoders',
+        match: /qwen3vl_32b_minimax_h3_int8_convrot_uncensored/i,
+        options: [
+          h3Pack('qwen3vl_32b_minimax_h3_int8_convrot_uncensored_FeiHou.safetensors', 'text_encoders'),
+        ],
+      },
+      h3VideoVaeSlot(),
+      h3AudioVaeSlot(),
     ],
   },
   {
@@ -290,6 +355,22 @@ const FAMILIES = [
         match: /h3-realism-people/i,
         options: [
           h3Local('h3-realism-people-t2v-i2v-r2v.safetensors', 'loras', 'H3-满血首尾帧视频-lora控制-显存不足\\loras\\h3-realism-people-t2v-i2v-r2v.safetensors'),
+        ],
+      },
+    ],
+  },
+  {
+    id: 'z-image-turbo',
+    label: 'Z-Image Turbo 文生图',
+    slots: [
+      {
+        id: 'ckpt',
+        label: '一体包',
+        folder: 'checkpoints',
+        anchor: true,
+        match: /zImageTurboNSFW_30BF16AIO/i,
+        options: [
+          zImageCkptOption(),
         ],
       },
     ],
@@ -370,6 +451,33 @@ function qwenClipSlot() {
       modelOption('bf16', 'ModelScope', 'qwen_2.5_vl_7b.safetensors', 'text_encoders', MS_QWEN),
     ],
   };
+}
+
+function zImageCkptOption() {
+  const option = modelOption('', '本机一体包', 'zImageTurboNSFW_30BF16AIO.safetensors', 'checkpoints', '', `${AITV_MODELS}\\checkpoints\\z-image\\zImageTurboNSFW_30BF16AIO.safetensors`);
+  option.directory = 'models/checkpoints/z-image';
+  option.place = `${AITV_MODELS}\\checkpoints\\z-image`;
+  return option;
+}
+
+function qwen21File(name, folder, splitDir) {
+  const option = modelOption(
+    '',
+    'Hugging Face',
+    name,
+    folder,
+    `https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/split_files/${splitDir}/${name}`,
+  );
+  option.directory = `models/${folder}/qwen-image-2.1`;
+  option.place = `${AITV_MODELS}\\${folder}\\qwen-image-2.1`;
+  return option;
+}
+
+function h3Pack(name, folder) {
+  const option = modelOption('', '本机成套包', name, folder, '', `${H3_PACK}\\${REMIX_PACK}\\${folder}\\${name}`);
+  option.directory = `models/${folder}/minimax`;
+  option.place = `${PACK_MODELS}\\${folder}\\minimax`;
+  return option;
 }
 
 function h3Local(name, folder, relative) {

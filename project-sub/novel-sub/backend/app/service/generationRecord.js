@@ -19,6 +19,7 @@ const BASIC_FIELDS = [
   ['creative_intent', '立意'],
   ['summary', '简介'],
   ['story_overview', '概要'],
+  ['cover_prompt', '封面提示词'],
 ];
 
 const WORLD_FIELDS = [

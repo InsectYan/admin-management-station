@@ -3,7 +3,7 @@
 const TEXT_KEYS = new Set([ 'text', 'prompt', 'positive_prompt', 'negative_prompt' ]);
 const NUMBER_KEYS = new Set([
   'seed', 'noise_seed', 'steps', 'cfg', 'denoise', 'width', 'height',
-  'batch_size', 'length', 'frames', 'frame_rate', 'fps',
+  'batch_size', 'length', 'frames', 'frame_rate', 'fps', 'resolution',
 ]);
 const CHOICE_KEYS = new Set([ 'sampler_name', 'scheduler' ]);
 const FRAME_KEYS = new Set([ 'length', 'frames', 'num_frames', 'frame_count' ]);
@@ -22,6 +22,7 @@ const LABEL = {
   width: '宽度',
   height: '高度',
   batch_size: '批次',
+  resolution: '分辨率',
   length: '帧数',
   frames: '帧数',
   frame_rate: '帧率',
@@ -121,7 +122,8 @@ function listPreviewFields(apiJson) {
       if (Array.isArray(value) || value == null || typeof value === 'object') return;
       const type = fieldType(key, value);
       if (!type) return;
-      const role = type === 'text' ? roles.get(String(nodeId)) : '';
+      const namedPrompt = key === 'prompt' || key === 'negative_prompt';
+      const role = type === 'text' && !namedPrompt ? roles.get(String(nodeId)) : '';
       fields.push({
         id: `${nodeId}.${key}`,
         node_id: String(nodeId),

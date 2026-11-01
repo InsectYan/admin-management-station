@@ -1,5 +1,4 @@
 import { api, resolveApiBase } from './apiConfig.js';
-import { getMediaProfileId } from '../utils/mediaProfileSession.js';
 import { withLlmSession } from '../utils/llmProfileSession.js';
 
 async function request(path, options = {}) {
@@ -140,15 +139,20 @@ export function fetchActivity(id) {
   return request(`/novels/${id}/activity`);
 }
 
+export function fetchCoverWorkflows(refresh = false) {
+  return request(`/ai/cover/workflows${refresh ? '?refresh=1' : ''}`);
+}
+
 export function generateCover(payload = {}) {
   return request('/ai/cover/generate', {
     method: 'POST',
-    timeout: 180000,
-    data: {
-      ...payload,
-      media_profile: payload.media_profile || getMediaProfileId(),
-    },
+    timeout: 16 * 60 * 1000,
+    data: payload,
   });
+}
+
+export function fetchCoverJob(jobId) {
+  return request(`/ai/cover/jobs/${encodeURIComponent(jobId)}`);
 }
 
 export function fetchNovelQa(id) {

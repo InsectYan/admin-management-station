@@ -159,7 +159,8 @@
         <el-form-item label="作者">
           <el-input v-model="form.author_name" placeholder="可选" @input="$emit('change')" />
         </el-form-item>
-        <el-form-item label="封面">
+        <StylePresetField :form="form" @change="$emit('change')" />
+        <el-form-item>
           <CoverGenerateField :form="form" @change="$emit('change')" />
         </el-form-item>
       </el-form>
@@ -171,13 +172,14 @@
       <el-image
         v-if="form.cover_url"
         class="novel-preview-cover"
-        :src="form.cover_url"
-        fit="cover"
+        :src="coverImageSrc(form.cover_url)"
+        fit="contain"
       />
       <div class="novel-preview-tags">
         <el-tag v-if="genreLabel" size="small">{{ genreLabel }}</el-tag>
         <el-tag v-if="lengthLabel" size="small" type="warning" effect="plain">{{ lengthLabel }}</el-tag>
         <el-tag v-if="paceLabel" size="small" type="info" effect="plain">{{ paceLabel }}</el-tag>
+        <el-tag v-if="styleLabel" size="small" effect="plain">{{ styleLabel }}</el-tag>
       </div>
       <div class="novel-preview-intent">
         <NovelMarkdown
@@ -217,7 +219,10 @@
 import { computed, onMounted, ref } from 'vue';
 import NovelMarkdown from '../markdown/NovelMarkdown.vue';
 import CoverGenerateField from '../CoverGenerateField.vue';
+import StylePresetField from '../StylePresetField.vue';
+import { coverImageSrc } from '../../../lib/publicHost.js';
 import { useNovelEnums, applyGenrePath } from '../../../composables/useNovelEnums.js';
+import { useStylePresets } from '../../../composables/useStylePresets.js';
 
 const props = defineProps({
   form: { type: Object, required: true },
@@ -226,6 +231,7 @@ const props = defineProps({
 const emit = defineEmits(['change']);
 
 const { enums, load, genreCascaderOptions } = useNovelEnums();
+const { presets: stylePresets } = useStylePresets();
 const genreCascaderProps = { checkStrictly: true, emitPath: true, expandTrigger: 'hover' };
 const formRef = ref(null);
 
@@ -251,6 +257,10 @@ const lengthLabel = computed(() => (
 
 const paceLabel = computed(() => (
   enums.value.update_paces.find((item) => item.id === props.form.update_pace_id)?.name || ''
+));
+
+const styleLabel = computed(() => (
+  stylePresets.value.find((item) => item.id === props.form.style_preset)?.name || ''
 ));
 
 const audienceLabel = computed(() => (
@@ -308,11 +318,12 @@ defineExpose({ validate });
 }
 
 .novel-preview-cover {
-  width: 120px;
-  height: 168px;
+  width: 150px;
+  height: 200px;
   margin: 0 0 12px;
   border-radius: 6px;
   overflow: hidden;
+  background: var(--novel-color-primary-muted, #eef6f1);
 }
 
 .novel-preview-tags {

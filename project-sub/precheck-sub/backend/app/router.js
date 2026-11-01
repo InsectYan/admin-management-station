@@ -4,8 +4,14 @@ module.exports = app => {
   const { router, controller } = app;
   router.get('/api/health', controller.health.index);
   router.get('/api/runtimes', controller.runtime.index);
+  router.get('/api/models/:folder', controller.modelCatalog.list);
+  router.get('/api/refmods', controller.refmod.index);
+  router.post('/api/refmods', controller.refmod.create);
+  router.get('/api/refmods/:id/files/:name', controller.refmod.file);
+  router.delete('/api/refmods/:id', controller.refmod.destroy);
   router.get('/api/runtimes/:id/probe', controller.runtime.probe);
   router.post('/api/runtimes/:id/start', controller.runtime.start);
+  router.get('/api/comfy/progress', controller.workflow.comfyProgress);
   router.get('/api/workflows', controller.workflow.index);
   router.post('/api/workflows', controller.workflow.create);
   router.post('/api/workflows/inspect', controller.workflow.inspect);
@@ -13,11 +19,13 @@ module.exports = app => {
   router.post('/api/workflows/drafts/:key/preview', controller.workflow.startDraftPreview);
   router.get('/api/workflows/drafts/:key/preview', controller.workflow.draftStatus);
   router.get('/api/workflows/drafts/:key/file', controller.workflow.draftFile);
+  router.delete('/api/workflows/drafts/:key/preview/:runId', controller.workflow.removeDraftPreview);
   router.put('/api/workflows/:id', controller.workflow.update);
   router.get('/api/workflows/:id/dependencies', controller.workflow.dependencies);
   router.post('/api/workflows/:id/bind', controller.workflow.bind);
   router.post('/api/workflows/:id/preview', controller.workflow.startPreview);
   router.get('/api/workflows/:id/preview', controller.workflow.previewStatus);
   router.get('/api/workflows/:id/preview/file', controller.workflow.previewFile);
+  router.delete('/api/workflows/:id/preview/:runId', controller.workflow.removePreview);
   router.get('/api/workflows/:id', controller.workflow.show);
 };

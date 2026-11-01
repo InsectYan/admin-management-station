@@ -15,6 +15,7 @@ export function applyBasicPatch(form, patch = {}) {
   if (patch.creative_intent !== undefined) form.creative_intent = String(patch.creative_intent);
   if (patch.summary !== undefined) form.summary = String(patch.summary);
   if (patch.story_overview !== undefined) form.story_overview = String(patch.story_overview);
+  if (patch.cover_prompt !== undefined) form.cover_prompt = String(patch.cover_prompt);
 }
 
 const WORLD_TEXT_KEYS = [

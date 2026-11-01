@@ -14,7 +14,8 @@
       <el-form-item label="作者" prop="author_name">
         <el-input v-model="form.author_name" />
       </el-form-item>
-      <el-form-item label="封面" prop="cover_url">
+      <StylePresetField :form="form" />
+      <el-form-item>
         <CoverGenerateField :form="form" />
       </el-form-item>
       <el-row :gutter="12">
@@ -119,8 +120,10 @@ import { PROGRESS_OPTIONS } from '../../utils/novelMeta.js';
 import { useNovelEnums, applyGenrePath, genrePathFromNovel } from '../../composables/useNovelEnums.js';
 import AiFormDock from './ai/AiFormDock.vue';
 import CoverGenerateField from './CoverGenerateField.vue';
+import StylePresetField from './StylePresetField.vue';
 import { BASIC_AI_SCENES } from '../../utils/aiScenes.js';
 import { applyBasicPatch } from '../../utils/aiApplyPatch.js';
+import { coverImagesFromNovel } from '../../utils/novelCreateSchema.js';
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -137,7 +140,10 @@ const genreCascaderProps = { checkStrictly: true, emitPath: true, expandTrigger:
 const form = reactive({
   title: '',
   author_name: '',
+  style_preset: '',
   cover_url: '',
+  cover_prompt: '',
+  cover_images: [],
   genre_path: [],
   genre_category_id: null,
   genre_subcategory_id: null,
@@ -159,7 +165,10 @@ function resetForm(novel) {
   Object.assign(form, {
     title: novel?.title || '',
     author_name: novel?.author_name || '',
+    style_preset: novel?.style_preset || '',
     cover_url: novel?.cover_url || '',
+    cover_prompt: novel?.cover_prompt || '',
+    cover_images: coverImagesFromNovel(novel || {}),
     genre_path: genrePathFromNovel(novel),
     genre_category_id: novel?.genre_category_id || null,
     genre_subcategory_id: novel?.genre_subcategory_id || null,
@@ -186,6 +195,7 @@ const editSnapshot = computed(() => ({
   creative_intent: form.creative_intent,
   summary: form.summary,
   story_overview: form.story_overview,
+  cover_prompt: form.cover_prompt,
 }));
 
 function onApplyBasic(patch) {
@@ -200,7 +210,10 @@ async function handleSubmit() {
   emit('submit', {
     title: form.title,
     author_name: form.author_name,
+    style_preset: form.style_preset || null,
     cover_url: form.cover_url,
+    cover_prompt: form.cover_prompt,
+    cover_images: form.cover_images,
     progress_status: form.progress_status,
     summary: form.summary,
     story_overview: form.story_overview,

@@ -9,10 +9,12 @@
     <template v-if="novel">
       <div class="novel-detail-cover">
         <el-image
-          v-if="novel.cover_url"
-          :src="novel.cover_url"
-          fit="cover"
+          v-if="coverSrc"
+          :src="coverSrc"
+          fit="contain"
           class="novel-detail-cover__img"
+          :preview-src-list="[coverSrc]"
+          preview-teleported
         >
           <template #error>
             <div class="novel-detail-cover__fallback">{{ coverFallback(novel.title) }}</div>
@@ -45,17 +47,21 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import NovelMarkdown from './markdown/NovelMarkdown.vue';
 import { formatDateTime } from '../../utils/formatDateTime.js';
 import { coverFallback, progressLabel } from '../../utils/novelMeta.js';
+import { coverImageSrc } from '../../lib/publicHost.js';
 
-defineProps({
+const props = defineProps({
   visible: { type: Boolean, default: false },
   novel: { type: Object, default: null },
   loading: { type: Boolean, default: false },
 });
 
 defineEmits(['close']);
+
+const coverSrc = computed(() => coverImageSrc(props.novel?.cover_url));
 </script>
 
 <style scoped>
@@ -65,10 +71,16 @@ defineEmits(['close']);
 
 .novel-detail-cover__img,
 .novel-detail-cover__fallback {
-  width: 120px;
-  height: 160px;
+  width: 150px;
+  height: 200px;
   border-radius: 8px;
   overflow: hidden;
+}
+
+.novel-detail-cover__img {
+  display: block;
+  background: var(--novel-color-primary-muted, #eef6f1);
+  cursor: zoom-in;
 }
 
 .novel-detail-cover__fallback {

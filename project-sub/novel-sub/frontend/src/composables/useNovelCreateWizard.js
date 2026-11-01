@@ -239,6 +239,7 @@ export function useNovelCreateWizard() {
       creative_intent: basicForm.creative_intent,
       summary: basicForm.summary,
       story_overview: basicForm.story_overview,
+      cover_prompt: basicForm.cover_prompt,
       world: { ...worldForm },
       factions: factions.value,
       characters: characters.value,
@@ -276,8 +277,9 @@ export function useNovelCreateWizard() {
     else if (featureKey === 'characters') applyCharacterPatch(characters.value, characterEdges.value, patch);
     else if (featureKey === 'outline') applyOutlinePatch(outlineForm, patch);
     else if (featureKey === 'content') applyChaptersPatch(contentForm, patch);
-    else if (featureKey === 'style' && novelId.value && patch.style_preset) {
-      await saveNovelStyle(novelId.value, patch.style_preset);
+    else if (featureKey === 'style' && patch.style_preset) {
+      basicForm.style_preset = patch.style_preset;
+      if (novelId.value) await saveNovelStyle(novelId.value, patch.style_preset);
     } else if (featureKey === 'plotline' && novelId.value) {
       for (const row of patch.plotlines || []) {
         if (!row?.name) continue;

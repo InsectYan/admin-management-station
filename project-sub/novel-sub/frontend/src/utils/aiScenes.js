@@ -38,6 +38,14 @@ export const BASIC_AI_SCENES = [
         placeholder: '写全书故事概要：背景、主线、基调与关键转折…',
       },
       {
+        id: 'cover',
+        title: '封面扩写',
+        icon: 'Picture',
+        scene: 'basic.cover',
+        path: 'cover_prompt',
+        placeholder: '描述封面上要看到的人、景和气质，写成能出图的提示词…',
+      },
+      {
         id: 'genre',
         title: '小说类型',
         icon: 'CollectionTag',
@@ -79,6 +87,15 @@ export const BASIC_AI_SCENES = [
         icon: 'AlarmClock',
         scene: 'basic.pace',
         path: 'update_pace_id',
+        selectable: false,
+        disabledHint: '下拉选项，请在表单中手动选择',
+      },
+      {
+        id: 'style',
+        title: '风格',
+        icon: 'MagicStick',
+        scene: 'basic.style',
+        path: 'style_preset',
         selectable: false,
         disabledHint: '下拉选项，请在表单中手动选择',
       },
@@ -239,7 +256,7 @@ export const STYLE_AI_SCENES = [
     title: '风格',
     icon: 'MagicStick',
     scene: 'style',
-    placeholder: '按已有立意和概要，从严肃、爽文、甜宠、悬疑、搞笑里选一个语气…',
+    placeholder: '按已有立意和概要，从风格列表里选一个语气…',
   },
 ];
 
@@ -249,7 +266,7 @@ export const PLOTLINE_AI_SCENES = [
     title: '剧情线',
     icon: 'Share',
     scene: 'plotline',
-    placeholder: '按人物和立意整理主线、支线、伏笔和情感线…',
+    placeholder: '按人物和立意整理主线、支线、伏笔和情感线。出现章节可以先不填…',
   },
 ];
 
@@ -307,7 +324,7 @@ export const CONTENT_AI_SCENES = [
     title: '章节目录',
     icon: 'CollectionTag',
     scene: 'content',
-    placeholder: '按大纲小节生成章节标题，并标正反派场次…',
+    placeholder: '按大纲小节生成章节标题，并参考剧情线的节奏安排推进…',
     children: [
       {
         id: 'chapters',
@@ -315,7 +332,7 @@ export const CONTENT_AI_SCENES = [
         icon: 'Document',
         scene: 'content.chapters',
         path: 'chapters',
-        placeholder: '按大纲小节生成章节标题…',
+        placeholder: '按大纲小节生成章节标题，节奏对齐已有剧情线…',
       },
       {
         id: 'faction',
@@ -394,22 +411,13 @@ export const ORCHESTRATE_AI_SCENES = [
         placeholder: '门派齐了再拆人物…',
       },
       {
-        id: 'plan-style',
-        title: '风格',
-        icon: 'MagicStick',
-        scene: 'orchestrate.style',
-        path: 'tasks',
-        taskPath: 'plan.style',
-        placeholder: '人物齐了再定语气…',
-      },
-      {
         id: 'plan-plotline',
         title: '剧情线',
         icon: 'Share',
         scene: 'orchestrate.plotline',
         path: 'tasks',
         taskPath: 'plan.plotline',
-        placeholder: '风格定了再拆剧情线…',
+        placeholder: '人物齐了再拆剧情线，出现章节可以先空着…',
       },
       {
         id: 'plan-outline',

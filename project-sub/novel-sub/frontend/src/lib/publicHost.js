@@ -1,6 +1,10 @@
 /**
  * 公网访问时把 localhost / 127.0.0.1 换成当前页面 hostname（端口保留）。
  */
+export function coverImageSrc(url) {
+  return rewriteLoopbackHost(url);
+}
+
 export function rewriteLoopbackHost(url) {
   if (!url || typeof window === 'undefined') return url;
   const raw = String(url).trim();

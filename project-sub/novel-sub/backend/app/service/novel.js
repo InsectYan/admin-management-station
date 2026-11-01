@@ -100,6 +100,21 @@ class NovelService extends Service {
       themes = ids.length ? await ThemeCategory.findAll({ where: { id: { [Op.in]: ids } } }) : [];
     }
 
+    if (next.cover_prompt != null) next.cover_prompt = String(next.cover_prompt).slice(0, 2000);
+    if (Array.isArray(next.cover_images)) {
+      next.cover_images = next.cover_images.map((row, index) => {
+        const url = String(row?.url || '').trim().slice(0, 500);
+        if (!url) return null;
+        return {
+          id: String(row?.id || `c${index}`).slice(0, 40),
+          url,
+          name: String(row?.name || '').slice(0, 120),
+        };
+      }).filter(Boolean).slice(0, 24);
+    } else {
+      delete next.cover_images;
+    }
+
     delete next.ai_record;
     delete next.theme_ids;
     delete next.themes;
@@ -113,7 +128,11 @@ class NovelService extends Service {
     delete next.health_score;
     delete next.health_status;
     delete next.health_summary;
-    delete next.style_preset;
+    if (Object.prototype.hasOwnProperty.call(next, 'style_preset')) {
+      const { stylePreset } = require('../lib/stylePresets');
+      const preset = stylePreset(next.style_preset);
+      next.style_preset = preset ? preset.id : null;
+    }
     return { fields: next, themes };
   }
 
@@ -185,6 +204,7 @@ class NovelService extends Service {
       creative_intent: row.creative_intent,
       summary: row.summary,
       story_overview: row.story_overview,
+      cover_prompt: row.cover_prompt,
     };
     const { fields, themes } = await this.resolveEnumFields(clean);
     await row.update(fields);

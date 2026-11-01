@@ -2,7 +2,7 @@
   <div class="novel-step-content">
     <div class="novel-step-content__head">
       <p class="novel-step-content__hint">
-        这里只编排章节标题、顺序、关联大纲和正/反/中立场次。门派、宗门等组织请到「门派组织」。
+        这里只编排章节标题、顺序、关联大纲和正/反/中立场次。生成时会带上已有剧情线，按它们的节奏排章节。门派、宗门等组织请到「门派组织」。
       </p>
       <div class="novel-step-content__style">
         <span class="novel-step-content__swatch novel-step-content__swatch--hero">正派</span>

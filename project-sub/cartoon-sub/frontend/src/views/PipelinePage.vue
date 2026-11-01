@@ -11,8 +11,10 @@
       <h3 class="cartoon-module__title">默认节点</h3>
       <div class="cartoon-pipeline-add">
         <el-button v-for="item in catalog" :key="item.node_key" :disabled="!canMake()" @click="addNode(item)">添加{{ item.title }}</el-button>
+        <el-button type="danger" plain :disabled="!canMake() || !removableNodes.length" @click="removeChecked">一键删除</el-button>
       </div>
-      <el-table :data="nodes">
+      <el-table :data="nodes" row-key="node_key" @selection-change="picked = $event">
+        <el-table-column type="selection" width="48" :selectable="row => row.removable && canMake()" />
         <el-table-column prop="title" label="节点" min-width="140" />
         <el-table-column label="来源" min-width="180">
           <template #default="{ row }">{{ sourceLabel(row) }}</template>
@@ -74,17 +76,20 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, computed, reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 import { CONTENT_TYPES } from '../lib/contentTypes.js';
+import { confirmBulkDelete } from '../utils/tableBulkDelete.js';
 
 const route = useRoute();
 const contentType = ref(route.params.contentType || 'ai_comic');
 const nodes = ref([]);
+const picked = ref([]);
+const removableNodes = computed(() => nodes.value.filter(row => row.removable));
 const agents = ref([]);
 const catalog = ref([]);
 const profiles = ref([]);
@@ -143,6 +148,29 @@ async function removeNode(row) {
     }));
   } catch (err) {
     ElMessage.error(err.message);
+  }
+}
+async function removeChecked() {
+  const removable = removableNodes.value;
+  const selected = picked.value.filter(row => row.removable);
+  const ok = await confirmBulkDelete({
+    selectedCount: selected.length,
+    totalCount: selected.length || removable.length,
+  });
+  if (!ok) return;
+  const targets = selected.length ? selected : removable;
+  try {
+    for (const row of targets) {
+      apply(await request(`/pipelines/nodes/${row.node_key}`, {
+        method: 'delete',
+        params: { content_type: contentType.value },
+      }));
+    }
+    picked.value = [];
+    ElMessage.success(selected.length ? '已删除勾选节点' : '已删除全部可移除节点');
+  } catch (err) {
+    ElMessage.error(err.message);
+    await load().catch(() => {});
   }
 }
 function openAgent(row) {

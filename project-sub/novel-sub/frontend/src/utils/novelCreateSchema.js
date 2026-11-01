@@ -3,12 +3,11 @@ export const WIZARD_STEPS = [
   { step: 2, key: 'world', title: '世界观设定' },
   { step: 3, key: 'factions', title: '门派组织' },
   { step: 4, key: 'characters', title: '人物设定' },
-  { step: 5, key: 'style', title: '风格' },
-  { step: 6, key: 'plotline', title: '剧情线' },
-  { step: 7, key: 'outline', title: '篇幅大纲' },
-  { step: 8, key: 'script', title: '剧本' },
-  { step: 9, key: 'intent', title: '叙事分镜' },
-  { step: 10, key: 'content', title: '章节目录', hint: '编排章节标题、顺序与场次倾向，不含门派设定' },
+  { step: 5, key: 'plotline', title: '剧情线' },
+  { step: 6, key: 'outline', title: '篇幅大纲' },
+  { step: 7, key: 'script', title: '剧本' },
+  { step: 8, key: 'intent', title: '叙事分镜' },
+  { step: 9, key: 'content', title: '章节目录', hint: '按大纲小节编排章节，并参考已有剧情线的节奏' },
 ];
 
 export function wizardStepOf(key) {
@@ -37,11 +36,39 @@ export function createBasicInfoForm() {
     target_audience: '',
     update_cadence: '',
     author_name: '',
+    style_preset: '',
     cover_url: '',
+    cover_prompt: '',
+    cover_images: [],
     status: 'draft',
     progress_status: 'ongoing',
     progress_percent: 0,
   };
+}
+
+function coverImageRow(row, index) {
+  const url = String(row?.url || '').trim();
+  if (!url) return null;
+  return {
+    id: String(row.id || `c${index}`).slice(0, 40),
+    url,
+    name: String(row.name || url.split('/').pop() || '封面').slice(0, 120),
+  };
+}
+
+export function coverImagesFromNovel(novel = {}) {
+  const saved = Array.isArray(novel.cover_images) ? novel.cover_images : [];
+  const items = saved.map(coverImageRow).filter(Boolean);
+  const url = String(novel.cover_url || '').trim();
+  if (url && !items.some(item => item.url === url)) {
+    items.unshift({ id: 'current', url, name: url.split('/').pop() || '封面' });
+  }
+  return items;
+}
+
+export function coverImagesFromForm(form = {}) {
+  const saved = Array.isArray(form.cover_images) ? form.cover_images : [];
+  return saved.map(coverImageRow).filter(Boolean).slice(0, 24);
 }
 
 export function parseTargetAudience(value) {
@@ -76,7 +103,10 @@ export function novelToBasicForm(novel = {}) {
     target_audience: parseTargetAudience(novel.target_audience),
     update_cadence: novel.update_cadence || '',
     author_name: novel.author_name || '',
+    style_preset: novel.style_preset || '',
     cover_url: novel.cover_url || '',
+    cover_prompt: novel.cover_prompt || '',
+    cover_images: coverImagesFromNovel(novel),
     status: novel.status || 'draft',
     progress_status: novel.progress_status || 'ongoing',
     progress_percent: novel.progress_percent ?? 0,
@@ -91,7 +121,10 @@ export function basicFormToPayload(form) {
     summary: form.summary?.trim() || null,
     story_overview: form.story_overview?.trim() || null,
     author_name: form.author_name?.trim() || null,
+    style_preset: form.style_preset || null,
     cover_url: form.cover_url?.trim() || null,
+    cover_prompt: form.cover_prompt?.trim() || null,
+    cover_images: coverImagesFromForm(form),
     status: form.status || 'draft',
     progress_status: form.progress_status || 'ongoing',
     progress_percent: form.progress_percent ?? 0,

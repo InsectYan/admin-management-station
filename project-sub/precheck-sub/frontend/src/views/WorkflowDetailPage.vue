@@ -11,7 +11,9 @@
             <div><dt>名称</dt><dd>{{ row.name }}</dd></div>
             <div><dt>分类</dt><dd>{{ categoryLabel(row.category) }}</dd></div>
             <div><dt>建议显存</dt><dd>{{ row.suggested_vram_gb == null ? '不限制' : `${row.suggested_vram_gb} GB` }}</dd></div>
+            <div v-if="defaultSteps != null"><dt>默认步数</dt><dd>{{ defaultSteps }}</dd></div>
           </dl>
+          <p v-if="refmod" class="precheck-module__hint">这条工作流可以导入本页检测用的人物包和场景包。在预览里按顺序选择，提示词用 &lt;Picture 1&gt; 起指代。正式包按项目放在 AI 视频里。</p>
           <p>节点：{{ (row.required_nodes || []).join('、') || '无' }}</p>
           <p>模型：{{ (row.required_models || []).join('、') || '无' }}</p>
           <DependencyCheck :run="inspect" />
@@ -19,8 +21,8 @@
       </el-tab-pane>
       <el-tab-pane label="预览" name="preview">
         <div class="precheck-module">
-          <p class="precheck-module__hint">填写正向提示词，需要图片的工作流先上传图片。重复生成时只留下最新的一份产物。</p>
-          <WorkflowPreview :workflow-id="row.id" :api-json="row.api_json" />
+          <p class="precheck-module__hint">填写正向提示词，需要图片的工作流先上传图片。每次生成都会留下一条产物，可以删除。</p>
+          <WorkflowPreview :workflow-id="row.id" :api-json="row.api_json" :refmod="refmod" />
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -28,7 +30,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import PageShell from '../components/PageShell.vue';
 import DependencyCheck from '../components/DependencyCheck.vue';
@@ -40,6 +42,13 @@ const route = useRoute();
 const router = useRouter();
 const row = ref(null);
 const tab = ref('info');
+const refmod = computed(() => String(row.value?.name || '').includes('[RefMod]'));
+const defaultSteps = computed(() => {
+  const graph = row.value?.api_json;
+  if (!graph || typeof graph !== 'object') return null;
+  const node = Object.values(graph).find(item => item?.inputs && typeof item.inputs.steps === 'number');
+  return node ? node.inputs.steps : null;
+});
 
 async function inspect() {
   return request(`/workflows/${route.params.id}/dependencies`);

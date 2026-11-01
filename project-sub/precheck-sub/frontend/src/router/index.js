@@ -15,6 +15,7 @@ export function createAppRouter(basename) {
           { path: 'workflows/new', name: 'workflow-new', component: () => import('../views/WorkflowEditorPage.vue') },
           { path: 'workflows/:id/edit', name: 'workflow-edit', component: () => import('../views/WorkflowEditorPage.vue') },
           { path: 'workflows/:id', component: () => import('../views/WorkflowDetailPage.vue') },
+          { path: 'refmods', component: () => import('../views/RefModPage.vue') },
         ],
       },
     ],

@@ -41,6 +41,10 @@ services:
       POSTGRES_DB: ${NOVEL_POSTGRES_DB:-novel_db}
       AGENT_PLATFORM_URL: ${AGENT_PLATFORM_URL:-http://host.docker.internal:4001}
       AGENT_PLATFORM_TIMEOUT_MS: ${AGENT_PLATFORM_TIMEOUT_MS:-600000}
+      PRECHECK_API_ORIGIN: ${PRECHECK_API_ORIGIN:-http://host.docker.internal:5204}
+      COMFYUI_BASE_URL: ${COMFYUI_BASE_URL:-http://host.docker.internal:8188}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${NOVEL_PORT:-5201}:${NOVEL_PORT:-5201}"
     depends_on:

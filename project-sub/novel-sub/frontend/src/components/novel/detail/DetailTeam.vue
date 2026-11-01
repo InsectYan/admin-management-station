@@ -17,10 +17,12 @@
       </div>
       <div class="novel-entry-actions">
         <el-button type="primary" :loading="saving" @click="save">添加成员</el-button>
+        <el-button type="danger" plain :disabled="!members.length" @click="removeChecked">一键删除</el-button>
       </div>
     </el-form>
     <el-empty v-if="!members.length" description="还没有成员" />
-    <el-table v-else :data="members" size="small">
+    <el-table v-else :data="members" row-key="id" size="small" @selection-change="picked = $event">
+      <el-table-column type="selection" width="48" />
       <el-table-column prop="username" label="账号" />
       <el-table-column label="角色" width="120">
         <template #default="{ row }">{{ roleLabel(row.role) }}</template>
@@ -76,6 +78,7 @@
 <script setup>
 import { onMounted, reactive, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { confirmBulkDelete } from '../../../utils/tableBulkDelete.js';
 import { addMember, createSnapshot, fetchActivity, fetchMembers, fetchShellMembers, fetchSnapshots, removeMember, restoreSnapshot } from '../../../services/novelService.js';
 
 const props = defineProps({
@@ -83,6 +86,7 @@ const props = defineProps({
 });
 
 const members = ref([]);
+const picked = ref([]);
 const shellMembers = ref([]);
 const shellNote = ref('');
 const activity = ref([]);
@@ -170,6 +174,25 @@ async function remove(row) {
   } catch (err) {
     if (err === 'cancel' || err?.message === 'cancel') return;
     ElMessage.error(err.message || '没有移出');
+  }
+}
+
+async function removeChecked() {
+  const selected = picked.value;
+  const ok = await confirmBulkDelete({
+    selectedCount: selected.length,
+    totalCount: selected.length || members.value.length,
+  });
+  if (!ok) return;
+  const targets = selected.length ? selected : [...members.value];
+  try {
+    for (const row of targets) await removeMember(props.novelId, row.id);
+    picked.value = [];
+    ElMessage.success(selected.length ? '已移出勾选成员' : '已移出全部成员');
+    await load();
+  } catch (err) {
+    ElMessage.error(err.message || '没有移出');
+    await load();
   }
 }
 

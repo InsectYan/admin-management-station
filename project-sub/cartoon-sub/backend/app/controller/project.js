@@ -275,7 +275,7 @@ class ProjectController extends Controller {
   }
 
   async generate() {
-    const kinds = [ 'image', 'video', 'i2v', 'edit' ];
+    const kinds = [ 'image', 'video', 'i2v', 'edit', 'refmod', 't2v' ];
     const kind = kinds.includes(this.ctx.query.kind) ? this.ctx.query.kind : 'image';
     try {
       ok(this.ctx, await this.ctx.service.generate.start(
@@ -302,6 +302,22 @@ class ProjectController extends Controller {
   async outputFile() {
     try {
       await this.ctx.service.generate.sendFile(this.ctx.params.id);
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async removeOutput() {
+    try {
+      ok(this.ctx, await this.ctx.service.generate.removeOutput(this.ctx.params.id));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async removeTask() {
+    try {
+      ok(this.ctx, await this.ctx.service.generate.removeTask(this.ctx.params.id));
     } catch (err) {
       fail(this.ctx, err);
     }

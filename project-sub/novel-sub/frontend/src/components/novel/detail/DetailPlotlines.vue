@@ -2,47 +2,8 @@
   <section class="novel-plotlines">
     <header>
       <h3>剧情线</h3>
-      <p>主线、支线、伏笔和情感线记在这里。绑到章节只改这条线，不改正文。</p>
+      <p>主线、支线、伏笔和情感线先记在这里。出现章节可以先不填，生成章节目录时会参考这些线的节奏。</p>
     </header>
-    <el-form label-position="top" class="novel-entry-form" @submit.prevent>
-      <div class="novel-entry-grid">
-        <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
-        <el-form-item class="is-wide" label="概要">
-          <el-input v-model="form.summary" type="textarea" :rows="2" placeholder="这条线要推进什么" />
-        </el-form-item>
-        <el-form-item label="类型">
-          <el-select v-model="form.kind" style="width: 100%">
-            <el-option v-for="item in kinds" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="form.status" style="width: 100%">
-            <el-option v-for="item in statuses" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="出现章节">
-          <el-select v-model="form.chapterIds" multiple placeholder="选择章节" style="width: 100%">
-            <el-option v-for="chapter in chapters" :key="chapter.chapter_id" :label="chapter.title" :value="chapter.chapter_id" />
-          </el-select>
-        </el-form-item>
-        <template v-if="form.kind === 'foreshadow'">
-          <el-form-item label="埋设章节">
-            <el-select v-model="form.plant_chapter_id" clearable placeholder="选择章节" style="width: 100%">
-              <el-option v-for="chapter in chapters" :key="`p-${chapter.chapter_id}`" :label="chapter.title" :value="chapter.chapter_id" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="计划回收">
-            <el-select v-model="form.payoff_chapter_id" clearable placeholder="选择章节" style="width: 100%">
-              <el-option v-for="chapter in chapters" :key="`o-${chapter.chapter_id}`" :label="chapter.title" :value="chapter.chapter_id" />
-            </el-select>
-          </el-form-item>
-        </template>
-      </div>
-      <div class="novel-entry-actions">
-        <el-button type="primary" :loading="saving" @click="save">{{ form.id ? '保存' : '添加' }}</el-button>
-        <el-button v-if="form.id" @click="reset">取消</el-button>
-      </div>
-    </el-form>
     <h4>时间线</h4>
     <p>按章节顺序排列这些事件。有年份就记在事件上，不另排一套时间坐标。</p>
     <p v-if="worldYears.length">世界观年份：{{ worldYears.map(item => item.year).filter(Boolean).join('、') || '未标年份' }}</p>
@@ -60,31 +21,92 @@
         </template>
       </el-table-column>
     </el-table>
-    <el-empty v-if="!lines.length" description="还没有剧情线" />
-    <el-table v-else :data="lines" size="small">
-      <el-table-column label="名称" prop="name" width="140" />
+    <div class="novel-bulk-bar">
+      <el-button type="primary" plain size="small" @click="openCreate">添加</el-button>
+      <el-button type="danger" plain size="small" :disabled="!lines.length" @click="removeChecked">一键删除</el-button>
+    </div>
+    <el-table :data="lines" row-key="id" size="small" empty-text="还没有剧情线" @selection-change="picked = $event">
+      <el-table-column type="selection" width="48" />
+      <el-table-column label="名称" prop="name" min-width="140" />
       <el-table-column label="类型" width="80">
         <template #default="{ row }">{{ kindLabel(row.kind) }}</template>
       </el-table-column>
       <el-table-column label="状态" width="90">
         <template #default="{ row }">{{ statusLabel(row.status) }}</template>
       </el-table-column>
-      <el-table-column label="章节">
+      <el-table-column label="概要" min-width="180" show-overflow-tooltip>
+        <template #default="{ row }">{{ row.summary || '—' }}</template>
+      </el-table-column>
+      <el-table-column label="章节" min-width="140">
         <template #default="{ row }">{{ chapterText(row) }}</template>
       </el-table-column>
-      <el-table-column label="" width="140">
+      <el-table-column label="" width="80">
         <template #default="{ row }">
-          <el-button link type="primary" @click="edit(row)">编辑</el-button>
-          <el-button link type="danger" @click="remove(row)">删除</el-button>
+          <el-button link type="primary" @click="openDetail(row)">详情</el-button>
         </template>
       </el-table-column>
     </el-table>
+
+    <el-drawer
+      v-model="drawerOpen"
+      class="novel-plotline-drawer"
+      :title="form.id ? '剧情详情' : '添加剧情'"
+      direction="rtl"
+      size="480px"
+      append-to-body
+    >
+      <el-form label-position="top" class="novel-entry-form" @submit.prevent>
+        <div class="novel-entry-grid">
+          <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
+          <el-form-item class="is-wide" label="概要">
+            <el-input v-model="form.summary" type="textarea" :rows="3" placeholder="这条线要推进什么" />
+          </el-form-item>
+          <el-form-item label="类型">
+            <el-select v-model="form.kind" style="width: 100%">
+              <el-option v-for="item in kinds" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-select v-model="form.status" style="width: 100%">
+              <el-option v-for="item in statuses" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item class="is-wide" label="出现章节">
+            <el-select v-model="form.chapterIds" multiple clearable placeholder="可留空；已有章节时再选" style="width: 100%">
+              <el-option v-for="chapter in chapters" :key="chapter.chapter_id" :label="chapter.title" :value="chapter.chapter_id" />
+            </el-select>
+            <p class="novel-plotlines__optional">可留空。不填也能保存，章节目录生成时会用这条线的概要来排节奏。</p>
+          </el-form-item>
+          <template v-if="form.kind === 'foreshadow'">
+            <el-form-item label="埋设章节">
+              <el-select v-model="form.plant_chapter_id" clearable placeholder="可留空" style="width: 100%">
+                <el-option v-for="chapter in chapters" :key="`p-${chapter.chapter_id}`" :label="chapter.title" :value="chapter.chapter_id" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="计划回收">
+              <el-select v-model="form.payoff_chapter_id" clearable placeholder="可留空" style="width: 100%">
+                <el-option v-for="chapter in chapters" :key="`o-${chapter.chapter_id}`" :label="chapter.title" :value="chapter.chapter_id" />
+              </el-select>
+            </el-form-item>
+          </template>
+        </div>
+      </el-form>
+      <template #footer>
+        <div class="novel-plotline-drawer__footer">
+          <el-button v-if="form.id" type="danger" plain @click="removeCurrent">删除</el-button>
+          <span class="novel-plotline-drawer__spacer" />
+          <el-button @click="drawerOpen = false">取消</el-button>
+          <el-button type="primary" :loading="saving" @click="save">{{ form.id ? '保存' : '添加' }}</el-button>
+        </div>
+      </template>
+    </el-drawer>
   </section>
 </template>
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { confirmBulkDelete } from '../../../utils/tableBulkDelete.js';
 import {
   createPlotline,
   deletePlotline,
@@ -113,12 +135,13 @@ const statuses = [
 ];
 
 const lines = ref([]);
+const picked = ref([]);
 const chapters = ref([]);
 const timeline = ref([]);
 const worldYears = ref([]);
 const saving = ref(false);
+const drawerOpen = ref(false);
 const form = reactive(emptyForm());
-const pending = ref([]);
 
 function emptyForm() {
   return {
@@ -248,6 +271,28 @@ async function remove(row) {
   await load();
 }
 
+async function removeChecked() {
+  const selected = picked.value;
+  const ok = await confirmBulkDelete({
+    selectedCount: selected.length,
+    totalCount: selected.length || lines.value.length,
+  });
+  if (!ok) return;
+  const targets = selected.length ? selected : [...lines.value];
+  try {
+    for (const row of targets) {
+      await deletePlotline(props.novelId, row.id);
+      if (form.id === row.id) reset();
+    }
+    picked.value = [];
+    ElMessage.success(selected.length ? '已删除勾选剧情线' : '已删除全部剧情线');
+    await load();
+  } catch (err) {
+    ElMessage.error(err.message || '删除失败');
+    await load();
+  }
+}
+
 function hasDraft() {
   return Boolean(form.name.trim());
 }
@@ -281,8 +326,14 @@ onMounted(() => {
   flex-direction: column;
   gap: 12px;
 }
-.novel-plotlines header p {
+.novel-plotlines header p,
+.novel-plotlines__optional {
   margin: 4px 0 0;
   color: var(--el-text-color-secondary);
+  line-height: 1.5;
+}
+.novel-bulk-bar {
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

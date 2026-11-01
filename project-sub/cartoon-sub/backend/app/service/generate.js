@@ -47,6 +47,38 @@ function formatPrecheckBlock(diff, workflowId) {
   return parts.join('。');
 }
 
+function blockingReason(diff, workflowId) {
+  if (!diff) return `预检拦住：工作流 ${workflowId}`;
+  const hard = !diff.online
+    || diff.version_ok === false
+    || (diff.missing_nodes || []).length
+    || (diff.missing_models || []).length
+    || (!diff.ok && !diff.low_vram);
+  if (!hard) return '';
+  return formatPrecheckBlock({ ...diff, low_vram: false }, workflowId);
+}
+
+const VIDEO_CLASS = /video|wan|vhs_|svd|hunyuan|ltxv|animatediff|mochi|minimax|createvideo|savevideo/i;
+const FRAME_KEYS = [ 'length', 'frames', 'num_frames', 'frame_count', 'fps', 'frame_rate' ];
+
+function looksLikeVideo(apiJson) {
+  return Object.values(apiJson || {}).some(node => {
+    if (!node?.class_type) return false;
+    if (VIDEO_CLASS.test(node.class_type)) return true;
+    const inputs = node.inputs || {};
+    return FRAME_KEYS.some(key => {
+      const value = inputs[key];
+      return value != null && !Array.isArray(value) && typeof value !== 'object';
+    });
+  });
+}
+
+function mediaOf(row, detail) {
+  const category = String(row?.category || detail?.category || '');
+  const videoCategory = category === 'text_to_video' || category === 'image_to_video';
+  return videoCategory || looksLikeVideo(detail?.api_json) ? 'video' : 'image';
+}
+
 function precheckGap(diff, workflowId) {
   return {
     workflow_id: workflowId,
@@ -88,6 +120,15 @@ class GenerateService extends Service {
       if (usage && Number(usage.call_count) >= cap) this.ctx.throw(400, '超过成本上限');
     }
     await this.ctx.service.project.updateShot(shot.id, { positive_zh: text });
+    const refmodIds = (Array.isArray(payload.refmod_ids) ? payload.refmod_ids : [])
+      .map(id => Number(id))
+      .filter(id => id > 0);
+    const workflowOverride = Number(payload.workflow_id) || 0;
+    if (kind === 'refmod') {
+      if (!workflowOverride) this.ctx.throw(400, '请选择一条 [RefMod] 工作流');
+      if (!refmodIds.length) this.ctx.throw(400, '请选择本项目的人物包或场景包');
+      await this.assertRefmodWorkflow(workflowOverride);
+    }
 
     const profileRow = project
       ? await this.ctx.model.AgentConfig.findOne({ where: { content_type: project.content_type, role: 'video' } })
@@ -107,7 +148,12 @@ class GenerateService extends Service {
       external_id: task.id,
       detail: { project_id: Number(projectId), shot_id: shot.id, kind },
     });
-    return this.execute(task, text, Array.isArray(payload.images) ? payload.images : []);
+    const seed = Number(payload.seed);
+    return this.execute(task, text, Array.isArray(payload.images) ? payload.images : [], {
+      refmodIds,
+      workflowOverride,
+      seed: Number.isSafeInteger(seed) && seed >= 0 ? seed : undefined,
+    });
   }
 
   workflowEnvId(kind) {
@@ -154,6 +200,16 @@ class GenerateService extends Service {
     return ids;
   }
 
+  async assertRefmodWorkflow(workflowId) {
+    const res = await fetch(`${this.precheckBase()}/api/workflows/${workflowId}`, { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) throw new Error(`预检返回 ${res.status}`);
+    const workflow = unwrap(await res.json());
+    if (!String(workflow?.name || '').includes('[RefMod]')) {
+      this.ctx.throw(400, '这条工作流不能挂 RefMod 包');
+    }
+    return workflow;
+  }
+
   async workflowIdFor(kind) {
     const configured = this.workflowEnvId(kind);
     if (configured) return configured;
@@ -181,28 +237,78 @@ class GenerateService extends Service {
     return this.execute(task, text, []);
   }
 
+  async choices() {
+    const cached = this.app.cartoonWorkflowChoices;
+    if (cached && Date.now() - cached.at < 20000) return cached.rows;
+    const res = await fetch(`${this.precheckBase()}/api/workflows`, { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) throw new Error(`预检返回 ${res.status}`);
+    const rows = unwrap(await res.json()) || [];
+    const choices = [];
+    const queue = rows.slice();
+    const workers = Array.from({ length: Math.min(4, rows.length) }, async () => {
+      while (queue.length) {
+        const row = queue.shift();
+        try {
+          const detailRes = await fetch(`${this.precheckBase()}/api/workflows/${row.id}`, { signal: AbortSignal.timeout(20000) });
+          if (!detailRes.ok) continue;
+          const detail = unwrap(await detailRes.json());
+          if (!detail?.call_inputs?.positive) continue;
+          choices.push({
+            id: row.id,
+            name: row.name,
+            media: mediaOf(row, detail),
+            images: detail.call_inputs.images || [],
+          });
+        } catch (err) {
+          this.ctx.logger.warn('[cartoon] workflow %s %s', row.id, err.message);
+        }
+      }
+    });
+    await Promise.all(workers);
+    choices.sort((a, b) => a.id - b.id);
+    this.app.cartoonWorkflowChoices = { at: Date.now(), rows: choices };
+    return choices;
+  }
+
+  async choiceById(workflowId) {
+    const rows = await this.choices();
+    const found = rows.find(item => item.id === Number(workflowId));
+    if (!found) this.ctx.throw(400, '工作流不存在，或没有正向提示词');
+    return found;
+  }
+
   async inputs() {
-    const kinds = [ 'image', 'video', 'i2v', 'edit' ];
-    const result = {};
-    for (const kind of kinds) {
+    const result = {
+      image: { workflow_id: null, images: [] },
+      video: { workflow_id: null, images: [] },
+      i2v: { workflow_id: null, images: [] },
+      edit: { workflow_id: null, images: [] },
+      refmod: { workflow_id: null, images: [] },
+      workflows: [],
+    };
+    try {
+      result.workflows = await this.choices();
+    } catch (err) {
+      result.error = err.message;
+    }
+    for (const kind of [ 'image', 'video', 'i2v', 'edit' ]) {
       try {
         const workflowId = await this.workflowIdFor(kind);
-        const res = await fetch(`${this.precheckBase()}/api/workflows/${workflowId}`, { signal: AbortSignal.timeout(20000) });
-        if (!res.ok) throw new Error(`预检返回 ${res.status}`);
-        const workflow = unwrap(await res.json());
-        result[kind] = { workflow_id: workflowId, images: workflow.call_inputs?.images || [] };
+        const found = result.workflows.find(item => item.id === workflowId);
+        result[kind] = { workflow_id: workflowId, images: found?.images || [] };
       } catch (err) {
         result[kind] = { workflow_id: null, images: [], error: err.message };
       }
     }
+    result.refmod_workflows = result.workflows.filter(item => String(item.name || '').includes('[RefMod]'));
     return result;
   }
 
-  async bindWorkflow(workflowId, positive, images) {
+  async bindWorkflow(workflowId, positive, images, refImages = [], seed) {
     const res = await fetch(`${this.precheckBase()}/api/workflows/${workflowId}/bind`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ positive, images: images || [] }),
+      body: JSON.stringify({ positive, images: images || [], ref_images: refImages, seed }),
       signal: AbortSignal.timeout(60000),
     });
     const body = await res.json().catch(() => ({}));
@@ -216,10 +322,25 @@ class GenerateService extends Service {
     return data.prompt;
   }
 
-  async execute(task, text, images = []) {
+  async execute(task, text, images = [], options = {}) {
     let workflowId;
+    let refImages = [];
     try {
-      workflowId = await this.workflowIdFor(task.kind);
+      if (options.workflowOverride) {
+        workflowId = options.workflowOverride;
+        const chosen = await this.choiceById(workflowId);
+        const expectVideo = [ 'video', 'i2v', 't2v', 'refmod' ].includes(task.kind);
+        if (expectVideo && chosen.media !== 'video') throw new Error('请选择生视频工作流');
+        if (!expectVideo && chosen.media !== 'image') throw new Error('请选择生图工作流');
+        if (task.kind === 'refmod') {
+          if (!String(chosen.name || '').includes('[RefMod]')) throw new Error('这条工作流不能挂 RefMod 包');
+          refImages = await this.ctx.service.refmod.imageFiles(task.project_id, options.refmodIds || []);
+        }
+      } else if (task.kind === 'refmod') {
+        throw new Error('请选择一条 [RefMod] 工作流');
+      } else {
+        workflowId = await this.workflowIdFor(task.kind);
+      }
     } catch (err) {
       await task.update({ status: 'failed', error_message: err.message });
       return task.reload();
@@ -240,10 +361,20 @@ class GenerateService extends Service {
       return task.reload();
     }
 
-    if (!diff.ok) {
+    if (!diff) {
       await task.update({
         status: 'failed',
-        error_message: formatPrecheckBlock(diff, workflowId),
+        error_message: `连不上预检：依赖检测没有返回`,
+        precheck_workflow_id: workflowId,
+      });
+      return task.reload();
+    }
+
+    const reason = blockingReason(diff, workflowId);
+    if (reason) {
+      await task.update({
+        status: 'failed',
+        error_message: reason,
         precheck_workflow_id: workflowId,
         precheck_gap: precheckGap(diff, workflowId),
       });
@@ -252,7 +383,7 @@ class GenerateService extends Service {
 
     let graph;
     try {
-      graph = await this.bindWorkflow(workflowId, text, images);
+      graph = await this.bindWorkflow(workflowId, text, images, refImages, options.seed);
     } catch (err) {
       await task.update({ status: 'failed', error_message: err.message, precheck_workflow_id: workflowId });
       return task.reload();
@@ -268,7 +399,7 @@ class GenerateService extends Service {
       const res = await fetch(promptUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ prompt: graph, client_id: `cartoon-${task.id}` }),
+        body: JSON.stringify({ prompt: graph, client_id: 'precheck-watch' }),
         signal: AbortSignal.timeout(20000),
       });
       submitted = await res.json();
@@ -295,6 +426,21 @@ class GenerateService extends Service {
       precheck_gap: null,
     });
     return task.reload();
+  }
+
+  async liveProgress(promptIds) {
+    const ids = [ ...new Set((promptIds || []).filter(Boolean)) ];
+    if (!ids.length) return {};
+    try {
+      const res = await fetch(`${this.precheckBase()}/api/comfy/progress?prompt_id=${encodeURIComponent(ids.join(','))}`, {
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!res.ok) return {};
+      return unwrap(await res.json()) || {};
+    } catch (err) {
+      this.ctx.logger.warn('[cartoon] progress %s', err.message);
+      return {};
+    }
   }
 
   async settleProject(projectId) {
@@ -419,6 +565,46 @@ class GenerateService extends Service {
     this.ctx.set('Content-Range', `bytes ${start}-${end}/${stat.size}`);
     this.ctx.set('Content-Length', String(end - start + 1));
     this.ctx.body = fs.createReadStream(absolute, { start, end });
+  }
+
+  async removeOutput(outputId) {
+    const output = await this.ctx.model.Output.findByPk(outputId);
+    if (!output) this.ctx.throw(404, '产物不存在');
+    const task = output.task_id ? await this.ctx.model.Task.findByPk(output.task_id) : null;
+    if (task && [ 'queued', 'running', 'saving' ].includes(task.status)) {
+      this.ctx.throw(400, '正在生成的产物不能删除');
+    }
+    if (output.file_path) {
+      const absolute = resolveInside(outputRoot(this.app), output.file_path);
+      if (absolute && fs.existsSync(absolute)) await fs.promises.unlink(absolute);
+    }
+    const taskId = output.task_id;
+    await output.destroy();
+    if (taskId) {
+      const left = await this.ctx.model.Output.count({ where: { task_id: taskId } });
+      if (!left && task && ![ 'queued', 'running', 'saving' ].includes(task.status)) {
+        await task.destroy();
+      }
+    }
+    return { id: Number(outputId) };
+  }
+
+  async removeTask(taskId) {
+    const task = await this.ctx.model.Task.findByPk(taskId);
+    if (!task) this.ctx.throw(404, '产物不存在');
+    if ([ 'queued', 'running', 'saving' ].includes(task.status)) {
+      this.ctx.throw(400, '正在生成的产物不能删除');
+    }
+    const outputs = await this.ctx.model.Output.findAll({ where: { task_id: task.id } });
+    for (const output of outputs) {
+      if (output.file_path) {
+        const absolute = resolveInside(outputRoot(this.app), output.file_path);
+        if (absolute && fs.existsSync(absolute)) await fs.promises.unlink(absolute);
+      }
+      await output.destroy();
+    }
+    await task.destroy();
+    return { id: Number(taskId) };
   }
 }
 

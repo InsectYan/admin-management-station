@@ -184,6 +184,7 @@
           <el-table-column prop="node" label="回到" width="100" />
         </el-table>
       </section>
+      <RefModPacks v-else-if="node === 'refmods'" :project-id="projectId" />
       <template v-else-if="node === 'generate' || node === 'preview'">
         <section v-if="!shotQuery" class="cartoon-module cartoon-workbench__note">
           <h3 class="cartoon-module__title">选择分镜</h3>
@@ -226,6 +227,7 @@ import ShotGeneratePage from './ShotGeneratePage.vue';
 import ShotOutputsPage from './ShotOutputsPage.vue';
 import ProjectEditPage from './ProjectEditPage.vue';
 import ExportSpecs from '../components/ExportSpecs.vue';
+import RefModPacks from '../components/RefModPacks.vue';
 import { request } from '../services/apiConfig.js';
 import { isLocalType, typeLabel } from '../lib/contentTypes.js';
 
@@ -234,6 +236,7 @@ const nodes = [
   { id: 'script', title: '脚本' },
   { id: 'storyboard', title: '分镜' },
   { id: 'assets', title: '资产' },
+  { id: 'refmods', title: 'RefMod' },
   { id: 'generate', title: '生成' },
   { id: 'voice', title: '配音' },
   { id: 'subtitle', title: '字幕' },

@@ -64,6 +64,7 @@ const REGISTRY = {
   'basic.intent': BASIC_LEAF('intent', 'creative_intent'),
   'basic.summary': BASIC_LEAF('summary', 'summary'),
   'basic.overview': BASIC_LEAF('overview', 'story_overview'),
+  'basic.cover': BASIC_LEAF('cover', 'cover_prompt'),
 
   world: {
     pipeline: [

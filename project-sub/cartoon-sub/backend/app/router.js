@@ -41,6 +41,10 @@ module.exports = app => {
   router.get('/api/projects/:id', controller.project.show);
   router.put('/api/projects/:id/tasks/:taskId', controller.project.touchNode);
   router.put('/api/projects/:id', controller.project.update);
+  router.get('/api/projects/:id/refmods', controller.refmod.index);
+  router.post('/api/projects/:id/refmods', controller.refmod.create);
+  router.get('/api/projects/:id/refmods/:packId/files/:name', controller.refmod.file);
+  router.delete('/api/projects/:id/refmods/:packId', controller.refmod.destroy);
   router.post('/api/projects/:id/imports', controller.project.addImport);
   router.delete('/api/projects/:id/imports/:importId', controller.project.removeImport);
   router.post('/api/projects/:id/imports/from-novel', controller.project.pullNovel);
@@ -95,5 +99,7 @@ module.exports = app => {
   router.post('/api/projects/:id/edit/seed', controller.edit.seed);
   router.post('/api/projects/:id/edit/export', controller.edit.startExport);
   router.get('/api/edit-jobs/:id', controller.edit.job);
+  router.delete('/api/outputs/:id', controller.project.removeOutput);
+  router.delete('/api/tasks/:id', controller.project.removeTask);
   router.get('/api/outputs/:id/file', controller.project.outputFile);
 };

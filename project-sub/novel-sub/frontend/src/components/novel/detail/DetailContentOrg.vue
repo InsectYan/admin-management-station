@@ -1,7 +1,7 @@
 <template>
   <div class="novel-detail-content">
     <p class="novel-detail-content__hint">
-      章节标题、顺序与正反派场次。门派组织见「门派组织」模块；正文请到「单章开发」。
+      章节标题、顺序与正反派场次。生成时会参考已有剧情线的节奏。门派组织见「门派组织」模块；正文请到「单章开发」。
     </p>
     <section v-if="chapters.length" class="novel-detail-factions">
       <div class="novel-detail-faction novel-detail-faction--hero">

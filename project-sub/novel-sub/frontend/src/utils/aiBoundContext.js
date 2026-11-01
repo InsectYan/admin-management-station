@@ -36,6 +36,7 @@ export function basicContextForAgent(form = {}, enums = {}) {
     creative_intent: form.creative_intent || '',
     summary: form.summary || '',
     story_overview: form.story_overview || '',
+    cover_prompt: form.cover_prompt || '',
     genre,
     genre_subcategory,
     genre_label: [genre, genre_subcategory].filter(Boolean).join(' / '),

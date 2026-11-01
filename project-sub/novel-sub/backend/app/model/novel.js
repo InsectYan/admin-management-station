@@ -7,6 +7,8 @@ module.exports = (app) => {
     id: { type: INTEGER, primaryKey: true, autoIncrement: true },
     title: { type: STRING(200), allowNull: false },
     cover_url: { type: STRING(500), allowNull: true },
+    cover_prompt: { type: TEXT, allowNull: true },
+    cover_images: { type: JSONB, allowNull: false, defaultValue: [] },
     genre: { type: STRING(50), allowNull: true },
     novel_type: { type: STRING(50), allowNull: true },
     progress_status: { type: STRING(20), defaultValue: 'ongoing' },

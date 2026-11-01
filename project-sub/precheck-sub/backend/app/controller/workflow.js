@@ -118,6 +118,7 @@ class WorkflowController extends Controller {
         draftKey: this.ctx.params.key,
         apiJson: body.api_json,
         values: body.values || [],
+        refmodIds: body.refmod_ids || [],
       }));
     } catch (err) {
       this.ctx.status = err.status || 500;
@@ -135,6 +136,7 @@ class WorkflowController extends Controller {
         draftKey: null,
         apiJson,
         values: body.values || [],
+        refmodIds: body.refmod_ids || [],
       }));
     } catch (err) {
       this.ctx.status = err.status || 500;
@@ -162,7 +164,7 @@ class WorkflowController extends Controller {
 
   async previewFile() {
     try {
-      await this.ctx.service.workflowPreview.sendFile(this.ctx.params.id, null);
+      await this.ctx.service.workflowPreview.sendFile(this.ctx.params.id, null, this.ctx.query.run);
     } catch (err) {
       this.ctx.status = err.status || 500;
       this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
@@ -171,7 +173,36 @@ class WorkflowController extends Controller {
 
   async draftFile() {
     try {
-      await this.ctx.service.workflowPreview.sendFile(null, this.ctx.params.key);
+      await this.ctx.service.workflowPreview.sendFile(null, this.ctx.params.key, this.ctx.query.run);
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
+  async removePreview() {
+    try {
+      ok(this.ctx, await this.ctx.service.workflowPreview.removeRun(this.ctx.params.id, null, this.ctx.params.runId));
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
+  async comfyProgress() {
+    const raw = String(this.ctx.query.prompt_id || '');
+    const ids = raw.split(',').map(item => item.trim()).filter(id => /^[0-9a-f-]{8,64}$/i.test(id)).slice(0, 20);
+    try {
+      ok(this.ctx, await this.ctx.service.workflowPreview.progress(ids));
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
+  async removeDraftPreview() {
+    try {
+      ok(this.ctx, await this.ctx.service.workflowPreview.removeRun(null, this.ctx.params.key, this.ctx.params.runId));
     } catch (err) {
       this.ctx.status = err.status || 500;
       this.ctx.body = { code: this.ctx.status, message: err.message, data: null };

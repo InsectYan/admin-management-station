@@ -3,7 +3,6 @@ export const SETTING_FEATURE_LABELS = {
   world: '世界观',
   factions: '门派组织',
   characters: '人物',
-  style: '风格',
   plotline: '剧情线',
   outline: '大纲',
   script: '剧本',

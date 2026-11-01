@@ -26,6 +26,10 @@
         <el-icon><Share /></el-icon>
         <span>工作流</span>
       </el-menu-item>
+      <el-menu-item index="/refmods">
+        <el-icon><Picture /></el-icon>
+        <span>RefMod</span>
+      </el-menu-item>
     </el-menu>
   </el-aside>
   <el-menu
@@ -46,13 +50,17 @@
       <el-icon><Share /></el-icon>
       <span>工作流</span>
     </el-menu-item>
+    <el-menu-item index="/refmods">
+      <el-icon><Picture /></el-icon>
+      <span>RefMod</span>
+    </el-menu-item>
   </el-menu>
 </template>
 
 <script setup>
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { Expand, Fold, Monitor, Share } from '@element-plus/icons-vue';
+import { Expand, Fold, Monitor, Picture, Share } from '@element-plus/icons-vue';
 import { useNavCollapse } from '../composables/useNavCollapse.js';
 
 defineProps({ embedded: { type: Boolean, default: false } });

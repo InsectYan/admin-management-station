@@ -1,8 +1,8 @@
 'use strict';
 
-// 与前端 novelCreateSchema.WIZARD_STEPS、novelDetail.STUDIO_TAB 对齐：章节目录是第 10 步，单章开发是第 11 页。
-const CONTENT_STEP = 10;
-const STUDIO_TAB = 11;
+// 与前端 novelCreateSchema.WIZARD_STEPS、novelDetail.STUDIO_TAB 对齐：章节目录是第 9 步，单章开发是第 10 页。风格在基础信息里选，不再单独占一步。
+const CONTENT_STEP = 9;
+const STUDIO_TAB = 10;
 
 const PLAN_STEPS = [
   {
@@ -46,29 +46,19 @@ const PLAN_STEPS = [
     label: '人物',
   },
   {
-    id: 't_style',
-    path: 'plan.style',
-    step: 5,
-    feature_key: 'style',
-    writer_action: 'fill_style',
-    scene: 'style',
-    depends_on: ['t_characters'],
-    label: '风格',
-  },
-  {
     id: 't_plotline',
     path: 'plan.plotline',
-    step: 6,
+    step: 5,
     feature_key: 'plotline',
     writer_action: 'fill_plotlines',
     scene: 'plotline',
-    depends_on: ['t_style'],
+    depends_on: ['t_characters'],
     label: '剧情线',
   },
   {
     id: 't_outline',
     path: 'plan.outline',
-    step: 7,
+    step: 6,
     feature_key: 'outline',
     writer_action: 'fill_outline',
     scene: 'outline',
@@ -78,7 +68,7 @@ const PLAN_STEPS = [
   {
     id: 't_script',
     path: 'plan.script',
-    step: 8,
+    step: 7,
     feature_key: 'script',
     writer_action: 'fill_script',
     scene: 'script',
@@ -88,7 +78,7 @@ const PLAN_STEPS = [
   {
     id: 't_intent',
     path: 'plan.intent',
-    step: 9,
+    step: 8,
     feature_key: 'intent',
     writer_action: 'fill_intent_shots',
     scene: 'intent',

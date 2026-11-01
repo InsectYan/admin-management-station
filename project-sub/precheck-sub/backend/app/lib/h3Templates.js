@@ -8,10 +8,13 @@ const UNET_LIGHT = 'minimax\\minimax_h3_fl2va_pruned_int8_convrot.safetensors';
 const UNET_FULL = 'minimax\\minimax_h3_fl2va_bf16.safetensors';
 const UNET_REF = 'minimax\\minimax_h3_ref2va_pruned_int8_convrot.safetensors';
 const LORA = 'minimax\\h3-realism-people-t2v-i2v-r2v.safetensors';
+const UNET_REMIX = 'minimax\\FeiHou_MiniMax-H3_Remix_HSA_turbo_v0.8_int8_convrotHQ.safetensors';
+const CLIP_REMIX = 'minimax\\qwen3vl_32b_minimax_h3_int8_convrot_uncensored_FeiHou.safetensors';
 
 const PROMPT_T2V = '一只橘猫从窗台走过，阳光落在木地板上，镜头缓慢跟随，环境音是远处的鸟叫。';
 const PROMPT_FLF = '人物从门口走到窗边，动作连贯，光线从暖色变成傍晚的冷色，脚步声清晰。';
 const PROMPT_REF = '让 <Picture 1> 里的角色保持同一张脸和同一套衣服，走到窗边停下，光线柔和，有轻微的衣料声。';
+const PROMPT_REFMOD = '让 <Picture 1> 保持同一张脸和同一套衣服，从门口走到窗边停下，光线柔和，有轻微的衣料声。';
 const PROMPT_LORA = '真实人物从门口走到窗边，皮肤和衣服细节清楚，动作自然，光线是傍晚室内光。';
 
 function h3Graph(options) {
@@ -59,8 +62,10 @@ function h3Graph(options) {
   if (options.reference) {
     condition.inputs.audio_vae = [ '5', 0 ];
     condition.inputs.ref_image_size = 'match';
-    condition.inputs['ref_images.ref_image_0'] = [ '20', 0 ];
-    nodes['20'] = { class_type: 'LoadImage', inputs: { image: 'reference.png' } };
+    if (!options.refmod) {
+      condition.inputs['ref_images.ref_image_0'] = [ '20', 0 ];
+      nodes['20'] = { class_type: 'LoadImage', inputs: { image: 'reference.png' } };
+    }
   }
   if (options.first) {
     condition.inputs.first_frame = [ '21', 0 ];
@@ -182,6 +187,45 @@ const H3_TEMPLATES = [
       prefix: 'video/h3-full-flf-lora',
     }),
   },
+  {
+    name: 'h3-remix-文生视频',
+    category: 'text_to_video',
+    suggested_vram_gb: 48,
+    api_json: h3Graph({
+      unet: UNET_REMIX,
+      clip: CLIP_REMIX,
+      prompt: PROMPT_T2V,
+      steps: 8,
+      prefix: 'video/h3-remix-t2v',
+    }),
+  },
+  {
+    name: '满血-h3-文生视频[RefMod]',
+    category: 'text_to_video',
+    suggested_vram_gb: 64,
+    api_json: h3Graph({
+      unet: UNET_FULL,
+      clip: CLIP_BF16,
+      prompt: PROMPT_REFMOD,
+      steps: 20,
+      reference: true,
+      refmod: true,
+      prefix: 'video/h3-full-t2v-refmod',
+    }),
+  },
+  {
+    name: '轻量-h3-文生视频[RefMod]',
+    category: 'text_to_video',
+    suggested_vram_gb: 24,
+    api_json: h3Graph({
+      unet: UNET_LIGHT,
+      prompt: PROMPT_REFMOD,
+      steps: 20,
+      reference: true,
+      refmod: true,
+      prefix: 'video/h3-light-t2v-refmod',
+    }),
+  },
 ];
 
 module.exports = {
@@ -193,5 +237,7 @@ module.exports = {
   UNET_LIGHT,
   UNET_FULL,
   UNET_REF,
+  UNET_REMIX,
+  CLIP_REMIX,
   LORA,
 };

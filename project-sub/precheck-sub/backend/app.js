@@ -8,5 +8,6 @@ module.exports = app => {
     const ctx = app.createAnonymousContext();
     await ctx.service.runtime.ensureDefault();
     await ctx.service.workflow.ensureTemplates();
+    ctx.service.workflowPreview.ensureWatcher();
   });
 };

@@ -5,4 +5,5 @@ dist/
 
 backend/logs/
 backend/run/
+backend/app/data/
 *.log

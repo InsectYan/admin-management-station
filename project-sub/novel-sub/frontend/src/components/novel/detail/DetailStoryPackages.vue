@@ -16,9 +16,11 @@
         </div>
         <div class="novel-entry-actions">
           <el-button type="primary" @click="addTerm">添加</el-button>
+          <el-button type="danger" plain :disabled="!desk.terms.length" @click="removeCheckedTerms">一键删除</el-button>
         </div>
       </el-form>
-      <el-table :data="desk.terms" empty-text="还没有术语" size="small">
+      <el-table :data="desk.terms" row-key="id" empty-text="还没有术语" size="small" @selection-change="pickedTerms = $event">
+        <el-table-column type="selection" width="48" />
         <el-table-column prop="name" label="名称" width="140" />
         <el-table-column label="类别" width="100">
           <template #default="{ row }">{{ categoryLabel(row.category) }}</template>
@@ -110,6 +112,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { confirmBulkDelete } from '../../../utils/tableBulkDelete.js';
 import {
   applyPromotion,
   createTerm,
@@ -142,6 +145,7 @@ const desk = reactive({
 });
 const term = reactive({ name: '', aliases: '', category: 'term' });
 const selected = ref([]);
+const pickedTerms = ref([]);
 const scripts = ref([]);
 const scriptIds = ref([]);
 const intents = ref([]);
@@ -221,6 +225,25 @@ async function removeTerm(row) {
     await load();
   } catch (err) {
     ElMessage.error(err.message);
+  }
+}
+
+async function removeCheckedTerms() {
+  const selectedRows = pickedTerms.value;
+  const ok = await confirmBulkDelete({
+    selectedCount: selectedRows.length,
+    totalCount: selectedRows.length || desk.terms.length,
+  });
+  if (!ok) return;
+  const targets = selectedRows.length ? selectedRows : [...desk.terms];
+  try {
+    for (const row of targets) await deleteTerm(props.novelId, row.id);
+    pickedTerms.value = [];
+    ElMessage.success(selectedRows.length ? '已删除勾选术语' : '已删除全部术语');
+    await load();
+  } catch (err) {
+    ElMessage.error(err.message || '删除失败');
+    await load();
   }
 }
 async function check() {

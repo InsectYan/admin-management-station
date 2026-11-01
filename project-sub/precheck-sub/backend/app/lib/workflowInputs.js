@@ -134,6 +134,23 @@ function describeCallInputs(apiJson) {
   return { positive: findPositive(graph), images };
 }
 
+function applySeed(graph, seed) {
+  const number = Number(seed);
+  if (!Number.isSafeInteger(number) || number < 0) return graph;
+  Object.values(graph || {}).forEach(node => {
+    const inputs = node?.inputs;
+    if (!inputs) return;
+    [ 'seed', 'noise_seed' ].forEach(key => {
+      const current = inputs[key];
+      if (Array.isArray(current) || current == null || typeof current === 'object') return;
+      if (typeof current === 'number' || (typeof current === 'string' && current.trim() && Number.isFinite(Number(current)))) {
+        inputs[key] = number;
+      }
+    });
+  });
+  return graph;
+}
+
 function applyCallInputs(apiJson, { positive, imageNames } = {}) {
   const graph = JSON.parse(JSON.stringify(apiJson));
   const call = describeCallInputs(graph);
@@ -192,5 +209,6 @@ function withCallFields(fields, apiJson) {
 module.exports = {
   describeCallInputs,
   applyCallInputs,
+  applySeed,
   withCallFields,
 };

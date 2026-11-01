@@ -70,10 +70,6 @@
           :characters="characters"
           :edges="characterEdges"
         />
-        <DetailStyle
-          v-else-if="tabKey === 'style'"
-          :novel-id="novelId || novelMeta.id"
-        />
         <DetailPlotlines
           v-else-if="tabKey === 'plotline'"
           :novel-id="novelId || novelMeta.id"
@@ -168,7 +164,6 @@ import DetailPlotlines from '../components/novel/detail/DetailPlotlines.vue';
 import DetailScripts from '../components/novel/detail/DetailScripts.vue';
 import DetailIntentShots from '../components/novel/detail/DetailIntentShots.vue';
 import DetailTeam from '../components/novel/detail/DetailTeam.vue';
-import DetailStyle from '../components/novel/detail/DetailStyle.vue';
 import DetailGenerationRecords from '../components/novel/detail/DetailGenerationRecords.vue';
 import { useNovelDetail } from '../composables/useNovelDetail.js';
 import { WIZARD_STEPS } from '../utils/novelCreateSchema.js';

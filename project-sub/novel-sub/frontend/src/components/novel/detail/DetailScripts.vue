@@ -54,7 +54,11 @@
       <el-button @click="applySuggestion">填入表单</el-button>
     </div>
     <el-empty v-if="!scripts.length" description="还没有剧本" />
-    <el-table v-else :data="scripts" size="small">
+    <div v-if="scripts.length" class="novel-bulk-bar">
+      <el-button type="danger" plain size="small" @click="removeChecked">一键删除</el-button>
+    </div>
+    <el-table v-if="scripts.length" :data="scripts" row-key="id" size="small" @selection-change="picked = $event">
+      <el-table-column type="selection" width="48" />
       <el-table-column prop="title" label="标题" />
       <el-table-column label="改写" width="100">
         <template #default="{ row }">{{ row.variant === 'short_drama' ? '短剧改写' : '漫剧改写' }}</template>
@@ -75,6 +79,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { confirmBulkDelete } from '../../../utils/tableBulkDelete.js';
 import {
   createScript,
   deleteScript,
@@ -89,6 +94,7 @@ const props = defineProps({
 });
 
 const scripts = ref([]);
+const picked = ref([]);
 const chapters = ref([]);
 const saving = ref(false);
 const suggesting = ref(false);
@@ -211,6 +217,28 @@ async function remove(row) {
   await load();
 }
 
+async function removeChecked() {
+  const selected = picked.value;
+  const ok = await confirmBulkDelete({
+    selectedCount: selected.length,
+    totalCount: selected.length || scripts.value.length,
+  });
+  if (!ok) return;
+  const targets = selected.length ? selected : [...scripts.value];
+  try {
+    for (const row of targets) {
+      await deleteScript(props.novelId, row.id);
+      if (form.id === row.id) reset();
+    }
+    picked.value = [];
+    ElMessage.success(selected.length ? '已删除勾选剧本' : '已删除全部剧本');
+    await load();
+  } catch (err) {
+    ElMessage.error(err.message || '删除失败');
+    await load();
+  }
+}
+
 function hasDraft() {
   return Boolean(form.title.trim() || form.scenes.some(scene => scene.location || scene.dialogue || scene.action));
 }
@@ -256,4 +284,5 @@ onMounted(() => {
   justify-content: space-between;
   margin-bottom: 8px;
 }
+.novel-bulk-bar { display: flex; justify-content: flex-end; }
 </style>

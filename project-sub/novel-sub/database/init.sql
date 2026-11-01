@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS novels (
   id SERIAL PRIMARY KEY,
   title VARCHAR(200) NOT NULL,
   cover_url VARCHAR(500),
+  cover_prompt TEXT,
+  cover_images JSONB NOT NULL DEFAULT '[]',
   genre VARCHAR(50),
   novel_type VARCHAR(50),
   progress_status VARCHAR(20) DEFAULT 'ongoing',

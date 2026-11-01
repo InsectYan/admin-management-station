@@ -110,6 +110,22 @@ class AiTurnService extends require('egg').Service {
         feature: spec.feature_key,
         chapterId: boundContext.chapter?.id || boundContext.chapter_id,
       });
+      if (spec.feature_key === 'content') {
+        const rows = await this.ctx.model.Plotline.findAll({
+          where: { novel_id: session.novel_id },
+          order: [[ 'id', 'ASC' ]],
+        });
+        const plotlines = rows.map(row => ({
+          name: row.name,
+          kind: row.kind,
+          status: row.status,
+          summary: row.summary || '',
+        })).filter(row => row.name);
+        if (plotlines.length) {
+          boundContext.plotlines = plotlines;
+          boundContext.chapter_rhythm = '按这些剧情线的先后和概要安排章节推进。出现章节当时可以还没填，不要为此编造章节编号。';
+        }
+      }
     }
 
     const lengthId = pickLengthId(boundContext);

@@ -55,11 +55,12 @@ Agent `reply` 可用加粗、列表、短标题；不要用代码围栏包住整
 
 ---
 
-## 4. 封面与非文本模型
+## 4. 封面与 ComfyUI 工作流
 
-封面生成 **禁止**走 `novel-writer-skill` 或侧栏文本「AI 模型」。  
-必须使用主应用侧栏 **多模态** 当前选中的 `media_profile`（见 `media-model.mdc`），经 `POST /api/ai/cover/generate` → Agent `POST /api/media/generate`。  
-生成结果写入表单 `cover_url`，用户点保存后才 `PUT` 小说。
+封面生成 **禁止**走 `novel-writer-skill`、侧栏文本「AI 模型」，也 **不**走侧栏多模态 `media_profile`。  
+封面是本地 ComfyUI 出图：`GET /api/ai/cover/workflows` 只列出预检里依赖已满足、且不需要输入图的文生图工作流；`POST /api/ai/cover/generate` 经预检 `bind` 后把图提交到本机 ComfyUI。  
+展示比例 **3:4**，建议出图 **768×1024**。界面写明这个尺寸，由用户在工作流里改宽高；BFF 不改工作流的宽高节点。  
+生成结果写入表单 `cover_url`，用户点保存后才 `PUT` 小说。新建、编辑、详情和列表都展示这张图。
 
 ---
 

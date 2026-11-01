@@ -207,7 +207,7 @@ Skill 在 `agent-management-master/plugins/`。
 ### 4.7 封面与多模态
 
 - [ ] 侧栏「多模态」每项可见文生图/文生视频能力标签
-- [ ] 创建步 1 / 快编「AI 生成封面」走 `POST /api/ai/cover/generate`，Network 无直连 `:4001`
+- [ ] 创建步 1 / 快编「生成封面」走 `POST /api/ai/cover/generate`，工作流来自预检，Network 无直连 `:4001`
 - [ ] 封面不经过 writer；未点保存列表 `cover_url` 不变
 - [ ] 选中仅视频模型时出图返回 `MEDIA_MODALITY_UNSUPPORTED`
 
@@ -252,7 +252,7 @@ Skill 在 `agent-management-master/plugins/`。
 | G4 | 「补全全部缺口」?ai=plan | 完成 |
 | H1 | Agent media catalog + `/api/media/profiles` `/generate` | 完成 |
 | H2 | 主应用侧栏多模态选项（能力标签、全局 sessionStorage） | 完成 |
-| H3 | 封面 generate 走 media_profile，不走 writer | 完成 |
+| H3 | 封面 generate 走预检 ComfyUI 文生图工作流，不走 writer | 完成 |
 | H4 | 规范 `media-model.mdc`：非文本一律该选项 | 完成 |
 | I1 | 门派组织步 3 + 章节目录改名说明 | 完成 |
 | I2 | 正文独立表 + 单章 GET/PUT | 完成 |

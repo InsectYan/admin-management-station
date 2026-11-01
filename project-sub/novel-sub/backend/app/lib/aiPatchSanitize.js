@@ -1,8 +1,9 @@
 'use strict';
 
 const { sanitizeTasks } = require('./aiPlan');
+const { listStylePresets } = require('./stylePresets');
 
-const BASIC_FIELDS = ['title', 'creative_intent', 'summary', 'story_overview'];
+const BASIC_FIELDS = ['title', 'creative_intent', 'summary', 'story_overview', 'cover_prompt'];
 const WORLD_TEXT_FIELDS = [
   'era',
   'geography',
@@ -30,7 +31,7 @@ const STYLE_FIELDS = ['style_preset'];
 const PLOTLINE_FIELDS = ['plotlines'];
 const SCRIPT_FIELDS = ['script'];
 const INTENT_FIELDS = ['intent_shots'];
-const STYLE_IDS = new Set(['serious', 'power', 'sweet', 'suspense', 'comedy']);
+const STYLE_IDS = new Set(listStylePresets().map(item => item.id));
 const PLOTLINE_KINDS = new Set(['main', 'side', 'foreshadow', 'emotion']);
 const PLOTLINE_STATUSES = new Set(['open', 'active', 'resolved', 'dropped']);
 const SCRIPT_VARIANTS = new Set(['comic', 'short_drama']);
@@ -421,7 +422,8 @@ function sanitizePatch(raw, _catalog, allowedFields, notices = [], options = {})
   for (const key of [...BASIC_FIELDS, ...WORLD_TEXT_FIELDS]) {
     if (!allow.has(key) || source[key] === undefined || source[key] === null) continue;
     const text = String(source[key]).trim();
-    if (text) out[key] = text.slice(0, key === 'title' ? 200 : 4000);
+    const cap = key === 'title' ? 200 : key === 'cover_prompt' ? 2000 : 4000;
+    if (text) out[key] = text.slice(0, cap);
   }
   if (allow.has('timeline') && source.timeline !== undefined) {
     const timeline = sanitizeTimeline(source.timeline);

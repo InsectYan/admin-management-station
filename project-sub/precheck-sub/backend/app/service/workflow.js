@@ -4,10 +4,12 @@ const Service = require('egg').Service;
 const { parseApiWorkflow } = require('../lib/workflowParse');
 const { buildSupplies } = require('../lib/supplyCatalog');
 const { H3_TEMPLATES } = require('../lib/h3Templates');
+const { ZIMAGE_TEMPLATES } = require('../lib/zImageTemplates');
+const { QWEN21_TEMPLATES } = require('../lib/qwen21Templates');
 
 class WorkflowService extends Service {
   async ensureTemplates() {
-    for (const item of H3_TEMPLATES) {
+    for (const item of [ ...H3_TEMPLATES, ...ZIMAGE_TEMPLATES, ...QWEN21_TEMPLATES ]) {
       const parsed = parseApiWorkflow(item.api_json);
       const existing = await this.ctx.model.Workflow.findOne({ where: { name: item.name } });
       const fields = {

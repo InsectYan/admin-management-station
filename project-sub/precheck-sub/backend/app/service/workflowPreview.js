@@ -6,7 +6,8 @@ const Service = require('egg').Service;
 const { parseApiWorkflow } = require('../lib/workflowParse');
 const { buildSupplies } = require('../lib/supplyCatalog');
 const { listPreviewFields, applyPreviewValues, collectMedia } = require('../lib/workflowPreview');
-const { describeCallInputs, applyCallInputs, withCallFields } = require('../lib/workflowInputs');
+const { describeCallInputs, applyCallInputs, applySeed, withCallFields } = require('../lib/workflowInputs');
+const { applyRefmod } = require('../lib/refmodApply');
 
 function previewRoot() {
   return process.env.PREVIEW_DIR || '/data/previews';
@@ -22,12 +23,41 @@ function safeKey(value) {
   return key;
 }
 
+function boardOf(raw) {
+  if (!raw) return { runs: [] };
+  if (Array.isArray(raw.runs)) {
+    return { runs: raw.runs.filter(item => item && item.id).map(item => ({ ...item })) };
+  }
+  if (raw.status || raw.prompt_id || raw.file_name) {
+    return { runs: [{ ...raw, id: String(raw.id || 'legacy') }] };
+  }
+  return { runs: [] };
+}
+
+const COMFY_CLIENT_ID = 'precheck-watch';
+
 function comfyMessage(body, status) {
   const error = body?.error;
   if (!error) return `ComfyUI 返回 ${status}`;
   if (typeof error === 'string') return error;
   const nodeErrors = body?.node_errors ? JSON.stringify(body.node_errors).slice(0, 240) : '';
   return [ error.message || error.type || '', nodeErrors ].filter(Boolean).join(' ') || `ComfyUI 返回 ${status}`;
+}
+
+function sampleNode(nodes) {
+  const list = Object.values(nodes || {}).filter(item => Number(item.max) > 0);
+  const heavy = list.filter(item => Number(item.max) > 1);
+  const pool = heavy.length ? heavy : list;
+  const running = pool.filter(item => item.state === 'running');
+  const chosen = (running.length ? running : pool)
+    .sort((a, b) => Number(b.max) - Number(a.max))[0];
+  return chosen || null;
+}
+
+function socketText(data) {
+  if (typeof data === 'string') return data;
+  if (Buffer.isBuffer(data)) return data.toString('utf8');
+  return '';
 }
 
 class WorkflowPreviewService extends Service {
@@ -134,6 +164,8 @@ class WorkflowPreviewService extends Service {
     const byId = new Map((images || []).map(item => [ item.slot_id || item.id, item ]));
     const names = {};
     for (const slot of call.images) {
+      const existing = apiJson[slot.node_id]?.inputs?.image;
+      if (slot.role === 'reference' && typeof existing === 'string' && existing) continue;
       const file = byId.get(slot.id);
       const payload = file?.data_base64 || file?.data;
       if (!payload) {
@@ -154,22 +186,41 @@ class WorkflowPreviewService extends Service {
       error.status = 400;
       throw error;
     }
-    const names = await this.imageNames(row.api_json, payload.images || []);
-    const graph = applyCallInputs(row.api_json, { positive, imageNames: names });
+    let source = row.api_json;
+    const refImages = Array.isArray(payload.ref_images) ? payload.ref_images : [];
+    if (refImages.length) {
+      const uploaded = [];
+      for (const file of refImages) uploaded.push(await this.uploadImage(file, 'refmod'));
+      source = applyRefmod(source, uploaded);
+    }
+    const names = await this.imageNames(source, payload.images || []);
+    const graph = applySeed(applyCallInputs(source, { positive, imageNames: names }), payload.seed);
     parseApiWorkflow(graph);
     return { prompt: graph, call_inputs: describeCallInputs(row.api_json) };
   }
 
-  async start({ workflowId, draftKey, apiJson, values }) {
-    const names = await this.imageNames(apiJson, (values || []).filter(item => item?.type === 'image'));
-    const graph = applyCallInputs(applyPreviewValues(apiJson, values), { imageNames: names });
+  async start({ workflowId, draftKey, apiJson, values, refmodIds }) {
+    let source = apiJson;
+    if (Array.isArray(refmodIds) && refmodIds.length) {
+      const files = await this.ctx.service.refmod.imageFiles(refmodIds);
+      const uploaded = [];
+      for (const file of files) {
+        uploaded.push(await this.uploadImage(file, 'refmod'));
+      }
+      source = applyRefmod(apiJson, uploaded);
+    } else if (describeCallInputs(apiJson).images.length === 0
+      && Object.values(apiJson || {}).some(node => node?.class_type === 'MiniMaxH3ReferenceToVideo')) {
+      this.ctx.throw(400, '请选择至少一个包');
+    }
+    const names = await this.imageNames(source, (values || []).filter(item => item?.type === 'image'));
+    const graph = applyCallInputs(applyPreviewValues(source, values), { imageNames: names });
     parseApiWorkflow(graph);
     let submitted;
     try {
       const res = await fetch(`${this.comfyBase()}/prompt`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ prompt: graph, client_id: workflowId ? `precheck-${workflowId}` : `precheck-draft-${draftKey}` }),
+        body: JSON.stringify({ prompt: graph, client_id: COMFY_CLIENT_ID }),
         signal: AbortSignal.timeout(30000),
       });
       submitted = await res.json();
@@ -182,7 +233,9 @@ class WorkflowPreviewService extends Service {
       if (err.status) throw err;
       this.ctx.throw(502, `连不上 ComfyUI：${err.message}`);
     }
-    const state = {
+    const now = new Date().toISOString();
+    const run = {
+      id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
       status: 'running',
       phase: 'queued',
       prompt_id: submitted.prompt_id,
@@ -195,11 +248,17 @@ class WorkflowPreviewService extends Service {
       queue_ahead: 0,
       node: '',
       submitted: this.summarizeValues(values),
-      updated_at: new Date().toISOString(),
+      created_at: now,
+      updated_at: now,
     };
-    await this.writeState(workflowId, draftKey, state);
+    const board = await this.withBoard(workflowId, draftKey, async () => {
+      const current = await this.loadBoard(workflowId, draftKey);
+      current.runs.unshift(run);
+      await this.saveBoard(workflowId, draftKey, current);
+      return current;
+    });
     this.ensureWatcher();
-    return state;
+    return { runs: board.runs };
   }
 
   summarizeValues(values) {
@@ -222,15 +281,36 @@ class WorkflowPreviewService extends Service {
     return this.app.precheckPromptProgress;
   }
 
+  boardLocks() {
+    if (!this.app.previewBoardLocks) this.app.previewBoardLocks = new Map();
+    return this.app.previewBoardLocks;
+  }
+
+  async withBoard(workflowId, draftKey, fn) {
+    const key = workflowId ? `workflow:${workflowId}` : `draft:${safeKey(draftKey)}`;
+    const locks = this.boardLocks();
+    const previous = locks.get(key) || Promise.resolve();
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    locks.set(key, previous.catch(() => {}).then(() => gate));
+    await previous.catch(() => {});
+    try {
+      return await fn();
+    } finally {
+      release();
+    }
+  }
+
   ensureWatcher() {
     if (this.app.precheckComfyWatch) return;
     const WS = global.WebSocket;
     if (typeof WS !== 'function') {
       this.app.precheckComfyWatch = { disabled: true };
+      this.app.logger.warn('[precheck] 当前 Node 没有 WebSocket，无法同步 ComfyUI 步数');
       return;
     }
     const store = this.progressStore();
-    const url = `${this.comfyBase().replace(/^http/, 'ws')}/ws?clientId=precheck-watch`;
+    const url = `${this.comfyBase().replace(/^http/, 'ws')}/ws?clientId=${COMFY_CLIENT_ID}`;
     const open = () => {
       let socket;
       try {
@@ -240,13 +320,22 @@ class WorkflowPreviewService extends Service {
         setTimeout(open, 5000);
         return;
       }
+      let closed = false;
+      const retry = () => {
+        if (closed) return;
+        closed = true;
+        if (this.app.precheckComfySocket === socket) this.app.precheckComfySocket = null;
+        setTimeout(open, 3000);
+      };
       socket.addEventListener('message', (event) => {
+        const text = socketText(event.data);
+        if (!text || text[0] !== '{') return;
         let msg;
-        try { msg = JSON.parse(event.data); } catch { return; }
+        try { msg = JSON.parse(text); } catch { return; }
         const data = msg?.data || {};
         const promptId = data.prompt_id;
         if (!promptId) return;
-        const current = store.get(promptId) || { value: 0, max: 0, node: '', phase: 'running' };
+        const current = store.get(promptId) || { value: 0, max: 0, node: '', phase: 'running', error: '' };
         if (msg.type === 'progress') {
           store.set(promptId, {
             ...current,
@@ -254,6 +343,18 @@ class WorkflowPreviewService extends Service {
             max: Number(data.max) || 0,
             node: data.node || current.node,
             phase: 'running',
+            error: '',
+          });
+        } else if (msg.type === 'progress_state') {
+          const sample = sampleNode(data.nodes);
+          if (!sample) return;
+          store.set(promptId, {
+            ...current,
+            value: Number(sample.value) || 0,
+            max: Number(sample.max) || 0,
+            node: sample.display_node_id || sample.node_id || current.node,
+            phase: sample.state === 'error' ? 'error' : 'running',
+            error: sample.state === 'error' ? (current.error || 'ComfyUI 执行失败') : '',
           });
         } else if (msg.type === 'executing') {
           store.set(promptId, {
@@ -261,83 +362,161 @@ class WorkflowPreviewService extends Service {
             node: data.node || '',
             phase: data.node ? 'running' : current.phase,
           });
+        } else if (msg.type === 'execution_error') {
+          store.set(promptId, {
+            ...current,
+            phase: 'error',
+            node: data.node_id || current.node,
+            error: String(data.exception_message || 'ComfyUI 执行失败').slice(0, 400),
+          });
         }
       });
-      socket.addEventListener('close', () => setTimeout(open, 3000));
+      socket.addEventListener('error', (err) => {
+        this.app.logger.warn('[precheck] progress socket %s', err.message || err);
+      });
+      socket.addEventListener('close', retry);
       this.app.precheckComfySocket = socket;
     };
     this.app.precheckComfyWatch = { started: true };
     open();
   }
 
-  async queueOf(promptId) {
+  placeOf(body, promptId) {
+    if (!body) return null;
+    const running = body.queue_running || [];
+    const pending = body.queue_pending || [];
+    if (running.some(row => row?.[1] === promptId)) return { phase: 'running', ahead: 0 };
+    const index = pending.findIndex(row => row?.[1] === promptId);
+    if (index >= 0) return { phase: 'queued', ahead: index + 1 };
+    return { phase: 'unknown', ahead: 0 };
+  }
+
+  progressView(promptId, queueBody) {
+    const live = this.progressStore().get(promptId);
+    const place = this.placeOf(queueBody, promptId);
+    const max = live && Number(live.max) > 0 ? Number(live.max) : 0;
+    const value = live && Number.isFinite(Number(live.value)) ? Number(live.value) : 0;
+    const percent = max > 0 ? Math.min(99, Math.round((value / max) * 100)) : 0;
+    let phase = 'unknown';
+    if (live?.phase === 'error') phase = 'error';
+    else if (place?.phase === 'queued') phase = 'queued';
+    else if (place?.phase === 'running' || live?.phase === 'running') phase = 'running';
+    return {
+      phase,
+      queue_ahead: place?.ahead || 0,
+      progress_value: value,
+      progress_max: max,
+      progress_percent: percent,
+      node: live?.node || '',
+      error: phase === 'error' ? (live?.error || 'ComfyUI 执行失败') : '',
+    };
+  }
+
+  async queueBody() {
     try {
       const res = await fetch(`${this.comfyBase()}/queue`, { signal: AbortSignal.timeout(8000) });
       if (!res.ok) return null;
-      const body = await res.json();
-      const running = body.queue_running || [];
-      const pending = body.queue_pending || [];
-      if (running.some((row) => row?.[1] === promptId)) return { phase: 'running', ahead: 0 };
-      const index = pending.findIndex((row) => row?.[1] === promptId);
-      if (index >= 0) return { phase: 'queued', ahead: index + 1 };
-      return { phase: 'unknown', ahead: 0 };
+      return await res.json();
     } catch (err) {
       this.ctx.logger.warn('[precheck] queue %s', err.message);
       return null;
     }
   }
 
+  async progress(promptIds) {
+    this.ensureWatcher();
+    const ids = [ ...new Set((promptIds || []).filter(Boolean)) ];
+    const queue = ids.length ? await this.queueBody() : null;
+    const data = {};
+    ids.forEach(id => {
+      data[id] = this.progressView(id, queue);
+    });
+    return data;
+  }
+
   async decorate(state, workflowId, draftKey) {
     if (!state || state.status !== 'running' || !state.prompt_id) return state;
     this.ensureWatcher();
-    const live = this.progressStore().get(state.prompt_id);
-    const queue = await this.queueOf(state.prompt_id);
-    const max = live && Number(live.max) > 0 ? Number(live.max) : (Number(state.progress_max) || 0);
-    const value = live && Number.isFinite(Number(live.value)) ? Number(live.value) : (Number(state.progress_value) || 0);
-    const percent = max > 0 ? Math.min(99, Math.round((value / max) * 100)) : 0;
-    const phase = queue?.phase === 'queued' ? 'queued' : (live?.phase || (queue?.phase === 'running' ? 'running' : state.phase || 'running'));
+    const view = this.progressView(state.prompt_id, await this.queueBody());
+    if (view.phase === 'error') {
+      return this.patchRun(workflowId, draftKey, state.id, {
+        status: 'failed',
+        phase: 'error',
+        error: view.error || 'ComfyUI 执行失败',
+        updated_at: new Date().toISOString(),
+      }) || state;
+    }
+    const phase = view.phase === 'unknown' ? (state.phase || 'running') : view.phase;
     const next = {
       ...state,
       phase,
-      queue_ahead: queue?.ahead || 0,
-      progress_value: value,
-      progress_max: max,
-      progress_percent: percent,
-      node: live?.node || state.node || '',
+      queue_ahead: view.queue_ahead,
+      progress_value: view.progress_max > 0 ? view.progress_value : (Number(state.progress_value) || 0),
+      progress_max: view.progress_max > 0 ? view.progress_max : (Number(state.progress_max) || 0),
+      progress_percent: view.progress_max > 0
+        ? view.progress_percent
+        : (Number(state.progress_percent) || 0),
+      node: view.node || state.node || '',
     };
     const changed = next.phase !== state.phase
       || next.queue_ahead !== state.queue_ahead
       || next.progress_value !== state.progress_value
       || next.progress_max !== state.progress_max
       || next.node !== state.node;
-    if (changed) await this.writeState(workflowId, draftKey, next);
-    return next;
+    if (!changed) return next;
+    return await this.patchRun(workflowId, draftKey, state.id, next) || next;
   }
 
-  async writeState(workflowId, draftKey, state) {
+  async loadBoard(workflowId, draftKey) {
     if (workflowId) {
       const row = await this.ctx.service.workflow.show(workflowId);
-      await row.update({ preview_json: state });
+      return boardOf(row.preview_json);
+    }
+    return boardOf(this.drafts().get(safeKey(draftKey)));
+  }
+
+  async saveBoard(workflowId, draftKey, board) {
+    const stored = { runs: board.runs || [] };
+    if (workflowId) {
+      const row = await this.ctx.service.workflow.show(workflowId);
+      await row.update({ preview_json: stored });
       return;
     }
-    this.drafts().set(safeKey(draftKey), state);
+    this.drafts().set(safeKey(draftKey), stored);
   }
 
-  async currentState(workflowId, draftKey) {
-    if (workflowId) {
-      const row = await this.ctx.service.workflow.show(workflowId);
-      return row.preview_json || null;
-    }
-    return this.drafts().get(safeKey(draftKey)) || null;
+  async patchRun(workflowId, draftKey, id, next) {
+    return this.withBoard(workflowId, draftKey, async () => {
+      const board = await this.loadBoard(workflowId, draftKey);
+      const index = board.runs.findIndex(item => item.id === id);
+      if (index < 0) return null;
+      const current = board.runs[index];
+      if (next.prompt_id && current.prompt_id && current.prompt_id !== next.prompt_id) return current;
+      if (current.status !== 'running' && current.status !== next.status) return current;
+      board.runs[index] = { ...current, ...next, id: current.id };
+      await this.saveBoard(workflowId, draftKey, board);
+      return board.runs[index];
+    });
   }
 
   async read(workflowId, draftKey) {
-    let state = await this.currentState(workflowId, draftKey);
-    if (!state) return null;
-    if (state.status === 'running' && state.prompt_id) {
-      state = await this.settle(workflowId, draftKey, state);
+    const board = await this.loadBoard(workflowId, draftKey);
+    const runs = [];
+    for (const run of board.runs) {
+      let next = run;
+      if (next.status === 'running' && next.prompt_id) {
+        next = await this.settle(workflowId, draftKey, next);
+        if (next?.status === 'running') next = await this.decorate(workflowId, draftKey, next);
+      }
+      if (next) runs.push(next);
     }
-    return this.decorate(state, workflowId, draftKey);
+    const latest = await this.loadBoard(workflowId, draftKey);
+    const settled = new Map(runs.map(item => [ item.id, item ]));
+    const merged = latest.runs.map(item => settled.get(item.id) || item);
+    settled.forEach((item, id) => {
+      if (!latest.runs.some(run => run.id === id)) merged.push(item);
+    });
+    return { runs: merged };
   }
 
   async settle(workflowId, draftKey, state) {
@@ -353,43 +532,46 @@ class WorkflowPreviewService extends Service {
       return state;
     }
     if (!item) return state;
-    const latest = await this.currentState(workflowId, draftKey);
-    if (!latest || latest.prompt_id !== state.prompt_id) return latest;
+    const latest = (await this.loadBoard(workflowId, draftKey)).runs.find(run => run.id === state.id);
+    if (!latest || latest.prompt_id !== state.prompt_id) return latest || state;
     if (item.status?.status_str === 'error') {
-      const failed = { ...latest, status: 'failed', error: 'ComfyUI 执行失败', updated_at: new Date().toISOString() };
-      await this.writeState(workflowId, draftKey, failed);
-      return failed;
+      return this.patchRun(workflowId, draftKey, latest.id, {
+        status: 'failed',
+        error: 'ComfyUI 执行失败',
+        updated_at: new Date().toISOString(),
+      });
     }
     if (!item.status?.completed && item.status?.status_str !== 'success') return latest;
     const files = collectMedia(item.outputs);
     const file = files[files.length - 1];
     if (!file) {
-      const failed = { ...latest, status: 'failed', error: 'ComfyUI 没有返回图片或视频', updated_at: new Date().toISOString() };
-      await this.writeState(workflowId, draftKey, failed);
-      return failed;
+      return this.patchRun(workflowId, draftKey, latest.id, {
+        status: 'failed',
+        error: 'ComfyUI 没有返回图片或视频',
+        updated_at: new Date().toISOString(),
+      });
     }
     try {
-      const saved = await this.saveLatest(workflowId, draftKey, file);
-      const again = await this.currentState(workflowId, draftKey);
-      if (!again || again.prompt_id !== state.prompt_id) return again;
-      const success = {
-        ...again,
+      const saved = await this.saveFile(workflowId, draftKey, latest, file);
+      const again = (await this.loadBoard(workflowId, draftKey)).runs.find(run => run.id === state.id);
+      if (!again || again.prompt_id !== state.prompt_id) return again || state;
+      return this.patchRun(workflowId, draftKey, again.id, {
         status: 'success',
         error: '',
         media_kind: file.media_kind,
         file_name: saved,
         updated_at: new Date().toISOString(),
-      };
-      await this.writeState(workflowId, draftKey, success);
-      return success;
+      });
     } catch (err) {
-      const failed = { ...latest, status: 'failed', error: err.message, updated_at: new Date().toISOString() };
-      await this.writeState(workflowId, draftKey, failed);
-      return failed;
+      return this.patchRun(workflowId, draftKey, latest.id, {
+        status: 'failed',
+        error: err.message,
+        updated_at: new Date().toISOString(),
+      });
     }
   }
 
-  async saveLatest(workflowId, draftKey, file) {
+  async saveFile(workflowId, draftKey, run, file) {
     const filename = path.basename(file.filename || '');
     if (!filename) throw new Error('产物文件名无效');
     const view = new URL('/view', `${this.comfyBase()}/`);
@@ -402,19 +584,42 @@ class WorkflowPreviewService extends Service {
     if (!bytes.length) throw new Error('产物是空文件');
     const dir = this.dirFor(workflowId ? 'workflows' : 'drafts', workflowId ? String(workflowId) : safeKey(draftKey));
     await fs.promises.mkdir(dir, { recursive: true });
-    const existing = await fs.promises.readdir(dir);
-    await Promise.all(existing.map(name => fs.promises.unlink(path.join(dir, name))));
     const ext = path.extname(filename) || (file.media_kind === 'video' ? '.mp4' : '.png');
-    const stored = `latest${ext.toLowerCase()}`;
+    const stored = run.id === 'legacy' && run.file_name
+      ? path.basename(run.file_name)
+      : `${run.id}${ext.toLowerCase()}`;
     await fs.promises.writeFile(path.join(dir, stored), bytes);
     return stored;
   }
 
-  async sendFile(workflowId, draftKey) {
-    const state = await this.currentState(workflowId, draftKey);
-    if (!state?.file_name || state.status !== 'success') this.ctx.throw(404, '还没有预览产物');
+  async removeRun(workflowId, draftKey, runId) {
+    const board = await this.loadBoard(workflowId, draftKey);
+    const run = board.runs.find(item => item.id === String(runId || ''));
+    if (!run) this.ctx.throw(404, '产物不存在');
+    if (run.status === 'running') this.ctx.throw(400, '正在生成的产物不能删除');
+    if (run.file_name) {
+      const dir = this.dirFor(workflowId ? 'workflows' : 'drafts', workflowId ? String(workflowId) : safeKey(draftKey));
+      const absolute = path.resolve(dir, path.basename(run.file_name));
+      if (path.dirname(absolute) === dir && fs.existsSync(absolute)) {
+        await fs.promises.unlink(absolute);
+      }
+    }
+    await this.withBoard(workflowId, draftKey, async () => {
+      const current = await this.loadBoard(workflowId, draftKey);
+      current.runs = current.runs.filter(item => item.id !== run.id);
+      await this.saveBoard(workflowId, draftKey, current);
+    });
+    return { id: run.id };
+  }
+
+  async sendFile(workflowId, draftKey, runId) {
+    const board = await this.loadBoard(workflowId, draftKey);
+    const run = runId
+      ? board.runs.find(item => item.id === String(runId))
+      : board.runs.find(item => item.status === 'success' && item.file_name);
+    if (!run?.file_name || run.status !== 'success') this.ctx.throw(404, '还没有预览产物');
     const dir = this.dirFor(workflowId ? 'workflows' : 'drafts', workflowId ? String(workflowId) : safeKey(draftKey));
-    const absolute = path.resolve(dir, path.basename(state.file_name));
+    const absolute = path.resolve(dir, path.basename(run.file_name));
     if (path.dirname(absolute) !== dir || !fs.existsSync(absolute)) this.ctx.throw(404, '预览文件不在磁盘上');
     const ext = path.extname(absolute).toLowerCase();
     this.ctx.type = ext === '.mp4' || ext === '.webm' ? ext.slice(1) : 'png';

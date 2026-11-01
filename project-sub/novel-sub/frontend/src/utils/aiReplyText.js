@@ -99,7 +99,7 @@ function pickBestSkillObject(raw) {
   return objects[0];
 }
 
-const LIFT_KEYS = ['title', 'creative_intent', 'summary', 'story_overview'];
+const LIFT_KEYS = ['title', 'creative_intent', 'summary', 'story_overview', 'cover_prompt'];
 
 export function salvagePatchFromContent(content) {
   const obj = pickBestSkillObject(content);

@@ -59,6 +59,14 @@ module.exports = appInfo => {
     timeoutMs: Number(process.env.AGENT_PLATFORM_TIMEOUT_MS || 600000),
   };
 
+  config.precheck = {
+    baseUrl: process.env.PRECHECK_API_ORIGIN || 'http://127.0.0.1:5204',
+  };
+
+  config.comfy = {
+    baseUrl: process.env.COMFYUI_BASE_URL || 'http://127.0.0.1:8188',
+  };
+
   config.bodyParser = {
     jsonLimit: '16mb',
     formLimit: '16mb',

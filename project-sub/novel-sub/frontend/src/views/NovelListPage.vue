@@ -88,7 +88,7 @@
             <div class="novel-card__cover">
               <el-image
                 v-if="item.cover_url"
-                :src="item.cover_url"
+                :src="coverImageSrc(item.cover_url)"
                 fit="cover"
                 class="novel-card__cover-img"
               >
@@ -178,13 +178,9 @@
 
     <!-- 表格视图 -->
     <template v-else>
-      <div v-if="selectedRows.length" class="novel-action-bar">
-        <span class="novel-action-bar__hint">已选 {{ selectedRows.length }} 项</span>
-        <el-popconfirm title="确定批量删除选中小说？" @confirm="handleBatchDelete">
-          <template #reference>
-            <el-button type="danger" plain :loading="batchDeleting">批量删除</el-button>
-          </template>
-        </el-popconfirm>
+      <div class="novel-action-bar">
+        <span v-if="selectedRows.length" class="novel-action-bar__hint">已选 {{ selectedRows.length }} 项</span>
+        <el-button type="danger" plain :loading="batchDeleting" :disabled="!total" @click="handleBatchDelete">一键删除</el-button>
         <el-dropdown trigger="click" @command="toggleColumn">
           <el-button>自定义列</el-button>
           <template #dropdown>
@@ -237,7 +233,7 @@
               <template #default="{ row }">
                 <div class="novel-table-title">
                   <div class="novel-table-title__cover">
-                    <el-image v-if="row.cover_url" :src="row.cover_url" fit="cover">
+                    <el-image v-if="row.cover_url" :src="coverImageSrc(row.cover_url)" fit="cover">
                       <template #error>
                         <span>{{ coverFallback(row.title) }}</span>
                       </template>
@@ -400,6 +396,7 @@ import {
 import { useRoute, useRouter } from 'vue-router';
 import { Plus, MagicStick } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
+import { confirmBulkDelete } from '../utils/tableBulkDelete.js';
 import PageShell from '../components/PageShell.vue';
 import DataTablePanel from '../components/DataTablePanel.vue';
 import NovelEditDialog from '../components/novel/NovelEditDialog.vue';
@@ -422,6 +419,7 @@ import {
 } from '../utils/novelMeta.js';
 import { healthStatusLabel, healthTagType } from '../utils/novelQa.js';
 import { formatDateTime } from '../utils/formatDateTime.js';
+import { coverImageSrc } from '../lib/publicHost.js';
 import { useNovelEnums } from '../composables/useNovelEnums.js';
 import { firstChapterId, hasChapters } from '../utils/chapterTree.js';
 import { STUDIO_TAB } from '../utils/novelDetail.js';
@@ -706,11 +704,33 @@ async function handleDelete(id) {
   }
 }
 
+async function collectFilteredNovelIds() {
+  const ids = [];
+  let pageNo = 1;
+  let seen = 0;
+  let count = Infinity;
+  while (seen < count) {
+    const data = await fetchNovels(buildListParams({ page: pageNo, pageSize: 100 }));
+    const list = data.list || [];
+    count = Number(data.total) || 0;
+    ids.push(...list.map((row) => row.id).filter(Boolean));
+    seen += list.length;
+    if (!list.length) break;
+    pageNo += 1;
+  }
+  return ids;
+}
+
 async function handleBatchDelete() {
+  const picked = selectedRows.value;
+  const totalCount = picked.length || Number(total.value) || 0;
+  const ok = await confirmBulkDelete({ selectedCount: picked.length, totalCount });
+  if (!ok) return;
   batchDeleting.value = true;
   try {
-    await batchDeleteNovels(selectedRows.value.map((r) => r.id));
-    ElMessage.success('批量删除成功');
+    const ids = picked.length ? picked.map((row) => row.id) : await collectFilteredNovelIds();
+    await batchDeleteNovels(ids);
+    ElMessage.success(picked.length ? '已删除勾选小说' : '已删除全部小说');
     selectedRows.value = [];
     await loadNovels();
   } catch (e) {
@@ -810,6 +830,7 @@ onMounted(() => {
 .novel-card__cover-fallback {
   width: 100%;
   height: 100%;
+  display: block;
 }
 
 .novel-card__cover-fallback {

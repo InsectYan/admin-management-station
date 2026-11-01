@@ -27,15 +27,23 @@
       </section>
       <el-card v-for="task in tasks" :key="task.id" shadow="never" class="cartoon-output">
         <p>{{ statusLabel(task.status) }} · {{ kindLabel(task.kind) }}</p>
+        <el-progress
+          v-if="['queued','running','saving'].includes(task.status)"
+          :percentage="task.status === 'saving' ? 99 : (task.progress_percent || 0)"
+          :stroke-width="8"
+          color="#2f8a5b"
+        />
+        <p v-if="['queued','running','saving'].includes(task.status)" class="cartoon-module__hint">{{ progressText(task) }}</p>
         <p v-if="task.error_message">{{ task.error_message }}</p>
         <p v-if="task.precheck_workflow_id">
           <a class="cartoon-precheck-link" :href="precheckHref(task.precheck_workflow_id)" target="_blank" rel="noreferrer">打开预检梳理</a>
         </p>
-        <div v-for="output in task.outputs" :key="output.id">
-          <video v-if="output.media_kind === 'video'" :src="fileUrl(output.id)" controls class="cartoon-media"></video>
-          <img v-else :src="fileUrl(output.id)" :alt="task.shot_description" class="cartoon-media" />
-          <p class="cartoon-module__hint">{{ stageLabel(output.version_stage) }}</p>
-          <p class="cartoon-module__hint">串脸由人工标记，这里不自动检测。</p>
+        <el-button v-if="!['queued','running','saving'].includes(task.status)" link type="danger" @click="removeTask(task)">删除</el-button>
+        <div v-for="output in task.outputs" :key="output.id" class="cartoon-output-file">
+          <MediaFileList :items="[fileItem(output)]" :show-name="false" @remove="removeOutput(output)" />
+          <div>
+            <p class="cartoon-module__hint">{{ stageLabel(output.version_stage) }}</p>
+            <p class="cartoon-module__hint">串脸由人工标记，这里不自动检测。</p>
           <p>{{ faceLabel(output) }}</p>
           <el-button size="small" @click="markFace(output, true)">画面正常</el-button>
           <el-button size="small" @click="markFace(output, false)">有串脸</el-button>
@@ -48,6 +56,7 @@
               </div>
             </div>
           </div>
+          </div>
         </div>
       </el-card>
     </section>
@@ -56,8 +65,9 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
+import MediaFileList from '../components/MediaFileList.vue';
 import PageShell from '../components/PageShell.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
@@ -79,17 +89,36 @@ const projectId = computed(() => route.params.id);
 const shotId = computed(() => route.params.shotId || route.query.shot);
 const inWorkbench = computed(() => route.name === 'workbench');
 
+function progressText(task) {
+  if (task.status === 'saving') return '正在保存产物';
+  if (task.phase === 'queued') {
+    return task.queue_ahead > 0 ? `排队，前面还有 ${task.queue_ahead} 个` : '排队中';
+  }
+  if (task.progress_max > 0) {
+    const node = task.node ? `节点 ${task.node} ` : '';
+    return `${node}${task.progress_value}/${task.progress_max}`;
+  }
+  return '正在生成，等待 ComfyUI 回报步数';
+}
 function statusLabel(status) {
   return { queued: '排队', running: '生成中', saving: '生成中', success: '成功', failed: '失败' }[status] || status;
 }
 function kindLabel(kind) {
-  return { image: '文生图', video: '首尾帧', i2v: '图生视频', edit: '改图' }[kind] || kind;
+  return { image: '文生图', video: '首尾帧', i2v: '图生视频', edit: '改图', refmod: '文生视频', t2v: '文生视频' }[kind] || kind;
 }
 function precheckHref(id) {
   const origin = import.meta.env.VITE_PRECHECK_ORIGIN || 'http://localhost:5104';
   return `${origin.replace(/\/$/, '')}/workflows?id=${id}`;
 }
 function fileUrl(id) { return `${resolveApiBase()}/outputs/${id}/file`; }
+function fileItem(output) {
+  return {
+    id: output.id,
+    url: fileUrl(output.id),
+    kind: output.media_kind === 'video' ? 'video' : 'image',
+    name: `${stageLabel(output.version_stage)} #${output.id}`,
+  };
+}
 function stageLabel(stage) {
   return { draft: '草稿', generated: '生成版', revised: '修改版', final: '最终交付版' }[stage] || '生成版';
 }
@@ -135,6 +164,20 @@ async function compare() {
     diffError.value = err.message;
     ElMessage.error(err.message);
   }
+}
+async function removeTask(task) {
+  await ElMessageBox.confirm('删除这条生成记录和它带的产物？剪辑里用到这些产物的片段会失去画面。', '删除产物', { type: 'warning' });
+  await request(`/tasks/${task.id}`, { method: 'delete' });
+  await load();
+}
+async function removeOutput(output) {
+  if ([ 'queued', 'running', 'saving' ].includes(tasks.value.find(item => (item.outputs || []).some(row => row.id === output.id))?.status)) {
+    ElMessage.warning('正在生成的产物不能删除');
+    return;
+  }
+  await ElMessageBox.confirm('删除这条产物？剪辑里用到它的片段会失去画面。', '删除产物', { type: 'warning' });
+  await request(`/outputs/${output.id}`, { method: 'delete' });
+  await load();
 }
 function back() {
   if (inWorkbench.value) {
@@ -182,7 +225,7 @@ async function load() {
   await loadProfiles(outputs);
   loaded.value = true;
   const active = tasks.value.some(item => [ 'queued', 'running', 'saving' ].includes(item.status));
-  if (active && !pollTimer) pollTimer = setInterval(load, 2000);
+  if (active && !pollTimer) pollTimer = setInterval(load, 1000);
   if (!active) stopPoll();
 }
 onMounted(load);
@@ -191,7 +234,7 @@ onUnmounted(stopPoll);
 
 <style scoped>
 .cartoon-output { margin-bottom: 12px; }
-.cartoon-media { max-width: 420px; display: block; margin-top: 8px; }
+.cartoon-output-file { display: flex; gap: 12px; align-items: flex-start; margin-top: 8px; }
 .cartoon-precheck-link { color: #2f8a5b; }
 .cartoon-devices { display: flex; gap: 12px; margin-top: 8px; }
 .cartoon-device { width: 120px; }

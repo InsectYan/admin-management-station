@@ -48,7 +48,11 @@
       <el-button type="primary" :loading="writing" @click="writeSuggestion">写入这些分镜</el-button>
     </div>
     <el-empty v-if="!shots.length" description="还没有叙事分镜" />
-    <el-table v-else :data="shots" size="small">
+    <div v-if="shots.length" class="novel-bulk-bar">
+      <el-button type="danger" plain size="small" @click="removeChecked">一键删除</el-button>
+    </div>
+    <el-table v-if="shots.length" :data="shots" row-key="id" size="small" @selection-change="picked = $event">
+      <el-table-column type="selection" width="48" />
       <el-table-column prop="sort_order" label="序" width="60" />
       <el-table-column prop="intent" label="意图" />
       <el-table-column prop="dialogue" label="台词" />
@@ -67,6 +71,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { confirmBulkDelete } from '../../../utils/tableBulkDelete.js';
 import {
   createIntentShot,
   deleteIntentShot,
@@ -82,6 +87,7 @@ const props = defineProps({
 });
 
 const shots = ref([]);
+const picked = ref([]);
 const scripts = ref([]);
 const characters = ref([]);
 const saving = ref(false);
@@ -262,6 +268,28 @@ async function remove(row) {
   await load();
 }
 
+async function removeChecked() {
+  const selected = picked.value;
+  const ok = await confirmBulkDelete({
+    selectedCount: selected.length,
+    totalCount: selected.length || shots.value.length,
+  });
+  if (!ok) return;
+  const targets = selected.length ? selected : [...shots.value];
+  try {
+    for (const row of targets) {
+      await deleteIntentShot(props.novelId, row.id);
+      if (form.id === row.id) reset();
+    }
+    picked.value = [];
+    ElMessage.success(selected.length ? '已删除勾选分镜' : '已删除全部分镜');
+    await load();
+  } catch (err) {
+    ElMessage.error(err.message || '删除失败');
+    await load();
+  }
+}
+
 onMounted(() => {
   load().catch(err => ElMessage.error(err.message || '叙事分镜加载失败'));
 });
@@ -271,4 +299,5 @@ onMounted(() => {
 .novel-intents { display: flex; flex-direction: column; gap: 12px; }
 .novel-intents header p { margin: 4px 0 0; color: var(--el-text-color-secondary); }
 .novel-intents a { margin-right: 8px; }
+.novel-bulk-bar { display: flex; justify-content: flex-end; }
 </style>

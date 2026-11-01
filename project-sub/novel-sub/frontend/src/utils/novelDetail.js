@@ -107,7 +107,7 @@ export function characterRoleStats(characters = []) {
 }
 
 export function tabFilled(tabKey, {
-  basic, worldForm, characters, outlineForm, contentForm, factions, stylePreset, story,
+  basic, worldForm, characters, outlineForm, contentForm, factions, story,
 }) {
   switch (tabKey) {
     case 'basic':
@@ -122,8 +122,6 @@ export function tabFilled(tabKey, {
       return Boolean(factions?.length);
     case 'characters':
       return Boolean(characters?.length);
-    case 'style':
-      return Boolean(stylePreset);
     case 'plotline':
       return Boolean(story?.plotline);
     case 'outline':

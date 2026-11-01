@@ -259,3 +259,12 @@ CREATE TABLE IF NOT EXISTS cartoon_batch_items (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS cartoon_refmods (
+  id SERIAL PRIMARY KEY,
+  project_id INTEGER NOT NULL REFERENCES cartoon_projects(id) ON DELETE CASCADE,
+  kind VARCHAR(16) NOT NULL DEFAULT 'character',
+  name VARCHAR(200) NOT NULL,
+  images TEXT NOT NULL DEFAULT '[]',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

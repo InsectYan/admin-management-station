@@ -21,7 +21,14 @@
       </div>
       <div class="novel-detail-hero">
         <div class="novel-detail-hero__cover">
-          <el-image v-if="coverUrl" :src="coverUrl" fit="cover" class="novel-detail-hero__cover-img">
+          <el-image
+            v-if="coverSrc"
+            :src="coverSrc"
+            fit="contain"
+            class="novel-detail-hero__cover-img"
+            :preview-src-list="[coverSrc]"
+            preview-teleported
+          >
             <template #error>
               <div class="novel-detail-hero__cover-fallback">{{ coverLetter }}</div>
             </template>
@@ -68,6 +75,7 @@ import { computed } from 'vue';
 import { EditPen } from '@element-plus/icons-vue';
 import NovelMarkdown from '../markdown/NovelMarkdown.vue';
 import { coverFallback, formatGenreLabel, progressLabel } from '../../../utils/novelMeta.js';
+import { coverImageSrc } from '../../../lib/publicHost.js';
 
 const props = defineProps({
   title: { type: String, default: '' },
@@ -84,6 +92,7 @@ const props = defineProps({
 defineEmits(['back', 'edit', 'plan', 'autorun', 'qa']);
 
 const coverLetter = computed(() => coverFallback(props.title));
+const coverSrc = computed(() => coverImageSrc(props.coverUrl));
 const genreLabel = computed(() => formatGenreLabel({
   genre: props.genre,
   genre_subcategory: props.genreSubcategory,
@@ -141,11 +150,21 @@ const statusType = computed(() => (props.progressStatus === 'completed' ? 'succe
 .novel-detail-hero__cover,
 .novel-detail-hero__cover-img,
 .novel-detail-hero__cover-fallback {
-  width: 72px;
-  height: 96px;
+  width: 150px;
+  height: 200px;
   border-radius: var(--novel-radius-sm, 6px);
   overflow: hidden;
   flex-shrink: 0;
+}
+
+.novel-detail-hero__cover {
+  background: var(--novel-color-primary-muted, #eef6f1);
+}
+
+.novel-detail-hero__cover-img {
+  display: block;
+  background: var(--novel-color-primary-muted, #eef6f1);
+  cursor: zoom-in;
 }
 
 .novel-detail-hero__cover-fallback {

@@ -2,7 +2,8 @@
 
 const MODEL_KEYS = [
   'ckpt_name', 'lora_name', 'vae_name', 'unet_name', 'clip_name',
-  'model_name', 'control_net_name', 'ipadapter_file',
+  'clip_name1', 'clip_name2', 'model_name', 'control_net_name',
+  'style_model_name', 'gligen_name', 'ipadapter_file',
 ];
 const MODEL_EXT = /\.(safetensors|ckpt|gguf|pt|pth|bin|sft)$/i;
 

@@ -8,7 +8,9 @@ alwaysApply: true
 文本对话走侧栏 **AI 模型**（`llm_profile` / `ams-llm-profile-id`）。  
 出图、出视频、图生图、读图等 **非文本** 调用走侧栏 **多模态**（`media_profile` / `ams-media-profile-id`）。
 
-**禁止**用文本 catalog 或 `llm_profile` 调图片/视频厂商接口。封面生成、后续片头视频等同理。
+**禁止**用文本 catalog 或 `llm_profile` 调图片/视频厂商接口。后续片头视频等同理。
+
+叙事工作台的小说封面不走这条：它调用预检里依赖已满足的 ComfyUI 文生图工作流，由小说 BFF 提交。见 `novel-sub-development.mdc`。
 
 ## 落点
 

@@ -2,6 +2,17 @@
   <div>
     <el-empty v-if="!fields.length && loaded" description="这份工作流没有可改的提示词或尺寸参数，仍可直接生成" />
     <el-form v-else label-position="top" class="precheck-preview-form">
+      <el-form-item v-if="refmod" class="precheck-preview-duration" label="检测包">
+        <el-select v-model="refmodIds" multiple placeholder="选择人物或场景" style="width: 100%">
+          <el-option-group label="人物">
+            <el-option v-for="pack in characterPacks" :key="pack.id" :label="`${pack.name}（${pack.image_count} 张）`" :value="pack.id" />
+          </el-option-group>
+          <el-option-group label="场景">
+            <el-option v-for="pack in scenePacks" :key="pack.id" :label="`${pack.name}（${pack.image_count} 张）`" :value="pack.id" />
+          </el-option-group>
+        </el-select>
+        <p class="precheck-preview-hint">按选择顺序对应 &lt;Picture 1&gt;、&lt;Picture 2&gt;。人物和场景可以一起选，总共不超过 9 张图。这里用的是预检检测包。首尾帧工作流不使用这个包。</p>
+      </el-form-item>
       <el-form-item
         v-for="field in fields"
         :key="field.id"
@@ -51,7 +62,7 @@
         <el-input v-else v-model="field.value" />
       </el-form-item>
     </el-form>
-    <el-button type="primary" :loading="running" :disabled="!apiJson" @click="generate">生成产物</el-button>
+    <el-button type="primary" :loading="submitting" :disabled="!apiJson" @click="generate">生成产物</el-button>
     <div v-if="preview && preview.status === 'running'" class="precheck-preview-progress">
       <el-progress :percentage="preview.progress_percent || 0" :stroke-width="8" color="#2f8a5b" />
       <p class="precheck-preview-note">{{ progressText }}</p>
@@ -60,33 +71,48 @@
       <li v-for="item in preview.submitted" :key="item.label">{{ item.label }}：{{ item.text }}</li>
     </ul>
     <p v-if="notice" class="precheck-preview-note">{{ notice }}</p>
-    <div v-if="preview && preview.status === 'success'" class="precheck-preview-media">
-      <video v-if="preview.media_kind === 'video'" :src="fileUrl" controls></video>
-      <img v-else :src="fileUrl" alt="最新预览产物" />
+    <div v-if="runs.length" class="precheck-preview-list">
+      <article v-for="item in runs" :key="item.id" class="precheck-preview-card">
+        <MediaFileList v-if="item.status === 'success'" :items="[mediaItem(item)]" @remove="removeRun" />
+        <template v-else>
+          <p>{{ runLabel(item) }}</p>
+          <el-progress v-if="item.status === 'running'" :percentage="item.progress_percent || 0" :stroke-width="8" color="#2f8a5b" />
+          <p v-if="item.status === 'running'">{{ runProgress(item) }}</p>
+          <p v-if="item.error">{{ item.error }}</p>
+          <el-button v-if="item.status !== 'running'" link type="danger" @click="removeRun(item)">删除</el-button>
+        </template>
+      </article>
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed, onUnmounted, reactive, ref, watch } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import MediaFileList from './MediaFileList.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 
 const props = defineProps({
   workflowId: { type: [String, Number], default: '' },
   apiJson: { type: Object, default: null },
+  refmod: { type: Boolean, default: false },
 });
 
 const FRAME_KEYS = new Set([ 'length', 'frames', 'num_frames', 'frame_count' ]);
 const IMAGE_TYPES = new Set([ 'image/png', 'image/jpeg', 'image/webp' ]);
 const fields = ref([]);
+const packs = ref([]);
+const characterPacks = computed(() => packs.value.filter(item => item.kind !== 'scene'));
+const scenePacks = computed(() => packs.value.filter(item => item.kind === 'scene'));
+const refmodIds = ref([]);
 const imageLists = reactive({});
 const loaded = ref(false);
 const frameBackup = ref(null);
 const running = ref(false);
+const submitting = ref(false);
 const notice = ref('');
 const preview = ref(null);
-const fileUrl = ref('');
+const runs = ref([]);
 let timer = null;
 
 const progressText = computed(() => {
@@ -229,11 +255,35 @@ function statusPath() {
     ? `/workflows/${props.workflowId}/preview`
     : `/workflows/drafts/${draftKey()}/preview`;
 }
-function mediaPath(stamp) {
+function mediaPath(item) {
+  const stamp = item?.updated_at || item?.id || '';
   const base = props.workflowId
     ? `/workflows/${props.workflowId}/preview/file`
     : `/workflows/drafts/${draftKey()}/file`;
-  return `${resolveApiBase()}${base}?t=${encodeURIComponent(stamp || '')}`;
+  return `${resolveApiBase()}${base}?run=${encodeURIComponent(item?.id || '')}&t=${encodeURIComponent(stamp)}`;
+}
+function mediaItem(item) {
+  return {
+    id: item.id,
+    url: mediaPath(item),
+    kind: item.media_kind === 'video' ? 'video' : 'image',
+    name: runLabel(item),
+  };
+}
+function runProgress(item) {
+  if (item.phase === 'queued') {
+    return item.queue_ahead > 0 ? `排队，前面还有 ${item.queue_ahead} 个` : '排队中';
+  }
+  if (item.progress_max > 0) {
+    const node = item.node ? `节点 ${item.node} ` : '';
+    return `${node}${item.progress_value}/${item.progress_max}`;
+  }
+  return '正在生成，等待 ComfyUI 回报步数';
+}
+function runLabel(item) {
+  const status = { queued: '排队', running: '生成中', success: '成功', failed: '失败' }[item.status] || item.status;
+  const when = item.created_at ? item.created_at.replace('T', ' ').slice(0, 16) : '';
+  return [ status, when ].filter(Boolean).join(' · ');
 }
 function stop() {
   if (timer) clearInterval(timer);
@@ -243,7 +293,7 @@ function follow(state) {
   if (state?.status !== 'running') return;
   running.value = true;
   if (timer) return;
-  timer = setInterval(() => { refresh().catch(() => {}); }, 2000);
+  timer = setInterval(() => { refresh().catch(() => {}); }, 1000);
 }
 async function loadFields() {
   loaded.value = false;
@@ -262,52 +312,72 @@ async function loadFields() {
 }
 async function refresh() {
   const state = await request(statusPath());
-  preview.value = state;
-  if (!state) {
+  const list = Array.isArray(state?.runs) ? state.runs : (state?.status ? [ state ] : []);
+  runs.value = list;
+  const active = list.find(item => item.status === 'running') || null;
+  preview.value = active;
+  if (!list.length) {
     running.value = false;
     stop();
     return;
   }
-  if (state.status === 'success') {
-    fileUrl.value = mediaPath(state.updated_at);
-    notice.value = '已保留最新一次产物';
-    running.value = false;
-    stop();
-  } else if (state.status === 'failed') {
-    notice.value = state.error || '生成失败';
-    running.value = false;
-    stop();
-  } else if (state.status === 'running') {
-    notice.value = state.phase === 'queued' ? '已提交，正在排队' : '正在生成，完成后只保留这一次的产物';
-    follow(state);
+  if (active) {
+    notice.value = active.phase === 'queued' ? '已提交，正在排队' : '正在生成，完成后会留在下面的列表里';
+    follow(active);
+    return;
   }
+  running.value = false;
+  stop();
+  const failed = list[0]?.status === 'failed' ? list[0] : null;
+  notice.value = failed ? (failed.error || '生成失败') : '每次生成都会留下一条，可以删除';
+}
+async function removeRun(item) {
+  await ElMessageBox.confirm('删除这条产物？', '删除产物', { type: 'warning' });
+  const path = props.workflowId
+    ? `/workflows/${props.workflowId}/preview/${item.id}`
+    : `/workflows/drafts/${draftKey()}/preview/${item.id}`;
+  await request(path, { method: 'delete' });
+  await refresh();
 }
 async function generate() {
   if (!props.apiJson) return;
+  if (props.refmod && !refmodIds.value.length) {
+    ElMessage.error('请选择至少一个包');
+    return;
+  }
   const missing = fields.value.filter(field => field.type === 'image' && !field.data);
   if (missing.length) {
     ElMessage.error(`请上传${missing.map(field => field.label).join('、')}`);
     return;
   }
-  running.value = true;
+  submitting.value = true;
   notice.value = '已提交到 ComfyUI';
   try {
-    const data = { values: fields.value, api_json: props.apiJson };
-    if (props.workflowId) {
-      await request(`/workflows/${props.workflowId}/preview`, { method: 'post', data });
-    } else {
-      await request(`/workflows/drafts/${draftKey()}/preview`, { method: 'post', data });
+    const data = { values: fields.value, api_json: props.apiJson, refmod_ids: refmodIds.value };
+    const saved = props.workflowId
+      ? await request(`/workflows/${props.workflowId}/preview`, { method: 'post', data })
+      : await request(`/workflows/drafts/${draftKey()}/preview`, { method: 'post', data });
+    if (Array.isArray(saved?.runs)) {
+      runs.value = saved.runs;
+      preview.value = saved.runs.find(item => item.status === 'running') || null;
     }
+    running.value = true;
     await refresh();
     follow(preview.value);
   } catch (err) {
     notice.value = err.message;
     running.value = false;
+  } finally {
+    submitting.value = false;
   }
 }
 
 watch(durationWatch, () => { if (loaded.value) syncFrames(); });
 watch(() => props.apiJson, () => { loadFields(); }, { immediate: true });
+watch(() => props.refmod, async enabled => {
+  if (!enabled) return;
+  packs.value = await request('/refmods') || [];
+}, { immediate: true });
 watch(() => props.workflowId, () => { refresh().catch(() => {}); }, { immediate: true });
 onUnmounted(stop);
 </script>
@@ -325,8 +395,8 @@ onUnmounted(stop);
 .precheck-preview-progress { max-width: 420px; margin-top: 12px; }
 .precheck-preview-submitted { margin: 8px 0 0; padding-left: 18px; color: #5c6b62; font-size: 13px; }
 .precheck-preview-note { color: #5c6b62; }
-.precheck-preview-media img,
-.precheck-preview-media video { max-width: 480px; display: block; margin-top: 12px; }
+.precheck-preview-list { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; margin-top: 12px; }
+.precheck-preview-card { width: 220px; }
 @media (max-width: 800px) {
   .precheck-preview-form { grid-template-columns: 1fr; }
 }
