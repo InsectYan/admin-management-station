@@ -51,7 +51,7 @@
             <h2>{{ ch.title }}</h2>
             <el-button link type="primary" @click="$emit('edit-chapter', ch.id)">去这一章</el-button>
           </header>
-          <NovelMarkdown :source="ch.body" empty-text="（未撰写）" />
+          <NovelMarkdown prose :source="ch.body" empty-text="（未撰写）" />
         </section>
       </article>
     </div>

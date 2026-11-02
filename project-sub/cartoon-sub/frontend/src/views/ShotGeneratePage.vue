@@ -1,6 +1,6 @@
 <template>
-  <PageShell v-if="shot" :title="shot.description || '生成产物'">
-    <template #extra>
+  <PageShell v-if="shot" :title="plain ? '' : (shot.description || '生成产物')">
+    <template v-if="!plain" #extra>
       <el-button link type="primary" @click="back">← 返回</el-button>
       <el-button @click="openOutputs">查看产物</el-button>
     </template>
@@ -8,8 +8,13 @@
     <section class="cartoon-module">
       <p class="cartoon-module__hint">{{ chapterTitle }} · {{ shot.shot_size || '中景' }} / {{ shot.camera_move || '固定' }}</p>
       <el-form label-position="top">
-        <el-form-item label="正向提示词">
-          <el-input v-model="promptText" type="textarea" :rows="4" />
+        <el-form-item label="关联资产">
+          <el-select v-model="assetIds" multiple filterable placeholder="可多选角色、场景、道具" style="width: 100%">
+            <el-option-group v-for="group in assetGroups" :key="group.kind" :label="group.label">
+              <el-option v-for="item in group.items" :key="item.id" :label="item.name" :value="item.id" />
+            </el-option-group>
+          </el-select>
+          <p class="cartoon-module__hint">按选择顺序带上人物、场景、道具的描述。镜头提示词单独附在最后。生图和生视频都用这组条件。</p>
         </el-form-item>
         <el-form-item label="类型">
           <el-button :type="media === 'image' ? 'primary' : 'default'" @click="media = 'image'">生图</el-button>
@@ -21,16 +26,29 @@
           </el-select>
           <p class="cartoon-module__hint">生图列出文生图和改图。生视频列出文生视频、首尾帧、图生视频和带 [RefMod] 的工作流。</p>
         </el-form-item>
-        <el-form-item v-if="needsRefmod" label="本项目的包">
-          <el-select v-model="refmodIds" multiple placeholder="先选人物，再选场景" style="width: 100%">
-            <el-option-group label="人物">
-              <el-option v-for="item in characterPacks" :key="item.id" :label="`${item.name}（${item.image_count} 张）`" :value="item.id" />
-            </el-option-group>
-            <el-option-group label="场景">
-              <el-option v-for="item in scenePacks" :key="item.id" :label="`${item.name}（${item.image_count} 张）`" :value="item.id" />
-            </el-option-group>
-          </el-select>
-          <p class="cartoon-module__hint">按选择顺序对应 &lt;Picture 1&gt;。人物和场景一起算，最多 9 张图。包在左侧 RefMod 里按项目保存。</p>
+        <el-form-item v-if="needsRefmod" label="RefMod 对应">
+          <p v-if="!picturePlan.length" class="cartoon-module__hint">先在关联资产里选择已经绑了 RefMod 的角色、场景或道具。</p>
+          <div v-for="item in picturePlan" :key="item.id" class="cartoon-refmod-bind">
+            <p class="cartoon-module__hint">
+              <template v-if="item.count">{{ kindLabel(item.kind) }}「{{ item.name }}」 · {{ item.count }} 张</template>
+              <template v-else>{{ kindLabel(item.kind) }}「{{ item.name }}」还没有 RefMod，只写入提示词</template>
+            </p>
+            <button v-if="item.count" type="button" class="cartoon-refmod-strip" @click="openRefmodDetail(item)">
+              <img v-for="image in item.images.slice(0, 4)" :key="image.name" :src="image.url" alt="" />
+              <span v-if="item.images.length > 4">+{{ item.images.length - 4 }}</span>
+            </button>
+          </div>
+          <p class="cartoon-module__hint">点图片组查看全部参考图。生成时按这个顺序补上图片对应，不写进下面的提示词。</p>
+        </el-form-item>
+        <el-form-item label="镜头提示词">
+          <el-input v-model="promptText" type="textarea" :rows="4" />
+        </el-form-item>
+        <el-form-item v-if="selectedAssets.length" label="这次的生成条件">
+          <el-input :model-value="conditionPreview" type="textarea" :rows="6" readonly />
+        </el-form-item>
+        <el-form-item v-if="media === 'video'" label="时长（秒）">
+          <el-input-number v-model="durationSec" :min="1" :max="60" :step="1" :precision="0" />
+          <p class="cartoon-module__hint">按这条工作流的帧率写成帧数，并对齐到模型要求的倍数。生图不用填。</p>
         </el-form-item>
         <p v-if="contractError" class="cartoon-module__hint">{{ contractError }}</p>
         <el-form-item v-for="slot in slots" :key="slot.id" :label="slot.label">
@@ -55,6 +73,7 @@
         </el-form-item>
         <div class="cartoon-generate-actions">
           <el-button type="primary" :disabled="!canMake()" :loading="generating" @click="generate">生成</el-button>
+          <el-button v-if="plain" @click="openOutputs">查看产物</el-button>
           <RandomSeedField ref="seedField" v-model="seed" />
         </div>
         <p class="cartoon-module__hint">同一提示词、同一种子只会出同一张图或同一段视频。开关打开时，每次生成先换成一个 8 到 10 位的新种子。关掉后只使用手填的数字。</p>
@@ -62,24 +81,34 @@
         <p v-if="jobLive" class="cartoon-module__hint">{{ jobNote }}</p>
       </el-form>
     </section>
+    <el-dialog v-model="refmodDetailOpen" :title="refmodDetailTitle" width="720px" append-to-body>
+      <div v-if="refmodDetail" class="cartoon-refmod-detail">
+        <img v-for="image in refmodDetail.images" :key="image.name" :src="image.url" alt="" />
+      </div>
+    </el-dialog>
   </PageShell>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { computed, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import RandomSeedField from '../components/RandomSeedField.vue';
-import { request } from '../services/apiConfig.js';
+import { request, resolveApiBase } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 
+const props = defineProps({
+  plain: { type: Boolean, default: false },
+  shotIdOverride: { type: [ String, Number ], default: '' },
+});
 const route = useRoute();
 const router = useRouter();
 const shot = ref(null);
 const chapterTitle = ref('');
 const promptText = ref('');
 const media = ref('image');
+const durationSec = ref(5);
 const workflowId = ref(null);
 const contracts = ref({});
 const IMAGE_TYPES = new Set([ 'image/png', 'image/jpeg', 'image/webp' ]);
@@ -91,16 +120,51 @@ const seedField = ref(null);
 const notice = ref('');
 const noticeType = ref('info');
 const packs = ref([]);
-const refmodIds = ref([]);
+const projectAssets = ref([]);
+const assetIds = ref([]);
+const refmodDetailOpen = ref(false);
+const refmodDetail = ref(null);
 let pollTimer = null;
 
 const projectId = computed(() => route.params.id);
-const shotId = computed(() => route.params.shotId || route.query.shot);
+const shotId = computed(() => props.shotIdOverride || route.params.shotId || route.query.shot);
 const inWorkbench = computed(() => route.name === 'workbench');
 const choices = computed(() => (contracts.value.workflows || []).filter(item => item.media === media.value));
 const selected = computed(() => choices.value.find(item => item.id === workflowId.value) || null);
 const slots = computed(() => selected.value?.images || []);
 const needsRefmod = computed(() => String(selected.value?.name || '').includes('[RefMod]'));
+const visualAssets = computed(() => projectAssets.value.filter(item => [ 'character', 'scene', 'prop' ].includes(item.kind) && !item.disabled));
+const assetGroups = computed(() => [
+  { kind: 'character', label: '角色', items: visualAssets.value.filter(item => item.kind === 'character') },
+  { kind: 'scene', label: '场景', items: visualAssets.value.filter(item => item.kind === 'scene') },
+  { kind: 'prop', label: '道具', items: visualAssets.value.filter(item => item.kind === 'prop') },
+].filter(group => group.items.length));
+const selectedAssets = computed(() => assetIds.value
+  .map(id => visualAssets.value.find(item => item.id === id))
+  .filter(Boolean));
+const picturePlan = computed(() => {
+  let cursor = 1;
+  return selectedAssets.value.map(asset => {
+    const pack = packs.value.find(item => item.asset_id === asset.id);
+    const names = pack?.images?.length ? pack.images : (pack?.cover ? [ pack.cover ] : []);
+    const count = names.length;
+    const from = count ? cursor : 0;
+    if (count) cursor += count;
+    return {
+      id: asset.id,
+      name: asset.name,
+      kind: asset.kind,
+      count,
+      from,
+      to: count ? from + count - 1 : 0,
+      images: names.map(name => ({ name, url: packFileUrl(pack, name) })),
+    };
+  });
+});
+const refmodDetailTitle = computed(() => (
+  refmodDetail.value ? `${kindLabel(refmodDetail.value.kind)}「${refmodDetail.value.name}」` : 'RefMod'
+));
+const conditionPreview = computed(() => composeCondition(selectedAssets.value, promptText.value, false, packs.value));
 const submitKind = computed(() => {
   if (needsRefmod.value) return 'refmod';
   if (media.value === 'image') return slots.value.length ? 'edit' : 'image';
@@ -109,8 +173,51 @@ const submitKind = computed(() => {
   return 't2v';
 });
 const contractError = computed(() => contracts.value.error || '');
-const characterPacks = computed(() => packs.value.filter(item => item.kind !== 'scene'));
-const scenePacks = computed(() => packs.value.filter(item => item.kind === 'scene'));
+function packFileUrl(pack, name) {
+  return `${resolveApiBase()}/projects/${projectId.value}/refmods/${pack.id}/files/${encodeURIComponent(name)}`;
+}
+function openRefmodDetail(item) {
+  refmodDetail.value = item;
+  refmodDetailOpen.value = true;
+}
+function kindLabel(kind) {
+  return { character: '人物', scene: '场景', prop: '道具' }[kind] || '资产';
+}
+function assetBrief(asset) {
+  const bits = [];
+  const push = value => {
+    const text = String(value || '').trim();
+    if (text) bits.push(text);
+  };
+  push(asset.description);
+  if (asset.kind === 'character') {
+    push(asset.consistency_note);
+    if (String(asset.costume_note || '').trim()) bits.push(`服装：${String(asset.costume_note).trim()}`);
+    if (String(asset.expression_note || '').trim()) bits.push(`表情：${String(asset.expression_note).trim()}`);
+  }
+  if (asset.kind === 'scene') push(asset.scene_type);
+  if (asset.kind === 'prop') push(asset.prop_category);
+  return bits.join('。');
+}
+function composeCondition(assets, shotPrompt, pictures, packRows) {
+  const lines = [];
+  let cursor = 1;
+  assets.forEach(asset => {
+    const pack = packRows.find(item => item.asset_id === asset.id);
+    const count = pictures ? (pack?.image_count || 0) : 0;
+    const tags = [];
+    if (count) {
+      for (let index = 0; index < count; index += 1) tags.push(`<Picture ${cursor + index}>`);
+      cursor += count;
+    }
+    const brief = assetBrief(asset);
+    const head = tags.length ? `${tags.join(' ')} 是${kindLabel(asset.kind)}「${asset.name}」` : `${kindLabel(asset.kind)}「${asset.name}」`;
+    lines.push(brief ? `${head}。${brief}` : head);
+  });
+  const shot = String(shotPrompt || '').trim();
+  if (!lines.length) return shot;
+  return [ lines.join('\n'), shot ? `镜头：${shot}` : '' ].filter(Boolean).join('\n');
+}
 
 function workflowLabel(item) {
   const duplicated = choices.value.filter(row => row.name === item.name).length > 1;
@@ -203,11 +310,17 @@ async function load() {
   const found = (detail.shots || []).find(item => String(item.id) === String(shotId.value));
   if (!found) {
     ElMessage.error('分镜不存在');
-    back();
+    if (!props.plain) back();
     return;
   }
   shot.value = found;
+  projectAssets.value = detail.assets || [];
+  const bound = (detail.bindings || [])
+    .filter(item => String(item.shot_id) === String(found.id))
+    .map(item => item.asset_id);
+  assetIds.value = bound.filter(id => projectAssets.value.some(asset => asset.id === id && [ 'character', 'scene', 'prop' ].includes(asset.kind) && !asset.disabled));
   promptText.value = found.prompt?.positive_zh || '';
+  if (Number(found.duration_ms) > 0) durationSec.value = Math.min(60, Math.max(1, Math.round(found.duration_ms / 1000)));
   const chapter = (detail.imports || []).find(item => String(item.id) === String(found.import_id));
   chapterTitle.value = chapter?.chapter_title || '未关联快照';
   try {
@@ -230,13 +343,17 @@ async function generate() {
     ElMessage.error('请选择工作流');
     return;
   }
-  if (needsRefmod.value && !refmodIds.value.length) {
-    ElMessage.error('请选择本项目的人物包或场景包');
+  if (needsRefmod.value && !picturePlan.value.some(item => item.count)) {
+    ElMessage.error('请选择已经绑了 RefMod 的角色、场景或道具');
     return;
   }
   const missing = slots.value.filter(slot => !files[slot.id]?.data_base64);
   if (missing.length) {
     ElMessage.error(`请上传${missing.map(slot => slot.label).join('、')}`);
+    return;
+  }
+  if (media.value === 'video' && !(Number(durationSec.value) >= 1)) {
+    ElMessage.warning('请填写视频时长');
     return;
   }
   const nextSeed = seedField.value?.takeSeed();
@@ -258,7 +375,8 @@ async function generate() {
           data_base64: files[slot.id].data_base64,
         })),
         workflow_id: workflowId.value,
-        refmod_ids: needsRefmod.value ? refmodIds.value : [],
+        asset_ids: assetIds.value,
+        duration_sec: media.value === 'video' ? Number(durationSec.value) : undefined,
         seed: nextSeed,
       },
     });
@@ -308,7 +426,7 @@ watch(workflowId, resetFiles);
 watch(slots, next => {
   (next || []).forEach(slot => ensureList(slot.id));
 }, { immediate: true });
-onMounted(load);
+watch(shotId, (id) => { if (id) load(); }, { immediate: true });
 onUnmounted(stopPoll);
 </script>
 
@@ -317,6 +435,35 @@ onUnmounted(stopPoll);
 .cartoon-image-upload { display: block; }
 .cartoon-generate-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cartoon-job-progress { max-width: 420px; margin-top: 12px; }
+.cartoon-refmod-bind + .cartoon-refmod-bind { margin-top: 8px; }
+.cartoon-refmod-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.cartoon-refmod-strip img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.cartoon-refmod-strip span { color: #5c6b62; }
+.cartoon-refmod-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.cartoon-refmod-detail img {
+  width: 160px;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 8px;
+}
 .cartoon-image-upload :deep(.el-upload-list--picture .el-upload-list__item) {
   border-radius: 10px;
   border-color: rgba(47, 138, 91, 0.16);

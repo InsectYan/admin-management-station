@@ -103,7 +103,12 @@ class GenerateService extends Service {
     if (!await this.ctx.service.project.panelReady(projectId)) this.ctx.throw(400, '面板还没填完');
     const text = String(payload.positive_zh || '').trim();
     if (!text) this.ctx.throw(400, '需要一句提示词');
-    const compliance = await complianceCheck(this.ctx, text);
+    const assetIds = (Array.isArray(payload.asset_ids) ? payload.asset_ids : [])
+      .map(id => Number(id))
+      .filter(id => id > 0);
+    const composed = await this.ctx.service.refmod.composePrompt(projectId, assetIds, text, kind === 'refmod');
+    const positive = composed.positive;
+    const compliance = await complianceCheck(this.ctx, positive);
     const hit = compliance?.hits?.[0];
     if (hit) this.ctx.throw(400, `命中规则 ${hit.id}`);
     const project = await this.ctx.model.Project.findByPk(projectId);
@@ -120,13 +125,19 @@ class GenerateService extends Service {
       if (usage && Number(usage.call_count) >= cap) this.ctx.throw(400, '超过成本上限');
     }
     await this.ctx.service.project.updateShot(shot.id, { positive_zh: text });
-    const refmodIds = (Array.isArray(payload.refmod_ids) ? payload.refmod_ids : [])
-      .map(id => Number(id))
-      .filter(id => id > 0);
+    const refmodIds = kind === 'refmod' ? composed.refmodIds : [];
     const workflowOverride = Number(payload.workflow_id) || 0;
+    const videoKind = [ 'video', 'i2v', 't2v', 'refmod' ].includes(kind);
+    let durationSec;
+    if (videoKind) {
+      const seconds = Number(payload.duration_sec);
+      if (!Number.isFinite(seconds) || seconds <= 0) this.ctx.throw(400, '请填写视频时长');
+      if (seconds > 60) this.ctx.throw(400, '时长不能超过 60 秒');
+      durationSec = seconds;
+    }
     if (kind === 'refmod') {
       if (!workflowOverride) this.ctx.throw(400, '请选择一条 [RefMod] 工作流');
-      if (!refmodIds.length) this.ctx.throw(400, '请选择本项目的人物包或场景包');
+      if (!refmodIds.length) this.ctx.throw(400, '请选择已经绑了 RefMod 的角色、场景或道具');
       await this.assertRefmodWorkflow(workflowOverride);
     }
 
@@ -149,10 +160,12 @@ class GenerateService extends Service {
       detail: { project_id: Number(projectId), shot_id: shot.id, kind },
     });
     const seed = Number(payload.seed);
-    return this.execute(task, text, Array.isArray(payload.images) ? payload.images : [], {
+    if (durationSec) await shot.update({ duration_ms: Math.round(durationSec * 1000) });
+    return this.execute(task, positive, Array.isArray(payload.images) ? payload.images : [], {
       refmodIds,
       workflowOverride,
       seed: Number.isSafeInteger(seed) && seed >= 0 ? seed : undefined,
+      durationSec,
     });
   }
 
@@ -304,11 +317,17 @@ class GenerateService extends Service {
     return result;
   }
 
-  async bindWorkflow(workflowId, positive, images, refImages = [], seed) {
+  async bindWorkflow(workflowId, positive, images, refImages = [], seed, durationSec) {
     const res = await fetch(`${this.precheckBase()}/api/workflows/${workflowId}/bind`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ positive, images: images || [], ref_images: refImages, seed }),
+      body: JSON.stringify({
+        positive,
+        images: images || [],
+        ref_images: refImages,
+        seed,
+        duration_sec: durationSec,
+      }),
       signal: AbortSignal.timeout(60000),
     });
     const body = await res.json().catch(() => ({}));
@@ -383,7 +402,7 @@ class GenerateService extends Service {
 
     let graph;
     try {
-      graph = await this.bindWorkflow(workflowId, text, images, refImages, options.seed);
+      graph = await this.bindWorkflow(workflowId, text, images, refImages, options.seed, options.durationSec);
     } catch (err) {
       await task.update({ status: 'failed', error_message: err.message, precheck_workflow_id: workflowId });
       return task.reload();

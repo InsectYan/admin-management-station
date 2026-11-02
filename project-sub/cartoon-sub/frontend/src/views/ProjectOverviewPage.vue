@@ -79,7 +79,9 @@
           <el-empty v-if="!liveImports.length" description="还没有章节快照" />
           <article v-for="item in liveImports" :key="item.id" class="cartoon-overview__snap">
             <strong>{{ item.chapter_title || '未命名章节' }}</strong>
-            <p>{{ excerpt(item.body) }}</p>
+            <div class="cartoon-overview__snap-body">
+              <CartoonMarkdown prose :source="item.body" empty-text="还没有正文" />
+            </div>
           </article>
         </section>
 
@@ -136,6 +138,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import NovelBriefPanel from '../components/NovelBriefPanel.vue';
+import CartoonMarkdown from '../components/CartoonMarkdown.vue';
 import CopyBlocks from '../components/CopyBlocks.vue';
 import BatchPanel from '../components/BatchPanel.vue';
 import TypePanel from '../components/TypePanel.vue';
@@ -195,10 +198,6 @@ const boardShots = computed(() => {
   return shots.filter(shot => String(shot.import_id) === String(current.importId));
 });
 
-function excerpt(text) {
-  const value = String(text || '').replace(/\s+/g, ' ').trim();
-  return value.length > 180 ? `${value.slice(0, 180)}…` : value;
-}
 function ensureBoard() {
   const items = boardItems.value;
   if (!items.length) {
@@ -333,12 +332,16 @@ onMounted(async () => {
 .cartoon-overview__facts dt { color: #5c6b62; font-size: 12px; }
 .cartoon-overview__facts dd { margin: 4px 0 0; }
 .cartoon-overview__snap { margin-bottom: 12px; }
-.cartoon-overview__snap p { margin: 6px 0 0; color: #5c6b62; }
+.cartoon-overview__snap-body {
+  margin-top: 6px;
+  max-height: 8.4em;
+  overflow: hidden;
+}
 .cartoon-board { display: flex; gap: 16px; align-items: flex-start; width: 100%; min-width: 0; }
 .cartoon-board__snaps { flex: 0 0 240px; display: flex; flex-direction: column; gap: 8px; }
 .cartoon-board__label { margin: 0; color: #5c6b62; font-size: 13px; }
 .cartoon-board__snap {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
   padding: 10px 12px; text-align: left; border: 1px solid rgba(47, 138, 91, 0.25);
   border-radius: 10px; background: rgba(255, 255, 255, 0.72); cursor: pointer;
 }

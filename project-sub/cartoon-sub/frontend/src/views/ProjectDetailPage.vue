@@ -68,8 +68,11 @@
           <strong>{{ item.chapter_title || '未命名章节' }}</strong>
           <el-tag v-if="item.legacy_unpinned" size="small">未钉扎</el-tag>
           <el-tag v-else-if="item.package_version" size="small" type="success">故事包 v{{ item.package_version }}</el-tag>
-          <p>{{ item.body }}</p>
-          <p v-if="item.script_data && item.script_data.summary">{{ item.script_data.summary }}</p>
+          <div class="cartoon-snap__body" :class="{ 'is-open': snapOpen[item.id] }">
+            <CartoonMarkdown prose :source="item.body" empty-text="还没有正文" />
+            <CartoonMarkdown v-if="item.script_data && item.script_data.summary" :source="item.script_data.summary" />
+          </div>
+          <el-button link type="primary" @click="snapOpen[item.id] = !snapOpen[item.id]">{{ snapOpen[item.id] ? '收起' : '展开' }}</el-button>
           <div class="cartoon-snap__actions">
             <el-button type="primary" :disabled="!canMake()" :loading="draftingId === item.id" @click="draft(item)">生成建议</el-button>
             <el-button
@@ -91,27 +94,32 @@
         <aside class="cartoon-board__snaps">
           <p class="cartoon-board__label">章节快照</p>
           <el-empty v-if="!boardItems.length" description="还没有快照" />
-          <button
+          <div
             v-for="item in boardItems"
             :key="item.key"
-            type="button"
             class="cartoon-board__snap"
             :class="{ 'is-active': item.key === selectedImportKey }"
+            role="button"
+            tabindex="0"
             @click="selectedImportKey = item.key"
+            @keydown.enter="selectedImportKey = item.key"
           >
             <span class="cartoon-board__snap-title">{{ item.title }}</span>
             <el-tag v-if="item.deleted" type="danger" size="small">已删除</el-tag>
             <el-tag v-else-if="item.removed" type="warning" size="small">上游已移除</el-tag>
             <span class="cartoon-board__snap-count">{{ item.count }} 镜</span>
-          </button>
+            <el-button
+              v-if="item.deleted || item.importId == null"
+              link
+              type="danger"
+              :disabled="!canMake()"
+              @click.stop="removeShotGroup(item)"
+            >删除</el-button>
+          </div>
         </aside>
         <div class="cartoon-board__main">
-          <div v-if="selectedBoard" class="cartoon-board__head">
-            <strong>{{ selectedBoard.title }}</strong>
-            <el-tag v-if="selectedBoard.deleted" type="danger" size="small">已删除</el-tag>
-            <el-tag v-else-if="selectedBoard.removed" type="warning" size="small">上游已移除</el-tag>
+          <div v-if="selectedBoard && selectedBoard.raw" class="cartoon-board__head">
             <el-button
-              v-if="selectedBoard.raw"
               type="primary"
               plain
               :disabled="!canMake()"
@@ -119,14 +127,13 @@
               @click="draft(selectedBoard.raw)"
             >生成建议</el-button>
             <el-button
-              v-if="selectedBoard.raw"
               type="primary"
               :disabled="!canMake() || pendingDraft?.importId !== selectedBoard.raw.id"
               :loading="applyingId === selectedBoard.raw.id"
               @click="applyDraft(selectedBoard.raw)"
             >写入生产稿</el-button>
           </div>
-          <p v-else class="cartoon-module__hint">先在左侧选择一条章节快照。</p>
+          <p v-if="!selectedBoard" class="cartoon-module__hint">先在左侧选择一条章节快照。</p>
       <el-form v-if="selectedBoard" label-position="top" class="cartoon-entry-form">
         <div class="cartoon-entry-grid">
           <el-form-item label="景别">
@@ -183,10 +190,11 @@
             <el-input :model-value="row.prompt?.negative_zh || ''" type="textarea" :rows="2" @update:model-value="setPrompt(row, 'negative_zh', $event)" @blur="saveShot(row)" />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="168" fixed="right">
+        <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" :disabled="!canMake()" @click.stop="openPromote(row)">提升台词</el-button>
-            <el-button link type="primary" @click.stop="openOutputs(row)">查看产物</el-button>
+            <el-button link type="primary" @click.stop="openOutputs(row)">查看</el-button>
+            <el-button link type="primary" :disabled="!canMake()" @click.stop="openGenerate(row)">生成</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -194,6 +202,9 @@
       </div>
     </section>
 
+    <el-drawer v-model="generateOpen" title="生成" size="560px" append-to-body>
+      <ShotGeneratePage v-if="generateOpen" plain :shot-id-override="generateShotId" />
+    </el-drawer>
     <el-dialog v-model="promoteVisible" title="提升到叙事工作台" width="520px">
       <p class="cartoon-module__hint">原句必须和钉扎版本里的句子一致。应用发生在叙事工作台，这里的生产稿不会被改回去。</p>
       <el-form label-position="top">
@@ -215,12 +226,17 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import FlowSteps from '../components/FlowSteps.vue';
 import NovelBriefPanel from '../components/NovelBriefPanel.vue';
+import CartoonMarkdown from '../components/CartoonMarkdown.vue';
 import CopyBlocks from '../components/CopyBlocks.vue';
+import ShotGeneratePage from './ShotGeneratePage.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 import { isLocalType } from '../lib/contentTypes.js';
 
-const props = defineProps({ forcedStep: { type: Number, default: 0 } });
+const props = defineProps({
+  forcedStep: { type: Number, default: 0 },
+  launchShotId: { type: String, default: '' },
+});
 const route = useRoute();
 const router = useRouter();
 const steps = [
@@ -272,6 +288,9 @@ const draftingId = ref(null);
 const applyingId = ref(null);
 const pendingDraft = ref(null);
 const selectedImportKey = ref('');
+const snapOpen = reactive({});
+const generateOpen = ref(false);
+const generateShotId = ref('');
 const notice = ref('');
 const noticeType = ref('info');
 
@@ -324,11 +343,30 @@ function hasOverride(row, field) {
   return Array.isArray(row.overridden_fields) && row.overridden_fields.includes(field);
 }
 function openGenerate(row) {
-  if (embedded.value) {
-    router.replace({ query: { node: 'generate', shot: String(row.id) } });
+  generateShotId.value = String(row.id);
+  generateOpen.value = true;
+}
+async function removeShotGroup(item) {
+  try {
+    const extra = item.importId == null ? '' : '左侧这条快照也会一并去掉。';
+    await ElMessageBox.confirm(
+      `删除「${item.title}」的 ${item.count} 条分镜？分镜上的提示词、资产绑定、配音和产物会一起删除。${extra}`,
+      '删除分镜',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    );
+  } catch {
     return;
   }
-  router.push({ path: `/projects/${route.params.id}/shots/${row.id}/generate`, query: { from: 'work' } });
+  try {
+    await request(`/projects/${route.params.id}/shots/purge`, {
+      method: 'post',
+      data: { import_id: item.importId },
+    });
+    await load();
+    ElMessage.success(item.importId == null ? '已删除未关联的分镜和产物' : '已删除快照、分镜和产物');
+  } catch (err) {
+    ElMessage.error(err.message);
+  }
 }
 function openOutputs(row) {
   if (embedded.value) {
@@ -549,6 +587,11 @@ async function addShot() {
   shot.positive_zh = '';
   await load();
 }
+watch(() => props.launchShotId, (id) => {
+  if (!id) return;
+  generateShotId.value = id;
+  generateOpen.value = true;
+}, { immediate: true });
 onMounted(async () => {
   const [catalog, metaRes] = await Promise.all([
     request('/novel-catalog').catch(() => []),
@@ -576,6 +619,8 @@ onMounted(async () => {
   row-gap: 0;
 }
 .cartoon-snap { margin-bottom: 12px; }
+.cartoon-snap__body { max-height: 100px; overflow: hidden; }
+.cartoon-snap__body.is-open { max-height: none; }
 .cartoon-snap__actions {
   display: flex;
   flex-wrap: wrap;
@@ -592,7 +637,6 @@ onMounted(async () => {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  width: 100%;
   padding: 10px 12px;
   text-align: left;
   border: 1px solid rgba(47, 138, 91, 0.25);
@@ -604,7 +648,7 @@ onMounted(async () => {
 .cartoon-board__snap-title { flex: 1 1 100%; font-weight: 600; }
 .cartoon-board__snap-count { color: #5c6b62; font-size: 12px; }
 .cartoon-board__main { flex: 1; min-width: 0; overflow: hidden; }
-.cartoon-board__head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.cartoon-board__head { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 12px; }
 @media (max-width: 900px) {
   .cartoon-setting-grid { grid-template-columns: 1fr; }
 }

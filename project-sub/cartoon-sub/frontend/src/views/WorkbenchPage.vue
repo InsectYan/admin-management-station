@@ -26,11 +26,11 @@
         </div>
         <p v-if="customNote" class="cartoon-module__hint">{{ customNote }}</p>
       </section>
-      <ProjectDetailPage v-if="scriptStep" :forced-step="scriptStep" />
+      <ProjectDetailPage v-if="scriptStep" :forced-step="scriptStep" :launch-shot-id="launchShotId" />
       <section v-else-if="node === 'assets'" class="cartoon-module cartoon-workbench__note">
         <h3 class="cartoon-module__title">资产</h3>
-        <p class="cartoon-module__hint">角色登记编号、三视图路径、表情、服装和 LoRA 引用，这里不生成图片。场景可以登记多角度路径。道具选择分类。配音登记语种和发音人。字幕样式和转场只记名称和说明。停用后记录还在。</p>
-        <el-form label-position="top" class="cartoon-entry-form" @submit.prevent="addAsset">
+        <p class="cartoon-module__hint">图片直接上传，保存后记下访问链接。角色点表格后可以改人物编号；新增时不填编号，保存时由系统生成。道具选择分类。配音登记语种和发音人。字幕样式和转场只记名称和说明。停用后记录还在。RefMod 要先点选已保存的角色、场景或道具，再新增，一份资产一份。</p>
+        <el-form label-position="top" class="cartoon-entry-form" @submit.prevent="createAsset">
           <div class="cartoon-entry-grid">
             <el-form-item label="名称"><el-input v-model="assetForm.name" /></el-form-item>
             <el-form-item label="类型">
@@ -50,12 +50,17 @@
             </el-form-item>
             <template v-if="assetForm.kind === 'character'">
               <p class="cartoon-entry-label">角色</p>
-              <el-form-item label="叙事人物编号"><el-input v-model="assetForm.character_id" /></el-form-item>
+              <el-form-item v-if="editingAssetId" label="人物编号"><el-input v-model="assetForm.character_id" /></el-form-item>
               <el-form-item label="一致性备注"><el-input v-model="assetForm.consistency_note" /></el-form-item>
-              <el-form-item label="正面图路径"><el-input v-model="assetForm.front_path" /></el-form-item>
-              <el-form-item label="侧面图路径"><el-input v-model="assetForm.side_path" /></el-form-item>
-              <el-form-item label="背面图路径"><el-input v-model="assetForm.back_path" /></el-form-item>
-              <el-form-item label="参考图路径"><el-input v-model="assetForm.reference_path" /></el-form-item>
+              <el-form-item label="正面图"><AssetImageField v-model="assetForm.front_path" :project-id="projectId" /></el-form-item>
+              <el-form-item label="侧面图"><AssetImageField v-model="assetForm.side_path" :project-id="projectId" /></el-form-item>
+              <el-form-item label="背面图"><AssetImageField v-model="assetForm.back_path" :project-id="projectId" /></el-form-item>
+              <el-form-item class="is-wide" label="参考图">
+                <div class="cartoon-upload-row">
+                  <AssetImageField v-model="assetForm.reference_path" :project-id="projectId" />
+                  <el-button @click="openRefmod">新增refmod</el-button>
+                </div>
+              </el-form-item>
               <el-form-item label="表情"><el-input v-model="assetForm.expression_note" /></el-form-item>
               <el-form-item label="服装"><el-input v-model="assetForm.costume_note" /></el-form-item>
               <el-form-item class="is-wide" label="LoRA 引用"><el-input v-model="assetForm.lora_ref" /></el-form-item>
@@ -67,8 +72,11 @@
                   <el-option v-for="item in sceneTypes" :key="item" :label="item" :value="item" />
                 </el-select>
               </el-form-item>
-              <el-form-item label="多角度路径">
-                <el-input v-model="assetForm.angle_paths" type="textarea" :rows="2" placeholder="一行一个路径" />
+              <el-form-item class="is-wide" label="多角度图片">
+                <div class="cartoon-upload-row">
+                  <AssetImageField v-model="assetForm.angle_paths" :project-id="projectId" multiple />
+                  <el-button @click="openRefmod">新增refmod</el-button>
+                </div>
               </el-form-item>
             </template>
             <template v-else-if="assetForm.kind === 'prop'">
@@ -77,6 +85,9 @@
                 <el-select v-model="assetForm.prop_category" placeholder="选择分类" style="width: 100%">
                   <el-option v-for="item in propCategories" :key="item" :label="item" :value="item" />
                 </el-select>
+              </el-form-item>
+              <el-form-item label="RefMod">
+                <el-button @click="openRefmod">新增refmod</el-button>
               </el-form-item>
             </template>
             <template v-else-if="assetForm.kind === 'voice'">
@@ -91,12 +102,33 @@
               <el-form-item class="is-wide" label="文件路径"><el-input v-model="assetForm.reference_path" /></el-form-item>
             </template>
           </div>
+          <RefModPacks
+            variant="cards"
+            :project-id="projectId"
+            :revision="refmodRevision"
+            :asset-id="editingAssetId"
+            :asset-name="refmodAsset?.name || ''"
+            :asset-kind="refmodAsset?.kind || ''"
+          />
           <div class="cartoon-entry-actions">
-            <el-button type="primary" @click="addAsset">添加</el-button>
+            <el-button type="primary" @click="createAsset">新增</el-button>
+            <el-button @click="saveAsset">保存</el-button>
           </div>
         </el-form>
+        <el-drawer v-model="refmodOpen" title="新增 RefMod" size="520px" append-to-body>
+          <RefModPacks
+            v-if="refmodOpen"
+            :key="editingAssetId"
+            variant="form"
+            :project-id="projectId"
+            :asset-id="editingAssetId"
+            :asset-name="refmodAsset?.name || ''"
+            :asset-kind="refmodAsset?.kind || ''"
+            @changed="refmodRevision += 1"
+          />
+        </el-drawer>
         <el-empty v-if="!assets.length" description="还没有资产" />
-        <el-table v-else :data="assets" size="small">
+        <el-table v-else :data="assets" size="small" highlight-current-row class="cartoon-asset-table" @row-click="fillAsset">
           <el-table-column label="类型" width="80">
             <template #default="{ row }">{{ assetKind(row.kind) }}</template>
           </el-table-column>
@@ -116,9 +148,10 @@
           <el-table-column label="状态" width="90">
             <template #default="{ row }">{{ row.disabled ? '已停用' : '使用中' }}</template>
           </el-table-column>
-          <el-table-column label="" width="80">
+          <el-table-column label="" width="120">
             <template #default="{ row }">
-              <el-button v-if="!row.disabled" link type="danger" @click="disableAsset(row)">停用</el-button>
+              <el-button v-if="!row.disabled" link type="danger" @click.stop="disableAsset(row)">停用</el-button>
+              <el-button link type="danger" @click.stop="removeAsset(row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -184,8 +217,7 @@
           <el-table-column prop="node" label="回到" width="100" />
         </el-table>
       </section>
-      <RefModPacks v-else-if="node === 'refmods'" :project-id="projectId" />
-      <template v-else-if="node === 'generate' || node === 'preview'">
+      <template v-else-if="node === 'preview'">
         <section v-if="!shotQuery" class="cartoon-module cartoon-workbench__note">
           <h3 class="cartoon-module__title">选择分镜</h3>
           <el-empty v-if="!shots.length" description="还没有分镜">
@@ -199,8 +231,7 @@
             <el-table-column prop="camera_move" label="运镜" width="100" />
           </el-table>
         </section>
-        <ShotGeneratePage v-else-if="node === 'generate'" :key="`generate-${shotQuery}`" />
-        <ShotOutputsPage v-else :key="`preview-${shotQuery}`" />
+        <ShotOutputsPage v-if="shotQuery" :key="`preview-${shotQuery}`" />
       </template>
       <template v-else-if="node === 'compose' || node === 'export'">
         <ExportSpecs v-if="node === 'export'" class="cartoon-workbench__note" :project-id="projectId" />
@@ -222,12 +253,13 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { ElMessageBox } from 'element-plus';
 import ProjectDetailPage from './ProjectDetailPage.vue';
-import ShotGeneratePage from './ShotGeneratePage.vue';
 import ShotOutputsPage from './ShotOutputsPage.vue';
 import ProjectEditPage from './ProjectEditPage.vue';
 import ExportSpecs from '../components/ExportSpecs.vue';
 import RefModPacks from '../components/RefModPacks.vue';
+import AssetImageField from '../components/AssetImageField.vue';
 import { request } from '../services/apiConfig.js';
 import { isLocalType, typeLabel } from '../lib/contentTypes.js';
 
@@ -236,8 +268,6 @@ const nodes = [
   { id: 'script', title: '脚本' },
   { id: 'storyboard', title: '分镜' },
   { id: 'assets', title: '资产' },
-  { id: 'refmods', title: 'RefMod' },
-  { id: 'generate', title: '生成' },
   { id: 'voice', title: '配音' },
   { id: 'subtitle', title: '字幕' },
   { id: 'review', title: '初审' },
@@ -256,6 +286,19 @@ const shots = ref([]);
 const error = ref('');
 const sceneTypes = [ '室内', '室外', '城市', '自然', '古风', '品牌' ];
 const propCategories = [ '服饰', '器物', '食物', '文书', '交通', '其他' ];
+const editingAssetId = ref(null);
+const refmodOpen = ref(false);
+const refmodRevision = ref(0);
+const refmodAsset = computed(() => assets.value.find(item => item.id === editingAssetId.value) || null);
+function openRefmod() {
+  if (!refmodAsset.value || ![ 'character', 'scene', 'prop' ].includes(refmodAsset.value.kind)) {
+    actionNote.value = '先在表格里点选已保存的角色、场景或道具，再新增 RefMod';
+    return;
+  }
+  actionNote.value = '';
+  refmodOpen.value = true;
+}
+const launchShotId = ref('');
 const assetForm = reactive({
   name: '', kind: 'character', description: '', reference_path: '', character_id: '', voice_key: '', speech_rate: '', emotion: '',
   consistency_note: '', scene_type: '', front_path: '', side_path: '', back_path: '', expression_note: '', costume_note: '', lora_ref: '',
@@ -277,7 +320,8 @@ const nodeTitle = computed(() => nodes.find(item => item.id === node.value)?.tit
 
 const projectId = computed(() => route.params.id);
 const node = computed(() => {
-  const value = String(route.query.node || episode.value?.current_node || 'input');
+  const raw = String(route.query.node || episode.value?.current_node || 'input');
+  const value = raw === 'generate' ? 'storyboard' : (raw === 'refmods' ? 'assets' : raw);
   return nodes.some(item => item.id === value) ? value : 'input';
 });
 const scriptStep = computed(() => stepByNode[node.value] || 0);
@@ -340,35 +384,34 @@ function nodeMark(id) {
   }
   return 'idle';
 }
-async function addAsset() {
-  const name = assetForm.name.trim();
-  if (!name) return;
-  await request(`/projects/${projectId.value}/assets`, {
-    method: 'post',
-    data: {
-      name,
-      kind: assetForm.kind,
-      description: assetForm.description,
-      reference_path: assetForm.reference_path,
-      character_id: assetForm.character_id,
-      voice_key: assetForm.voice_key,
-      speech_rate: assetForm.speech_rate,
-      emotion: assetForm.emotion,
-      consistency_note: assetForm.consistency_note,
-      scene_type: assetForm.scene_type,
-      front_path: assetForm.front_path,
-      side_path: assetForm.side_path,
-      back_path: assetForm.back_path,
-      expression_note: assetForm.expression_note,
-      costume_note: assetForm.costume_note,
-      lora_ref: assetForm.lora_ref,
-      angle_paths: assetForm.angle_paths,
-      prop_category: assetForm.prop_category,
-      voice_lang: assetForm.voice_lang,
-      speaker_name: assetForm.speaker_name,
-    },
-  });
+function assetPayload(includeCharacterId) {
+  return {
+    name: assetForm.name.trim(),
+    kind: assetForm.kind,
+    description: assetForm.description,
+    reference_path: assetForm.reference_path,
+    character_id: includeCharacterId ? assetForm.character_id : '',
+    voice_key: assetForm.voice_key,
+    speech_rate: assetForm.speech_rate,
+    emotion: assetForm.emotion,
+    consistency_note: assetForm.consistency_note,
+    scene_type: assetForm.scene_type,
+    front_path: assetForm.front_path,
+    side_path: assetForm.side_path,
+    back_path: assetForm.back_path,
+    expression_note: assetForm.expression_note,
+    costume_note: assetForm.costume_note,
+    lora_ref: assetForm.lora_ref,
+    angle_paths: assetForm.angle_paths,
+    prop_category: assetForm.prop_category,
+    voice_lang: assetForm.voice_lang,
+    speaker_name: assetForm.speaker_name,
+  };
+}
+function resetAssetForm() {
+  editingAssetId.value = null;
   assetForm.name = '';
+  assetForm.kind = 'character';
   assetForm.description = '';
   assetForm.reference_path = '';
   assetForm.character_id = '';
@@ -387,7 +430,58 @@ async function addAsset() {
   assetForm.prop_category = '';
   assetForm.voice_lang = '';
   assetForm.speaker_name = '';
-  await load();
+}
+function fillAsset(row) {
+  editingAssetId.value = row.id;
+  assetForm.name = row.name || '';
+  assetForm.kind = row.kind || 'character';
+  assetForm.description = row.description || '';
+  assetForm.reference_path = row.reference_path || '';
+  assetForm.character_id = row.character_id || '';
+  assetForm.voice_key = row.voice_key || '';
+  assetForm.speech_rate = row.speech_rate || '';
+  assetForm.emotion = row.emotion || '';
+  assetForm.consistency_note = row.consistency_note || '';
+  assetForm.scene_type = row.scene_type || '';
+  assetForm.front_path = row.front_path || '';
+  assetForm.side_path = row.side_path || '';
+  assetForm.back_path = row.back_path || '';
+  assetForm.expression_note = row.expression_note || '';
+  assetForm.costume_note = row.costume_note || '';
+  assetForm.lora_ref = row.lora_ref || '';
+  assetForm.angle_paths = row.angle_paths || '';
+  assetForm.prop_category = row.prop_category || '';
+  assetForm.voice_lang = row.voice_lang || '';
+  assetForm.speaker_name = row.speaker_name || '';
+}
+async function createAsset() {
+  if (!assetForm.name.trim()) return;
+  try {
+    const created = await request(`/projects/${projectId.value}/assets`, { method: 'post', data: assetPayload(false) });
+    resetAssetForm();
+    await load();
+    actionNote.value = created?.character_id ? `已新增，人物编号 ${created.character_id}` : '已新增';
+  } catch (err) {
+    actionNote.value = err.message || '没有新增';
+  }
+}
+async function saveAsset() {
+  if (!editingAssetId.value) {
+    actionNote.value = '先点一条资产，再保存修改';
+    return;
+  }
+  if (!assetForm.name.trim()) return;
+  try {
+    const saved = await request(`/projects/${projectId.value}/assets/${editingAssetId.value}`, {
+      method: 'put',
+      data: assetPayload(true),
+    });
+    if (saved?.character_id) assetForm.character_id = saved.character_id;
+    await load();
+    actionNote.value = '资产已保存';
+  } catch (err) {
+    actionNote.value = err.message || '没有保存';
+  }
 }
 async function runAction(work) {
   actionNote.value = '';
@@ -459,9 +553,31 @@ async function disableAsset(row) {
   await request(`/projects/${projectId.value}/assets/${row.id}/disable`, { method: 'post' });
   await load();
 }
+async function removeAsset(row) {
+  try {
+    await ElMessageBox.confirm(
+      `删除「${row.name}」会同时去掉它的 RefMod、上传图片和镜头绑定。已经生成的分镜画面会留着。`,
+      '删除资产',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  try {
+    await request(`/projects/${projectId.value}/assets/${row.id}`, { method: 'delete' });
+    if (editingAssetId.value === row.id) {
+      resetAssetForm();
+      refmodOpen.value = false;
+    }
+    actionNote.value = '已删除资产和对应的 RefMod、图片';
+    await load();
+  } catch (err) {
+    actionNote.value = err.message || '没有删除';
+  }
+}
 function selectNode(id) {
   const query = { node: id };
-  if ((id === 'generate' || id === 'preview') && route.query.shot) query.shot = String(route.query.shot);
+  if (id === 'preview' && route.query.shot) query.shot = String(route.query.shot);
   router.replace({ query });
 }
 function pickShot(row) {
@@ -508,6 +624,16 @@ async function load() {
   await persistNode(node.value);
 }
 
+watch(() => route.query.node, (value) => {
+  if (value === 'generate') {
+    launchShotId.value = String(route.query.shot || '');
+    const query = { node: 'storyboard' };
+    if (launchShotId.value) query.shot = launchShotId.value;
+    router.replace({ query });
+  } else if (value === 'refmods') {
+    router.replace({ query: { node: 'assets' } });
+  }
+}, { immediate: true });
 watch(node, (value) => {
   actionNote.value = '';
   persistNode(value);
@@ -524,17 +650,19 @@ onMounted(() => {
 .cartoon-workbench {
   display: grid;
   grid-template-columns: 196px minmax(0, 1fr) 168px;
-  min-height: 100%;
-  align-items: start;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  align-items: stretch;
 }
 .cartoon-workbench__nav {
-  position: sticky;
-  top: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin: 16px 12px;
   padding: 10px;
+  min-height: 0;
+  overflow: auto;
   border-radius: 10px;
   background: rgba(240, 247, 242, 0.72);
   border: 1px solid rgba(47, 138, 91, 0.12);
@@ -580,8 +708,8 @@ onMounted(() => {
 .cartoon-workbench__dot.is-bad { background: #c44b4b; }
 .cartoon-workbench__dot.is-run { background: #3b7fc4; }
 .cartoon-workbench__side {
-  position: sticky;
-  top: 0;
+  min-height: 0;
+  overflow: auto;
   padding: 16px 12px;
   color: var(--cartoon-color-muted);
   font-size: 13px;
@@ -608,7 +736,10 @@ onMounted(() => {
   border-radius: 2px;
   background: #2f8a5b;
 }
-.cartoon-workbench__main { min-width: 0; }
+.cartoon-workbench__main { min-width: 0; min-height: 0; overflow: auto; }
+.cartoon-upload-row { display: flex; gap: 12px; align-items: flex-start; }
+.cartoon-upload-row > .el-button { flex: none; }
+.cartoon-asset-table { cursor: pointer; }
 .cartoon-workbench__note { margin: 16px 20px 0; }
 .cartoon-workbench__main :deep(.cartoon-page) { padding-top: 12px; }
 </style>

@@ -5,6 +5,7 @@ module.exports = app => {
   return app.model.define('cartoon_refmod', {
     id: { type: INTEGER, primaryKey: true, autoIncrement: true },
     project_id: { type: INTEGER, allowNull: false },
+    asset_id: { type: INTEGER, allowNull: true },
     kind: { type: STRING(16), allowNull: false, defaultValue: 'character' },
     name: { type: STRING(200), allowNull: false },
     images: { type: TEXT, allowNull: false, defaultValue: '[]' },

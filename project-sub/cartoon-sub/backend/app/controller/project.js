@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const Controller = require('egg').Controller;
 const { listVideoTemplates, videoTemplateDraft } = require('../lib/videoTemplates');
 
@@ -250,9 +252,52 @@ class ProjectController extends Controller {
     }
   }
 
+  async updateAsset() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.updateAsset(this.ctx.params.id, this.ctx.params.assetId, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async saveAssetImage() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.saveAssetImage(this.ctx.params.id, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async assetImage() {
+    try {
+      const absolute = this.ctx.service.project.assetImagePath(this.ctx.params.id, this.ctx.params.name);
+      const ext = path.extname(absolute).toLowerCase();
+      this.ctx.type = ext === '.jpg' || ext === '.jpeg' ? 'jpeg' : (ext === '.webp' ? 'webp' : 'png');
+      this.ctx.body = fs.createReadStream(absolute);
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async purgeShots() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.purgeShotGroup(this.ctx.params.id, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async disableAsset() {
     try {
       ok(this.ctx, await this.ctx.service.project.disableAsset(this.ctx.params.id, this.ctx.params.assetId));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async removeAsset() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.removeAsset(this.ctx.params.id, this.ctx.params.assetId));
     } catch (err) {
       fail(this.ctx, err);
     }

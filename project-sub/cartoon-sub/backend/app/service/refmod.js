@@ -8,8 +8,29 @@ const { outputRoot, resolveInside } = require('../lib/mediaPaths');
 const MAX_PER_PACK = 8;
 const MAX_TOTAL = 9;
 
+const VISUAL_KINDS = new Set([ 'character', 'scene', 'prop' ]);
+const KIND_LABEL = { character: '人物', scene: '场景', prop: '道具' };
+
 function packKind(value) {
-  return value === 'scene' ? 'scene' : 'character';
+  if (value === 'scene' || value === 'prop') return value;
+  return 'character';
+}
+
+function assetBrief(asset) {
+  const bits = [];
+  const push = value => {
+    const text = String(value || '').trim();
+    if (text) bits.push(text);
+  };
+  push(asset.description);
+  if (asset.kind === 'character') {
+    push(asset.consistency_note);
+    if (String(asset.costume_note || '').trim()) bits.push(`服装：${String(asset.costume_note).trim()}`);
+    if (String(asset.expression_note || '').trim()) bits.push(`表情：${String(asset.expression_note).trim()}`);
+  }
+  if (asset.kind === 'scene') push(asset.scene_type);
+  if (asset.kind === 'prop') push(asset.prop_category);
+  return bits.join('。');
 }
 
 function decodeImage(file) {
@@ -37,10 +58,12 @@ class RefmodService extends Service {
     return {
       id: row.id,
       project_id: row.project_id,
+      asset_id: row.asset_id || null,
       kind: packKind(row.kind),
       name: row.name,
       image_count: images.length,
       cover: images[0] || '',
+      images,
       created_at: row.created_at,
     };
   }
@@ -48,27 +71,83 @@ class RefmodService extends Service {
   async list(projectId) {
     const project = await this.ctx.model.Project.findByPk(projectId);
     if (!project) this.ctx.throw(404, '项目不存在');
-    const rows = await this.ctx.model.Refmod.findAll({
-      where: { project_id: projectId },
-      order: [[ 'id', 'DESC' ]],
+    const [ rows, assets ] = await Promise.all([
+      this.ctx.model.Refmod.findAll({
+        where: { project_id: projectId },
+        order: [[ 'id', 'DESC' ]],
+      }),
+      this.ctx.model.Asset.findAll({ where: { project_id: projectId } }),
+    ]);
+    const byId = new Map(assets.map(row => [ row.id, row ]));
+    return rows.map(row => {
+      const asset = byId.get(row.asset_id);
+      return {
+        ...this.present(row),
+        asset_name: asset?.name || '',
+        asset_kind: asset?.kind || '',
+      };
     });
-    return rows.map(row => this.present(row));
+  }
+
+  async composePrompt(projectId, assetIds, shotPrompt, pictures) {
+    const ids = [ ...new Set((assetIds || []).map(id => Number(id)).filter(id => id > 0)) ];
+    const assets = ids.length
+      ? await this.ctx.model.Asset.findAll({ where: { project_id: projectId, id: ids } })
+      : [];
+    const byId = new Map(assets.map(row => [ row.id, row ]));
+    const ordered = ids
+      .map(id => byId.get(id))
+      .filter(row => row && !row.disabled && VISUAL_KINDS.has(row.kind));
+    const packs = ordered.length
+      ? await this.ctx.model.Refmod.findAll({
+        where: { project_id: projectId, asset_id: ordered.map(row => row.id) },
+      })
+      : [];
+    const packByAsset = new Map(packs.map(row => [ row.asset_id, row ]));
+    const lines = [];
+    const refmodIds = [];
+    let cursor = 1;
+    ordered.forEach(asset => {
+      const pack = packByAsset.get(asset.id);
+      const count = pack ? JSON.parse(pack.images || '[]').length : 0;
+      const tags = [];
+      if (pictures && count) {
+        for (let index = 0; index < count; index += 1) tags.push(`<Picture ${cursor + index}>`);
+        cursor += count;
+        refmodIds.push(pack.id);
+      }
+      const brief = assetBrief(asset);
+      const label = KIND_LABEL[asset.kind] || '资产';
+      const head = tags.length ? `${tags.join(' ')} 是${label}「${asset.name}」` : `${label}「${asset.name}」`;
+      lines.push(brief ? `${head}。${brief}` : head);
+    });
+    const shot = String(shotPrompt || '').trim();
+    const positive = lines.length
+      ? [ lines.join('\n'), shot ? `镜头：${shot}` : '' ].filter(Boolean).join('\n')
+      : shot;
+    return { positive, refmodIds };
   }
 
   async create(projectId, payload) {
     const project = await this.ctx.model.Project.findByPk(projectId);
     if (!project) this.ctx.throw(404, '项目不存在');
-    const kind = packKind(payload?.kind);
-    const name = String(payload?.name || '').trim();
+    const assetId = Number(payload?.asset_id);
+    if (!assetId) this.ctx.throw(400, '请先选中已保存的角色、场景或道具');
+    const asset = await this.ctx.model.Asset.findByPk(assetId);
+    if (!asset || String(asset.project_id) !== String(projectId)) this.ctx.throw(404, '资产不存在');
+    if (!VISUAL_KINDS.has(asset.kind)) this.ctx.throw(400, '只有角色、场景和道具可以绑 RefMod');
+    if (asset.disabled) this.ctx.throw(400, '停用的资产不能绑 RefMod');
+    const taken = await this.ctx.model.Refmod.findOne({ where: { project_id: projectId, asset_id: asset.id } });
+    if (taken) this.ctx.throw(400, '这个资产已经有 RefMod，先删除再新增');
     const images = Array.isArray(payload?.images) ? payload.images : [];
-    const label = kind === 'scene' ? '场景' : '人物';
-    if (!name) this.ctx.throw(400, `请填写${label}名称`);
+    const label = KIND_LABEL[asset.kind] || '资产';
     if (!images.length) this.ctx.throw(400, `请至少上传一张该${label}的图片`);
     if (images.length > MAX_PER_PACK) this.ctx.throw(400, `一个包最多 ${MAX_PER_PACK} 张图`);
     const row = await this.ctx.model.Refmod.create({
       project_id: Number(projectId),
-      kind,
-      name,
+      asset_id: asset.id,
+      kind: packKind(asset.kind),
+      name: asset.name,
       images: '[]',
       created_at: new Date(),
     });
@@ -81,7 +160,7 @@ class RefmodService extends Service {
       return filename;
     });
     await row.update({ images: JSON.stringify(saved) });
-    return this.present(row);
+    return { ...this.present(row), asset_name: asset.name, asset_kind: asset.kind };
   }
 
   async remove(projectId, id) {

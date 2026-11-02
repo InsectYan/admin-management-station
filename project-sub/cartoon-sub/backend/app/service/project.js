@@ -1,6 +1,9 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const Service = require('egg').Service;
+const { outputRoot, resolveInside } = require('../lib/mediaPaths');
 const { VISUAL_STYLES, SHOT_SIZES, CAMERA_MOVES, assertEnum } = require('../lib/cartoonMeta');
 const { sameBody, keepsProductionText, withOverride } = require('../lib/rebasePlan');
 const { reportAudit } = require('../lib/reportAudit');
@@ -14,6 +17,35 @@ const {
   panelReady: fieldsReady,
   normalizePanel,
 } = require('../lib/contentCatalog');
+function assetFileNames(projectId, row) {
+  const marker = `/projects/${projectId}/asset-files/`;
+  const raw = [ row.front_path, row.side_path, row.back_path, row.reference_path, row.angle_paths ]
+    .filter(Boolean)
+    .join('\n');
+  const names = new Set();
+  raw.split(/[\n,，]/).forEach(part => {
+    const text = String(part || '').trim();
+    const index = text.indexOf(marker);
+    if (index < 0) return;
+    const name = path.basename(text.slice(index + marker.length).split(/[?#]/)[0]);
+    if (/^[a-z0-9]+\.(png|jpe?g|webp)$/i.test(name)) names.add(name);
+  });
+  return [ ...names ];
+}
+
+function decodeAssetImage(file) {
+  const payload = String(file?.data_base64 || '');
+  const raw = payload.includes(',') ? payload.slice(payload.indexOf(',') + 1) : payload;
+  const bytes = Buffer.from(raw, 'base64');
+  if (!bytes.length) {
+    const error = new Error('图片内容为空');
+    error.status = 400;
+    throw error;
+  }
+  const ext = String(file.filename || '').toLowerCase().match(/\.(png|jpe?g|webp)$/);
+  return { bytes, ext: ext ? ext[0].replace('jpeg', 'jpg') : '.png' };
+}
+
 function unwrap(json) {
   if (json && Object.prototype.hasOwnProperty.call(json, 'data')) return json.data;
   return json;
@@ -657,12 +689,7 @@ class ProjectService extends Service {
     return shot;
   }
 
-  async addAsset(projectId, payload) {
-    await this.show(projectId);
-    const name = String(payload.name || '').trim();
-    if (!name) this.ctx.throw(400, '需要资产名称');
-    const kinds = [ 'character', 'scene', 'prop', 'voice', 'bgm', 'sfx', 'subtitle_style', 'transition' ];
-    const kind = kinds.includes(payload.kind) ? payload.kind : 'character';
+  assetFields(payload, kind, characterId) {
     const voiceKey = String(payload.voice_key || '').trim();
     if (kind === 'voice' && !voiceKey) this.ctx.throw(400, '需要音色标识');
     const sceneTypes = [ '室内', '室外', '城市', '自然', '古风', '品牌' ];
@@ -672,16 +699,15 @@ class ProjectService extends Service {
     const propCategory = String(payload.prop_category || '').trim();
     if (kind === 'prop' && propCategory && !propCategories.includes(propCategory)) this.ctx.throw(400, '道具分类不存在');
     const character = kind === 'character';
-    return this.ctx.model.Asset.create({
-      project_id: Number(projectId),
+    return {
       kind,
-      name,
+      name: String(payload.name || '').trim(),
       description: payload.description || '',
       reference_path: String(payload.reference_path || '').trim(),
       voice_key: voiceKey,
       speech_rate: String(payload.speech_rate || '').trim(),
       emotion: String(payload.emotion || '').trim(),
-      character_id: character ? String(payload.character_id || '').trim() : '',
+      character_id: character ? characterId : '',
       consistency_note: character ? String(payload.consistency_note || '').trim() : '',
       scene_type: kind === 'scene' ? sceneType : '',
       front_path: character ? String(payload.front_path || '').trim() : '',
@@ -694,8 +720,108 @@ class ProjectService extends Service {
       prop_category: kind === 'prop' ? propCategory : '',
       voice_lang: kind === 'voice' ? String(payload.voice_lang || '').trim() : '',
       speaker_name: kind === 'voice' ? String(payload.speaker_name || '').trim() : '',
+    };
+  }
+
+  async nextCharacterId(projectId) {
+    for (let i = 0; i < 5; i += 1) {
+      const characterId = `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+      const hit = await this.ctx.model.Asset.findOne({ where: { project_id: projectId, character_id: characterId } });
+      if (!hit) return characterId;
+    }
+    this.ctx.throw(500, '人物编号没有生成');
+  }
+
+  async addAsset(projectId, payload) {
+    await this.show(projectId);
+    const name = String(payload.name || '').trim();
+    if (!name) this.ctx.throw(400, '需要资产名称');
+    const kinds = [ 'character', 'scene', 'prop', 'voice', 'bgm', 'sfx', 'subtitle_style', 'transition' ];
+    const kind = kinds.includes(payload.kind) ? payload.kind : 'character';
+    let characterId = kind === 'character' ? String(payload.character_id || '').trim() : '';
+    if (kind === 'character' && !characterId) characterId = await this.nextCharacterId(projectId);
+    return this.ctx.model.Asset.create({
+      project_id: Number(projectId),
+      ...this.assetFields(payload, kind, characterId),
       disabled: false,
     });
+  }
+
+  async updateAsset(projectId, assetId, payload) {
+    const row = await this.ctx.model.Asset.findOne({ where: { id: assetId, project_id: projectId } });
+    if (!row) this.ctx.throw(404, '资产不存在');
+    const kinds = [ 'character', 'scene', 'prop', 'voice', 'bgm', 'sfx', 'subtitle_style', 'transition' ];
+    const kind = kinds.includes(payload.kind) ? payload.kind : row.kind;
+    const name = String(payload.name || '').trim();
+    if (!name) this.ctx.throw(400, '需要资产名称');
+    let characterId = kind === 'character' ? String(payload.character_id || '').trim() : '';
+    if (kind === 'character' && !characterId) characterId = row.character_id || await this.nextCharacterId(projectId);
+    await row.update(this.assetFields({ ...payload, name }, kind, characterId));
+    return row;
+  }
+
+  async saveAssetImage(projectId, payload) {
+    await this.show(projectId);
+    const image = decodeAssetImage(payload);
+    const dir = path.join(outputRoot(this.app), 'asset-files', String(projectId));
+    fs.mkdirSync(dir, { recursive: true });
+    const filename = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}${image.ext}`;
+    fs.writeFileSync(path.join(dir, filename), image.bytes);
+    return { path: `/projects/${projectId}/asset-files/${filename}` };
+  }
+
+  assetImagePath(projectId, filename) {
+    const base = path.basename(String(filename || ''));
+    if (!/^[a-z0-9]+\.(png|jpg|webp)$/i.test(base)) this.ctx.throw(404, '图片不存在');
+    const relative = path.join('asset-files', String(projectId), base);
+    const absolute = resolveInside(outputRoot(this.app), relative);
+    if (!absolute || !fs.existsSync(absolute)) this.ctx.throw(404, '图片不存在');
+    return absolute;
+  }
+
+  async purgeShotGroup(projectId, payload) {
+    await this.show(projectId);
+    const { Op } = this.app.Sequelize;
+    const importId = payload?.import_id;
+    let chapter = null;
+    let shots;
+    if (importId == null || importId === '') {
+      shots = await this.ctx.model.Shot.findAll({ where: { project_id: projectId, import_id: null } });
+    } else {
+      chapter = await this.ctx.model.Import.findOne({ where: { id: importId, project_id: projectId } });
+      if (!chapter) this.ctx.throw(404, '章节快照不存在');
+      if (!chapter.deleted_at) this.ctx.throw(400, '只能删除已删除快照下的分镜，或未关联快照的分镜');
+      shots = await this.ctx.model.Shot.findAll({ where: { project_id: projectId, import_id: chapter.id } });
+    }
+    const ids = shots.map(item => item.id);
+    if (ids.length) {
+      const tasks = await this.ctx.model.Task.findAll({ where: { shot_id: { [Op.in]: ids } } });
+      const busy = tasks.find(item => [ 'queued', 'running', 'saving' ].includes(item.status));
+      if (busy) this.ctx.throw(400, '有分镜正在生成，等它结束再删除');
+      const taskIds = tasks.map(item => item.id);
+      const outputs = taskIds.length
+        ? await this.ctx.model.Output.findAll({ where: { task_id: { [Op.in]: taskIds } } })
+        : [];
+      const outputIds = outputs.map(item => item.id);
+      if (outputIds.length) {
+        await this.ctx.model.EditClip.update(
+          { source_output_id: null },
+          { where: { source_output_id: { [Op.in]: outputIds } } },
+        );
+        await this.ctx.model.ExportSpec.update(
+          { source_output_id: null },
+          { where: { source_output_id: { [Op.in]: outputIds } } },
+        );
+      }
+      for (const task of tasks) await this.ctx.service.generate.removeTask(task.id);
+      await this.ctx.model.Prompt.destroy({ where: { shot_id: { [Op.in]: ids } } });
+      await this.ctx.model.ShotBinding.destroy({ where: { shot_id: { [Op.in]: ids } } });
+      await this.ctx.model.VoiceCue.destroy({ where: { shot_id: { [Op.in]: ids } } });
+      await this.ctx.model.ReviewFinding.destroy({ where: { shot_id: { [Op.in]: ids } } });
+      await this.ctx.model.Shot.destroy({ where: { id: { [Op.in]: ids } } });
+    }
+    if (chapter) await chapter.destroy();
+    return { removed: ids.length, snapshot: chapter ? Number(chapter.id) : null };
   }
 
   async disableAsset(projectId, assetId) {
@@ -703,6 +829,30 @@ class ProjectService extends Service {
     if (!row) this.ctx.throw(404, '资产不存在');
     await row.update({ disabled: true });
     return row;
+  }
+
+  async removeAsset(projectId, assetId) {
+    const row = await this.ctx.model.Asset.findOne({ where: { id: assetId, project_id: projectId } });
+    if (!row) this.ctx.throw(404, '资产不存在');
+    const packs = await this.ctx.model.Refmod.findAll({ where: { project_id: projectId, asset_id: row.id } });
+    for (const pack of packs) await this.ctx.service.refmod.remove(projectId, pack.id);
+    const names = assetFileNames(projectId, row);
+    if (names.length) {
+      const { Op } = this.app.Sequelize;
+      const others = await this.ctx.model.Asset.findAll({
+        where: { project_id: projectId, id: { [Op.ne]: row.id } },
+      });
+      const shared = new Set();
+      others.forEach(other => assetFileNames(projectId, other).forEach(name => shared.add(name)));
+      names.forEach(name => {
+        if (shared.has(name)) return;
+        const absolute = resolveInside(outputRoot(this.app), path.join('asset-files', String(projectId), name));
+        if (absolute) fs.rmSync(absolute, { force: true });
+      });
+    }
+    await this.ctx.model.ShotBinding.destroy({ where: { asset_id: row.id } });
+    await row.destroy();
+    return { id: Number(assetId), refmods: packs.length, images: names.length };
   }
 
   async ensureCharacterDrafts(projectId, characters) {

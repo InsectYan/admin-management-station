@@ -54,6 +54,7 @@ module.exports = app => {
   router.post('/api/projects/:id/imports/:importId/draft', controller.project.draft);
   router.post('/api/projects/:id/nodes/:nodeKey/run', controller.customNode.run);
   router.post('/api/projects/:id/shots', controller.project.addShot);
+  router.post('/api/projects/:id/shots/purge', controller.project.purgeShots);
   router.get('/api/projects/:id/copy-blocks', controller.project.listCopyBlocks);
   router.post('/api/projects/:id/copy-blocks', controller.project.addCopyBlock);
   router.put('/api/projects/:id/copy-blocks/:blockId', controller.project.updateCopyBlock);
@@ -69,6 +70,10 @@ module.exports = app => {
   router.get('/api/outputs/:id/lineage', controller.delivery.lineage);
   router.get('/api/projects/:id/shell-members', controller.project.shellMembers);
   router.post('/api/projects/:id/assets/:assetId/disable', controller.project.disableAsset);
+  router.delete('/api/projects/:id/assets/:assetId', controller.project.removeAsset);
+  router.put('/api/projects/:id/assets/:assetId', controller.project.updateAsset);
+  router.post('/api/projects/:id/asset-files', controller.project.saveAssetImage);
+  router.get('/api/projects/:id/asset-files/:name', controller.project.assetImage);
   router.post('/api/projects/:id/assets/link', controller.library.linkShared);
   router.post('/api/projects/:id/assets/match', controller.skillSuggest.matchAssets);
   router.post('/api/projects/:id/assets/suggest', controller.skillSuggest.suggestAssets);

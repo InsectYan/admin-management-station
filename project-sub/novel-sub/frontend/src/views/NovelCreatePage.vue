@@ -101,6 +101,7 @@
           require-novel-id
           :form-snapshot="outlineSnapshot"
           :session-locked="autorunActive"
+          apply-success=""
           @apply="onApplyPlotline"
         />
       </template>
@@ -518,23 +519,26 @@ function onApplyContent(patch, paths = []) {
 }
 
 async function saveOpenModule() {
-  if (stepKey.value === 'plotline' && plotlineRef.value?.hasDraft?.()) await plotlineRef.value.save();
-  else if (stepKey.value === 'script' && scriptRef.value?.hasDraft?.()) await scriptRef.value.save();
+  if (stepKey.value === 'plotline' && plotlineRef.value?.hasDraft?.()) return plotlineRef.value.save();
+  if (stepKey.value === 'script' && scriptRef.value?.hasDraft?.()) await scriptRef.value.save();
   else if (stepKey.value === 'intent' && intentRef.value?.hasSuggestion?.()) await intentRef.value.writeSuggestion();
+  return true;
 }
 
 async function saveCurrentDraft() {
-  await saveOpenModule();
+  const ok = await saveOpenModule();
+  if (ok === false) return false;
   return saveDraft();
 }
 
 async function nextStep() {
-  await saveOpenModule();
+  const ok = await saveOpenModule();
+  if (ok === false) return;
   return goNext();
 }
 
 function onApplyPlotline(patch) {
-  plotlineRef.value?.applyFromPatch?.(patch);
+  return plotlineRef.value?.applyFromPatch?.(patch);
 }
 
 function onApplyScript(patch) {

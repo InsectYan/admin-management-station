@@ -40,9 +40,11 @@
       <el-table-column label="章节" min-width="140">
         <template #default="{ row }">{{ chapterText(row) }}</template>
       </el-table-column>
-      <el-table-column label="" width="80">
+      <el-table-column label="操作" width="180" align="right">
         <template #default="{ row }">
           <el-button link type="primary" @click="openDetail(row)">详情</el-button>
+          <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
+          <el-button link type="danger" @click="remove(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -50,12 +52,46 @@
     <el-drawer
       v-model="drawerOpen"
       class="novel-plotline-drawer"
-      :title="form.id ? '剧情详情' : '添加剧情'"
+      :title="drawerTitle"
       direction="rtl"
       size="480px"
       append-to-body
     >
-      <el-form label-position="top" class="novel-entry-form" @submit.prevent>
+      <dl v-if="mode === 'detail' && viewing" class="novel-detail-fields novel-plotline-detail">
+        <div class="novel-detail-fields__row">
+          <dt>名称</dt>
+          <dd class="is-strong">{{ viewing.name }}</dd>
+        </div>
+        <div class="novel-detail-fields__row novel-detail-fields__row--split">
+          <div>
+            <dt>类型</dt>
+            <dd><el-tag size="small">{{ kindLabel(viewing.kind) }}</el-tag></dd>
+          </div>
+          <div>
+            <dt>状态</dt>
+            <dd><el-tag size="small" effect="plain">{{ statusLabel(viewing.status) }}</el-tag></dd>
+          </div>
+        </div>
+        <div class="novel-detail-fields__row">
+          <dt>概要</dt>
+          <dd><NovelMarkdown :source="viewing.summary" empty-text="未填写" /></dd>
+        </div>
+        <div class="novel-detail-fields__row">
+          <dt>出现章节</dt>
+          <dd>{{ chapterText(viewing) }}</dd>
+        </div>
+        <div v-if="viewing.kind === 'foreshadow'" class="novel-detail-fields__row novel-detail-fields__row--split">
+          <div>
+            <dt>埋设章节</dt>
+            <dd>{{ chapterTitle(viewing.plant_chapter_id) }}</dd>
+          </div>
+          <div>
+            <dt>计划回收</dt>
+            <dd>{{ chapterTitle(viewing.payoff_chapter_id) }}</dd>
+          </div>
+        </div>
+      </dl>
+      <el-form v-else label-position="top" class="novel-entry-form" @submit.prevent>
         <div class="novel-entry-grid">
           <el-form-item label="名称"><el-input v-model="form.name" /></el-form-item>
           <el-form-item class="is-wide" label="概要">
@@ -91,12 +127,10 @@
           </template>
         </div>
       </el-form>
-      <template #footer>
+      <template v-if="mode === 'form'" #footer>
         <div class="novel-plotline-drawer__footer">
-          <el-button v-if="form.id" type="danger" plain @click="removeCurrent">删除</el-button>
-          <span class="novel-plotline-drawer__spacer" />
           <el-button @click="drawerOpen = false">取消</el-button>
-          <el-button type="primary" :loading="saving" @click="save">{{ form.id ? '保存' : '添加' }}</el-button>
+          <el-button type="primary" :loading="saving" @click="save">保存</el-button>
         </div>
       </template>
     </el-drawer>
@@ -104,8 +138,9 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import NovelMarkdown from '../markdown/NovelMarkdown.vue';
 import { confirmBulkDelete } from '../../../utils/tableBulkDelete.js';
 import {
   createPlotline,
@@ -141,6 +176,8 @@ const timeline = ref([]);
 const worldYears = ref([]);
 const saving = ref(false);
 const drawerOpen = ref(false);
+const mode = ref('form');
+const viewing = ref(null);
 const form = reactive(emptyForm());
 
 function emptyForm() {
@@ -166,14 +203,50 @@ function statusLabel(value) {
   return statuses.find(item => item.value === value)?.label || value;
 }
 
+function chapterTitle(chapterId) {
+  if (!chapterId) return '未填写';
+  return chapters.value.find(item => item.chapter_id === chapterId)?.title || chapterId;
+}
+
 function chapterText(row) {
-  const titles = (row.events || []).map(event => chapters.value.find(item => item.chapter_id === event.chapter_id)?.title || event.chapter_id);
+  const titles = (row.events || []).map(event => chapterTitle(event.chapter_id));
   if (row.kind === 'foreshadow' && !row.payoff_chapter_id) titles.push('未设回收');
-  return titles.filter(Boolean).join('、') || '未绑定';
+  return titles.filter(title => title && title !== '未填写').join('、') || '未绑定';
 }
 
 function reset() {
   Object.assign(form, emptyForm());
+}
+
+const drawerTitle = computed(() => {
+  if (mode.value === 'detail') return '剧情详情';
+  return form.id ? '编辑剧情' : '添加剧情';
+});
+
+function openCreate() {
+  reset();
+  mode.value = 'form';
+  drawerOpen.value = true;
+}
+
+function openDetail(row) {
+  viewing.value = row;
+  mode.value = 'detail';
+  drawerOpen.value = true;
+}
+
+function openEdit(row) {
+  edit(row);
+  mode.value = 'form';
+  drawerOpen.value = true;
+}
+
+function knownKind(value) {
+  return kinds.some(item => item.value === value) ? value : 'main';
+}
+
+function knownStatus(value) {
+  return statuses.some(item => item.value === value) ? value : 'open';
 }
 
 function edit(row) {
@@ -201,18 +274,12 @@ async function load() {
   worldYears.value = view?.world_years || [];
 }
 
-async function save() {
-  const name = form.name.trim();
-  if (!name) {
-    ElMessage.warning('先写名称');
-    return;
-  }
-  saving.value = true;
-  const payload = {
-    name,
+function formPayload() {
+  return {
+    name: form.name.trim(),
     summary: form.summary.trim(),
-    kind: form.kind,
-    status: form.status,
+    kind: knownKind(form.kind),
+    status: knownStatus(form.status),
     plant_chapter_id: form.kind === 'foreshadow' ? form.plant_chapter_id : '',
     payoff_chapter_id: form.kind === 'foreshadow' ? form.payoff_chapter_id : '',
     events: form.chapterIds.map(chapterId => ({
@@ -221,25 +288,25 @@ async function save() {
       year: form.years[chapterId] || '',
     })),
   };
+}
+
+async function save() {
+  if (!form.name.trim()) {
+    ElMessage.warning('先写名称');
+    return false;
+  }
+  const creating = !form.id;
+  saving.value = true;
   try {
-    if (form.id) await updatePlotline(props.novelId, form.id, payload);
-    else await createPlotline(props.novelId, payload);
-    for (const item of pending.value) {
-      const extraName = String(item?.name || '').trim();
-      if (!extraName) continue;
-      await createPlotline(props.novelId, {
-        name: extraName,
-        summary: String(item.summary || '').trim(),
-        kind: item.kind,
-        status: item.status,
-        events: [],
-      });
-    }
-    pending.value = [];
-    reset();
+    if (form.id) await updatePlotline(props.novelId, form.id, formPayload());
+    else await createPlotline(props.novelId, formPayload());
+    drawerOpen.value = false;
     await load();
+    ElMessage.success(creating ? '已添加剧情线' : '剧情线已保存');
+    return true;
   } catch (err) {
     ElMessage.error(err.message || '保存失败');
+    return false;
   } finally {
     saving.value = false;
   }
@@ -264,11 +331,12 @@ async function remove(row) {
   try {
     await ElMessageBox.confirm(`删除剧情线「${row.name}」？章节正文保持不变。`, '删除剧情线', { type: 'warning' });
   } catch {
-    return;
+    return false;
   }
   await deletePlotline(props.novelId, row.id);
-  if (form.id === row.id) reset();
+  if (form.id === row.id || viewing.value?.id === row.id) drawerOpen.value = false;
   await load();
+  return true;
 }
 
 async function removeChecked() {
@@ -282,7 +350,7 @@ async function removeChecked() {
   try {
     for (const row of targets) {
       await deletePlotline(props.novelId, row.id);
-      if (form.id === row.id) reset();
+      if (form.id === row.id) drawerOpen.value = false;
     }
     picked.value = [];
     ElMessage.success(selected.length ? '已删除勾选剧情线' : '已删除全部剧情线');
@@ -294,23 +362,49 @@ async function removeChecked() {
 }
 
 function hasDraft() {
-  return Boolean(form.name.trim());
+  return drawerOpen.value && mode.value === 'form' && Boolean(form.name.trim());
 }
 
-function applyFromPatch(patch) {
+async function applyFromPatch(patch) {
   const list = Array.isArray(patch?.plotlines) ? patch.plotlines.filter(row => String(row?.name || '').trim()) : [];
   if (!list.length) {
     ElMessage.info('这一轮没有可填入的剧情线');
     return;
   }
-  const [first, ...rest] = list;
-  reset();
-  form.name = String(first.name).trim();
-  form.summary = String(first.summary || '').trim();
-  form.kind = first.kind || 'main';
-  form.status = first.status || 'open';
-  pending.value = rest;
-  ElMessage.success(rest.length ? `已填入「${form.name}」，保存时一并写入其余 ${rest.length} 条` : '已填入表单，点添加后才会写入');
+  if (!props.novelId) {
+    ElMessage.warning('请先保存基础信息');
+    return;
+  }
+  const existing = new Map(lines.value.map(row => [ row.name, row ]));
+  try {
+    for (const item of list) {
+      const name = String(item.name).trim();
+      const payload = {
+        name,
+        summary: String(item.summary || '').trim(),
+        kind: knownKind(item.kind),
+        status: knownStatus(item.status),
+        events: [],
+      };
+      const hit = existing.get(name);
+      if (hit) {
+        await updatePlotline(props.novelId, hit.id, {
+          ...payload,
+          plant_chapter_id: hit.plant_chapter_id || '',
+          payoff_chapter_id: hit.payoff_chapter_id || '',
+          events: hit.events || [],
+        });
+      } else {
+        const created = await createPlotline(props.novelId, payload);
+        if (created?.id) existing.set(name, created);
+      }
+    }
+    await load();
+    ElMessage.success(`已写入 ${list.length} 条剧情线`);
+  } catch (err) {
+    ElMessage.error(err.message || '写入剧情线失败');
+    await load().catch(() => {});
+  }
 }
 
 defineExpose({ applyFromPatch, hasDraft, save });
@@ -332,8 +426,52 @@ onMounted(() => {
   color: var(--el-text-color-secondary);
   line-height: 1.5;
 }
-.novel-bulk-bar {
+.novel-bulk-bar,
+.novel-plotline-drawer__footer {
   display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.novel-bulk-bar {
   justify-content: flex-end;
+}
+.novel-plotline-drawer__footer {
+  width: 100%;
+  justify-content: flex-end;
+}
+.novel-plotlines :deep(.el-table__cell .el-button + .el-button) {
+  margin-left: 4px;
+}
+.novel-plotline-detail {
+  --novel-color-text: #2c4336;
+  --novel-color-text-muted: #8a968e;
+  --novel-color-deep: #2a3a30;
+  color: var(--novel-color-text);
+}
+.novel-detail-fields {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.novel-detail-fields__row dt {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--novel-color-text-muted, #8a968e);
+}
+.novel-detail-fields__row dd {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.novel-detail-fields__row--split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.novel-plotline-detail .is-strong {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--novel-color-deep, #2a3a30);
 }
 </style>

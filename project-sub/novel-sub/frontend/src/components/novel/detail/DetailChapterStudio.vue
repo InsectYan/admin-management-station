@@ -148,11 +148,6 @@
             续写未完成章节
           </el-button>
           <el-button :disabled="queue.running" @click="$emit('open-reader')">全书预览</el-button>
-          <el-button :disabled="!prevChapter" @click="goChapter(prevChapter?.id)">上一章</el-button>
-          <el-button :disabled="!nextChapter" @click="goChapter(nextChapter?.id)">下一章</el-button>
-          <el-button type="primary" :disabled="!editable || !chapterId || !dirty || lockedByOther" :loading="saving" @click="saveBody()">
-            保存正文
-          </el-button>
         </div>
       </header>
       <div v-if="chapterId" class="novel-chapter-studio__plotlines">
@@ -235,7 +230,14 @@
           @input="onDraftInput"
         />
         <div v-else class="novel-chapter-studio__preview">
-          <NovelMarkdown :source="draft" empty-text="尚未撰写。打开「编辑」后可手写或用林间写手生成。" />
+          <NovelMarkdown prose :source="draft" empty-text="尚未撰写。打开「编辑」后可手写或用林间写手生成。" />
+        </div>
+        <div class="novel-chapter-studio__editor-actions">
+          <el-button :disabled="!prevChapter" @click="goChapter(prevChapter?.id)">上一章</el-button>
+          <el-button :disabled="!nextChapter" @click="goChapter(nextChapter?.id)">下一章</el-button>
+          <el-button type="primary" :disabled="!editable || !dirty || lockedByOther" :loading="saving" @click="saveBody()">
+            保存正文
+          </el-button>
         </div>
       </template>
     </section>
@@ -1285,6 +1287,14 @@ watch(
   min-height: 160px;
   font-family: inherit;
   line-height: 1.7;
+}
+
+.novel-chapter-studio__editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-top: 8px;
 }
 
 .novel-chapter-studio__dock {

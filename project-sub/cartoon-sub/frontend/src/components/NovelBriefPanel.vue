@@ -37,18 +37,22 @@
       </div>
       <div class="is-wide">
         <dt>创作立意</dt>
-        <dd>{{ novel.creative_intent || '未填写' }}</dd>
+        <dd><CartoonMarkdown :source="novel.creative_intent" empty-text="未填写" /></dd>
       </div>
       <div class="is-wide">
         <dt>小说简介</dt>
-        <dd>{{ novel.summary || '未填写' }}</dd>
+        <dd><CartoonMarkdown :source="novel.summary" empty-text="未填写" /></dd>
       </div>
       <div class="is-wide">
         <dt>小说概要</dt>
-        <dd :class="{ 'is-clamped': !overviewOpen }">{{ novel.story_overview || '未填写' }}</dd>
-        <el-button v-if="(novel.story_overview || '').length > 180" link type="primary" @click="overviewOpen = !overviewOpen">
-          {{ overviewOpen ? '收起' : '展开全文' }}
-        </el-button>
+        <dd>
+          <div :class="{ 'is-clamped': !overviewOpen }">
+            <CartoonMarkdown :source="novel.story_overview" empty-text="未填写" />
+          </div>
+          <el-button v-if="(novel.story_overview || '').length > 180" link type="primary" @click="overviewOpen = !overviewOpen">
+            {{ overviewOpen ? '收起' : '展开全文' }}
+          </el-button>
+        </dd>
       </div>
     </dl>
   </section>
@@ -56,6 +60,7 @@
 
 <script setup>
 import { computed, ref } from 'vue';
+import CartoonMarkdown from './CartoonMarkdown.vue';
 
 const props = defineProps({
   novel: { type: Object, default: null },
@@ -90,8 +95,8 @@ const progressText = computed(() => {
 .cartoon-novel-brief__grid div { min-width: 0; }
 .cartoon-novel-brief__grid .is-wide { grid-column: 1 / -1; }
 .cartoon-novel-brief dt { color: #5c6b62; font-size: 12px; }
-.cartoon-novel-brief dd { margin: 4px 0 0; white-space: pre-wrap; }
-.cartoon-novel-brief dd.is-clamped {
+.cartoon-novel-brief dd { margin: 4px 0 0; }
+.cartoon-novel-brief .is-clamped {
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;

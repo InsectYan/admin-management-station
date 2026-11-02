@@ -34,20 +34,17 @@ export function buildChapterTree(volumes = [], chapters = []) {
     id: vol.id,
     title: vol.title || '未命名卷',
     kind: 'volume',
-    children: (vol.groups || []).map((group) => ({
-      id: group.id,
-      title: group.title || '未命名章组',
-      kind: 'group',
-      children: [
-        ...(group.sections || []).map((sec) => ({
-          id: sec.id,
-          title: sec.title || '未命名小节',
-          kind: 'section',
-          children: takeFor(sec.title, sec.id).map((ch) => ({ ...ch, kind: 'chapter' })),
-        })),
-        ...takeFor(group.title, group.id).map((ch) => ({ ...ch, kind: 'chapter' })),
-      ],
-    })),
+      children: (vol.groups || []).map((group) => ({
+        id: group.id,
+        title: group.title || '未命名章组',
+        kind: 'group',
+        children: [
+          ...(group.sections || []).flatMap((sec) => takeFor(sec.title, sec.id)),
+          ...takeFor(group.title, group.id),
+        ]
+          .sort((a, b) => (a.order || 0) - (b.order || 0))
+          .map((ch) => ({ ...ch, kind: 'chapter' })),
+      })),
   }));
 
   const leftover = list.filter((ch) => !used.has(ch.id));

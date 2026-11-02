@@ -2,7 +2,7 @@
   <div
     v-if="html"
     class="novel-md"
-    :class="{ 'is-compact': compact }"
+    :class="{ 'is-compact': compact, 'is-prose': prose }"
     v-html="html"
   />
   <span v-else-if="emptyText" class="novel-md__empty">{{ emptyText }}</span>
@@ -16,6 +16,7 @@ const props = defineProps({
   source: { type: [String, Number], default: '' },
   emptyText: { type: String, default: '' },
   compact: { type: Boolean, default: false },
+  prose: { type: Boolean, default: false },
 });
 
 const html = computed(() => renderMarkdown(props.source));
@@ -41,6 +42,17 @@ const html = computed(() => renderMarkdown(props.source));
 
 .novel-md :deep(p) {
   margin: 0 0 0.6em;
+}
+
+.novel-md.is-prose :deep(p) {
+  text-indent: 2em;
+}
+
+.novel-md.is-prose :deep(li p),
+.novel-md.is-prose :deep(blockquote p),
+.novel-md.is-prose :deep(td p),
+.novel-md.is-prose :deep(th p) {
+  text-indent: 0;
 }
 
 .novel-md :deep(p:last-child),

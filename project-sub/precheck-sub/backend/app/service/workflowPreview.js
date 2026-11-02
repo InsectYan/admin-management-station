@@ -194,7 +194,11 @@ class WorkflowPreviewService extends Service {
       source = applyRefmod(source, uploaded);
     }
     const names = await this.imageNames(source, payload.images || []);
-    const graph = applySeed(applyCallInputs(source, { positive, imageNames: names }), payload.seed);
+    let graph = applySeed(applyCallInputs(source, { positive, imageNames: names }), payload.seed);
+    const seconds = Number(payload.duration_sec);
+    if (Number.isFinite(seconds) && seconds > 0) {
+      graph = applyPreviewValues(graph, [{ type: 'duration', key: 'duration_sec', value: seconds }]);
+    }
     parseApiWorkflow(graph);
     return { prompt: graph, call_inputs: describeCallInputs(row.api_json) };
   }

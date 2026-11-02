@@ -1,17 +1,12 @@
 <template>
-  <section class="cartoon-module cartoon-workbench__note">
-    <h3 class="cartoon-module__title">RefMod</h3>
-    <p class="cartoon-module__hint">包只属于这个项目。一个包是一个人物或一个场景，放 4 到 8 张清晰图。生成分镜时选「文生视频[RefMod]」，按选择顺序对应 &lt;Picture 1&gt;。人物和场景可以一起选，一次最多 9 张图。</p>
+  <section class="cartoon-module" :class="{ 'cartoon-workbench__note': variant === 'full' }">
+    <template v-if="variant !== 'cards'">
+    <h3 v-if="variant === 'full'" class="cartoon-module__title">RefMod</h3>
+    <p class="cartoon-module__hint">RefMod 必须绑在已保存的角色、场景或道具上。一个资产一份，放 1 到 8 张清晰图。导出的 JSON 只是这些图的访问清单，生成时不读这个文件。</p>
     <el-form label-position="top" class="cartoon-refmod-form" @submit.prevent>
-      <el-form-item label="类型">
-        <el-radio-group v-model="kind">
-          <el-radio-button value="character">人物</el-radio-button>
-          <el-radio-button value="scene">场景</el-radio-button>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item :label="kind === 'scene' ? '场景名称' : '人物名称'">
-        <el-input v-model="name" :placeholder="kind === 'scene' ? '例如：林家客厅' : '例如：林夏'" />
-      </el-form-item>
+      <p v-if="assetId" class="cartoon-module__hint">绑定到{{ kindLabel(assetKind) }}「{{ assetName || '未命名' }}」</p>
+      <p v-else class="cartoon-module__hint">先在表格里点选已保存的角色、场景或道具，再新增 RefMod。</p>
+      <template v-if="assetId">
       <el-form-item label="参考图">
         <el-upload
           v-model:file-list="fileList"
@@ -25,9 +20,13 @@
         </el-upload>
       </el-form-item>
       <el-button type="primary" :loading="saving" @click="create">保存</el-button>
+      </template>
     </el-form>
-    <p v-if="!packs.length" class="cartoon-module__hint">这个项目还没有 RefMod 包。</p>
-    <article v-for="pack in packs" :key="pack.id" class="cartoon-refmod-card">
+    </template>
+    <p v-if="variant !== 'form' && !assetId" class="cartoon-module__hint">点选角色、场景或道具后，这里显示它的 RefMod。</p>
+    <p v-else-if="variant !== 'form' && !visualAsset" class="cartoon-module__hint">这个类型不用 RefMod。</p>
+    <p v-else-if="variant !== 'form' && !shownPacks.length" class="cartoon-module__hint">「{{ assetName || '这个资产' }}」还没有 RefMod。</p>
+    <article v-for="pack in shownPacks" :key="pack.id" class="cartoon-refmod-card">
       <MediaFileList
         v-if="pack.cover"
         :show-name="false"
@@ -35,8 +34,9 @@
         @remove="remove(pack)"
       />
       <div>
-        <strong>{{ pack.name }}</strong>
-        <p>{{ pack.kind === 'scene' ? '场景' : '人物' }} · {{ pack.image_count }} 张参考图</p>
+        <strong>{{ pack.asset_name || pack.name }}</strong>
+        <p>{{ pack.asset_id ? `已绑定${kindLabel(pack.asset_kind || pack.kind)}` : '未绑定，生成时不会用到' }} · {{ pack.image_count }} 张参考图</p>
+        <el-button link type="primary" @click="exportPack(pack)">导出</el-button>
         <el-button v-if="!pack.cover" link type="danger" @click="remove(pack)">删除</el-button>
       </div>
     </article>
@@ -44,23 +44,52 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import MediaFileList from './MediaFileList.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 
 const props = defineProps({
   projectId: { type: [ String, Number ], required: true },
+  variant: { type: String, default: 'full' },
+  revision: { type: Number, default: 0 },
+  assetId: { type: [ String, Number ], default: '' },
+  assetName: { type: String, default: '' },
+  assetKind: { type: String, default: '' },
 });
+const emit = defineEmits([ 'changed' ]);
 
-const name = ref('');
-const kind = ref('character');
 const fileList = ref([]);
 const packs = ref([]);
 const saving = ref(false);
+const visualAsset = computed(() => [ 'character', 'scene', 'prop' ].includes(props.assetKind));
+const shownPacks = computed(() => {
+  if (props.variant === 'form' || !props.assetId || !visualAsset.value) return [];
+  return packs.value.filter(pack => String(pack.asset_id) === String(props.assetId));
+});
 
-function fileUrl(pack) {
-  return `${resolveApiBase()}/projects/${props.projectId}/refmods/${pack.id}/files/${encodeURIComponent(pack.cover)}`;
+function kindLabel(kind) {
+  return { character: '角色', scene: '场景', prop: '道具' }[kind] || '资产';
+}
+
+function fileUrl(pack, name = pack.cover) {
+  return `${resolveApiBase()}/projects/${props.projectId}/refmods/${pack.id}/files/${encodeURIComponent(name)}`;
+}
+
+function exportPack(pack) {
+  const names = pack.images?.length ? pack.images : [ pack.cover ].filter(Boolean);
+  const payload = {
+    asset_id: pack.asset_id || null,
+    name: pack.asset_name || pack.name,
+    kind: kindLabel(pack.asset_kind || pack.kind),
+    images: names.map(item => fileUrl(pack, item)),
+  };
+  const blob = new Blob([ JSON.stringify(payload, null, 2) ], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${pack.name || 'refmod'}.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
 }
 
 function readFile(file) {
@@ -77,8 +106,8 @@ async function load() {
 }
 
 async function create() {
-  if (!name.value.trim()) {
-    ElMessage.warning(kind.value === 'scene' ? '请填写场景名称' : '请填写人物名称');
+  if (!props.assetId) {
+    ElMessage.warning('先在表格里点选已保存的角色、场景或道具');
     return;
   }
   const files = fileList.value.map(item => item.raw).filter(Boolean);
@@ -92,12 +121,12 @@ async function create() {
     for (const file of files) images.push(await readFile(file));
     await request(`/projects/${props.projectId}/refmods`, {
       method: 'post',
-      data: { name: name.value.trim(), kind: kind.value, images },
+      data: { asset_id: Number(props.assetId), images },
     });
-    name.value = '';
     fileList.value = [];
-    ElMessage.success('已保存');
+    ElMessage.success('已绑到这个资产，可以导出访问清单');
     await load();
+    emit('changed');
   } catch (err) {
     ElMessage.error(err.message);
   } finally {
@@ -109,9 +138,12 @@ async function remove(pack) {
   await ElMessageBox.confirm(`删除「${pack.name}」？`, '删除 RefMod 包', { type: 'warning' });
   await request(`/projects/${props.projectId}/refmods/${pack.id}`, { method: 'delete' });
   await load();
+  emit('changed');
 }
 
 watch(() => props.projectId, () => { load().catch(err => ElMessage.error(err.message)); });
+watch(() => props.revision, () => { load().catch(err => ElMessage.error(err.message)); });
+watch(() => props.assetId, () => { fileList.value = []; });
 onMounted(() => { load().catch(err => ElMessage.error(err.message)); });
 </script>
 
