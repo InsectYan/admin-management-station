@@ -79,13 +79,15 @@ class CustomNodeService extends Service {
       order: [[ 'id', 'ASC' ]],
     });
     if (!chapter || !String(chapter.body || '').trim()) this.ctx.throw(400, '还没有可解析的章节');
+    const styleCtx = await this.ctx.service.draft.styleContext(project, chapter);
     const result = await invokeSkill(this.ctx, {
       skill: 'cartoon-script-skill',
       action: 'draft',
+      timeoutMs: Number(this.ctx.app.config.agentPlatform?.timeoutMs) || 600000,
       payload: {
         chapter_title: chapter.chapter_title || '',
         body: chapter.body,
-        visual_style: project.visual_style || '',
+        ...styleCtx,
         ...productionInput(project),
       },
     });

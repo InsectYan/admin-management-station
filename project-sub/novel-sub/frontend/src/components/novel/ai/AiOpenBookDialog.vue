@@ -8,7 +8,7 @@
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <p class="ai-open-book-dialog__lead">
-      用一句话说类型、读者和核心冲突。林间策只拆计划；「执行下一步」进向导确认，「连续执行设定」自动补到章节目录并逐步展示，正文仍到单章开发再写。
+      描述类型、读者、核心冲突与想要的氛围，可写完整段落。林间策只拆计划；「执行下一步」进向导确认，「连续执行设定」自动补到章节目录并逐步展示，正文仍到单章开发再写。
     </p>
     <div class="ai-open-book-dialog__dock">
       <AiFormDock
@@ -61,7 +61,7 @@ const snapshot = {
 async function onApply(patch, _paths, meta = {}) {
   const tasks = Array.isArray(patch?.tasks) ? patch.tasks : [];
   if (!tasks.length) {
-    ElMessage.info('请先发送一句话，生成开书计划');
+    ElMessage.info('请先发送开书意图，生成开书计划');
     return;
   }
   const sessionId = meta.sessionId;

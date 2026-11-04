@@ -219,12 +219,12 @@
       </section>
       <template v-else-if="node === 'preview'">
         <section v-if="!shotQuery" class="cartoon-module cartoon-workbench__note">
-          <h3 class="cartoon-module__title">选择分镜</h3>
-          <el-empty v-if="!shots.length" description="还没有分镜">
-            <el-button type="primary" @click="selectNode('storyboard')">去分镜</el-button>
+          <h3 class="cartoon-module__title">选择镜头</h3>
+          <el-empty v-if="!shots.length" description="还没有镜头">
+            <el-button type="primary" @click="selectNode('storyboard')">去镜头</el-button>
           </el-empty>
           <el-table v-else :data="shots" @row-click="pickShot">
-            <el-table-column label="分镜" min-width="220">
+            <el-table-column label="镜头" min-width="220">
               <template #default="{ row }">{{ row.description || `镜头 ${row.id}` }}</template>
             </el-table-column>
             <el-table-column prop="shot_size" label="景别" width="100" />
@@ -242,7 +242,7 @@
     <aside class="cartoon-workbench__side">
       <h2>这一集</h2>
       <p>类型 · {{ typeName }}</p>
-      <p>画面 · {{ project.visual_style || '未选' }}</p>
+      <p>画面 · {{ styleLabel || project.visual_style || '未选' }}</p>
       <p>钉扎 · {{ pinLabel || '未选择故事包' }}</p>
       <p>节点 · {{ nodeTitle }}</p>
     </aside>
@@ -262,11 +262,12 @@ import RefModPacks from '../components/RefModPacks.vue';
 import AssetImageField from '../components/AssetImageField.vue';
 import { request } from '../services/apiConfig.js';
 import { isLocalType, typeLabel } from '../lib/contentTypes.js';
+import { styleDisplayLabel } from '../utils/visualStyles.js';
 
 const nodes = [
   { id: 'input', title: '输入与绑定' },
-  { id: 'script', title: '脚本' },
-  { id: 'storyboard', title: '分镜' },
+  { id: 'script', title: '剧本' },
+  { id: 'storyboard', title: '镜头' },
   { id: 'assets', title: '资产' },
   { id: 'voice', title: '配音' },
   { id: 'subtitle', title: '字幕' },
@@ -275,7 +276,7 @@ const nodes = [
   { id: 'preview', title: '预览' },
   { id: 'export', title: '导出' },
 ];
-const stepByNode = { input: 1, script: 2, storyboard: 3 };
+const stepByNode = { input: 1, script: 2, storyboard: 4 };
 
 const route = useRoute();
 const router = useRouter();
@@ -283,6 +284,7 @@ const project = ref(null);
 const bundle = ref(null);
 const episode = ref(null);
 const shots = ref([]);
+const styles = ref([]);
 const error = ref('');
 const sceneTypes = [ '室内', '室外', '城市', '自然', '古风', '品牌' ];
 const propCategories = [ '服饰', '器物', '食物', '文书', '交通', '其他' ];
@@ -328,6 +330,7 @@ const scriptStep = computed(() => stepByNode[node.value] || 0);
 const shotQuery = computed(() => String(route.query.shot || ''));
 const episodeTitle = computed(() => episode.value?.title || '第1集');
 const typeName = computed(() => typeLabel(project.value?.content_type));
+const styleLabel = computed(() => styleDisplayLabel(styles.value, project.value?.visual_style));
 const pinLabel = computed(() => {
   if (project.value?.package_version) return `故事包 v${project.value.package_version}`;
   if (project.value?.pin_mode === 'legacy') return '未钉扎';
@@ -613,8 +616,12 @@ async function load() {
   episode.value = current || null;
   shots.value = (detail.shots || []).filter(item => !item.deleted_at);
   try {
-    const pipe = await request('/pipelines', { params: { content_type: detail.project.content_type } });
+    const [ pipe, meta ] = await Promise.all([
+      request('/pipelines', { params: { content_type: detail.project.content_type } }),
+      request('/meta').catch(() => ({ visual_styles: [] })),
+    ]);
     customNodes.value = (pipe.nodes || []).filter(item => item.kind === 'custom' && item.enabled);
+    styles.value = meta.visual_styles || [];
   } catch {
     customNodes.value = [];
   }

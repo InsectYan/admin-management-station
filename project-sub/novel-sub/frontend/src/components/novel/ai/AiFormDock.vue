@@ -296,7 +296,7 @@ async function onApply() {
       });
       return;
     }
-    ElMessage.info('请先发送一句话生成开书计划');
+    ElMessage.info('请先发送开书意图生成开书计划');
     return;
   }
   const patch = await applyPending();
@@ -320,7 +320,7 @@ function onAutorun() {
   if (props.autorunActive) return;
   const patch = pendingMessage.value?.patch_json;
   if (!patch || !Array.isArray(patch.tasks) || !patch.tasks.length) {
-    ElMessage.info('请先发送一句话生成开书计划');
+    ElMessage.info('请先发送开书意图生成开书计划');
     return;
   }
   if (!sessionId.value) {

@@ -51,6 +51,10 @@ module.exports = app => {
   router.post('/api/projects/:id/rebase', controller.project.rebase);
   router.post('/api/projects/:id/imports/:importId/draft/suggest', controller.project.draftSuggest);
   router.post('/api/projects/:id/imports/:importId/draft/apply', controller.project.draftApply);
+  router.post('/api/projects/:id/imports/:importId/draft/script', controller.project.draftScript);
+  router.post('/api/projects/:id/imports/:importId/draft/script/apply', controller.project.draftScriptApply);
+  router.post('/api/projects/:id/imports/:importId/draft/shot-outline', controller.project.draftShotOutline);
+  router.post('/api/projects/:id/imports/:importId/draft/shot-expand', controller.project.draftShotExpand);
   router.post('/api/projects/:id/imports/:importId/draft', controller.project.draft);
   router.post('/api/projects/:id/nodes/:nodeKey/run', controller.customNode.run);
   router.post('/api/projects/:id/shots', controller.project.addShot);
@@ -95,6 +99,7 @@ module.exports = app => {
   router.post('/api/batches/:id/cancel', controller.batch.cancel);
   router.post('/api/projects/:id/assets', controller.project.addAsset);
   router.put('/api/shots/:id', controller.project.updateShot);
+  router.delete('/api/shots/:id', controller.project.removeShot);
   router.post('/api/shots/:id/promote', controller.project.promoteShot);
   router.get('/api/generate-inputs', controller.project.generateInputs);
   router.post('/api/projects/:id/shots/:shotId/generate', controller.project.generate);

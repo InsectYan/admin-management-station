@@ -50,7 +50,7 @@
             <div v-if="isLocal"><dt>文案</dt><dd>本地文案</dd></div>
             <div v-else><dt>来源小说</dt><dd>{{ novelBrief?.title || '未绑定' }}</dd></div>
             <div><dt>章节快照</dt><dd>{{ liveImports.length }}</dd></div>
-            <div><dt>分镜</dt><dd>{{ detail.shots.length }}</dd></div>
+            <div><dt>镜头</dt><dd>{{ detail.shots.length }}</dd></div>
             <div><dt>生成记录</dt><dd>{{ detail.tasks.length }}</dd></div>
           </dl>
           <section class="cartoon-module">
@@ -86,7 +86,7 @@
         </section>
 
         <section v-show="tab === 3" class="cartoon-module">
-          <h3 class="cartoon-module__title">分镜</h3>
+          <h3 class="cartoon-module__title">镜头</h3>
           <div class="cartoon-board">
             <aside class="cartoon-board__snaps">
               <p class="cartoon-board__label">章节快照</p>
@@ -156,7 +156,7 @@ const showPanel = computed(() => hasPanel(detail.value?.project?.content_type));
 const tabs = computed(() => [
   { step: 1, title: '概览' },
   { step: 2, title: isLocal.value ? '本地文案' : '章节快照' },
-  { step: 3, title: '分镜' },
+  { step: 3, title: '镜头' },
   { step: 4, title: '批量' },
 ]);
 const tab = ref(Number(route.query.tab) || 1);
@@ -170,7 +170,10 @@ const selectedImportKey = ref('');
 
 const tabTitle = computed(() => tabs.value.find(item => item.step === tab.value)?.title || '概览');
 const mark = computed(() => (detail.value?.project?.name || '漫').trim().slice(0, 1));
-const styleLabel = computed(() => styles.value.find(item => item.value === detail.value?.project?.visual_style)?.label || '');
+const styleLabel = computed(() => {
+  const hit = styles.value.find(item => item.value === detail.value?.project?.visual_style);
+  return hit?.label || hit?.name || '';
+});
 const liveImports = computed(() => (detail.value?.imports || []).filter(item => !item.deleted_at));
 const gaps = computed(() => detail.value?.gaps || []);
 const boardItems = computed(() => {

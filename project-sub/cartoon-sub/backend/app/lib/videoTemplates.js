@@ -10,16 +10,16 @@ const TEMPLATES = [
     stage_label: '脚本',
     industry: 'education',
     industry_label: '教育',
-    scene: '用一条知识点讲清一个概念',
+    scene: '把一个概念讲清楚：定义、日常例子、易错点与收束',
     needs_package: false,
     voice_label: '旁白',
     subtitle_label: '底部字幕',
     pending: [ '旁白' ],
     copy_blocks: [
-      { sort_order: 1, title: '知识点', body: '先写这个概念是什么，再写一个日常例子。' },
+      { sort_order: 1, title: '知识点', body: '先写这个概念是什么、为什么重要，再写一个日常例子，最后点出常见误解。' },
     ],
     shots: [
-      { description: '用一个画面解释这个知识点' },
+      { description: '建立场景与概念主题；用具体画面演示定义，再切到日常例子与收束字幕' },
     ],
   },
   {
@@ -38,8 +38,8 @@ const TEMPLATES = [
     pending: [ '旁白' ],
     copy_blocks: [],
     shots: [
-      { description: '开场：交代人物和地点' },
-      { description: '冲突：出现要解决的事' },
+      { description: '开场：交代人物、地点、时间与氛围，建立主视角与空间关系' },
+      { description: '冲突：出现要解决的事，写清刺激、反应与下一镜钩子' },
     ],
   },
   {
@@ -51,15 +51,15 @@ const TEMPLATES = [
     stage_label: '脚本',
     industry: 'brand',
     industry_label: '品牌',
-    scene: '用一句口号和合规句做品牌片，不新建叙事作品',
+    scene: '品牌主张与合规说明做成品牌片，不新建叙事作品',
     needs_package: false,
     voice_label: '旁白',
     subtitle_label: '底部字幕',
     pending: [],
     copy_blocks: [
-      { sort_order: 1, title: '口号', body: '先写品牌主张，再写一句合规说明。' },
+      { sort_order: 1, title: '口号', body: '先写完整品牌主张与情绪，再写合规说明与行动号召。' },
     ],
-    shots: [ { description: '片头露出品牌标识' } ],
+    shots: [ { description: '片头建立品牌场景与标识，光影与气质对齐主张，再落到合规字幕' } ],
   },
   {
     id: 'documentary_narration',
@@ -127,7 +127,7 @@ const TEMPLATES = [
     subtitle_label: '多语字幕',
     pending: [],
     copy_blocks: [],
-    shots: [ { description: '一句对白配一张发音卡' } ],
+    shots: [ { description: '情境对白完整呈现，再切到发音卡特写：口型参考、字幕双语与示范节奏' } ],
   },
   {
     id: 'news_timeline',

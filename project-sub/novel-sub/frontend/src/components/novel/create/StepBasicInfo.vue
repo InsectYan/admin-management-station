@@ -22,10 +22,10 @@
           <el-input
             v-model="form.creative_intent"
             type="textarea"
-            :rows="3"
-            maxlength="500"
+            :rows="5"
+            maxlength="2000"
             show-word-limit
-            placeholder="一句话概括你想表达的核心"
+            placeholder="写清主题、情绪基调、人物处境与核心矛盾，可多段，不必压成口号"
             @input="$emit('change')"
           />
         </el-form-item>
@@ -92,10 +92,10 @@
           <el-input
             v-model="form.summary"
             type="textarea"
-            :rows="4"
-            maxlength="1000"
+            :rows="6"
+            maxlength="4000"
             show-word-limit
-            placeholder="短简介：列表与封面用，突出卖点即可（不必写完全书走向）"
+            placeholder="写清人物关系、世界钩子、冲突卖点与氛围，描写丰富动人；列表展示可截断，正文不必自我压缩"
             @input="$emit('change')"
           />
         </el-form-item>
@@ -107,10 +107,10 @@
             :rows="10"
             maxlength="8000"
             show-word-limit
-            placeholder="全书故事长文：背景、主线走向、基调（如生活搞笑少打斗）、关键转折。世界观/人物/大纲/正文都会优先对照这份概要来写。"
+            placeholder="全书故事长文：背景、主线走向、基调、关键转折与人物弧线。世界观/人物/大纲/正文都会优先对照这份概要来写。"
             @input="$emit('change')"
           />
-          <p class="novel-step-basic__hint">建议数百～数千字。与「简介」不同：概要是创作真源，简介是对外短文案。</p>
+          <p class="novel-step-basic__hint">建议数百～数千字。概要是创作真源；简介也鼓励写完整，不必压成广告短句。</p>
         </el-form-item>
 
         <el-row :gutter="16">

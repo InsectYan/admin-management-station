@@ -19,7 +19,7 @@ export const BASIC_AI_SCENES = [
         icon: 'ChatLineSquare',
         scene: 'basic.intent',
         path: 'creative_intent',
-        placeholder: '帮我凝练立意…',
+        placeholder: '帮我写完整立意：主题、基调、人物处境与核心矛盾…',
       },
       {
         id: 'summary',
@@ -27,7 +27,7 @@ export const BASIC_AI_SCENES = [
         icon: 'Document',
         scene: 'basic.summary',
         path: 'summary',
-        placeholder: '写一段短简介（列表用）…',
+        placeholder: '写一段丰富动人的简介：人物关系、世界钩子、冲突与氛围…',
       },
       {
         id: 'overview',

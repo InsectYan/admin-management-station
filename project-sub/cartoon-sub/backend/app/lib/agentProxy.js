@@ -10,19 +10,32 @@ function platformBase(ctx) {
   return base;
 }
 
+function resolveInvokeTimeout(ctx, timeoutMs) {
+  const explicit = Number(timeoutMs);
+  if (Number.isFinite(explicit) && explicit > 0) return explicit;
+  const configured = Number(ctx.app.config.agentPlatform?.timeoutMs);
+  if (Number.isFinite(configured) && configured > 0) return configured;
+  return 600000;
+}
+
 async function invokeSkill(ctx, { skill, action, payload, timeoutMs }) {
   const url = `${platformBase(ctx)}/api/skills/${skill}/invoke`;
-  ctx.logger.info('[cartoon] agent POST %s action=%s', url, action);
+  const waitMs = resolveInvokeTimeout(ctx, timeoutMs);
+  ctx.logger.info('[cartoon] agent POST %s action=%s timeoutMs=%s', url, action, waitMs);
   let res;
   try {
     res = await fetch(url, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ action, ...payload }),
-      signal: AbortSignal.timeout(timeoutMs || 180000),
+      signal: AbortSignal.timeout(waitMs),
     });
   } catch (err) {
-    const wrapped = new Error(`Agent 调用失败：${err.message}`);
+    const aborted = err?.name === 'AbortError' || /aborted due to timeout/i.test(String(err?.message || ''));
+    const message = aborted
+      ? `Agent 调用超时（${Math.round(waitMs / 1000)} 秒仍未返回，技能 ${skill}/${action}）`
+      : `Agent 调用失败：${err.message}`;
+    const wrapped = new Error(message);
     wrapped.status = 503;
     throw wrapped;
   }

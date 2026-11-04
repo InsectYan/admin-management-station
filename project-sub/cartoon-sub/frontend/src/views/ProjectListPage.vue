@@ -47,8 +47,11 @@
         </el-form-item>
         <el-form-item label="画面风格">
           <el-select v-model="form.visual_style" filterable placeholder="选择风格" style="width: 100%">
-            <el-option v-for="item in styles" :key="item.value" :label="item.label" :value="item.value" />
+            <el-option-group v-for="group in styleGroups" :key="group.label" :label="group.label">
+              <el-option v-for="item in group.options" :key="item.value" :label="item.label" :value="item.value" />
+            </el-option-group>
           </el-select>
+          <p v-if="selectedStyleNote" class="cartoon-module__hint">{{ selectedStyleNote }}</p>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -67,11 +70,17 @@ import PageShell from '../components/PageShell.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 import { CONTENT_TYPES, isLocalType, isOptionalType, typeLabel } from '../lib/contentTypes.js';
+import { groupVisualStyles, styleDisplayLabel } from '../utils/visualStyles.js';
 
 const router = useRouter();
 const rows = ref([]);
 const novels = ref([]);
 const styles = ref([]);
+const styleGroups = computed(() => groupVisualStyles(styles.value));
+const selectedStyleNote = computed(() => {
+  const hit = styles.value.find(item => item.value === form.visual_style);
+  return hit ? `${hit.name || hit.label}：${hit.note || hit.prompt || ''}` : '';
+});
 const loading = ref(false);
 const loadError = ref('');
 const saving = ref(false);
@@ -86,7 +95,7 @@ const opsHref = computed(() => {
 });
 
 function styleLabel(value) {
-  return styles.value.find(item => item.value === value)?.label || '—';
+  return styleDisplayLabel(styles.value, value);
 }
 function novelTitle(id) {
   if (!id) return '—';

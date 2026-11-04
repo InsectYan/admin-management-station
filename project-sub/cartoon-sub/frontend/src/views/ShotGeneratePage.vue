@@ -41,7 +41,7 @@
           <p class="cartoon-module__hint">点图片组查看全部参考图。生成时按这个顺序补上图片对应，不写进下面的提示词。</p>
         </el-form-item>
         <el-form-item label="镜头提示词">
-          <el-input v-model="promptText" type="textarea" :rows="4" />
+          <el-input v-model="promptText" type="textarea" :rows="12" />
         </el-form-item>
         <el-form-item v-if="selectedAssets.length" label="这次的生成条件">
           <el-input :model-value="conditionPreview" type="textarea" :rows="6" readonly />
@@ -108,7 +108,7 @@ const shot = ref(null);
 const chapterTitle = ref('');
 const promptText = ref('');
 const media = ref('image');
-const durationSec = ref(5);
+const durationSec = ref(10);
 const workflowId = ref(null);
 const contracts = ref({});
 const IMAGE_TYPES = new Set([ 'image/png', 'image/jpeg', 'image/webp' ]);
@@ -246,7 +246,7 @@ function back() {
     return;
   }
   if (route.query.from === 'work') {
-    router.push({ path: `/projects/${projectId.value}/work`, query: { step: '3' } });
+    router.push({ path: `/projects/${projectId.value}/work`, query: { step: '4' } });
     return;
   }
   router.push({ path: `/projects/${projectId.value}`, query: { tab: route.query.tab || '3' } });
@@ -320,7 +320,11 @@ async function load() {
     .map(item => item.asset_id);
   assetIds.value = bound.filter(id => projectAssets.value.some(asset => asset.id === id && [ 'character', 'scene', 'prop' ].includes(asset.kind) && !asset.disabled));
   promptText.value = found.prompt?.positive_zh || '';
-  if (Number(found.duration_ms) > 0) durationSec.value = Math.min(60, Math.max(1, Math.round(found.duration_ms / 1000)));
+  if (Number(found.duration_ms) > 0) {
+    durationSec.value = Math.min(60, Math.max(1, Math.round(found.duration_ms / 1000)));
+  } else {
+    durationSec.value = 10;
+  }
   const chapter = (detail.imports || []).find(item => String(item.id) === String(found.import_id));
   chapterTitle.value = chapter?.chapter_title || '未关联快照';
   try {

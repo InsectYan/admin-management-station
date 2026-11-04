@@ -163,7 +163,7 @@ class SkillSuggestService extends Service {
       return {
         shot_id: Number(item.shot_id),
         asset_id: Number(item.asset_id),
-        reason: String(item.reason || '').slice(0, 80),
+        reason: String(item.reason || '').slice(0, 500),
       };
     });
     await this.replaceBindings(project.id, bindings);

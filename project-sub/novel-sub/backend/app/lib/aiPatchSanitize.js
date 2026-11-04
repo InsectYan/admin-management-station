@@ -125,7 +125,7 @@ function sanitizeCharacter(row) {
   if (row.faction_id) out.faction_id = String(row.faction_id).trim().slice(0, 64);
   for (const key of ['personality', 'background', 'goal', 'relations']) {
     if (row[key] === undefined || row[key] === null) continue;
-    const text = clipText(row[key], 2000);
+    const text = clipText(row[key], 8000);
     if (text) out[key] = text;
   }
   return out;
@@ -282,7 +282,7 @@ function sanitizeFaction(row, notices) {
   if (row.alignment && !FACTION_ALIGNMENTS.has(row.alignment)) notices.alignment += 1;
   out.alignment = FACTION_ALIGNMENTS.has(row.alignment) ? row.alignment : 'neutral';
   for (const key of ['description', 'rules', 'headquarters']) {
-    const text = clipText(row[key], key === 'headquarters' ? 80 : 2000);
+    const text = clipText(row[key], key === 'headquarters' ? 200 : 8000);
     if (text) out[key] = text;
   }
   if (Array.isArray(row.member_ids)) {
@@ -352,7 +352,7 @@ function sanitizePlotlines(raw) {
       name,
       kind: PLOTLINE_KINDS.has(row?.kind) ? row.kind : 'main',
       status: PLOTLINE_STATUSES.has(row?.status) ? row.status : 'open',
-      summary: clipText(row?.summary, 800),
+      summary: clipText(row?.summary, 4000),
     });
     if (list.length >= 12) break;
   }
@@ -364,9 +364,9 @@ function sanitizeScriptPatch(raw) {
   if (!script) return undefined;
   const scenes = [];
   for (const scene of Array.isArray(script.scenes) ? script.scenes : []) {
-    const location = clipText(scene?.location, 80);
-    const dialogue = clipText(scene?.dialogue, 2000);
-    const action = clipText(scene?.action, 2000);
+    const location = clipText(scene?.location, 200);
+    const dialogue = clipText(scene?.dialogue, 8000);
+    const action = clipText(scene?.action, 8000);
     const characters = clipText(
       Array.isArray(scene?.characters) ? scene.characters.join('、') : scene?.characters,
       200,
@@ -393,9 +393,9 @@ function sanitizeIntentShots(raw) {
   if (!Array.isArray(raw)) return undefined;
   const list = [];
   for (const row of raw) {
-    const intent = clipText(row?.intent, 400);
-    const dialogue = clipText(row?.dialogue, 800);
-    const location = clipText(row?.location, 80);
+    const intent = clipText(row?.intent, 2000);
+    const dialogue = clipText(row?.dialogue, 4000);
+    const location = clipText(row?.location, 200);
     if (!intent && !dialogue && !location) continue;
     const names = Array.isArray(row?.characters)
       ? row.characters.map((name) => clipText(name, 40)).filter(Boolean)
@@ -405,7 +405,7 @@ function sanitizeIntentShots(raw) {
       scene_order: Number(row?.scene_order) || 1,
       intent,
       dialogue,
-      emotion: clipText(row?.emotion, 40),
+      emotion: clipText(row?.emotion, 200),
       location,
       characters: names.slice(0, 8),
     });
@@ -422,7 +422,7 @@ function sanitizePatch(raw, _catalog, allowedFields, notices = [], options = {})
   for (const key of [...BASIC_FIELDS, ...WORLD_TEXT_FIELDS]) {
     if (!allow.has(key) || source[key] === undefined || source[key] === null) continue;
     const text = String(source[key]).trim();
-    const cap = key === 'title' ? 200 : key === 'cover_prompt' ? 2000 : 4000;
+    const cap = key === 'title' ? 200 : key === 'cover_prompt' ? 4000 : key === 'story_overview' ? 12000 : 8000;
     if (text) out[key] = text.slice(0, cap);
   }
   if (allow.has('timeline') && source.timeline !== undefined) {
@@ -670,7 +670,7 @@ function digestHistory(messages = [], limit = 10) {
     .slice(-limit)
     .map((row) => ({
       role: row.role,
-      content: peelAssistantText(row.content).slice(0, 400),
+      content: peelAssistantText(row.content).slice(0, 2000),
     }));
 }
 

@@ -66,7 +66,7 @@
         <el-empty v-if="!liveImports.length" description="还没有章节快照" />
         <el-card v-for="item in liveImports" :key="item.id" shadow="never" class="cartoon-snap">
           <strong>{{ item.chapter_title || '未命名章节' }}</strong>
-          <el-tag v-if="item.legacy_unpinned" size="small">未钉扎</el-tag>
+          <el-tag v-if="item.legacy_unpinned" size="small" class="cartoon-status-tag">未钉扎</el-tag>
           <el-tag v-else-if="item.package_version" size="small" type="success">故事包 v{{ item.package_version }}</el-tag>
           <div class="cartoon-snap__body" :class="{ 'is-open': snapOpen[item.id] }">
             <CartoonMarkdown prose :source="item.body" empty-text="还没有正文" />
@@ -74,14 +74,13 @@
           </div>
           <el-button link type="primary" @click="snapOpen[item.id] = !snapOpen[item.id]">{{ snapOpen[item.id] ? '收起' : '展开' }}</el-button>
           <div class="cartoon-snap__actions">
-            <el-button type="primary" :disabled="!canMake()" :loading="draftingId === item.id" @click="draft(item)">生成建议</el-button>
+            <el-button type="primary" :disabled="!canMake()" :loading="draftingId === item.id" @click="generateScript(item)">生成剧本</el-button>
             <el-button
+              v-if="hasScript(item)"
               type="primary"
               plain
-              :disabled="!canMake() || pendingDraft?.importId !== item.id"
-              :loading="applyingId === item.id"
-              @click="applyDraft(item)"
-            >写入生产稿</el-button>
+              @click="openScriptPage(item)"
+            >查看剧本</el-button>
             <el-button type="danger" plain :disabled="!canMake()" @click="removeSnapshot(item)">删除快照</el-button>
           </div>
         </el-card>
@@ -89,7 +88,111 @@
     </section>
 
     <section v-show="step === 3" class="cartoon-module">
-      <h3 class="cartoon-module__title">分镜</h3>
+      <div class="cartoon-board__head" style="justify-content: space-between">
+        <h3 class="cartoon-module__title" style="margin: 0">剧本</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <el-button @click="goSnapshotPage">返回快照页</el-button>
+          <el-button type="primary" plain @click="goShotsPage">镜头</el-button>
+        </div>
+      </div>
+      <div class="cartoon-board">
+        <aside class="cartoon-board__snaps">
+          <p class="cartoon-board__label">章节快照</p>
+          <el-empty v-if="!scriptBoardItems.length" description="还没有快照" />
+          <div
+            v-for="item in scriptBoardItems"
+            :key="item.key"
+            class="cartoon-board__snap"
+            :class="{ 'is-active': item.key === selectedImportKey }"
+            role="button"
+            tabindex="0"
+            @click="selectedImportKey = item.key"
+            @keydown.enter="selectedImportKey = item.key"
+          >
+            <span class="cartoon-board__snap-title">{{ item.title }}</span>
+            <el-tag v-if="item.hasScript" type="success" size="small">有剧本</el-tag>
+            <span class="cartoon-board__snap-count">{{ item.count }} 镜</span>
+          </div>
+        </aside>
+        <div class="cartoon-board__main">
+          <p v-if="!selectedScriptImport" class="cartoon-module__hint">先在左侧选择一条章节快照。</p>
+          <template v-else>
+            <div class="cartoon-board__head">
+              <el-button
+                type="primary"
+                plain
+                :disabled="!canMake()"
+                :loading="draftingId === selectedScriptImport.id"
+                @click="generateScript(selectedScriptImport)"
+              >重新生成剧本</el-button>
+              <el-button
+                type="primary"
+                :disabled="!canMake() || !selectedScriptImport.script_data?.scenes?.length"
+                :loading="outliningId === selectedScriptImport.id"
+                @click="generateShotOutline(selectedScriptImport)"
+              >拆分分镜</el-button>
+            </div>
+            <div v-if="activeScriptData" class="cartoon-script">
+              <h4>概要</h4>
+              <CartoonMarkdown :source="activeScriptData.summary || ''" empty-text="还没有概要" />
+              <h4>人物</h4>
+              <el-empty v-if="!(activeScriptData.characters || []).length" description="还没有人物" />
+              <ul v-else class="cartoon-script__list">
+                <li v-for="(person, index) in activeScriptData.characters" :key="`${person.name}-${index}`">
+                  <strong>{{ person.name }}</strong> — {{ person.look }}
+                </li>
+              </ul>
+              <h4>场次</h4>
+              <el-empty v-if="!(activeScriptData.scenes || []).length" description="还没有场次" />
+              <div v-for="(scene, index) in (activeScriptData.scenes || [])" :key="`${scene.title}-${index}`" class="cartoon-script__scene">
+                <strong>{{ index + 1 }}. {{ scene.title || '未命名场次' }}</strong>
+                <CartoonMarkdown :source="scene.summary || ''" />
+              </div>
+            </div>
+            <p v-else class="cartoon-module__hint">还没有剧本，请先生成剧本。</p>
+
+            <h4 class="cartoon-module__title" style="margin-top: 20px">分镜表</h4>
+            <p class="cartoon-module__hint">只根据剧本拆成 8—15 秒剧情段；再对每一行点「生成分镜提示词」。不会自动跳到左侧「镜头」步骤。</p>
+            <el-empty v-if="!outlineRows.length" description="还没有分镜，请先点「拆分分镜」" />
+            <el-table v-else :data="outlineRows" style="margin-top: 8px">
+              <el-table-column prop="index" label="#" width="60" />
+              <el-table-column label="时长(秒)" width="120">
+                <template #default="{ row }">
+                  <el-input-number v-model="row.duration_sec" :min="8" :max="15" :step="1" controls-position="right" style="width: 100%" />
+                </template>
+              </el-table-column>
+              <el-table-column label="主景别" width="100" prop="shot_size" />
+              <el-table-column label="主运镜" width="100" prop="camera_move" />
+              <el-table-column label="涵盖的剧本内容" min-width="280">
+                <template #default="{ row }">
+                  <el-input v-model="row.coverage" type="textarea" :rows="3" />
+                </template>
+              </el-table-column>
+              <el-table-column label="对白" min-width="160">
+                <template #default="{ row }">
+                  <el-input v-model="row.dialogue" type="textarea" :rows="2" />
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="140" fixed="right">
+                <template #default="{ row }">
+                  <el-button
+                    link
+                    type="primary"
+                    :disabled="!canMake()"
+                    :loading="expandingKey === outlineKey(row)"
+                    @click="expandOutlineRow(row)"
+                  >生成分镜提示词</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <section v-show="step === 4" class="cartoon-module">
+      <h3 class="cartoon-module__title">镜头</h3>
+      <p class="cartoon-module__hint">对应左侧步骤「镜头」。汇总各快照已写入的剧情段（通常 8—15 秒/段），不从剧本页自动跳转过来。</p>
       <div class="cartoon-board">
         <aside class="cartoon-board__snaps">
           <p class="cartoon-board__label">章节快照</p>
@@ -118,86 +221,75 @@
           </div>
         </aside>
         <div class="cartoon-board__main">
-          <div v-if="selectedBoard && selectedBoard.raw" class="cartoon-board__head">
-            <el-button
-              type="primary"
-              plain
-              :disabled="!canMake()"
-              :loading="draftingId === selectedBoard.raw.id"
-              @click="draft(selectedBoard.raw)"
-            >生成建议</el-button>
-            <el-button
-              type="primary"
-              :disabled="!canMake() || pendingDraft?.importId !== selectedBoard.raw.id"
-              :loading="applyingId === selectedBoard.raw.id"
-              @click="applyDraft(selectedBoard.raw)"
-            >写入生产稿</el-button>
-          </div>
           <p v-if="!selectedBoard" class="cartoon-module__hint">先在左侧选择一条章节快照。</p>
-      <el-form v-if="selectedBoard" label-position="top" class="cartoon-entry-form">
-        <div class="cartoon-entry-grid">
-          <el-form-item label="景别">
-            <el-select v-model="shot.shot_size" style="width: 100%">
-              <el-option v-for="item in meta.shot_sizes" :key="item" :label="item" :value="item" />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="运镜">
-            <el-select v-model="shot.camera_move" style="width: 100%">
-              <el-option v-for="item in meta.camera_moves" :key="item" :label="item" :value="item" />
-            </el-select>
-          </el-form-item>
-          <el-form-item class="is-wide" label="描述"><el-input v-model="shot.description" type="textarea" :rows="3" /></el-form-item>
-          <el-form-item class="is-wide" label="提示词"><el-input v-model="shot.positive_zh" type="textarea" :rows="2" /></el-form-item>
-        </div>
-        <div class="cartoon-entry-actions">
-          <el-button type="primary" :disabled="!canMake()" @click="addShot">添加分镜</el-button>
-        </div>
-      </el-form>
-      <el-table v-if="selectedBoard" :data="boardShots" style="margin-top: 12px">
-        <el-table-column prop="sort_order" label="#" width="60" />
-        <el-table-column label="景别" width="120">
-          <template #default="{ row }">
-            <el-select v-model="row.shot_size" @change="saveShot(row)">
-              <el-option v-for="item in meta.shot_sizes" :key="item" :label="item" :value="item" />
-            </el-select>
-          </template>
-        </el-table-column>
-        <el-table-column label="运镜" width="120">
-          <template #default="{ row }">
-            <el-select v-model="row.camera_move" @change="saveShot(row)">
-              <el-option v-for="item in meta.camera_moves" :key="item" :label="item" :value="item" />
-            </el-select>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="120">
-          <template #default="{ row }">
-            <el-tag v-if="row.upstream_stale" size="small" type="warning">上游已变</el-tag>
-            <el-tag v-if="hasOverride(row, 'dialogue')" size="small">台词已改</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="描述">
-          <template #default="{ row }">
-            <el-input v-model="row.description" type="textarea" :rows="2" @blur="saveShot(row)" />
-          </template>
-        </el-table-column>
-        <el-table-column label="正向提示词">
-          <template #default="{ row }">
-            <el-input :model-value="row.prompt?.positive_zh || ''" type="textarea" :rows="2" @update:model-value="setPrompt(row, 'positive_zh', $event)" @blur="saveShot(row)" />
-          </template>
-        </el-table-column>
-        <el-table-column label="负向提示词">
-          <template #default="{ row }">
-            <el-input :model-value="row.prompt?.negative_zh || ''" type="textarea" :rows="2" @update:model-value="setPrompt(row, 'negative_zh', $event)" @blur="saveShot(row)" />
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" :disabled="!canMake()" @click.stop="openPromote(row)">提升台词</el-button>
-            <el-button link type="primary" @click.stop="openOutputs(row)">查看</el-button>
-            <el-button link type="primary" :disabled="!canMake()" @click.stop="openGenerate(row)">生成</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+          <el-form v-if="selectedBoard" label-position="top" class="cartoon-entry-form">
+            <div class="cartoon-entry-grid">
+              <el-form-item label="景别">
+                <el-select v-model="shot.shot_size" style="width: 100%">
+                  <el-option v-for="item in meta.shot_sizes" :key="item" :label="item" :value="item" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="运镜">
+                <el-select v-model="shot.camera_move" style="width: 100%">
+                  <el-option v-for="item in meta.camera_moves" :key="item" :label="item" :value="item" />
+                </el-select>
+              </el-form-item>
+              <el-form-item class="is-wide" label="描述"><el-input v-model="shot.description" type="textarea" :rows="3" /></el-form-item>
+              <el-form-item class="is-wide" label="提示词"><el-input v-model="shot.positive_zh" type="textarea" :rows="4" /></el-form-item>
+            </div>
+            <div class="cartoon-entry-actions">
+              <el-button type="primary" :disabled="!canMake()" @click="addShot">添加镜头</el-button>
+            </div>
+          </el-form>
+          <el-table v-if="selectedBoard" :data="boardShots" style="margin-top: 12px">
+            <el-table-column prop="sort_order" label="#" width="60" />
+            <el-table-column label="时长" width="80">
+              <template #default="{ row }">{{ row.duration_ms ? `${Math.round(row.duration_ms / 1000)}s` : '—' }}</template>
+            </el-table-column>
+            <el-table-column label="景别" width="120">
+              <template #default="{ row }">
+                <el-select v-model="row.shot_size" @change="saveShot(row)">
+                  <el-option v-for="item in meta.shot_sizes" :key="item" :label="item" :value="item" />
+                </el-select>
+              </template>
+            </el-table-column>
+            <el-table-column label="运镜" width="120">
+              <template #default="{ row }">
+                <el-select v-model="row.camera_move" @change="saveShot(row)">
+                  <el-option v-for="item in meta.camera_moves" :key="item" :label="item" :value="item" />
+                </el-select>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="120">
+              <template #default="{ row }">
+                <el-tag v-if="row.upstream_stale" size="small" type="warning">上游已变</el-tag>
+                <el-tag v-if="hasOverride(row, 'dialogue')" size="small">台词已改</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="描述">
+              <template #default="{ row }">
+                <el-input v-model="row.description" type="textarea" :rows="3" @blur="saveShot(row)" />
+              </template>
+            </el-table-column>
+            <el-table-column label="正向提示词">
+              <template #default="{ row }">
+                <el-input :model-value="row.prompt?.positive_zh || ''" type="textarea" :rows="6" @update:model-value="setPrompt(row, 'positive_zh', $event)" @blur="saveShot(row)" />
+              </template>
+            </el-table-column>
+            <el-table-column label="负向提示词">
+              <template #default="{ row }">
+                <el-input :model-value="row.prompt?.negative_zh || ''" type="textarea" :rows="3" @update:model-value="setPrompt(row, 'negative_zh', $event)" @blur="saveShot(row)" />
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="280" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="primary" :disabled="!canMake()" @click.stop="openPromote(row)">提升台词</el-button>
+                <el-button link type="primary" @click.stop="openOutputs(row)">查看</el-button>
+                <el-button link type="primary" :disabled="!canMake()" @click.stop="openGenerate(row)">生成</el-button>
+                <el-button link type="danger" :disabled="!canMake()" @click.stop="removeShot(row)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
         </div>
       </div>
     </section>
@@ -241,8 +333,9 @@ const route = useRoute();
 const router = useRouter();
 const steps = [
   { step: 1, title: '项目' },
-  { step: 2, title: '章节' },
-  { step: 3, title: '分镜' },
+  { step: 2, title: '快照' },
+  { step: 3, title: '剧本' },
+  { step: 4, title: '镜头' },
 ];
 const embedded = computed(() => props.forcedStep > 0);
 const step = ref(props.forcedStep || Number(route.query.step) || 1);
@@ -285,8 +378,9 @@ const shot = reactive({ shot_size: '中景', camera_move: '固定', description:
 const novelBrief = ref(null);
 const novelLoading = ref(false);
 const draftingId = ref(null);
-const applyingId = ref(null);
-const pendingDraft = ref(null);
+const outliningId = ref(null);
+const expandingKey = ref('');
+const outlineByImport = ref({});
 const selectedImportKey = ref('');
 const snapOpen = reactive({});
 const generateOpen = ref(false);
@@ -295,6 +389,25 @@ const notice = ref('');
 const noticeType = ref('info');
 
 const liveImports = computed(() => (detail.value?.imports || []).filter(item => !item.deleted_at));
+function hasScript(item) {
+  return Boolean(item?.script_data?.scenes?.length);
+}
+const scriptBoardItems = computed(() => {
+  const shots = detail.value?.shots || [];
+  return liveImports.value.map(item => ({
+    key: String(item.id),
+    title: item.chapter_title || '未命名章节',
+    hasScript: hasScript(item),
+    count: shots.filter(shotRow => String(shotRow.import_id) === String(item.id)).length,
+  }));
+});
+const selectedScriptImport = computed(() => liveImports.value.find(item => String(item.id) === selectedImportKey.value) || null);
+const activeScriptData = computed(() => selectedScriptImport.value?.script_data || null);
+const outlineRows = computed(() => {
+  const current = selectedScriptImport.value;
+  if (!current) return [];
+  return outlineByImport.value[String(current.id)] || [];
+});
 const boardItems = computed(() => {
   const imports = detail.value?.imports || [];
   const shots = detail.value?.shots || [];
@@ -503,7 +616,7 @@ async function saveImport() {
 async function removeSnapshot(item) {
   try {
     await ElMessageBox.confirm(
-      '删除后章节目录不再显示这条快照。已经生成的分镜会留在分镜页，并标成已删除。',
+      '删除后章节目录不再显示这条快照。已经生成的镜头会留在综合镜头页，并标成已删除。',
       '删除快照',
       { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
     );
@@ -514,7 +627,7 @@ async function removeSnapshot(item) {
     await request(`/projects/${route.params.id}/imports/${item.id}`, { method: 'delete' });
     selectedImportKey.value = String(item.id);
     await load();
-    ElMessage.success('已删除快照，分镜仍保留');
+    ElMessage.success('已删除快照，镜头仍保留');
   } catch (err) {
     ElMessage.error(err.message);
   }
@@ -535,14 +648,63 @@ async function saveShot(row) {
     },
   });
 }
-async function draft(item) {
+function openScriptPage(item) {
+  selectedImportKey.value = String(item.id);
+  step.value = 3;
+}
+function goSnapshotPage() {
+  if (embedded.value) {
+    router.replace({ query: { ...route.query, node: 'script' } });
+    step.value = 2;
+    return;
+  }
+  step.value = 2;
+}
+function goShotsPage() {
+  if (selectedScriptImport.value) selectedImportKey.value = String(selectedScriptImport.value.id);
+  if (embedded.value) {
+    router.replace({ query: { ...route.query, node: 'storyboard' } });
+    return;
+  }
+  step.value = 4;
+}
+async function removeShot(row) {
+  try {
+    await ElMessageBox.confirm(
+      '删除这条镜头？提示词、资产绑定、配音和产物会一起删除。',
+      '删除镜头',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  try {
+    await request(`/shots/${row.id}`, { method: 'delete' });
+    await load();
+    ElMessage.success('已删除镜头');
+  } catch (err) {
+    ElMessage.error(err.message);
+  }
+}
+function outlineKey(row) {
+  return `${selectedScriptImport.value?.id || ''}-${row.index}`;
+}
+async function generateScript(item) {
   draftingId.value = item.id;
-  notice.value = '正在生成建议，确认前不会写入';
+  notice.value = '正在生成剧本并写入…';
   noticeType.value = 'info';
   try {
-    const data = await request(`/projects/${route.params.id}/imports/${item.id}/draft/suggest`, { method: 'post', timeout: 600000 });
-    pendingDraft.value = { importId: item.id, ...data };
-    notice.value = '建议已返回，确认后才写入';
+    const data = await request(`/projects/${route.params.id}/imports/${item.id}/draft/script`, {
+      method: 'post',
+      timeout: 1800000,
+    });
+    await request(`/projects/${route.params.id}/imports/${item.id}/draft/script/apply`, {
+      method: 'post',
+      data: { script_data: data.script_data },
+    });
+    selectedImportKey.value = String(item.id);
+    await load();
+    notice.value = '剧本已生成，可点「查看剧本」';
     noticeType.value = 'success';
   } catch (err) {
     notice.value = err.message;
@@ -551,29 +713,62 @@ async function draft(item) {
     draftingId.value = null;
   }
 }
-async function applyDraft(item) {
-  if (!pendingDraft.value || pendingDraft.value.importId !== item.id) return;
-  applyingId.value = item.id;
+async function generateShotOutline(item) {
+  outliningId.value = item.id;
+  notice.value = '正在按剧本拆分分镜（8—15 秒/段）…';
+  noticeType.value = 'info';
   try {
-    await request(`/projects/${route.params.id}/imports/${item.id}/draft/apply`, {
+    const data = await request(`/projects/${route.params.id}/imports/${item.id}/draft/shot-outline`, {
       method: 'post',
-      data: {
-        script_data: pendingDraft.value.script_data,
-        shots: pendingDraft.value.shots,
-        prompts: pendingDraft.value.prompts,
-      },
+      timeout: 1800000,
     });
-    pendingDraft.value = null;
-    notice.value = '分镜已写入，可以再改';
+    const rows = Array.isArray(data.outline) ? data.outline.map((row, index) => ({
+      index: Number.isFinite(row.index) ? row.index : index,
+      coverage: row.coverage || '',
+      duration_sec: Math.min(15, Math.max(8, Number(row.duration_sec) || 10)),
+      shot_size: row.shot_size || '中景',
+      camera_move: row.camera_move || '固定',
+      dialogue: row.dialogue || '',
+    })) : [];
+    outlineByImport.value = { ...outlineByImport.value, [String(item.id)]: rows };
+    notice.value = `已拆出 ${rows.length} 段分镜，请逐行点「生成分镜提示词」`;
     noticeType.value = 'success';
-    selectedImportKey.value = String(item.id);
-    await load();
-    step.value = 3;
   } catch (err) {
     notice.value = err.message;
     noticeType.value = 'error';
   } finally {
-    applyingId.value = null;
+    outliningId.value = null;
+  }
+}
+async function expandOutlineRow(row) {
+  const item = selectedScriptImport.value;
+  if (!item || !row?.coverage?.trim()) {
+    ElMessage.warning('请先填写本段涵盖的剧本内容');
+    return;
+  }
+  expandingKey.value = outlineKey(row);
+  notice.value = `正在生成第 ${row.index + 1} 段分镜提示词（约 ${row.duration_sec || 10} 秒）…`;
+  noticeType.value = 'info';
+  try {
+    await request(`/projects/${route.params.id}/imports/${item.id}/draft/shot-expand`, {
+      method: 'post',
+      timeout: 1800000,
+      data: {
+        coverage: row.coverage,
+        duration_sec: row.duration_sec || 10,
+        shot_size: row.shot_size,
+        camera_move: row.camera_move,
+        dialogue: row.dialogue,
+      },
+    });
+    await load();
+    notice.value = `第 ${row.index + 1} 段已写入；可点左侧「镜头」或上方「镜头」查看，不会自动跳转`;
+    noticeType.value = 'success';
+  } catch (err) {
+    notice.value = err.message;
+    noticeType.value = 'error';
+  } finally {
+    expandingKey.value = '';
   }
 }
 async function addShot() {
@@ -648,8 +843,15 @@ onMounted(async () => {
 .cartoon-board__snap-title { flex: 1 1 100%; font-weight: 600; }
 .cartoon-board__snap-count { color: #5c6b62; font-size: 12px; }
 .cartoon-board__main { flex: 1; min-width: 0; overflow: hidden; }
-.cartoon-board__head { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 12px; }
+.cartoon-board__head { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 12px; }
+.cartoon-script { margin-top: 8px; }
+.cartoon-script h4 { margin: 16px 0 8px; font-size: 15px; }
+.cartoon-script__list { margin: 0; padding-left: 1.2em; }
+.cartoon-script__scene { margin-bottom: 12px; padding: 10px 12px; border: 1px solid rgba(47, 138, 91, 0.18); border-radius: 8px; background: #f7fbf8; }
 @media (max-width: 900px) {
   .cartoon-setting-grid { grid-template-columns: 1fr; }
+}
+.cartoon-status-tag {
+  margin: 0 4px 4px;
 }
 </style>

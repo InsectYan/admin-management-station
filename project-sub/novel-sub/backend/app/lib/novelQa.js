@@ -89,7 +89,7 @@ function checkBasic(novel, setting) {
   if (!nonEmpty(novel?.summary)) {
     findings.push(finding({
       module: 'basic', code: 'missing_summary', severity: 'warning',
-      message: '缺少作品简介', suggestion: '补一段带卖点的短简介（列表用）',
+      message: '缺少作品简介', suggestion: '补一段丰富动人的简介：人物关系、世界钩子、冲突与氛围',
     }));
   } else if (String(novel.summary).trim().length < 40) {
     findings.push(finding({

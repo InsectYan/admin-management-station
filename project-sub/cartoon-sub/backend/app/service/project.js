@@ -922,6 +922,37 @@ class ProjectService extends Service {
     return shot;
   }
 
+  async removeShot(id) {
+    const { Op } = this.app.Sequelize;
+    const shot = await this.ctx.model.Shot.findByPk(id);
+    if (!shot) this.ctx.throw(404, '镜头不存在');
+    const tasks = await this.ctx.model.Task.findAll({ where: { shot_id: shot.id } });
+    const busy = tasks.find(item => [ 'queued', 'running', 'saving' ].includes(item.status));
+    if (busy) this.ctx.throw(400, '该镜头正在生成，等它结束再删除');
+    const taskIds = tasks.map(item => item.id);
+    const outputs = taskIds.length
+      ? await this.ctx.model.Output.findAll({ where: { task_id: { [Op.in]: taskIds } } })
+      : [];
+    const outputIds = outputs.map(item => item.id);
+    if (outputIds.length) {
+      await this.ctx.model.EditClip.update(
+        { source_output_id: null },
+        { where: { source_output_id: { [Op.in]: outputIds } } },
+      );
+      await this.ctx.model.ExportSpec.update(
+        { source_output_id: null },
+        { where: { source_output_id: { [Op.in]: outputIds } } },
+      );
+    }
+    for (const task of tasks) await this.ctx.service.generate.removeTask(task.id);
+    await this.ctx.model.Prompt.destroy({ where: { shot_id: shot.id } });
+    await this.ctx.model.ShotBinding.destroy({ where: { shot_id: shot.id } });
+    await this.ctx.model.VoiceCue.destroy({ where: { shot_id: shot.id } });
+    await this.ctx.model.ReviewFinding.destroy({ where: { shot_id: shot.id } });
+    await shot.destroy();
+    return { id: Number(id) };
+  }
+
   async savePanel(projectId, payload) {
     const project = await this.ctx.model.Project.findByPk(projectId);
     if (!project) this.ctx.throw(404, '项目不存在');

@@ -61,8 +61,11 @@
         </el-form-item>
         <el-form-item label="画面风格">
           <el-select v-model="form.visual_style" filterable placeholder="选择风格" style="width: 100%">
-            <el-option v-for="item in styles" :key="item.value" :label="item.label" :value="item.value" />
+            <el-option-group v-for="group in styleGroups" :key="group.label" :label="group.label">
+              <el-option v-for="item in group.options" :key="item.value" :label="item.label" :value="item.value" />
+            </el-option-group>
           </el-select>
+          <p v-if="selectedStyleNote" class="cartoon-module__hint">{{ selectedStyleNote }}</p>
         </el-form-item>
         <p class="cartoon-module__hint">{{ current.needs_package ? '创建后到项目里绑定故事包。' : '不会出现选择小说，也不会在叙事工作台新建作品。' }}</p>
       </el-form>
@@ -82,6 +85,7 @@ import PageShell from '../components/PageShell.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 import { CONTENT_TYPES } from '../lib/contentTypes.js';
+import { groupVisualStyles } from '../utils/visualStyles.js';
 
 const router = useRouter();
 const rows = ref([]);
@@ -95,6 +99,11 @@ const createVisible = ref(false);
 const current = ref(null);
 const saving = ref(false);
 const form = reactive({ name: '', visual_style: '' });
+const styleGroups = computed(() => groupVisualStyles(styles.value));
+const selectedStyleNote = computed(() => {
+  const hit = styles.value.find(item => item.value === form.visual_style);
+  return hit ? `${hit.name || hit.label}：${hit.note || hit.prompt || ''}` : '';
+});
 
 const filtered = computed(() => rows.value.filter(item => {
   if (contentType.value && item.content_type !== contentType.value) return false;

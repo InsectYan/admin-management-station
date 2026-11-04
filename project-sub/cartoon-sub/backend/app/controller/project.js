@@ -165,7 +165,7 @@ class ProjectController extends Controller {
 
   async draftSuggest() {
     try {
-      ok(this.ctx, await this.ctx.service.draft.suggest(this.ctx.params.id, this.ctx.params.importId));
+      ok(this.ctx, await this.ctx.service.draft.suggestScript(this.ctx.params.id, this.ctx.params.importId));
     } catch (err) {
       fail(this.ctx, err);
     }
@@ -173,7 +173,39 @@ class ProjectController extends Controller {
 
   async draftApply() {
     try {
-      ok(this.ctx, await this.ctx.service.draft.apply(this.ctx.params.id, this.ctx.params.importId, this.ctx.request.body || {}));
+      ok(this.ctx, await this.ctx.service.draft.applyScript(this.ctx.params.id, this.ctx.params.importId, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async draftScript() {
+    try {
+      ok(this.ctx, await this.ctx.service.draft.suggestScript(this.ctx.params.id, this.ctx.params.importId));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async draftScriptApply() {
+    try {
+      ok(this.ctx, await this.ctx.service.draft.applyScript(this.ctx.params.id, this.ctx.params.importId, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async draftShotOutline() {
+    try {
+      ok(this.ctx, await this.ctx.service.draft.suggestShotOutline(this.ctx.params.id, this.ctx.params.importId));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async draftShotExpand() {
+    try {
+      ok(this.ctx, await this.ctx.service.draft.expandShot(this.ctx.params.id, this.ctx.params.importId, this.ctx.request.body || {}));
     } catch (err) {
       fail(this.ctx, err);
     }
@@ -306,6 +338,14 @@ class ProjectController extends Controller {
   async updateShot() {
     try {
       ok(this.ctx, await this.ctx.service.project.updateShot(this.ctx.params.id, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async removeShot() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.removeShot(this.ctx.params.id));
     } catch (err) {
       fail(this.ctx, err);
     }

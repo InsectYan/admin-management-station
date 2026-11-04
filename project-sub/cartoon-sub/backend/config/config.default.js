@@ -55,7 +55,8 @@ module.exports = appInfo => {
   };
   config.agentPlatform = {
     baseUrl: process.env.AGENT_PLATFORM_URL || 'http://127.0.0.1:4001',
-    timeoutMs: Number(process.env.AGENT_PLATFORM_TIMEOUT_MS || 180000),
+    // 剧本→分镜→提示词串行且本地模型上下文大，单次默认放宽到 10 分钟
+    timeoutMs: Number(process.env.AGENT_PLATFORM_TIMEOUT_MS || 600000),
   };
   config.ops = {
     baseUrl: process.env.OPS_API_ORIGIN || 'http://127.0.0.1:5203',

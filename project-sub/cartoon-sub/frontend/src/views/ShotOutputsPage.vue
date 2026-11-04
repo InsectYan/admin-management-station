@@ -185,7 +185,7 @@ function back() {
     return;
   }
   if (route.query.from === 'work') {
-    router.push({ path: `/projects/${projectId.value}/work`, query: { step: '3' } });
+    router.push({ path: `/projects/${projectId.value}/work`, query: { step: '4' } });
     return;
   }
   router.push({ path: `/projects/${projectId.value}`, query: { tab: route.query.tab || '3' } });
