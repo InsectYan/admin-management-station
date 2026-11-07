@@ -432,6 +432,14 @@ class ProjectController extends Controller {
     }
   }
 
+  async taskWorkflow() {
+    try {
+      ok(this.ctx, await this.ctx.service.generate.workflowOf(this.ctx.params.id));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async removeTask() {
     try {
       ok(this.ctx, await this.ctx.service.generate.removeTask(this.ctx.params.id));

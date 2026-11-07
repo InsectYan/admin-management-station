@@ -1,12 +1,11 @@
 <template>
-  <PageShell :title="shot ? (shot.description || '产物') : '产物'">
+  <PageShell>
     <template #extra>
       <el-button link type="primary" @click="back">← 返回</el-button>
       <el-button v-if="shot" :disabled="!canMake()" @click="openGenerate">继续生成</el-button>
       <el-button @click="openEdit">剪辑成片</el-button>
     </template>
     <section class="cartoon-module">
-      <p v-if="chapterTitle" class="cartoon-module__hint">{{ chapterTitle }}</p>
       <el-empty v-if="loaded && !tasks.length" description="这条分镜还没有产物" />
       <el-tabs v-else-if="loaded" v-model="previewTab">
         <el-tab-pane label="资产" name="assets">
@@ -28,6 +27,7 @@
               <el-card v-for="card in cards" :key="card.key" shadow="never" class="cartoon-output">
                 <div class="cartoon-output__head">
                   <p>
+                    <span class="cartoon-record">记录 #{{ card.task.id }}</span>
                     {{ statusLabel(card.task.status) }} · {{ kindLabel(card.task.kind) }}
                     <template v-if="card.output"> · {{ stageLabel(card.output.version_stage) }} · {{ faceLabel(card.output) }}</template>
                   </p>
@@ -75,7 +75,7 @@
           <article v-for="task in tasks" :key="task.id" class="cartoon-brief">
             <header class="cartoon-brief__head">
               <strong>{{ kindLabel(task.kind) }} · {{ statusLabel(task.status) }}</strong>
-              <span class="cartoon-module__hint">记录 #{{ task.id }}</span>
+              <span class="cartoon-record">记录 #{{ task.id }}</span>
             </header>
             <dl class="cartoon-brief__list">
               <div>
@@ -143,7 +143,6 @@ import { canMake } from '../lib/appAccess.js';
 const route = useRoute();
 const router = useRouter();
 const shot = ref(null);
-const chapterTitle = ref('');
 const tasks = ref([]);
 const loaded = ref(false);
 const profiles = ref({});
@@ -313,8 +312,6 @@ function stopPoll() {
 async function load() {
   const detail = await request(`/projects/${projectId.value}`);
   shot.value = (detail.shots || []).find(item => String(item.id) === String(shotId.value)) || null;
-  const chapter = (detail.imports || []).find(item => String(item.id) === String(shot.value?.import_id));
-  chapterTitle.value = chapter?.chapter_title || '';
   tasks.value = (detail.tasks || []).filter(item => String(item.shot_id) === String(shotId.value));
   const outputs = tasks.value.flatMap(item => item.outputs || []);
   if (outputs.length > 1 && !leftId.value) {
@@ -342,6 +339,7 @@ onUnmounted(stopPoll);
 .cartoon-output { margin: 0; }
 .cartoon-output__head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
 .cartoon-output__head p { margin: 0; }
+.cartoon-record { color: #2f8a5b; font-weight: 600; }
 .cartoon-output__error { margin: 8px 0 0; color: #b54747; }
 .cartoon-output-file { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 @container (min-width: 720px) {

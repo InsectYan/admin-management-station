@@ -31,5 +31,4 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.cartoon-workbench__note { margin: 16px 20px; }
 </style>

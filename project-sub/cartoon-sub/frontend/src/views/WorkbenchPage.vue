@@ -258,9 +258,10 @@
             <el-table-column label="运镜" width="180">
               <template #default="{ row }">{{ (row.camera_moves || []).join('、') || row.camera_move || '—' }}</template>
             </el-table-column>
-            <el-table-column label="操作" width="140" fixed="right">
+            <el-table-column label="操作" width="220" fixed="right">
               <template #default="{ row }">
                 <el-button link type="primary" @click.stop="pickShot(row)">查看产物</el-button>
+                <el-button link type="primary" :disabled="!workflowTasks(row).length" @click.stop="openWorkflow(row)">查看工作流</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -288,6 +289,15 @@
       <p>钉扎 · {{ pinLabel || '未选择故事包' }}</p>
       <p>节点 · {{ nodeTitle }}</p>
     </aside>
+    <el-dialog v-model="workflowOpen" :title="workflowTitle" width="760px" append-to-body destroy-on-close>
+      <div v-if="workflowChoices.length > 1" class="cartoon-workflow-pick">
+        <span>记录</span>
+        <el-select v-model="workflowTaskId" style="width: 220px" @change="loadWorkflow">
+          <el-option v-for="item in workflowChoices" :key="item.id" :label="`记录 #${item.id}`" :value="item.id" />
+        </el-select>
+      </div>
+      <pre class="cartoon-workflow-json">{{ workflowText }}</pre>
+    </el-dialog>
   </div>
   <p v-else class="cartoon-module__hint cartoon-workbench__note">{{ error || '正在打开工作台…' }}</p>
 </template>
@@ -734,6 +744,37 @@ function selectNode(id) {
 function pickShot(row) {
   router.replace({ query: { node: node.value, shot: String(row.id) } });
 }
+const workflowOpen = ref(false);
+const workflowTaskId = ref(null);
+const workflowChoices = ref([]);
+const workflowText = ref('');
+const workflowTitle = computed(() => (workflowTaskId.value ? `提交给 ComfyUI 的工作流 · 记录 #${workflowTaskId.value}` : '提交给 ComfyUI 的工作流'));
+function workflowTasks(row) {
+  return (bundle.value?.tasks || []).filter(item => String(item.shot_id) === String(row?.id) && item.has_workflow);
+}
+async function openWorkflow(row) {
+  const tasks = workflowTasks(row);
+  if (!tasks.length) {
+    ElMessage.warning('这条镜头还没有留下提交给 ComfyUI 的工作流');
+    return;
+  }
+  workflowChoices.value = tasks;
+  workflowTaskId.value = tasks[0].id;
+  workflowOpen.value = true;
+  await loadWorkflow();
+}
+async function loadWorkflow() {
+  workflowText.value = '正在读取…';
+  try {
+    const data = await request(`/tasks/${workflowTaskId.value}/workflow`);
+    workflowText.value = data?.submitted
+      ? JSON.stringify(data.submitted, null, 2)
+      : '这次生成没有留下提交给 ComfyUI 的工作流';
+  } catch (err) {
+    workflowText.value = '';
+    ElMessage.error(err.message || '没有读到工作流');
+  }
+}
 async function persistNode(value) {
   if (!episode.value || !value || episode.value.current_node === value) return;
   try {
@@ -811,6 +852,19 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.cartoon-workflow-pick { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+.cartoon-workflow-json {
+  max-height: 60vh;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  white-space: pre;
+  background: #f6f7f4;
+  border-radius: 6px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
 .cartoon-workbench {
   display: grid;
   grid-template-columns: 196px minmax(0, 1fr) 168px;
@@ -901,6 +955,7 @@ onMounted(() => {
   background: #2f8a5b;
 }
 .cartoon-workbench__main {
+  padding: 16px 0;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -943,7 +998,6 @@ onMounted(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  margin: 12px 16px;
 }
 .cartoon-asset-head {
   display: flex;
@@ -988,5 +1042,4 @@ onMounted(() => {
 .cartoon-pager { margin-top: 12px; justify-content: flex-end; }
 .cartoon-preview-table :deep(.el-table__row),
 .cartoon-preview-table :deep(.el-button) { cursor: pointer; }
-.cartoon-workbench__note { margin: 16px 20px 0; }
 </style>

@@ -153,12 +153,51 @@ function mentionsInPrompt(text) {
   return found;
 }
 
-function briefFromSnapshot(graph) {
+function submittedPrompt(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) return snapshot;
+  const prompt = snapshot.prompt;
+  if (!prompt || typeof prompt !== 'object' || Array.isArray(prompt)) return snapshot;
+  const nodes = Object.values(prompt);
+  if (nodes.some(node => node && typeof node === 'object' && node.class_type)) return prompt;
+  return snapshot;
+}
+
+function briefFromSnapshot(snapshot) {
+  const graph = submittedPrompt(snapshot);
   return {
     positive: linkedText(graph, 'positive') || directPrompt(graph),
     negative: linkedText(graph, 'negative'),
     seed: directNumber(graph, 'noise_seed') ?? directNumber(graph, 'seed'),
   };
+}
+
+function assertReferenceGraph(graph, expected) {
+  const node = Object.values(graph || {}).find(item => item?.class_type === 'MiniMaxH3ReferenceToVideo');
+  if (!node) {
+    const error = new Error('提交给 ComfyUI 的工作流没有参考图入口，RefMod 图片不会被引用');
+    error.status = 400;
+    throw error;
+  }
+  const prompt = String(node.inputs?.prompt || '');
+  const linked = Object.entries(node.inputs || {}).filter(([ key, value ]) => {
+    if (!/^ref_images\.ref_image_\d+$/.test(key) || !Array.isArray(value)) return false;
+    const loader = graph[String(value[0])];
+    const name = String(loader?.inputs?.image || '').split(/[/\\]/).pop();
+    return loader?.class_type === 'LoadImage' && name && name !== 'reference.png';
+  }).length;
+  const pictures = new Set();
+  const re = /<Picture\s+(\d+)\s*>/g;
+  let match;
+  while ((match = re.exec(prompt))) pictures.add(Number(match[1]));
+  const missing = [];
+  for (let index = 1; index <= expected; index += 1) {
+    if (!pictures.has(index)) missing.push(index);
+  }
+  if (linked !== expected || missing.length) {
+    const error = new Error(`参考图没有完整接进 ComfyUI：工作流接上 ${linked} 张，提示词标了 ${pictures.size} 张，这次要交 ${expected} 张`);
+    error.status = 400;
+    throw error;
+  }
 }
 
 function precheckGap(diff, workflowId) {
@@ -206,12 +245,30 @@ class GenerateService extends Service {
       : requestedIds;
     const picks = this.ctx.service.refmod.normalizePicks(payload.refmod_files)
       ?? await this.ctx.service.refmod.storedPicks(projectId, shot.id);
+    const workflowOverride = Number(payload.workflow_id) || 0;
+    let workflowName = '';
+    if (workflowOverride) {
+      const chosen = await this.choiceById(workflowOverride);
+      workflowName = chosen.name || '';
+      if (videoKind && chosen.media !== 'video') this.ctx.throw(400, '请选择生视频工作流');
+      if (!videoKind && chosen.media !== 'image') this.ctx.throw(400, '请选择生图工作流');
+    }
+    const useRefs = kind === 'refmod' || /\[refmod\]/i.test(workflowName);
+    if (kind === 'refmod' && !/\[refmod\]/i.test(workflowName)) {
+      this.ctx.throw(400, '请选择一条 [RefMod] 工作流');
+    }
     const composed = await this.ctx.service.refmod.composePrompt(
       projectId,
       assetIds,
       text,
-      videoKind ? { pictures: kind === 'refmod', lock: true, picks } : false,
+      videoKind ? { pictures: true, lock: true, picks } : false,
     );
+    if (videoKind && composed.refmodIds.length && !useRefs) {
+      this.ctx.throw(400, `工作流「${workflowName || '未选择'}」不能引用 RefMod 图片。这条镜头已经绑了参考图，用这条工作流提交时 ComfyUI 收不到图，成片不会像参考人物。请改用带 [RefMod] 的工作流。`);
+    }
+    if (useRefs && !composed.refmodIds.length) {
+      this.ctx.throw(400, '请勾选已经绑了 RefMod 的角色，并至少留一张参考图');
+    }
     const positive = composed.positive;
     const compliance = await complianceCheck(this.ctx, positive);
     const hit = compliance?.hits?.[0];
@@ -235,8 +292,8 @@ class GenerateService extends Service {
     if (payload.camera_moves != null) shotPatch.camera_moves = payload.camera_moves;
     else if (payload.camera_move != null) shotPatch.camera_move = payload.camera_move;
     await this.ctx.service.project.updateShot(shot.id, shotPatch);
-    const refmodIds = kind === 'refmod' ? composed.refmodIds : [];
-    const workflowOverride = Number(payload.workflow_id) || 0;
+    const refmodIds = useRefs ? composed.refmodIds : [];
+    const taskKind = useRefs ? 'refmod' : kind;
     let durationSec;
     if (videoKind) {
       const seconds = Number(payload.duration_sec);
@@ -244,11 +301,7 @@ class GenerateService extends Service {
       if (seconds > 60) this.ctx.throw(400, '时长不能超过 60 秒');
       durationSec = seconds;
     }
-    if (kind === 'refmod') {
-      if (!workflowOverride) this.ctx.throw(400, '请选择一条 [RefMod] 工作流');
-      if (!refmodIds.length) this.ctx.throw(400, '请勾选已经绑了 RefMod 的角色，并至少留一张参考图');
-      await this.assertRefmodWorkflow(workflowOverride);
-    }
+    if (useRefs) await this.assertRefmodWorkflow(workflowOverride);
 
     const profileRow = project
       ? await this.ctx.model.AgentConfig.findOne({ where: { content_type: project.content_type, role: 'video' } })
@@ -256,7 +309,7 @@ class GenerateService extends Service {
     const task = await this.ctx.model.Task.create({
       project_id: Number(projectId),
       shot_id: shot.id,
-      kind,
+      kind: taskKind,
       status: 'queued',
       model_profile: profileRow?.model_profile || 'comfy-local',
       package_version: project?.package_version || null,
@@ -599,6 +652,7 @@ class GenerateService extends Service {
     let graph;
     try {
       graph = await this.bindWorkflow(workflowId, text, images, refImages, options.seed, options.durationSec, options.negative);
+      if (refImages.length) assertReferenceGraph(graph, refImages.length);
     } catch (err) {
       if (await this.stopped(task, options.signal)) return task.reload();
       await task.update({ status: 'failed', error_message: err.message, precheck_workflow_id: workflowId });
@@ -611,12 +665,13 @@ class GenerateService extends Service {
     if (await this.stopped(task, signal)) return task.reload();
     const promptUrl = `${this.comfyBase()}/prompt`;
     this.ctx.logger.info('[cartoon] comfy POST %s', promptUrl);
+    const submission = { prompt: submittedPrompt(graph) || graph, client_id: 'precheck-watch' };
     let submitted;
     try {
       const res = await fetch(promptUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ prompt: graph, client_id: 'precheck-watch' }),
+        body: JSON.stringify(submission),
         signal: AbortSignal.timeout(20000),
       });
       submitted = await res.json();
@@ -629,7 +684,7 @@ class GenerateService extends Service {
       await task.update({
         status: 'failed',
         error_message: `连不上 ComfyUI：${err.message}`,
-        workflow_snapshot: graph,
+        workflow_snapshot: submission,
         precheck_workflow_id: workflowId || task.precheck_workflow_id,
       });
       return task.reload();
@@ -642,7 +697,7 @@ class GenerateService extends Service {
     await task.update({
       status: 'running',
       prompt_id: submitted.prompt_id,
-      workflow_snapshot: graph,
+      workflow_snapshot: submission,
       error_message: '',
       precheck_workflow_id: workflowId || task.precheck_workflow_id,
       precheck_gap: null,
@@ -901,9 +956,19 @@ class GenerateService extends Service {
       seed: stored?.seed ?? extracted.seed ?? null,
       duration_sec: stored?.duration_sec ?? null,
     };
+    const hasWorkflow = Boolean(json.workflow_snapshot && typeof json.workflow_snapshot === 'object' && Object.keys(json.workflow_snapshot).length);
     delete json.workflow_snapshot;
     delete json.generation_brief;
-    return { ...json, generation };
+    return { ...json, generation, has_workflow: hasWorkflow };
+  }
+
+  async workflowOf(taskId) {
+    const task = await this.ctx.model.Task.findByPk(taskId);
+    if (!task) this.ctx.throw(404, '产物不存在');
+    return {
+      id: task.id,
+      submitted: task.workflow_snapshot || null,
+    };
   }
 
   async removeTask(taskId) {

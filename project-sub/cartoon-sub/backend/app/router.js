@@ -117,6 +117,7 @@ module.exports = app => {
   router.post('/api/projects/:id/edit/export', controller.edit.startExport);
   router.get('/api/edit-jobs/:id', controller.edit.job);
   router.delete('/api/outputs/:id', controller.project.removeOutput);
+  router.get('/api/tasks/:id/workflow', controller.project.taskWorkflow);
   router.delete('/api/tasks/:id', controller.project.removeTask);
   router.get('/api/outputs/:id/file', controller.project.outputFile);
 };

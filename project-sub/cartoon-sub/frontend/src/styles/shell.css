@@ -16,7 +16,9 @@
   min-height: 0;
   overflow: hidden;
   box-sizing: border-box;
+  padding: 16px;
 }
+.cartoon-workbench__main .cartoon-page { padding: 0; }
 .cartoon-page-body {
   flex: 1;
   min-height: 0;

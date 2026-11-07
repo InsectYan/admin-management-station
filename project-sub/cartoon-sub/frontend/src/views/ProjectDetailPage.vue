@@ -1256,13 +1256,28 @@ async function runVideoShot(row, item, signal) {
   }
   const inputs = await request('/generate-inputs', { signal });
   const workflows = inputs.workflows || [];
-  const workflow = workflows.find(entry => entry.media === 'video' && entry.name === '满血-h3-文生视频')
+  const savedWorkflow = workflows.find(entry => entry.id === Number(saved?.workflow_id) && entry.media === 'video');
+  const bound = (detail.value.bindings || []).filter(entry => String(entry.shot_id) === String(row.id)).map(entry => Number(entry.asset_id));
+  let hasRef = false;
+  if (!savedWorkflow && bound.length) {
+    const packs = await request(`/projects/${route.params.id}/refmods`, { signal });
+    const packAssets = new Set((Array.isArray(packs) ? packs : []).map(entry => Number(entry.asset_id)));
+    hasRef = bound.some(id => packAssets.has(id));
+  }
+  const workflow = savedWorkflow
+    || (hasRef
+      ? workflows.find(entry => entry.media === 'video' && /满血-h3-文生视频/i.test(entry.name) && /\[refmod\]/i.test(entry.name))
+      : null)
+    || workflows.find(entry => entry.media === 'video' && entry.name === '满血-h3-文生视频')
     || workflows.find(entry => entry.media === 'video' && String(entry.name).includes('文生视频') && !/refmod/i.test(entry.name));
   if (!workflow) throw new Error('没有找到文生视频工作流');
-  const bound = (detail.value.bindings || []).filter(entry => String(entry.shot_id) === String(row.id)).map(entry => entry.asset_id);
+  if (hasRef && !/\[refmod\]/i.test(workflow.name)) {
+    throw new Error('这条镜头绑了 RefMod 参考图，但没有找到能引用这些图的 [RefMod] 工作流');
+  }
+  const kind = /\[refmod\]/i.test(workflow.name) ? 'refmod' : 't2v';
   const seed = rollSeed();
   writeNote(item, `种子 ${seed}`);
-  const task = await request(`/projects/${route.params.id}/shots/${row.id}/generate?kind=t2v`, {
+  const task = await request(`/projects/${route.params.id}/shots/${row.id}/generate?kind=${kind}`, {
     method: 'post',
     signal,
     data: {
