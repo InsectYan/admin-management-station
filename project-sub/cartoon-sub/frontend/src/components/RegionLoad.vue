@@ -1,5 +1,5 @@
 <template>
-  <div :style="boxStyle">
+  <div ref="root" :style="boxStyle">
     <div v-if="pane" :style="scrollStyle">
       <slot />
     </div>
@@ -9,7 +9,7 @@
 </template>
 
 <script setup>
-import { computed, provide, ref } from 'vue';
+import { computed, nextTick, onMounted, provide, ref } from 'vue';
 import LoadMask from './LoadMask.vue';
 
 const props = defineProps({
@@ -32,23 +32,41 @@ async function track(work) {
 provide('cartoon-region-load', track);
 defineExpose({ track });
 
+const root = ref(null);
+
+function pinDrawerBody() {
+  const body = root.value?.closest('.el-drawer__body');
+  if (!body) return;
+  body.style.overflow = 'hidden';
+  body.style.display = 'flex';
+  body.style.flexDirection = 'column';
+  body.style.minHeight = '0';
+}
+
+onMounted(async () => {
+  if (!props.pane) return;
+  await nextTick();
+  pinDrawerBody();
+});
+
 const boxStyle = computed(() => (
   props.pane
     ? {
       position: 'relative',
+      boxSizing: 'border-box',
       display: 'flex',
       flexDirection: 'column',
-      height: '100%',
-      minHeight: 'calc(100vh - 128px)',
+      flex: '1 1 0%',
+      width: '100%',
+      minHeight: '0',
       overflow: 'hidden',
     }
     : { position: 'relative', minHeight: '0', height: '100%' }
 ));
 
 const scrollStyle = {
-  flex: '1 1 auto',
+  flex: '1 1 0%',
   minHeight: '0',
-  height: '100%',
   overflow: 'auto',
 };
 </script>
