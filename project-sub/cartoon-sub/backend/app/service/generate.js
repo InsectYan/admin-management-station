@@ -6,7 +6,7 @@ const Service = require('egg').Service;
 const { outputRoot, resolveInside } = require('../lib/mediaPaths');
 const { reportAudit } = require('../lib/reportAudit');
 const { complianceCheck } = require('../lib/complianceCheck');
-const { clientAbort } = require('../lib/clientAbort');
+const { begin, finish, cancelProject } = require('../lib/activeRuns');
 const { usageSummary } = require('../lib/usageSummary');
 
 function unwrap(json) {
@@ -219,10 +219,16 @@ class GenerateService extends Service {
   }
 
   async start(projectId, shotId, payload, kind = 'image') {
-    const stop = clientAbort(this.ctx);
-    try {
     const shot = await this.ctx.model.Shot.findByPk(shotId);
     if (!shot || String(shot.project_id) !== String(projectId)) this.ctx.throw(404, '分镜不存在');
+    const claim = begin(this.app, { projectId, kind: 'generate', targetId: shot.id });
+    if (claim.joined) return claim.done;
+    const stop = {
+      signal: claim.signal,
+      stopped() { return claim.signal.aborted; },
+      release() {},
+    };
+    try {
     const missingPanel = await this.ctx.service.project.missingPanelLabels(projectId);
     if (missingPanel.length) this.ctx.throw(400, `面板还没填完：${missingPanel.join('、')}`);
     const text = String(payload.positive_zh || '').trim();
@@ -268,7 +274,7 @@ class GenerateService extends Service {
       this.ctx.throw(400, `工作流「${workflowName || '未选择'}」不能引用 RefMod 图片。这条镜头已经绑了参考图，用这条工作流提交时 ComfyUI 收不到图，成片不会像参考人物。请改用带 [RefMod] 的工作流。`);
     }
     if (useRefs && !composed.refmodIds.length) {
-      this.ctx.throw(400, '请勾选已经绑了 RefMod 的角色，并至少留一张参考图');
+      this.ctx.throw(400, '请勾选已经绑了 RefMod 的角色或场景，并至少留一张参考图');
     }
     const positive = composed.positive;
     const compliance = await complianceCheck(this.ctx, positive);
@@ -326,7 +332,9 @@ class GenerateService extends Service {
     if (durationSec) await shot.update({ duration_ms: Math.round(durationSec * 1000) });
     if (stop.stopped()) {
       await task.update({ status: 'cancelled', error_message: '已停止' });
-      return task.reload();
+      const cancelled = await task.reload();
+      finish(this.app, claim.row, null, cancelled);
+      return cancelled;
     }
     return await this.execute(task, positive, Array.isArray(payload.images) ? payload.images : [], {
       refmodIds,
@@ -337,7 +345,13 @@ class GenerateService extends Service {
       negative: payload.negative_zh != null ? String(payload.negative_zh) : '',
       signal: stop.signal,
       refmodPicks: picks,
+    }).then(saved => {
+      finish(this.app, claim.row, null, saved);
+      return saved;
     });
+    } catch (err) {
+      finish(this.app, claim.row, err);
+      throw err;
     } finally {
       stop.release();
     }
@@ -565,6 +579,7 @@ class GenerateService extends Service {
   async stopProject(projectId) {
     const project = await this.ctx.model.Project.findByPk(projectId);
     if (!project) this.ctx.throw(404, '项目不存在');
+    cancelProject(this.app, project.id);
     const tasks = await this.ctx.model.Task.findAll({
       where: {
         project_id: project.id,

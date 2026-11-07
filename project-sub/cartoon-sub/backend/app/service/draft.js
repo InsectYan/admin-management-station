@@ -16,13 +16,15 @@ const {
 } = require('../lib/cartoonMeta');
 const { minStoryUnits, normalizeOmissions, uncoveredScenes } = require('../lib/storyCoverage');
 const { normalizeScript } = require('../lib/rosterNames');
+const { uniquePrompt } = require('../lib/promptText');
+const { begin, finish } = require('../lib/activeRuns');
 
 function outputOf(result) {
   return result?.output || {};
 }
 
 function picturePrompt(text) {
-  return String(text || '').replace(/\n*【后期与对白备注】[\s\S]*$/u, '').trim();
+  return uniquePrompt(text);
 }
 
 function coveredPlaceNames(script, description) {
@@ -101,6 +103,19 @@ class DraftService extends Service {
 
   /** 只生成完整剧本，不拆分镜、不写提示词 */
   async suggestScript(projectId, importId) {
+    const claim = begin(this.app, { projectId, kind: 'script', targetId: importId });
+    if (claim.joined) return claim.done;
+    try {
+      const result = await this.composeScript(projectId, importId, claim.signal);
+      finish(this.app, claim.row, null, result);
+      return result;
+    } catch (err) {
+      finish(this.app, claim.row, err);
+      throw err;
+    }
+  }
+
+  async composeScript(projectId, importId, signal) {
     const { project, chapter } = await this.load(projectId, importId);
     const styleCtx = await this.styleContext(project, chapter);
     const bodyLen = String(chapter.body || '').length;
@@ -109,6 +124,7 @@ class DraftService extends Service {
       skill: 'cartoon-script-skill',
       action: 'draft',
       timeoutMs: skillTimeout(this.ctx),
+      signal,
       payload: {
         chapter_title: chapter.chapter_title || '',
         ...styleCtx,
@@ -133,11 +149,15 @@ class DraftService extends Service {
     scriptData.omissions = omissions;
     scriptData.shot_omissions = [];
     const named = normalizeScript(scriptData);
+    await chapter.update({
+      script_data: { ...named, shot_omissions: [] },
+      characters: named.characters || [],
+    });
     return {
       script_data: named,
       is_xianxia: styleCtx.is_xianxia,
       visual_style_label: styleCtx.visual_style_label,
-      persisted: false,
+      persisted: true,
     };
   }
 
@@ -156,6 +176,19 @@ class DraftService extends Service {
 
   /** 按已有剧本拆镜头大纲并落库；与镜头页共用同一批 Shot */
   async suggestShotOutline(projectId, importId, payload = {}) {
+    const claim = begin(this.app, { projectId, kind: 'outline', targetId: importId });
+    if (claim.joined) return claim.done;
+    try {
+      const result = await this.composeOutline(projectId, importId, payload, claim.signal);
+      finish(this.app, claim.row, null, result);
+      return result;
+    } catch (err) {
+      finish(this.app, claim.row, err);
+      throw err;
+    }
+  }
+
+  async composeOutline(projectId, importId, payload = {}, signal) {
     const { project, chapter } = await this.load(projectId, importId);
     const scriptData = chapter.script_data;
     if (!scriptData || !Array.isArray(scriptData.scenes) || !scriptData.scenes.length) {
@@ -177,6 +210,7 @@ class DraftService extends Service {
       skill: 'cartoon-storyboard-skill',
       action: 'draft',
       timeoutMs: skillTimeout(this.ctx),
+      signal,
       payload: {
         script_data: scriptData,
         outline_only: true,
@@ -282,9 +316,18 @@ class DraftService extends Service {
       where: { id: shotId, project_id: project.id, import_id: chapter.id },
     });
     if (!existing) this.ctx.throw(404, '镜头不存在');
-
+    const claim = begin(this.app, { projectId: project.id, kind: 'prompt', targetId: existing.id });
+    if (claim.joined) return claim.done;
+    const stop = {
+      signal: claim.signal,
+      stopped() { return claim.signal.aborted; },
+      release() {},
+    };
     const coverage = String(payload.coverage || payload.description || existing.description || '').trim();
-    if (!coverage) this.ctx.throw(400, '需要镜头涵盖的剧本内容');
+    if (!coverage) {
+      finish(this.app, claim.row, Object.assign(new Error('需要镜头涵盖的剧本内容'), { status: 400 }));
+      this.ctx.throw(400, '需要镜头涵盖的剧本内容');
+    }
     const durationSec = clampDurationSec(
       payload.duration_sec != null ? payload.duration_sec : (existing.duration_ms ? existing.duration_ms / 1000 : 10),
       10,
@@ -307,7 +350,6 @@ class DraftService extends Service {
       camera_moves: seedMoves,
       dialogue: String(payload.dialogue != null ? payload.dialogue : (existing.dialogue || '')).trim(),
     };
-    const stop = clientAbort(this.ctx);
     const ensureRunning = () => {
       if (stop.stopped()) throw stopError();
     };
@@ -446,7 +488,12 @@ class DraftService extends Service {
       shot.dialogue,
       ...coveredPlaceNames(scriptData, `${shot.description}\n${picturePrompt(prompt.positive_zh)}`),
     ].join('\n'));
-    return this.ctx.service.project.show(project.id);
+      const result = await this.ctx.service.project.show(project.id);
+      finish(this.app, claim.row, null, result);
+      return result;
+    } catch (err) {
+      finish(this.app, claim.row, err);
+      throw err;
     } finally {
       stop.release();
     }

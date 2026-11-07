@@ -69,6 +69,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import MediaFileList from './MediaFileList.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
+import { useRegionLoad } from '../lib/useRegionLoad.js';
 
 const props = defineProps({
   projectId: { type: [ String, Number ], required: true },
@@ -79,6 +80,7 @@ const props = defineProps({
   assetKind: { type: String, default: '' },
 });
 const emit = defineEmits([ 'changed' ]);
+const { run: runRegionLoad } = useRegionLoad();
 
 const fileList = ref([]);
 const packs = ref([]);
@@ -202,9 +204,13 @@ function readFile(file) {
   });
 }
 
-async function load() {
-  packs.value = await request(`/projects/${props.projectId}/refmods`) || [];
-  if (props.variant === 'editor') fillDraft();
+async function load(mask = false) {
+  const pull = async () => {
+    packs.value = await request(`/projects/${props.projectId}/refmods`) || [];
+    if (props.variant === 'editor') fillDraft();
+  };
+  if (mask) await runRegionLoad(pull);
+  else await pull();
 }
 
 async function create() {
@@ -243,15 +249,15 @@ async function remove(pack) {
   emit('changed');
 }
 
-watch(() => props.projectId, () => { load().catch(err => ElMessage.error(err.message)); });
-watch(() => props.revision, () => { load().catch(err => ElMessage.error(err.message)); });
+watch(() => props.projectId, () => { load(true).catch(err => ElMessage.error(err.message)); });
+watch(() => props.revision, () => { load(true).catch(err => ElMessage.error(err.message)); });
 watch(() => props.assetId, () => {
   fileList.value = [];
   draft.value = [];
   removed.value = [];
   if (props.variant === 'editor') fillDraft();
 });
-onMounted(() => { load().catch(err => ElMessage.error(err.message)); });
+onMounted(() => { load(true).catch(err => ElMessage.error(err.message)); });
 defineExpose({ flush });
 </script>
 

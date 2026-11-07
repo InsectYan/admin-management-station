@@ -152,14 +152,14 @@ class RefmodService extends Service {
 
   async lockCharacterIds(projectId, shot, requestedIds, parts) {
     const requested = [ ...new Set((requestedIds || []).map(id => Number(id)).filter(id => id > 0)) ];
-    const characters = await this.ctx.model.Asset.findAll({
-      where: { project_id: projectId, kind: 'character', disabled: false },
+    const visuals = await this.ctx.model.Asset.findAll({
+      where: { project_id: projectId, kind: [ 'character', 'scene' ], disabled: false },
     });
-    const allowed = new Set(characters.map(row => row.id));
+    const allowed = new Set(visuals.map(row => row.id));
     const picked = requested.filter(id => allowed.has(id));
     const fields = Array.isArray(shot?.overridden_fields) ? shot.overridden_fields : [];
     if (fields.includes('assets')) return picked;
-    const extra = mentionedAssetIds(shotText(parts || {}), characters)
+    const extra = mentionedAssetIds(shotText(parts || {}), visuals)
       .map(id => Number(id))
       .filter(id => allowed.has(id) && !picked.includes(id));
     return picked.concat(extra);
@@ -176,7 +176,7 @@ class RefmodService extends Service {
     const ordered = ids
       .map(id => byId.get(id))
       .filter(row => row && !row.disabled && VISUAL_KINDS.has(row.kind));
-    const used = lock ? ordered.filter(row => row.kind === 'character') : ordered;
+    const used = lock ? ordered.filter(row => row.kind === 'character' || row.kind === 'scene') : ordered;
     const packs = used.length
       ? await this.ctx.model.Refmod.findAll({
         where: { project_id: projectId, asset_id: used.map(row => row.id) },
@@ -192,7 +192,9 @@ class RefmodService extends Service {
       const names = pack ? chosenNames(fileNames(pack.images), asset.id, picks) : [];
       const notes = pack ? noteMap(pack.image_notes) : {};
       const label = KIND_LABEL[asset.kind] || '资产';
-      const who = lock ? `角色「${asset.name}」` : `${label}「${asset.name}」`;
+      const who = lock
+        ? `${asset.kind === 'scene' ? '场景' : '角色'}「${asset.name}」`
+        : `${label}「${asset.name}」`;
       const pictureLines = [];
       if (pictures && names.length) {
         names.forEach(name => {
@@ -208,7 +210,9 @@ class RefmodService extends Service {
       if (lock) {
         const head = pictureLines.length
           ? `${pictureLines.join('\n')}\n这些图都是${who}，按每张图自己的说明使用，不要互相替代`
-          : `${who}。锁定这张脸、体态和服装，本段画面保持一致`;
+          : (asset.kind === 'scene'
+            ? `${who}。锁定这个场景的空间、陈设和结构，本段画面保持一致`
+            : `${who}。锁定这张脸、体态和服装，本段画面保持一致`);
         lines.push(brief ? `${head}。${brief}` : head);
         return;
       }

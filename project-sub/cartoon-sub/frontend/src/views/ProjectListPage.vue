@@ -1,5 +1,5 @@
 <template>
-  <PageShell title="AI 视频">
+  <PageShell title="AI 视频" :loading="loading">
     <template #extra>
       <el-button type="primary" :disabled="!canMake()" @click="openCreate">新建项目</el-button>
     </template>
@@ -13,8 +13,8 @@
     </div>
 
     <div class="cartoon-module">
-      <el-table class="cartoon-project-table" v-loading="loading" :data="rows" @row-click="open">
-        <el-table-column prop="name" label="名称" min-width="160" />
+      <el-table class="cartoon-project-table" :data="rows" @row-click="open">
+        <el-table-column prop="name" label="名称" min-width="160" fixed="left" />
         <el-table-column label="类型" width="90">
           <template #default="{ row }">{{ typeLabel(row.content_type) }}</template>
         </el-table-column>
@@ -85,7 +85,7 @@ const selectedStyleNote = computed(() => {
   const hit = styles.value.find(item => item.value === form.visual_style);
   return hit ? `${hit.name || hit.label}：${hit.note || hit.prompt || ''}` : '';
 });
-const loading = ref(false);
+const loading = ref(true);
 const loadError = ref('');
 const saving = ref(false);
 const visible = ref(false);

@@ -1,5 +1,5 @@
 <template>
-  <PageShell>
+  <PageShell :loading="loading && !loaded">
     <template #extra>
       <el-button link type="primary" @click="back">← 返回</el-button>
       <el-button v-if="shot" :disabled="!canMake()" @click="openGenerate">继续生成</el-button>
@@ -137,6 +137,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
 import MediaFileList from '../components/MediaFileList.vue';
 import PageShell from '../components/PageShell.vue';
+import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 
@@ -309,20 +310,26 @@ function stopPoll() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = null;
 }
+const { loading, run } = useRegionLoad({ immediate: true });
 async function load() {
-  const detail = await request(`/projects/${projectId.value}`);
-  shot.value = (detail.shots || []).find(item => String(item.id) === String(shotId.value)) || null;
-  tasks.value = (detail.tasks || []).filter(item => String(item.shot_id) === String(shotId.value));
-  const outputs = tasks.value.flatMap(item => item.outputs || []);
-  if (outputs.length > 1 && !leftId.value) {
-    leftId.value = outputs[0].id;
-    rightId.value = outputs[1].id;
-  }
-  await loadProfiles(outputs);
-  loaded.value = true;
-  const active = tasks.value.some(item => [ 'queued', 'running', 'saving' ].includes(item.status));
-  if (active && !pollTimer) pollTimer = setInterval(load, 1000);
-  if (!active) stopPoll();
+  const first = !loaded.value;
+  const pull = async () => {
+    const detail = await request(`/projects/${projectId.value}`);
+    shot.value = (detail.shots || []).find(item => String(item.id) === String(shotId.value)) || null;
+    tasks.value = (detail.tasks || []).filter(item => String(item.shot_id) === String(shotId.value));
+    const outputs = tasks.value.flatMap(item => item.outputs || []);
+    if (outputs.length > 1 && !leftId.value) {
+      leftId.value = outputs[0].id;
+      rightId.value = outputs[1].id;
+    }
+    await loadProfiles(outputs);
+    loaded.value = true;
+    const active = tasks.value.some(item => [ 'queued', 'running', 'saving' ].includes(item.status));
+    if (active && !pollTimer) pollTimer = setInterval(load, 1000);
+    if (!active) stopPoll();
+  };
+  if (first) await run(pull);
+  else await pull();
 }
 onMounted(load);
 onUnmounted(stopPoll);

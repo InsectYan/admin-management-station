@@ -111,6 +111,7 @@ module.exports = app => {
   router.delete('/api/shots/:id', controller.project.removeShot);
   router.post('/api/shots/:id/promote', controller.project.promoteShot);
   router.get('/api/generate-inputs', controller.project.generateInputs);
+  router.get('/api/projects/:id/runs', controller.project.runs);
   router.post('/api/projects/:id/generate/stop', controller.project.stopGenerate);
   router.post('/api/projects/:id/shots/:shotId/generate', controller.project.generate);
   router.get('/api/media-tools', controller.edit.tools);

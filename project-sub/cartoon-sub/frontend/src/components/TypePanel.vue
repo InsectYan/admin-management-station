@@ -18,6 +18,7 @@
 import { onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { request } from '../services/apiConfig.js';
+import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { canMake } from '../lib/appAccess.js';
 
 const props = defineProps({
@@ -47,7 +48,8 @@ async function save() {
   }
 }
 
+const { run } = useRegionLoad();
 onMounted(() => {
-  load().catch(err => ElMessage.error(err.message));
+  run(() => load()).catch(err => ElMessage.error(err.message));
 });
 </script>

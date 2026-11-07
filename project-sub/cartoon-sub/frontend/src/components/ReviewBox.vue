@@ -27,6 +27,7 @@
 import { onMounted, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { request } from '../services/apiConfig.js';
+import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { canMake } from '../lib/appAccess.js';
 
 const props = defineProps({
@@ -53,7 +54,8 @@ async function decide(decision) {
     ElMessage.error(err.message);
   }
 }
+const { run } = useRegionLoad();
 onMounted(() => {
-  load().catch(() => {});
+  run(() => load()).catch(() => {});
 });
 </script>

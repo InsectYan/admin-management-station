@@ -19,7 +19,7 @@
     </el-form>
     <el-empty v-if="loaded && !rows.length" description="还没有登记规格" />
     <el-table v-else-if="rows.length" :data="rows" size="small">
-      <el-table-column label="规格" width="120">
+      <el-table-column label="规格" width="120" fixed="left">
         <template #default="{ row }">{{ presetLabel(row.preset) }}</template>
       </el-table-column>
       <el-table-column label="尺寸" width="140">
@@ -41,6 +41,7 @@
 import { onMounted, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { request, resolveApiBase } from '../services/apiConfig.js';
+import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { canMake } from '../lib/appAccess.js';
 
 const props = defineProps({
@@ -80,7 +81,8 @@ async function save() {
   }
 }
 
+const { run } = useRegionLoad();
 onMounted(() => {
-  load().catch(err => ElMessage.error(err.message));
+  run(() => load()).catch(err => ElMessage.error(err.message));
 });
 </script>

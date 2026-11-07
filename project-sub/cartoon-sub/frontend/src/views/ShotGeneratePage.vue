@@ -50,19 +50,21 @@
           <p class="cartoon-module__hint">生图列出文生图和改图。生视频列出文生视频、首尾帧、图生视频。带 [RefMod] 的工作流会把参考图和开头的角色锁定一起交给模型。</p>
         </el-form-item>
         <el-form-item v-if="needsRefmod" label="RefMod 对应">
-          <p v-if="!picturePlan.length" class="cartoon-module__hint">先选中已经绑了 RefMod 的角色。剧情里自动关联上的角色也算。</p>
-          <div v-for="item in picturePlan" :key="item.id" class="cartoon-refmod-bind">
-            <p class="cartoon-module__hint">
-              <template v-if="item.count">{{ kindLabel(item.kind) }}「{{ item.name }}」 · {{ item.count }} 张</template>
-              <template v-else-if="item.hasPack">{{ kindLabel(item.kind) }}「{{ item.name }}」这镜没有勾选参考图</template>
-              <template v-else>{{ kindLabel(item.kind) }}「{{ item.name }}」还没有 RefMod，只写入提示词</template>
-            </p>
-            <button v-if="item.count" type="button" class="cartoon-refmod-strip" @click="openRefmodDetail(item)">
-              <img v-for="image in item.images.slice(0, 4)" :key="image.name" :src="image.url" alt="" />
-              <span v-if="item.images.length > 4">+{{ item.images.length - 4 }}</span>
-            </button>
+          <div class="cartoon-refmod-plan">
+            <p v-if="!picturePlan.length" class="cartoon-module__hint">先选中已经绑了 RefMod 的角色或场景。剧情里自动关联上的角色和场景也算。</p>
+            <div v-for="item in picturePlan" :key="item.id" class="cartoon-refmod-bind">
+              <p class="cartoon-module__hint">
+                <template v-if="item.count">{{ kindLabel(item.kind) }}「{{ item.name }}」 · {{ item.count }} 张</template>
+                <template v-else-if="item.hasPack">{{ kindLabel(item.kind) }}「{{ item.name }}」这镜没有勾选参考图</template>
+                <template v-else>{{ kindLabel(item.kind) }}「{{ item.name }}」还没有 RefMod，只写入提示词</template>
+              </p>
+              <button v-if="item.count" type="button" class="cartoon-refmod-strip" @click="openRefmodDetail(item)">
+                <img v-for="image in item.images.slice(0, 4)" :key="image.name" :src="image.url" alt="" />
+                <span v-if="item.images.length > 4">+{{ item.images.length - 4 }}</span>
+              </button>
+            </div>
+            <p class="cartoon-module__hint">点图片组查看全部参考图。生成时按这个顺序把角色锁定写在提示词开头，并挂上对应参考图。</p>
           </div>
-          <p class="cartoon-module__hint">点图片组查看全部参考图。生成时按这个顺序把角色锁定写在提示词开头，并挂上对应参考图。</p>
         </el-form-item>
         <el-form-item label="主景别">
           <el-select v-model="shotSizes" multiple collapse-tags :disabled="readOnly" style="width: 100%" placeholder="多选景别">
@@ -128,6 +130,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
+import { useRegionLoad } from '../lib/useRegionLoad.js';
 
 const props = defineProps({
   plain: { type: Boolean, default: false },
@@ -135,6 +138,7 @@ const props = defineProps({
   mode: { type: String, default: 'detail' },
 });
 const emit = defineEmits([ 'saved', 'running' ]);
+const { run: runRegionLoad } = useRegionLoad();
 const readOnly = computed(() => props.mode === 'detail');
 const route = useRoute();
 const router = useRouter();
@@ -185,9 +189,9 @@ const assetsLocked = computed(() => {
   const fields = shot.value?.overridden_fields;
   return Array.isArray(fields) && fields.includes('assets');
 });
-function mentionedCharacterIds(text, assets) {
+function mentionedVisualIds(text, assets) {
   const catalog = assets
-    .filter(asset => asset.kind === 'character' && String(asset.name || '').trim())
+    .filter(asset => (asset.kind === 'character' || asset.kind === 'scene') && String(asset.name || '').trim())
     .slice()
     .sort((a, b) => b.name.length - a.name.length);
   const source = String(text || '');
@@ -210,23 +214,23 @@ function mentionedCharacterIds(text, assets) {
   });
   return ids;
 }
-const lockCharacters = computed(() => {
+const lockVisuals = computed(() => {
   const ids = [];
   assetIds.value.forEach(id => {
     const asset = visualAssets.value.find(item => item.id === id);
-    if (asset?.kind === 'character' && !ids.includes(id)) ids.push(id);
+    if ((asset?.kind === 'character' || asset?.kind === 'scene') && !ids.includes(id)) ids.push(id);
   });
   if (!assetsLocked.value) {
     const text = [ shot.value?.description, shot.value?.dialogue, promptText.value, negativeText.value ]
       .filter(Boolean)
       .join('\n');
-    mentionedCharacterIds(text, visualAssets.value).forEach(id => {
+    mentionedVisualIds(text, visualAssets.value).forEach(id => {
       if (!ids.includes(id)) ids.push(id);
     });
   }
   return ids.map(id => visualAssets.value.find(item => item.id === id)).filter(Boolean);
 });
-const conditionAssets = computed(() => (media.value === 'video' ? lockCharacters.value : selectedAssets.value));
+const conditionAssets = computed(() => (media.value === 'video' ? lockVisuals.value : selectedAssets.value));
 function packOf(assetId) {
   return packs.value.find(item => item.asset_id === assetId) || null;
 }
@@ -278,7 +282,7 @@ const refmodChoices = computed(() => selectedAssets.value.map(asset => {
 }).filter(Boolean));
 const picturePlan = computed(() => {
   let cursor = 1;
-  return lockCharacters.value.map(asset => {
+  return lockVisuals.value.map(asset => {
     const pack = packOf(asset.id);
     const names = pack ? pickedNames(asset.id, pack) : [];
     const count = names.length;
@@ -346,13 +350,15 @@ function assetBrief(asset) {
   return bits.join('。');
 }
 function composeCondition(assets, shotPrompt, pictures, packRows, lock) {
-  const rows = lock ? assets.filter(asset => asset.kind === 'character') : assets;
+  const rows = lock ? assets.filter(asset => asset.kind === 'character' || asset.kind === 'scene') : assets;
   const lines = [];
   let cursor = 1;
   rows.forEach(asset => {
     const pack = packRows.find(item => item.asset_id === asset.id);
     const names = pictures && pack ? pickedNames(asset.id, pack) : [];
-    const who = lock ? `角色「${asset.name}」` : `${kindLabel(asset.kind)}「${asset.name}」`;
+    const who = lock
+      ? `${asset.kind === 'scene' ? '场景' : '角色'}「${asset.name}」`
+      : `${kindLabel(asset.kind)}「${asset.name}」`;
     const pictureLines = names.map(name => {
       const note = String(pack?.notes?.[name] || '').trim();
       const line = note
@@ -365,7 +371,9 @@ function composeCondition(assets, shotPrompt, pictures, packRows, lock) {
     if (lock) {
       const head = pictureLines.length
         ? `${pictureLines.join('\n')}\n这些图都是${who}，按每张图自己的说明使用，不要互相替代`
-        : `${who}。锁定这张脸、体态和服装，本段画面保持一致`;
+        : (asset.kind === 'scene'
+          ? `${who}。锁定这个场景的空间、陈设和结构，本段画面保持一致`
+          : `${who}。锁定这张脸、体态和服装，本段画面保持一致`);
       lines.push(brief ? `${head}。${brief}` : head);
       return;
     }
@@ -493,6 +501,7 @@ function replaceImage(slot, picked) {
   readImage(slot, file);
 }
 async function load() {
+  await runRegionLoad(async () => {
   const [detail, meta] = await Promise.all([
     request(`/projects/${projectId.value}`),
     request('/meta').catch(() => null),
@@ -564,6 +573,7 @@ async function load() {
   } catch (err) {
     ElMessage.error(err.message);
   }
+  });
 }
 let echoing = false;
 function pickDefault(nextMedia) {
@@ -678,7 +688,7 @@ async function generate() {
     return;
   }
   if (needsRefmod.value && !picturePlan.value.some(item => item.count)) {
-    ElMessage.error('请选择已经绑了 RefMod 的角色');
+    ElMessage.error('请选择已经绑了 RefMod 的角色或场景');
     return;
   }
   const missing = slots.value.filter(slot => !files[slot.id]?.data_base64);
@@ -790,7 +800,22 @@ defineExpose({
 .cartoon-asset-mark.is-have { color: #1f7a45; background: #e7f6ee; }
 .cartoon-asset-mark.is-miss { color: #c45656; background: #fdecec; }
 .cartoon-job-progress { max-width: 420px; margin-top: 12px; }
-.cartoon-refmod-bind + .cartoon-refmod-bind { margin-top: 8px; }
+.cartoon-refmod-pick,
+.cartoon-refmod-plan {
+  flex: 1 0 100%;
+  width: 100%;
+}
+.cartoon-refmod-plan {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.cartoon-refmod-bind,
+.cartoon-refmod-pick__asset {
+  display: block;
+  width: 100%;
+}
 .cartoon-refmod-strip {
   display: flex;
   align-items: center;

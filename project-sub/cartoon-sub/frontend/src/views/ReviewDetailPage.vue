@@ -1,5 +1,5 @@
 <template>
-  <PageShell title="审核详情">
+  <PageShell title="审核详情" :loading="loading">
     <el-empty v-if="missing" description="审核记录不存在" />
     <div v-else-if="detail">
       <p>{{ detail.project_name }} · {{ detail.decision === 'pass' ? '通过' : '驳回' }} · {{ detail.node }}</p>
@@ -13,16 +13,20 @@
 import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import PageShell from '../components/PageShell.vue';
+import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { request } from '../services/apiConfig.js';
 
 const route = useRoute();
 const detail = ref(null);
 const missing = ref(false);
-onMounted(async () => {
-  try {
-    detail.value = await request(`/library/reviews/${route.params.id}`);
-  } catch (err) {
-    missing.value = true;
-  }
+const { loading, run } = useRegionLoad({ immediate: true });
+onMounted(() => {
+  run(async () => {
+    try {
+      detail.value = await request(`/library/reviews/${route.params.id}`);
+    } catch (err) {
+      missing.value = true;
+    }
+  });
 });
 </script>

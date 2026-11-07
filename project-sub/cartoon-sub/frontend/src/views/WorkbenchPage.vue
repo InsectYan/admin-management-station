@@ -1,5 +1,9 @@
 <template>
-  <div v-if="project" class="cartoon-workbench">
+  <div v-if="!project" class="cartoon-workbench cartoon-workbench--boot">
+    <LoadMask :loading="entryLoading" />
+    <p v-if="error && !entryLoading" class="cartoon-module__hint">{{ error }}</p>
+  </div>
+  <div v-else class="cartoon-workbench">
     <aside class="cartoon-workbench__nav">
       <el-button link type="primary" @click="router.push(`/projects/${projectId}`)">← 返回项目</el-button>
       <h1>{{ project.name }}</h1>
@@ -17,7 +21,7 @@
         {{ item.title }}
       </button>
     </aside>
-    <main class="cartoon-workbench__main">
+    <RegionLoad class="cartoon-workbench__main" :loading="entryLoading || voiceLoading">
       <section v-if="customNodes.length || episode?.warning" class="cartoon-module cartoon-workbench__note">
         <h3 class="cartoon-module__title">专项检查</h3>
         <p v-if="episode?.warning" class="cartoon-module__hint">{{ episode.warning }}</p>
@@ -36,7 +40,7 @@
           <el-tab-pane label="资产清单" name="list">
         <el-empty v-if="!assets.length" description="还没有资产" />
         <el-table v-else :data="assets" size="small" highlight-current-row class="cartoon-asset-table" @row-click="openAssetEdit">
-          <el-table-column label="类型" width="80">
+          <el-table-column label="类型" width="80" fixed="left">
             <template #default="{ row }">{{ assetKind(row.kind) }}</template>
           </el-table-column>
           <el-table-column prop="name" label="名称" width="140" />
@@ -73,19 +77,20 @@
           <el-button type="primary" :disabled="!assetSuggestions.length" @click="applyAssets">写入绑定</el-button>
         </div>
         <el-table :data="bindingRows" size="small">
-          <el-table-column prop="shot_code" label="镜头" width="120" />
+          <el-table-column prop="shot_code" label="镜头" width="120" fixed="left" />
           <el-table-column prop="asset_name" label="资产名称" width="160" />
           <el-table-column prop="asset_kind" label="类型" width="90" />
           <el-table-column prop="reason" label="原因" />
         </el-table>
         <el-table v-if="suggestionRows.length" :data="suggestionRows" size="small">
-          <el-table-column prop="shot_code" label="镜头" width="120" />
+          <el-table-column prop="shot_code" label="镜头" width="120" fixed="left" />
           <el-table-column prop="asset_name" label="资产名称" width="160" />
           <el-table-column prop="reason" label="原因" />
         </el-table>
           </el-tab-pane>
         </el-tabs>
         <el-drawer v-model="assetDrawerOpen" :title="editingAssetId ? '编辑资产' : '新增资产'" size="640px" append-to-body>
+        <RegionLoad pane>
         <el-form label-position="top" class="cartoon-entry-form" @submit.prevent="editingAssetId ? saveAsset() : createAsset()">
           <div class="cartoon-entry-grid">
             <el-form-item label="名称"><el-input v-model="assetForm.name" /></el-form-item>
@@ -164,6 +169,7 @@
             <el-button v-else type="primary" @click="saveAsset">保存</el-button>
           </div>
         </el-form>
+        </RegionLoad>
         </el-drawer>
       </section>
       <section v-else-if="node === 'voice'" class="cartoon-module cartoon-voice-page">
@@ -188,7 +194,7 @@
               class="cartoon-voice-table"
               @row-click="selectLibraryVoice"
             >
-              <el-table-column prop="name" label="音色" min-width="140" />
+              <el-table-column prop="name" label="音色" min-width="140" fixed="left" />
               <el-table-column prop="folder" label="分组" width="140" show-overflow-tooltip />
               <el-table-column label="" width="72">
                 <template #default="{ row }">
@@ -208,7 +214,7 @@
           </div>
           <div class="cartoon-voice__shots">
             <el-table :data="spokenShots" size="small" @selection-change="voiceShotIds = $event.map(item => item.id)">
-              <el-table-column type="selection" width="42" />
+              <el-table-column type="selection" width="42" fixed="left" />
               <el-table-column prop="shot_code" label="镜头" width="110" />
               <el-table-column label="台词" min-width="180">
                 <template #default="{ row }"><ClampText title="台词" :text="row.dialogue || ''" /></template>
@@ -235,7 +241,7 @@
           <el-button type="primary" :disabled="!reviewSuggestions.length" @click="applyReview">记下问题</el-button>
         </div>
         <el-table v-if="findings.length" :data="findings" size="small">
-          <el-table-column prop="level" label="级别" width="90" />
+          <el-table-column prop="level" label="级别" width="90" fixed="left" />
           <el-table-column prop="message" label="问题" />
           <el-table-column prop="node" label="回到" width="100" />
         </el-table>
@@ -247,7 +253,7 @@
             <el-button type="primary" @click="selectNode('storyboard')">去镜头</el-button>
           </el-empty>
           <el-table v-else class="cartoon-preview-table" :data="previewPageRows" @row-click="pickShot">
-            <el-table-column prop="shot_code" label="镜头" width="130" />
+            <el-table-column prop="shot_code" label="镜头" width="130" fixed="left" />
             <el-table-column prop="chapter_title" label="章节" width="220" show-overflow-tooltip />
             <el-table-column label="描述" width="560">
               <template #default="{ row }"><ClampText title="描述" :text="row.description || ''" /></template>
@@ -281,7 +287,7 @@
         <p v-if="node === 'export'" class="cartoon-module__hint cartoon-workbench__note">已有成片仍用本页右上角「导出成片」。下面的规格会重新编码，有台词时烧进画面，长版可以混入背景音乐。</p>
         <ProjectEditPage />
       </template>
-    </main>
+    </RegionLoad>
     <aside class="cartoon-workbench__side">
       <h2>这一集</h2>
       <p>类型 · {{ typeName }}</p>
@@ -296,10 +302,12 @@
           <el-option v-for="item in workflowChoices" :key="item.id" :label="`记录 #${item.id}`" :value="item.id" />
         </el-select>
       </div>
-      <pre class="cartoon-workflow-json">{{ workflowText }}</pre>
+      <div class="cartoon-workflow-body">
+        <pre v-if="!workflowLoading" class="cartoon-workflow-json">{{ workflowText }}</pre>
+        <LoadMask :loading="workflowLoading" />
+      </div>
     </el-dialog>
   </div>
-  <p v-else class="cartoon-module__hint cartoon-workbench__note">{{ error || '正在打开工作台…' }}</p>
 </template>
 
 <script setup>
@@ -313,6 +321,8 @@ import ProjectEditPage from './ProjectEditPage.vue';
 import ExportSpecs from '../components/ExportSpecs.vue';
 import RefModPacks from '../components/RefModPacks.vue';
 import AssetImageField from '../components/AssetImageField.vue';
+import RegionLoad from '../components/RegionLoad.vue';
+import LoadMask from '../components/LoadMask.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { isLocalType, typeLabel } from '../lib/contentTypes.js';
 import { styleDisplayLabel } from '../utils/visualStyles.js';
@@ -334,6 +344,9 @@ const stepByNode = { input: 1, script: 2, storyboard: 4 };
 const route = useRoute();
 const router = useRouter();
 const project = ref(null);
+const entryLoading = ref(true);
+const voiceLoading = ref(false);
+let entryToken = 0;
 const bundle = ref(null);
 const episode = ref(null);
 const shots = ref([]);
@@ -636,6 +649,7 @@ async function applyAssets() {
   });
 }
 async function loadVoiceLibrary() {
+  voiceLoading.value = true;
   try {
     const data = await request('/voice-library');
     voiceRows.value = data?.rows || [];
@@ -646,6 +660,8 @@ async function loadVoiceLibrary() {
     voiceFolders.value = [];
     voiceSkipped.value = [];
     ElMessage.error(err.message || '音色库没有打开');
+  } finally {
+    voiceLoading.value = false;
   }
 }
 function selectLibraryVoice(row) {
@@ -745,6 +761,7 @@ function pickShot(row) {
   router.replace({ query: { node: node.value, shot: String(row.id) } });
 }
 const workflowOpen = ref(false);
+const workflowLoading = ref(false);
 const workflowTaskId = ref(null);
 const workflowChoices = ref([]);
 const workflowText = ref('');
@@ -764,7 +781,8 @@ async function openWorkflow(row) {
   await loadWorkflow();
 }
 async function loadWorkflow() {
-  workflowText.value = '正在读取…';
+  workflowLoading.value = true;
+  workflowText.value = '';
   try {
     const data = await request(`/tasks/${workflowTaskId.value}/workflow`);
     workflowText.value = data?.submitted
@@ -773,6 +791,8 @@ async function loadWorkflow() {
   } catch (err) {
     workflowText.value = '';
     ElMessage.error(err.message || '没有读到工作流');
+  } finally {
+    workflowLoading.value = false;
   }
 }
 async function persistNode(value) {
@@ -787,8 +807,11 @@ async function persistNode(value) {
     // 地址栏仍是当前节点，记不住时下次打开回到上次成功写入的节点
   }
 }
-async function load() {
+async function load(mask = false) {
+  const token = mask ? ++entryToken : 0;
+  if (mask) entryLoading.value = true;
   error.value = '';
+  try {
   const detail = await request(`/projects/${projectId.value}`);
   const episodes = detail.episodes || [];
   if (!episodes.length) {
@@ -818,6 +841,9 @@ async function load() {
     await router.replace({ query: { ...route.query, node: episode.value.current_node } });
   }
   await persistNode(node.value);
+  } finally {
+    if (mask && token === entryToken) entryLoading.value = false;
+  }
 }
 
 watch(() => route.query.node, (value) => {
@@ -838,13 +864,13 @@ watch([ voiceQuery, voiceFolder ], () => {
   voicePage.value = 1;
 });
 watch(() => route.params.taskId, () => {
-  load().catch((err) => {
+  load(true).catch((err) => {
     error.value = err.message || '打不开工作台';
     ElMessage.error(error.value);
   });
 });
 onMounted(() => {
-  load().catch((err) => {
+  load(true).catch((err) => {
     error.value = err.message || '打不开工作台';
     ElMessage.error(error.value);
   });
@@ -864,6 +890,14 @@ onMounted(() => {
   font-family: ui-monospace, Consolas, monospace;
   font-size: 12px;
   line-height: 1.5;
+}
+.cartoon-workbench--boot {
+  display: block;
+  position: relative;
+}
+.cartoon-workflow-body {
+  position: relative;
+  min-height: 240px;
 }
 .cartoon-workbench {
   display: grid;

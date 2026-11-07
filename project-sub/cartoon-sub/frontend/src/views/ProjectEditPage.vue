@@ -1,5 +1,5 @@
 <template>
-  <PageShell :title="store.project?.name ? `${store.project.name} · 剪辑` : '剪辑成片'">
+  <PageShell :title="store.project?.name ? `${store.project.name} · 剪辑` : '剪辑成片'" :loading="!loaded">
     <template #extra>
       <el-button v-if="route.name !== 'workbench'" @click="router.push(`/projects/${projectId}`)">返回详情</el-button>
       <el-button :disabled="!canMake() || !store.past.length" @click="store.undo()">撤销</el-button>

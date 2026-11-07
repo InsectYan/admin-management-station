@@ -1,5 +1,6 @@
 <template>
-  <section v-loading="loading" class="cartoon-novel-brief">
+  <section class="cartoon-novel-brief">
+    <LoadMask :loading="loading" />
     <h3 class="cartoon-module__title">小说基础信息</h3>
     <p v-if="!novel && !loading" class="cartoon-module__hint">选择来源小说后，这里展示小说的基础信息。</p>
     <dl v-else-if="novel" class="cartoon-novel-brief__grid">
@@ -61,6 +62,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import CartoonMarkdown from './CartoonMarkdown.vue';
+import LoadMask from './LoadMask.vue';
 
 const props = defineProps({
   novel: { type: Object, default: null },

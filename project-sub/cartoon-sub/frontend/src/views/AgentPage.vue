@@ -1,11 +1,11 @@
 <template>
-  <PageShell title="Agent">
+  <PageShell title="Agent" :loading="loading">
     <p class="cartoon-module__hint">这里查看各内容类型已经保存的角色参数。没有 Skill 的角色不能启用。修改仍在流水线页完成。</p>
     <el-select v-model="contentType" style="width: 180px" @change="load">
       <el-option v-for="item in CONTENT_TYPES" :key="item.id" :label="item.label" :value="item.id" />
     </el-select>
     <el-table :data="agents" class="cartoon-agent-table">
-      <el-table-column prop="label" label="角色" />
+      <el-table-column prop="label" label="角色" fixed="left" />
       <el-table-column prop="skill_name" label="Skill" />
       <el-table-column prop="model_profile" label="模型档位" />
       <el-table-column label="启用" width="90">
@@ -21,19 +21,23 @@ import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
+import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { request } from '../services/apiConfig.js';
 import { CONTENT_TYPES } from '../lib/contentTypes.js';
 
 const route = useRoute();
 const contentType = ref(route.params.contentType || 'ai_comic');
 const agents = ref([]);
+const { loading, run } = useRegionLoad({ immediate: true });
 async function load() {
-  try {
-    const data = await request('/pipelines', { params: { content_type: contentType.value } });
-    agents.value = data.agents || [];
-  } catch (err) {
-    ElMessage.error(err.message);
-  }
+  await run(async () => {
+    try {
+      const data = await request('/pipelines', { params: { content_type: contentType.value } });
+      agents.value = data.agents || [];
+    } catch (err) {
+      ElMessage.error(err.message);
+    }
+  });
 }
 onMounted(load);
 </script>

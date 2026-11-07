@@ -1,5 +1,5 @@
 <template>
-  <PageShell title="模板中心">
+  <PageShell title="模板中心" :loading="loading">
     <div class="cartoon-module cartoon-template-filters">
       <el-select v-model="contentType" clearable placeholder="内容类型" style="width: 160px">
         <el-option v-for="item in CONTENT_TYPES" :key="item.id" :label="item.label" :value="item.id" />
@@ -82,6 +82,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
+import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 import { CONTENT_TYPES } from '../lib/contentTypes.js';
@@ -146,13 +147,16 @@ async function create() {
     saving.value = false;
   }
 }
+const { loading, run } = useRegionLoad({ immediate: true });
 async function load() {
-  const [templates, meta] = await Promise.all([
-    request('/video-templates'),
-    request('/meta').catch(() => ({ visual_styles: [] })),
-  ]);
-  rows.value = templates || [];
-  styles.value = meta.visual_styles || [];
+  await run(async () => {
+    const [templates, meta] = await Promise.all([
+      request('/video-templates'),
+      request('/meta').catch(() => ({ visual_styles: [] })),
+    ]);
+    rows.value = templates || [];
+    styles.value = meta.visual_styles || [];
+  });
 }
 onMounted(() => {
   load().catch(err => ElMessage.error(err.message));

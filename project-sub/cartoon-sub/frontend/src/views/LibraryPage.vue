@@ -1,5 +1,5 @@
 <template>
-  <PageShell :title="page.title">
+  <PageShell :title="page.title" :loading="loading">
     <p class="cartoon-module__hint">{{ page.hint }}</p>
     <p v-if="route.name === 'assets'" class="cartoon-module__hint">
       <router-link v-for="item in assetLinks" :key="item.kind" :to="`/assets/${item.kind}`">{{ item.label }}</router-link>
@@ -30,8 +30,14 @@
     </div>
     <el-empty v-if="!rows.length" description="还没有记录" />
     <el-table v-else :data="rows">
-      <el-table-column v-for="column in page.columns" :key="column.prop" :prop="column.prop" :label="column.label" />
-      <el-table-column v-if="page.link" label="项目" width="140">
+      <el-table-column
+        v-for="(column, index) in page.columns"
+        :key="column.prop"
+        :prop="column.prop"
+        :label="column.label"
+        :fixed="index === 0 ? 'left' : undefined"
+      />
+      <el-table-column v-if="page.link" label="项目" width="140" :fixed="page.columns.length ? undefined : 'left'">
         <template #default="{ row }">
           <router-link :to="`/projects/${row.project_id || row.id}`">打开</router-link>
           <router-link v-if="route.name === 'reviews'" :to="`/reviews/${row.id}`">记录</router-link>
@@ -46,6 +52,7 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
+import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { request } from '../services/apiConfig.js';
 
 const route = useRoute();
@@ -155,13 +162,16 @@ async function createShared() {
     ElMessage.error(err.message);
   }
 }
+const { loading, run } = useRegionLoad({ immediate: true });
 async function load() {
-  try {
-    rows.value = await request(page.value.api) || [];
-  } catch (err) {
-    rows.value = [];
-    ElMessage.error(err.message);
-  }
+  await run(async () => {
+    try {
+      rows.value = await request(page.value.api) || [];
+    } catch (err) {
+      rows.value = [];
+      ElMessage.error(err.message);
+    }
+  });
 }
 watch(() => route.fullPath, () => {
   load();

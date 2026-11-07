@@ -25,6 +25,7 @@
 import { onMounted, reactive, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { request } from '../services/apiConfig.js';
+import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { canMake } from '../lib/appAccess.js';
 
 const props = defineProps({
@@ -71,11 +72,12 @@ async function remove(item) {
   }
 }
 
+const { run } = useRegionLoad();
 watch(() => props.projectId, () => {
   reset();
-  load().catch(err => ElMessage.error(err.message));
+  run(() => load()).catch(err => ElMessage.error(err.message));
 });
 onMounted(() => {
-  load().catch(err => ElMessage.error(err.message));
+  run(() => load()).catch(err => ElMessage.error(err.message));
 });
 </script>

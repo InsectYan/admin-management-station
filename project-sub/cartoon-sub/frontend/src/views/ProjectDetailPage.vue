@@ -1,5 +1,5 @@
 <template>
-  <PageShell v-if="detail" :title="embedded ? '' : detail.project.name">
+  <PageShell v-if="detail" :title="embedded ? '' : detail.project.name" :loading="!region.covered && region.loading">
     <template v-if="!embedded" #extra>
       <el-button link type="primary" @click="router.push(`/projects/${route.params.id}`)">返回详情</el-button>
     </template>
@@ -191,7 +191,7 @@
                 <p class="cartoon-module__hint">与「镜头」页同一批数据。场次和镜头只按下文字数设下限，不设上限。镜头描述和提示词不限字数，对白多时一条可以写到数千字。拆分后会落库；逐行生成提示词。删除任一侧会同步。</p>
                 <el-empty v-if="!scriptShots.length" description="还没有分镜，请先点「拆分分镜」" />
                 <el-table v-else class="cartoon-shot-table" :data="scriptPageRows" style="margin-top: 8px" row-key="id">
-              <el-table-column label="镜头ID" width="120" prop="shot_code" />
+              <el-table-column label="镜头ID" width="120" prop="shot_code" fixed="left" />
               <el-table-column label="时长(秒)" width="110">
                 <template #default="{ row }">{{ shotDurationSec(row) }}</template>
               </el-table-column>
@@ -289,7 +289,7 @@
             <el-button type="danger" plain :disabled="!canStop" @click="stopWork">停止</el-button>
           </div>
           <el-table v-if="selectedBoard" class="cartoon-shot-table" :data="boardPageRows" style="margin-top: 12px">
-            <el-table-column label="镜头ID" width="120" prop="shot_code" />
+            <el-table-column label="镜头ID" width="120" prop="shot_code" fixed="left" />
             <el-table-column label="时长" width="90">
               <template #default="{ row }">{{ row.duration_ms ? `${Math.round(row.duration_ms / 1000)}s` : '—' }}</template>
             </el-table-column>
@@ -355,7 +355,7 @@
         <el-empty v-if="!autoRecords.length" description="还没有执行记录" />
         <template v-else>
           <el-table :data="recordPageRows">
-            <el-table-column label="时间" width="110" prop="at" />
+            <el-table-column label="时间" width="110" prop="at" fixed="left" />
             <el-table-column label="镜头" width="120" prop="shotCode" />
             <el-table-column label="执行内容" width="140" prop="action" />
             <el-table-column label="结果" width="100">
@@ -401,6 +401,7 @@
       </template>
     </el-drawer>
     <el-drawer v-model="generateOpen" :title="shotDrawerMode === 'edit' ? '编辑镜头' : '镜头详情'" size="640px" append-to-body>
+      <RegionLoad pane>
       <ShotGeneratePage
         v-if="generateOpen"
         ref="shotPanel"
@@ -410,6 +411,7 @@
         @saved="load"
         @running="onShotRunning"
       />
+      </RegionLoad>
       <template #footer>
         <div class="cartoon-drawer-footer">
           <template v-if="shotDrawerMode === 'detail'">
@@ -476,6 +478,8 @@ import NovelBriefPanel from '../components/NovelBriefPanel.vue';
 import CartoonMarkdown from '../components/CartoonMarkdown.vue';
 import CopyBlocks from '../components/CopyBlocks.vue';
 import ShotGeneratePage from './ShotGeneratePage.vue';
+import RegionLoad from '../components/RegionLoad.vue';
+import { useRegionLoad } from '../lib/useRegionLoad.js';
 import ClampText from '../components/ClampText.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
@@ -489,6 +493,7 @@ const props = defineProps({
 });
 const route = useRoute();
 const router = useRouter();
+const region = useRegionLoad();
 const steps = [
   { step: 1, title: '项目' },
   { step: 2, title: '快照' },
@@ -1556,6 +1561,7 @@ watch(() => props.launchShotId, (id) => {
   generateOpen.value = true;
 }, { immediate: true });
 onMounted(async () => {
+  await region.run(async () => {
   const [catalog, metaRes] = await Promise.all([
     request('/novel-catalog').catch(() => []),
     request('/meta').catch(() => null),
@@ -1571,6 +1577,7 @@ onMounted(async () => {
     loadChapters(projectForm.source_novel_id),
     loadNovelBrief(projectForm.source_novel_id),
   ]);
+  });
 });
 </script>
 

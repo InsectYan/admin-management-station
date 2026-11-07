@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const Controller = require('egg').Controller;
 const { listVideoTemplates, videoTemplateDraft } = require('../lib/videoTemplates');
+const { list: listRuns } = require('../lib/activeRuns');
 
 function ok(ctx, data) {
   ctx.body = { code: 0, message: 'ok', data };
@@ -419,6 +420,23 @@ class ProjectController extends Controller {
   async generateInputs() {
     try {
       ok(this.ctx, await this.ctx.service.generate.inputs());
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async runs() {
+    try {
+      const id = this.ctx.params.id;
+      const tasks = await this.ctx.model.Task.findAll({
+        where: { project_id: id, status: [ 'queued', 'running', 'saving' ] },
+        attributes: [ 'id', 'shot_id', 'status', 'kind' ],
+        order: [[ 'id', 'DESC' ]],
+      });
+      ok(this.ctx, {
+        runs: listRuns(this.app, id),
+        tasks: tasks.map(item => (item.toJSON ? item.toJSON() : item)),
+      });
     } catch (err) {
       fail(this.ctx, err);
     }

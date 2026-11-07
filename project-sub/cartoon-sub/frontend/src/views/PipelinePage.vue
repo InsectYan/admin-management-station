@@ -1,5 +1,5 @@
 <template>
-  <PageShell title="流水线">
+  <PageShell title="流水线" :loading="loading">
     <p class="cartoon-module__hint">这里只保存节点和模型参数。运行仍走原来的 Skill、预检和 ComfyUI，不会把生产稿写进故事包。</p>
     <div class="cartoon-module">
       <el-select v-model="contentType" style="width: 180px" @change="load">
@@ -14,7 +14,7 @@
         <el-button type="danger" plain :disabled="!canMake() || !removableNodes.length" @click="removeChecked">一键删除</el-button>
       </div>
       <el-table :data="nodes" row-key="node_key" @selection-change="picked = $event">
-        <el-table-column type="selection" width="48" :selectable="row => row.removable && canMake()" />
+        <el-table-column type="selection" width="48" fixed="left" :selectable="row => row.removable && canMake()" />
         <el-table-column prop="title" label="节点" min-width="140" />
         <el-table-column label="来源" min-width="180">
           <template #default="{ row }">{{ sourceLabel(row) }}</template>
@@ -35,7 +35,7 @@
     <div class="cartoon-module">
       <h3 class="cartoon-module__title">模型参数</h3>
       <el-table :data="agents">
-        <el-table-column prop="label" label="角色" width="120" />
+        <el-table-column prop="label" label="角色" width="120" fixed="left" />
         <el-table-column prop="skill_name" label="Skill" min-width="180">
           <template #default="{ row }">{{ row.skill_name || (row.local ? '本地' : '未接入') }}</template>
         </el-table-column>
@@ -80,6 +80,7 @@ import { onMounted, computed, reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
+import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 import { CONTENT_TYPES } from '../lib/contentTypes.js';
@@ -119,8 +120,11 @@ function apply(data) {
   catalog.value = data.custom_catalog || [];
   profiles.value = data.model_profiles || [];
 }
+const { loading, run } = useRegionLoad({ immediate: true });
 async function load() {
-  apply(await request('/pipelines', { params: { content_type: contentType.value } }));
+  await run(async () => {
+    apply(await request('/pipelines', { params: { content_type: contentType.value } }));
+  });
 }
 async function addNode(item) {
   try {

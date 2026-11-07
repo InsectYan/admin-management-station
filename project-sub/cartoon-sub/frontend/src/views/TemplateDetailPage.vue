@@ -1,5 +1,5 @@
 <template>
-  <PageShell :title="detail?.name || '模板'">
+  <PageShell :title="detail?.name || '模板'" :loading="loading">
     <el-empty v-if="missing" description="模板不存在" />
     <div v-else-if="detail" class="cartoon-module">
       <p>{{ detail.scene }}</p>
@@ -16,16 +16,20 @@
 import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import PageShell from '../components/PageShell.vue';
+import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { request } from '../services/apiConfig.js';
 
 const route = useRoute();
 const detail = ref(null);
 const missing = ref(false);
-onMounted(async () => {
-  try {
-    detail.value = await request(`/video-templates/${route.params.id}`);
-  } catch (err) {
-    missing.value = true;
-  }
+const { loading, run } = useRegionLoad({ immediate: true });
+onMounted(() => {
+  run(async () => {
+    try {
+      detail.value = await request(`/video-templates/${route.params.id}`);
+    } catch (err) {
+      missing.value = true;
+    }
+  });
 });
 </script>

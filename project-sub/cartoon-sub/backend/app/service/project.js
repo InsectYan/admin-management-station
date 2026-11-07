@@ -13,6 +13,7 @@ const { reportAudit } = require('../lib/reportAudit');
 const { videoTemplateDraft, templateGaps } = require('../lib/videoTemplates');
 const { auditShot, mentionedAssetIds, shotText } = require('../lib/shotAssets');
 const { characterTag, placeTag, normalizeScript } = require('../lib/rosterNames');
+const { uniquePrompt } = require('../lib/promptText');
 const {
   contentType,
   isLocal,
@@ -31,7 +32,7 @@ function avModeOf(contentTypeId, value) {
 function presentPrompt(row) {
   if (!row) return null;
   const json = row.toJSON ? row.toJSON() : { ...row };
-  json.positive_zh = String(json.positive_zh || '').replace(/\n*【后期与对白备注】[\s\S]*$/u, '').trim();
+  json.positive_zh = uniquePrompt(json.positive_zh);
   return json;
 }
 

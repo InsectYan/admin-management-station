@@ -1,5 +1,5 @@
 <template>
-  <PageShell title="规则">
+  <PageShell title="规则" :loading="loading">
     <p class="cartoon-module__hint">规则按内容类型保存。已经开始的批次仍用创建时的快照，之后的修改只影响新批次。</p>
     <div class="cartoon-module">
       <el-select v-model="contentType" style="width: 160px" @change="load">
@@ -39,7 +39,7 @@
         </div>
       </el-form>
       <el-table :data="rows" class="cartoon-rule-table">
-        <el-table-column prop="name" label="名称" />
+        <el-table-column prop="name" label="名称" fixed="left" />
         <el-table-column prop="kind" label="类型" width="120" />
         <el-table-column label="启用" width="90">
           <template #default="{ row }">
@@ -55,6 +55,7 @@
 import { onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
+import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 import { CONTENT_TYPES } from '../lib/contentTypes.js';
@@ -63,8 +64,11 @@ const contentType = ref('ai_comic');
 const rows = ref([]);
 const form = reactive({ name: '', kind: 'style', body: '', cost_cap: 10 });
 
+const { loading, run } = useRegionLoad({ immediate: true });
 async function load() {
-  rows.value = await request('/rules', { params: { content_type: contentType.value } }) || [];
+  await run(async () => {
+    rows.value = await request('/rules', { params: { content_type: contentType.value } }) || [];
+  });
 }
 async function create() {
   try {

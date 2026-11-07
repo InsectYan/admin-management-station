@@ -1,4 +1,5 @@
 <template>
+  <RegionLoad ref="stage" class="cartoon-overview-stage" :loading="booting">
   <div v-if="detail" class="cartoon-overview">
     <header class="cartoon-overview__header">
       <div class="cartoon-overview__bar">
@@ -62,7 +63,7 @@
             <el-alert v-if="shellNote" type="info" :title="shellNote" show-icon :closable="false" />
             <el-empty v-else-if="!shellMembers.length" description="壳上还没有登记这个项目的成员" />
             <el-table v-else :data="shellMembers" size="small">
-              <el-table-column prop="username" label="账号" />
+              <el-table-column prop="username" label="账号" fixed="left" />
               <el-table-column prop="role_label" label="角色" width="120" />
             </el-table>
           </section>
@@ -110,7 +111,7 @@
             <div class="cartoon-board__main">
               <el-empty v-if="!selectedBoard" description="先选择一条章节快照" />
               <el-table v-else class="cartoon-shot-table" :data="boardPageRows">
-                <el-table-column prop="sort_order" label="#" width="70" />
+                <el-table-column prop="sort_order" label="#" width="70" fixed="left" />
                 <el-table-column label="景别" width="160">
                   <template #default="{ row }">{{ (row.shot_sizes || []).join('、') || row.shot_size || '—' }}</template>
                 </el-table-column>
@@ -200,6 +201,7 @@
       </template>
     </el-dialog>
   </div>
+  </RegionLoad>
 </template>
 
 <script setup>
@@ -213,6 +215,7 @@ import BatchPanel from '../components/BatchPanel.vue';
 import TypePanel from '../components/TypePanel.vue';
 import ExportSpecs from '../components/ExportSpecs.vue';
 import ReviewBox from '../components/ReviewBox.vue';
+import RegionLoad from '../components/RegionLoad.vue';
 import ClampText from '../components/ClampText.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
@@ -423,14 +426,24 @@ async function load() {
 watch(tab, value => {
   router.replace({ query: { ...route.query, tab: String(value) } });
 });
+const stage = ref(null);
+const booting = ref(true);
 onMounted(async () => {
-  const meta = await request('/meta').catch(() => ({ visual_styles: [] }));
-  styles.value = meta.visual_styles || [];
-  await load();
+  try {
+    await stage.value?.track(async () => {
+      booting.value = false;
+      const meta = await request('/meta').catch(() => ({ visual_styles: [] }));
+      styles.value = meta.visual_styles || [];
+      await load();
+    });
+  } finally {
+    booting.value = false;
+  }
 });
 </script>
 
 <style scoped>
+.cartoon-overview-stage { height: 100%; min-height: 0; overflow: hidden; }
 .cartoon-overview { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; padding: 16px 20px 24px; gap: 12px; box-sizing: border-box; }
 .cartoon-edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
 .cartoon-overview__bar, .cartoon-overview__actions, .cartoon-overview__tags { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
