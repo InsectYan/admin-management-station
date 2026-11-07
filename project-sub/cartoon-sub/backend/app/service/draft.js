@@ -362,9 +362,13 @@ class DraftService extends Service {
       signal: stop.signal,
       payload: promptPayload,
     });
-    let prompt = (outputOf(promptResult).prompts || [])[0] || {};
+    const promptOutput = outputOf(promptResult);
+    let prompt = (promptOutput.prompts || [])[0] || {};
     const positive = String(prompt.positive_zh || '').trim();
-    if (!positive) this.ctx.throw(502, '没有返回正向提示词');
+    if (!positive) {
+      const reply = String(promptOutput.reply || promptOutput.summary || '').replace(/\s+/g, ' ').trim();
+      this.ctx.throw(502, reply ? `没有返回正向提示词。${reply.slice(0, 160)}` : '没有返回正向提示词');
+    }
     if (negativeNeedsRetry(prompt)) {
       try {
         ensureRunning();
