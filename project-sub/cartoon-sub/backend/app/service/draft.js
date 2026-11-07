@@ -15,13 +15,37 @@ const {
   serializeCameraMoves,
 } = require('../lib/cartoonMeta');
 const { minStoryUnits, normalizeOmissions, uncoveredScenes } = require('../lib/storyCoverage');
+const { normalizeScript } = require('../lib/rosterNames');
 
 function outputOf(result) {
   return result?.output || {};
 }
 
+function picturePrompt(text) {
+  return String(text || '').replace(/\n*【后期与对白备注】[\s\S]*$/u, '').trim();
+}
+
+function coveredPlaceNames(script, description) {
+  const text = String(description || '');
+  const places = (Array.isArray(script?.places) ? script.places : [])
+    .map(item => String(item?.name || '').trim())
+    .filter(Boolean);
+  const names = new Set(places.filter(name => text.includes(name)));
+  (Array.isArray(script?.scenes) ? script.scenes : []).forEach((scene, index) => {
+    const title = String(scene?.title || '').trim();
+    const place = String(scene?.place || '').trim();
+    const mentioned = text.includes(`第${index + 1}场`) || (title && text.includes(title));
+    if (!mentioned) return;
+    if (place) names.add(place);
+    places.forEach(name => {
+      if (title.includes(name)) names.add(name);
+    });
+  });
+  return [ ...names ];
+}
+
 function skillTimeout(ctx) {
-  return Number(ctx.app.config.agentPlatform?.timeoutMs) || 600000;
+  return Number(ctx.app.config.agentPlatform?.timeoutMs) || 960000;
 }
 
 function clampDurationSec(value, fallback = 10) {
@@ -93,9 +117,11 @@ class DraftService extends Service {
         min_scenes: minScenes,
       },
     });
-    const scriptData = outputOf(scriptResult).script_data;
+    const scriptOutput = outputOf(scriptResult);
+    const scriptData = scriptOutput.script_data;
     if (!scriptData || !Array.isArray(scriptData.scenes) || !scriptData.scenes.length) {
-      this.ctx.throw(502, '剧本没有返回场次');
+      const reply = String(scriptOutput.reply || scriptOutput.summary || '').replace(/\s+/g, ' ').trim();
+      this.ctx.throw(502, reply ? `剧本没有返回场次。${reply.slice(0, 160)}` : '剧本没有返回场次');
     }
     const omissions = normalizeOmissions(scriptData.omissions);
     if (scriptData.scenes.length < minScenes && !omissions.length) {
@@ -106,8 +132,9 @@ class DraftService extends Service {
     }
     scriptData.omissions = omissions;
     scriptData.shot_omissions = [];
+    const named = normalizeScript(scriptData);
     return {
-      script_data: scriptData,
+      script_data: named,
       is_xianxia: styleCtx.is_xianxia,
       visual_style_label: styleCtx.visual_style_label,
       persisted: false,
@@ -116,7 +143,7 @@ class DraftService extends Service {
 
   async applyScript(projectId, importId, payload) {
     const { chapter } = await this.load(projectId, importId);
-    const scriptData = payload.script_data;
+    const scriptData = normalizeScript(payload.script_data);
     if (!scriptData || !Array.isArray(scriptData.scenes) || !scriptData.scenes.length) {
       this.ctx.throw(400, '需要场次');
     }
@@ -358,11 +385,37 @@ class DraftService extends Service {
         this.ctx.logger.warn('[cartoon] 负向提示词补调失败 %s', err.message);
       }
     }
+    if (project.av_mode) {
+      ensureRunning();
+      const closed = await invokeSkill(this.ctx, {
+        skill: 'cartoon-av-prompt-skill',
+        action: 'draft',
+        timeoutMs: skillTimeout(this.ctx),
+        signal: stop.signal,
+        payload: {
+          ...promptPayload,
+          shots: [{
+            ...shot,
+            draft_positive_zh: picturePrompt(prompt.positive_zh),
+            draft_negative_zh: String(prompt.negative_zh || '').trim(),
+            draft_production_note: String(prompt.production_note || '').trim(),
+          }],
+        },
+      });
+      const again = (outputOf(closed).prompts || [])[0] || {};
+      const closedPositive = picturePrompt(again.positive_zh);
+      if (!closedPositive) this.ctx.throw(502, 'AV 收口没有返回画面提示词');
+      prompt = {
+        ...prompt,
+        positive_zh: closedPositive,
+        negative_zh: String(again.negative_zh || prompt.negative_zh || '').trim(),
+        production_note: String(again.production_note || prompt.production_note || '').trim(),
+      };
+    }
     ensureRunning();
     const overrides = (Array.isArray(existing.overridden_fields) ? existing.overridden_fields : [])
       .filter(field => field !== 'assets');
     await existing.update({
-      description: shot.description,
       shot_size: shot.shot_size,
       camera_move: shot.camera_move,
       dialogue: shot.dialogue,
@@ -372,21 +425,22 @@ class DraftService extends Service {
     const promptRow = await this.ctx.model.Prompt.findOne({ where: { shot_id: existing.id } });
     if (promptRow) {
       await promptRow.update({
-        positive_zh: prompt.positive_zh || shot.description,
+        positive_zh: picturePrompt(prompt.positive_zh) || shot.description,
         negative_zh: prompt.negative_zh || '',
       });
     } else {
       await this.ctx.model.Prompt.create({
         shot_id: existing.id,
-        positive_zh: prompt.positive_zh || shot.description,
+        positive_zh: picturePrompt(prompt.positive_zh) || shot.description,
         negative_zh: prompt.negative_zh || '',
       });
     }
     await this.ctx.service.project.bindMatchedAssets(project.id, existing.id, [
-      prompt.positive_zh || shot.description,
+      picturePrompt(prompt.positive_zh) || shot.description,
       prompt.negative_zh || '',
       shot.description,
       shot.dialogue,
+      ...coveredPlaceNames(scriptData, `${shot.description}\n${picturePrompt(prompt.positive_zh)}`),
     ].join('\n'));
     return this.ctx.service.project.show(project.id);
     } finally {

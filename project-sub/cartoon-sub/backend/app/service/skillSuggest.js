@@ -1,5 +1,6 @@
 'use strict';
 
+const { Agent } = require('undici');
 const { Op } = require('sequelize');
 const Service = require('egg').Service;
 const { invokeSkill, listMediaProfiles } = require('../lib/agentProxy');
@@ -316,20 +317,30 @@ class SkillSuggestService extends Service {
     if (!audio) return '当前档位不能出音频';
     const base = String(this.ctx.app.config.agentPlatform?.baseUrl || '').replace(/\/$/, '');
     for (const cue of cues) {
-      const res = await fetch(`${base}/api/media/generate`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          kind: 'audio',
-          prompt: cue.text,
-          media_profile: audio.id,
-        }),
-        signal: AbortSignal.timeout(180000),
+      const dispatcher = new Agent({
+        headersTimeout: 915000,
+        bodyTimeout: 915000,
+        connectTimeout: 15000,
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) this.ctx.throw(res.status >= 500 ? 502 : res.status, data.error || '音频没有生成');
-      const mediaRef = String(data.url || data.file || data.id || '').slice(0, 200);
-      if (mediaRef) await this.ctx.model.VoiceCue.update({ media_ref: mediaRef }, { where: { id: cue.id } });
+      try {
+        const res = await fetch(`${base}/api/media/generate`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            kind: 'audio',
+            prompt: cue.text,
+            media_profile: audio.id,
+          }),
+          signal: AbortSignal.timeout(900000),
+          dispatcher,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) this.ctx.throw(res.status >= 500 ? 502 : res.status, data.error || '音频没有生成');
+        const mediaRef = String(data.url || data.file || data.id || '').slice(0, 200);
+        if (mediaRef) await this.ctx.model.VoiceCue.update({ media_ref: mediaRef }, { where: { id: cue.id } });
+      } finally {
+        await dispatcher.close().catch(() => {});
+      }
     }
     return '';
   }

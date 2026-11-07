@@ -1,9 +1,19 @@
 require('dotenv').config();
+const { presentError } = require('../app/lib/httpError');
 
 module.exports = appInfo => {
   const config = {};
   config.keys = appInfo.name + '_cartoon_sub';
-  config.middleware = [ 'sessionAuth', 'roleGate' ];
+  config.middleware = [ 'apiError', 'sessionAuth', 'roleGate' ];
+  config.onerror = {
+    all(err, ctx) {
+      const body = presentError(err);
+      ctx.status = body.code;
+      ctx.type = 'json';
+      // koa-onerror 会直接 end(ctx.body)，对象会让响应挂住
+      ctx.body = JSON.stringify(body);
+    },
+  };
   config.jwt = {
     secret: process.env.JWT_SECRET || 'CHANGE_ME_LOCAL_JWT',
     enable: false,
@@ -55,8 +65,8 @@ module.exports = appInfo => {
   };
   config.agentPlatform = {
     baseUrl: process.env.AGENT_PLATFORM_URL || 'http://127.0.0.1:4001',
-    // 剧本→分镜→提示词串行且本地模型上下文大，单次默认放宽到 10 分钟
-    timeoutMs: Number(process.env.AGENT_PLATFORM_TIMEOUT_MS || 600000),
+    // 本地模型单次 15 分钟，外层多留 1 分钟把结果或超时原因送回来
+    timeoutMs: Number(process.env.AGENT_PLATFORM_TIMEOUT_MS || 960000),
   };
   config.ops = {
     baseUrl: process.env.OPS_API_ORIGIN || 'http://127.0.0.1:5203',

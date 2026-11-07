@@ -1,0 +1,1 @@
+ALTER TABLE cartoon_projects ADD COLUMN IF NOT EXISTS av_mode BOOLEAN NOT NULL DEFAULT false;

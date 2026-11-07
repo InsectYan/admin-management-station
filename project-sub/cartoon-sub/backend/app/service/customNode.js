@@ -83,7 +83,7 @@ class CustomNodeService extends Service {
     const result = await invokeSkill(this.ctx, {
       skill: 'cartoon-script-skill',
       action: 'draft',
-      timeoutMs: Number(this.ctx.app.config.agentPlatform?.timeoutMs) || 600000,
+      timeoutMs: Number(this.ctx.app.config.agentPlatform?.timeoutMs) || 960000,
       payload: {
         chapter_title: chapter.chapter_title || '',
         body: chapter.body,

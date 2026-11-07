@@ -15,7 +15,9 @@ module.exports = app => {
   router.get('/api/novel-catalog/:novelId/chapters', controller.project.chapters);
   router.get('/api/novel-catalog/:novelId/packages', controller.project.packages);
   router.get('/api/summary', controller.project.summary);
+  router.get('/api/novel-enums', controller.project.novelEnums);
   router.get('/api/novel-catalog/:novelId', controller.project.novel);
+  router.put('/api/novel-catalog/:novelId', controller.project.updateNovel);
   router.get('/api/video-templates', controller.project.templates);
   router.get('/api/video-templates/:id', controller.project.template);
   router.get('/api/library/assets', controller.library.assets);
@@ -52,6 +54,7 @@ module.exports = app => {
   router.post('/api/projects/:id/rebase', controller.project.rebase);
   router.post('/api/projects/:id/imports/:importId/draft/suggest', controller.project.draftSuggest);
   router.post('/api/projects/:id/imports/:importId/draft/apply', controller.project.draftApply);
+  router.put('/api/projects/:id/imports/:importId/roster', controller.project.saveScriptRoster);
   router.post('/api/projects/:id/imports/:importId/draft/script', controller.project.draftScript);
   router.post('/api/projects/:id/imports/:importId/draft/script/apply', controller.project.draftScriptApply);
   router.post('/api/projects/:id/imports/:importId/draft/shot-outline', controller.project.draftShotOutline);

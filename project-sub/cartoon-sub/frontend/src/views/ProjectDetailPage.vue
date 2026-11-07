@@ -17,6 +17,10 @@
               <el-option v-for="item in novels" :key="item.id" :label="item.title" :value="String(item.id)" />
             </el-select>
           </el-form-item>
+          <el-form-item v-if="supportsAv(detail.project.content_type)" label="AV">
+            <el-checkbox v-model="projectForm.av_mode">开启</el-checkbox>
+            <p class="cartoon-module__hint">开启后仍先走常规提示词，再由 AV 技能收口成时间片画面。对白单独存放。人体和道具用实际外形，不用美化说法。</p>
+          </el-form-item>
           <el-form-item label="画面风格">
             <el-select v-model="projectForm.visual_style" filterable placeholder="选择风格" style="width: 100%">
               <el-option v-for="item in meta.visual_styles" :key="item.value" :label="item.label" :value="item.value" />
@@ -33,7 +37,7 @@
       <CopyBlocks :project-id="route.params.id" />
     </section>
 
-    <section v-show="step === 2 && !isLocal">
+    <section v-show="step === 2 && !isLocal" class="cartoon-snap-page">
       <div class="cartoon-module">
         <h3 class="cartoon-module__title">从小说拉取</h3>
         <p class="cartoon-module__hint">新项目按叙事工作台已发布的故事包版本拉取。旧项目仍可直接拉章节，并标记为未钉扎。</p>
@@ -43,13 +47,13 @@
               <el-option v-for="item in packageVersions" :key="item.version" :label="`v${item.version} · ${item.published_at || ''}`" :value="item.version" />
             </el-select>
           </el-form-item>
-          <el-alert v-else-if="pinRequired" type="info" show-icon :closable="false" title="还没有已发布的故事包。请先到叙事工作台发布，再回来拉取。" />
+          <el-alert v-else-if="pinRequired" type="info" show-icon :closable="false" title="还没有已发布的故事包。可以直接拉取这一章正文，快照会标为未钉扎。" />
           <el-form-item label="章节">
             <el-select v-model="chapterId" filterable placeholder="选择章节" style="width: 100%" :disabled="!projectForm.source_novel_id">
               <el-option v-for="item in pullChapters" :key="item.id" :label="item.label || item.title" :value="String(item.id)" />
             </el-select>
           </el-form-item>
-          <el-button type="primary" :disabled="!chapterId || !canMake() || (pinRequired && !packageVersion)" @click="pull">{{ pullLabel }}</el-button>
+          <el-button type="primary" :disabled="!chapterId || !canMake() || (pinRequired && packageVersions.length && !packageVersion)" @click="pull">{{ pullLabel }}</el-button>
         </el-form>
       </div>
       <div class="cartoon-module">
@@ -86,7 +90,7 @@
       </div>
     </section>
 
-    <section v-show="step === 3" class="cartoon-module">
+    <section v-show="step === 3" class="cartoon-module cartoon-script-page">
       <div class="cartoon-board__head" style="justify-content: space-between">
         <h3 class="cartoon-module__title" style="margin: 0">剧本</h3>
           <div style="display: flex; flex-wrap: wrap; gap: 8px">
@@ -138,41 +142,55 @@
                 @click="clearScriptShots(selectedScriptImport)"
               >一键删除分镜</el-button>
             </div>
-            <div v-if="activeScriptData" class="cartoon-script">
-              <h4>概要</h4>
-              <CartoonMarkdown :source="activeScriptData.summary || ''" empty-text="还没有概要" />
-              <h4>人物</h4>
-              <el-empty v-if="!(activeScriptData.characters || []).length" description="还没有人物" />
-              <ul v-else class="cartoon-script__list">
-                <li v-for="(person, index) in activeScriptData.characters" :key="`${person.name}-${index}`">
-                  <strong>{{ person.name }}</strong> — {{ person.look }}
-                </li>
-              </ul>
-              <h4>场次</h4>
-              <el-empty v-if="!(activeScriptData.scenes || []).length" description="还没有场次" />
-              <div v-for="(scene, index) in (activeScriptData.scenes || [])" :key="`${scene.title}-${index}`" class="cartoon-script__scene">
-                <strong>{{ index + 1 }}. {{ scene.title || '未命名场次' }}</strong>
-                <CartoonMarkdown :source="scene.summary || ''" />
-              </div>
-            </div>
-            <p v-else class="cartoon-module__hint">还没有剧本，请先生成剧本。</p>
-
-            <div v-if="coverageNotices.length" class="cartoon-coverage">
-              <el-alert
-                v-for="(note, index) in coverageNotices"
-                :key="`${note.title}-${index}`"
-                type="warning"
-                :closable="false"
-                show-icon
-                :title="note.title"
-                :description="note.reason"
-              />
-            </div>
-            <h4 id="script-shot-table" class="cartoon-module__title" style="margin-top: 20px">分镜表（{{ scriptShots.length }}）</h4>
-            <p class="cartoon-module__hint">与「镜头」页同一批数据。场次和镜头只按下文字数设下限，不设上限。镜头描述和提示词不限字数，对白多时一条可以写到数千字。拆分后会落库；逐行生成提示词。删除任一侧会同步。</p>
-            <el-empty v-if="!scriptShots.length" description="还没有分镜，请先点「拆分分镜」" />
-            <template v-else>
-            <el-table class="cartoon-shot-table" :data="scriptPageRows" style="margin-top: 8px" row-key="id">
+            <el-tabs v-if="activeScriptData" v-model="scriptTab" class="cartoon-script-tabs">
+              <el-tab-pane label="概览" name="overview">
+                <h4>概要</h4>
+                <CartoonMarkdown :source="activeScriptData.summary || ''" empty-text="还没有概要" />
+                <div class="cartoon-board__head">
+                  <el-button :disabled="!canMake()" @click="openRoster('character')">新增人物</el-button>
+                  <el-button :disabled="!canMake()" @click="openRoster('scene')">新增场景</el-button>
+                  <el-button type="primary" plain :disabled="!canMake() || !missingRoster.length" @click="ensureRosterAssets">补齐缺少的资产</el-button>
+                </div>
+                <h4>人物</h4>
+                <el-empty v-if="!(activeScriptData.characters || []).length" description="还没有人物" />
+                <ul v-else class="cartoon-script__list">
+                  <li v-for="(person, index) in activeScriptData.characters" :key="`${person.name}-${index}`">
+                    <strong>{{ person.name }}</strong> — {{ person.look }}
+                    <span v-if="!namedAsset('character', person.name)" class="cartoon-missing">缺少角色资产</span>
+                  </li>
+                </ul>
+                <h4>所在场景</h4>
+                <el-empty v-if="!scriptPlaces.length" description="还没有场景" />
+                <ul v-else class="cartoon-script__list">
+                  <li v-for="(place, index) in scriptPlaces" :key="`${place.name}-${index}`">
+                    <strong>{{ place.name }}</strong>
+                    <span v-if="place.note"> — {{ place.note }}</span>
+                    <span v-if="!namedAsset('scene', place.name)" class="cartoon-missing">缺少场景资产</span>
+                  </li>
+                </ul>
+              </el-tab-pane>
+              <el-tab-pane :label="`场次（${(activeScriptData.scenes || []).length}）`" name="scenes">
+                <el-empty v-if="!(activeScriptData.scenes || []).length" description="还没有场次" />
+                <div v-for="(scene, index) in (activeScriptData.scenes || [])" :key="`${scene.title}-${index}`" class="cartoon-script__scene">
+                  <strong>{{ index + 1 }}. {{ scene.title || '未命名场次' }}</strong>
+                  <CartoonMarkdown :source="scene.summary || ''" />
+                </div>
+              </el-tab-pane>
+              <el-tab-pane :label="`分镜表（${scriptShots.length}）`" name="shots">
+                <div v-if="coverageNotices.length" class="cartoon-coverage">
+                  <el-alert
+                    v-for="(note, index) in coverageNotices"
+                    :key="`${note.title}-${index}`"
+                    type="warning"
+                    :closable="false"
+                    show-icon
+                    :title="note.title"
+                    :description="note.reason"
+                  />
+                </div>
+                <p class="cartoon-module__hint">与「镜头」页同一批数据。场次和镜头只按下文字数设下限，不设上限。镜头描述和提示词不限字数，对白多时一条可以写到数千字。拆分后会落库；逐行生成提示词。删除任一侧会同步。</p>
+                <el-empty v-if="!scriptShots.length" description="还没有分镜，请先点「拆分分镜」" />
+                <el-table v-else class="cartoon-shot-table" :data="scriptPageRows" style="margin-top: 8px" row-key="id">
               <el-table-column label="镜头ID" width="120" prop="shot_code" />
               <el-table-column label="时长(秒)" width="110">
                 <template #default="{ row }">{{ shotDurationSec(row) }}</template>
@@ -201,15 +219,18 @@
                   <el-button link type="danger" :disabled="!canMake()" @click="removeShot(row)">删除</el-button>
                 </template>
               </el-table-column>
-            </el-table>
-            <el-pagination
-              v-model:current-page="scriptPage"
-              class="cartoon-pager"
-              :page-size="pageSize"
-              :total="scriptShots.length"
-              layout="total, prev, pager, next"
-            />
-            </template>
+                </el-table>
+                <el-pagination
+                  v-if="scriptShots.length"
+                  v-model:current-page="scriptPage"
+                  class="cartoon-pager"
+                  :page-size="pageSize"
+                  :total="scriptShots.length"
+                  layout="total, prev, pager, next"
+                />
+              </el-tab-pane>
+            </el-tabs>
+            <p v-else class="cartoon-module__hint">还没有剧本，请先生成剧本。</p>
           </template>
         </div>
       </div>
@@ -285,8 +306,11 @@
                 <span v-if="!row.upstream_stale && !hasOverride(row, 'dialogue')">—</span>
               </template>
             </el-table-column>
-            <el-table-column label="描述" width="360">
-              <template #default="{ row }"><ClampText title="描述" :text="row.description || ''" /></template>
+            <el-table-column label="剧本信息" width="360">
+              <template #default="{ row }"><ClampText title="剧本信息" :text="row.description || ''" /></template>
+            </el-table-column>
+            <el-table-column label="对白" width="280">
+              <template #default="{ row }"><ClampText title="对白" :text="row.dialogue || ''" /></template>
             </el-table-column>
             <el-table-column label="正向提示词" width="520">
               <template #default="{ row }"><ClampText title="正向提示词" :text="row.prompt?.positive_zh || ''" /></template>
@@ -315,15 +339,15 @@
                 <el-button link type="danger" :disabled="!canMake()" @click.stop="removeShot(row)">删除</el-button>
               </template>
             </el-table-column>
-          </el-table>
-          <el-pagination
-            v-if="selectedBoard && boardShots.length"
-            v-model:current-page="boardPage"
-            class="cartoon-pager"
-            :page-size="pageSize"
-            :total="boardShots.length"
-            layout="total, prev, pager, next"
-          />
+            </el-table>
+            <el-pagination
+              v-if="selectedBoard && boardShots.length"
+              v-model:current-page="boardPage"
+              class="cartoon-pager"
+              :page-size="pageSize"
+              :total="boardShots.length"
+              layout="total, prev, pager, next"
+            />
         </div>
       </div>
       </el-tab-pane>
@@ -401,6 +425,7 @@
               <el-button v-if="shotPanel?.jobLive || shotPanel?.generating" type="danger" plain @click="stopWork">停止</el-button>
               <el-button type="primary" :disabled="!canMake()" :loading="shotPanel?.generating" @click="shotPanel?.generate()">生成</el-button>
               <el-button @click="shotPanel?.openAssets()">查看资产</el-button>
+              <el-button @click="openShotOutputs">查看产物</el-button>
             </div>
           </template>
           <div v-else class="cartoon-drawer-footer__actions">
@@ -424,6 +449,20 @@
         <el-button type="primary" :disabled="!canMake()" @click="submitPromote">提交</el-button>
       </template>
     </el-dialog>
+    <el-dialog v-model="rosterOpen" :title="rosterKind === 'character' ? '新增人物' : '新增场景'" width="480px">
+      <el-form label-position="top">
+        <el-form-item :label="rosterKind === 'character' ? '人物名称' : '场景名称'">
+          <el-input v-model="rosterForm.name" />
+        </el-form-item>
+        <el-form-item :label="rosterKind === 'character' ? '外观' : '场景说明'">
+          <el-input v-model="rosterForm.detail" type="textarea" :rows="3" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="rosterOpen = false">取消</el-button>
+        <el-button type="primary" :disabled="!canMake()" @click="submitRoster">保存</el-button>
+      </template>
+    </el-dialog>
   </PageShell>
 </template>
 
@@ -440,7 +479,7 @@ import ShotGeneratePage from './ShotGeneratePage.vue';
 import ClampText from '../components/ClampText.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
-import { isLocalType } from '../lib/contentTypes.js';
+import { isLocalType, supportsAv } from '../lib/contentTypes.js';
 import { uncoveredScenes } from '../utils/sceneCoverage.js';
 
 const props = defineProps({
@@ -473,7 +512,7 @@ const detail = ref(null);
 const novels = ref([]);
 const chapters = ref([]);
 const meta = reactive({ visual_styles: [], shot_sizes: [ '中景' ], camera_moves: [ '固定' ] });
-const projectForm = reactive({ name: '', source_novel_id: '', visual_style: '' });
+const projectForm = reactive({ name: '', source_novel_id: '', visual_style: '', av_mode: false });
 const chapterId = ref('');
 const packageDesk = ref(null);
 const packageVersion = ref(null);
@@ -643,6 +682,41 @@ const scriptBoardItems = computed(() => {
 });
 const selectedScriptImport = computed(() => liveImports.value.find(item => String(item.id) === selectedImportKey.value) || null);
 const activeScriptData = computed(() => selectedScriptImport.value?.script_data || null);
+const scriptTab = ref('overview');
+const rosterOpen = ref(false);
+const rosterKind = ref('character');
+const rosterForm = reactive({ name: '', detail: '' });
+function derivePlaces(scenes) {
+  const seen = new Set();
+  const list = [];
+  (scenes || []).forEach(scene => {
+    let title = String(scene?.title || '').replace(/^Scene\s*\d+\s*[:：]\s*/i, '').trim();
+    const cut = title.split(/\s[-—]\s/)[0].trim();
+    if (cut) title = cut;
+    if (!title || seen.has(title)) return;
+    seen.add(title);
+    list.push({ name: title, note: '' });
+  });
+  return list;
+}
+const scriptPlaces = computed(() => {
+  const data = activeScriptData.value;
+  if (!data) return [];
+  if (Array.isArray(data.places)) return data.places;
+  return derivePlaces(data.scenes);
+});
+function namedAsset(kind, name) {
+  return (detail.value?.assets || []).some(asset => !asset.disabled && asset.kind === kind && asset.name === name);
+}
+const missingRoster = computed(() => {
+  const people = (activeScriptData.value?.characters || [])
+    .filter(item => item?.name && !namedAsset('character', item.name))
+    .map(item => ({ kind: 'character', name: item.name, look: item.look || '' }));
+  const places = scriptPlaces.value
+    .filter(item => item?.name && !namedAsset('scene', item.name))
+    .map(item => ({ kind: 'scene', name: item.name, note: item.note || '' }));
+  return people.concat(places);
+});
 const scriptShots = computed(() => {
   const current = selectedScriptImport.value;
   if (!current) return [];
@@ -748,6 +822,7 @@ const boardPageRows = computed(() => boardShots.value.slice((boardPage.value - 1
 watch(selectedImportKey, () => {
   scriptPage.value = 1;
   boardPage.value = 1;
+  scriptTab.value = 'overview';
 });
 watch(scriptShots, (rows) => {
   const max = Math.max(1, Math.ceil(rows.length / pageSize));
@@ -806,6 +881,12 @@ async function removeShotGroup(item) {
     ElMessage.error(err.message);
   }
 }
+function openShotOutputs() {
+  const id = generateShotId.value;
+  if (!id) return;
+  generateOpen.value = false;
+  openOutputs({ id });
+}
 function openOutputs(row) {
   if (embedded.value) {
     router.replace({ query: { node: 'preview', shot: String(row.id) } });
@@ -819,6 +900,7 @@ function fillProject() {
   projectForm.name = project.name || '';
   projectForm.source_novel_id = project.source_novel_id ? String(project.source_novel_id) : '';
   projectForm.visual_style = project.visual_style || '';
+  projectForm.av_mode = Boolean(project.av_mode);
 }
 async function loadChapters(novelId) {
   chapters.value = [];
@@ -876,6 +958,7 @@ async function saveProject() {
         name: projectForm.name,
         source_novel_id: isLocal.value ? null : (projectForm.source_novel_id || null),
         visual_style: projectForm.visual_style || '',
+        av_mode: supportsAv(detail.value?.project?.content_type) && projectForm.av_mode,
       },
     });
     await load();
@@ -987,6 +1070,50 @@ function ensureShotSizes(row) {
   const list = text ? text.split(/[,，、|/]+/).map(item => item.trim()).filter(Boolean) : [];
   row.shot_sizes = list.length ? list : [ '中景' ];
   return row.shot_sizes;
+}
+function openRoster(kind) {
+  rosterKind.value = kind;
+  rosterForm.name = '';
+  rosterForm.detail = '';
+  rosterOpen.value = true;
+}
+async function writeRoster(characters, places, ensure) {
+  const chapter = selectedScriptImport.value;
+  if (!chapter?.id) return;
+  detail.value = await request(`/projects/${route.params.id}/imports/${chapter.id}/roster`, {
+    method: 'put',
+    data: { characters, places, ensure_assets: ensure },
+  });
+}
+async function submitRoster() {
+  const name = rosterForm.name.trim();
+  if (!name) {
+    ElMessage.warning(rosterKind.value === 'character' ? '请填写人物名称' : '请填写场景名称');
+    return;
+  }
+  const characters = (activeScriptData.value?.characters || []).map(item => ({ name: item.name, look: item.look || '' }));
+  const places = scriptPlaces.value.map(item => ({ name: item.name, note: item.note || '' }));
+  if (rosterKind.value === 'character') characters.push({ name, look: rosterForm.detail.trim() });
+  else places.push({ name, note: rosterForm.detail.trim() });
+  try {
+    await writeRoster(characters, places, true);
+    rosterOpen.value = false;
+    ElMessage.success('已写入');
+  } catch (err) {
+    ElMessage.error(err.message);
+  }
+}
+async function ensureRosterAssets() {
+  try {
+    await writeRoster(
+      (activeScriptData.value?.characters || []).map(item => ({ name: item.name, look: item.look || '' })),
+      scriptPlaces.value.map(item => ({ name: item.name, note: item.note || '' })),
+      true,
+    );
+    ElMessage.success('已补齐资产');
+  } catch (err) {
+    ElMessage.error(err.message);
+  }
 }
 function openScriptPage(item) {
   selectedImportKey.value = String(item.id);
@@ -1501,7 +1628,11 @@ onMounted(async () => {
 .cartoon-coverage { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
 .cartoon-snap { margin-bottom: 12px; }
 .cartoon-snap__body { max-height: 100px; overflow: hidden; }
-.cartoon-snap__body.is-open { max-height: none; }
+.cartoon-snap__body.is-open { max-height: none; overflow: visible; }
+.cartoon-missing { color: #c45656; margin-left: 8px; font-size: 12px; }
+.cartoon-script-tabs { flex: 1 1 auto; min-height: 280px; display: flex; flex-direction: column; }
+.cartoon-script-tabs :deep(.el-tabs__content) { flex: 1 1 auto; min-height: 240px; overflow: auto; }
+.cartoon-script-tabs :deep(.el-tab-pane) { min-height: 220px; }
 .cartoon-snap__actions {
   display: flex;
   flex-wrap: wrap;

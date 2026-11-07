@@ -9,6 +9,7 @@
           <el-breadcrumb-item>{{ tabTitle }}</el-breadcrumb-item>
         </el-breadcrumb>
         <div class="cartoon-overview__actions">
+          <el-button :disabled="!canMake()" @click="openEdit">编辑</el-button>
           <el-button @click="openWorkbench('compose')">剪辑成片</el-button>
           <el-button type="primary" @click="openWorkbench('input')">进入制作</el-button>
         </div>
@@ -19,6 +20,7 @@
           <h1>{{ detail.project.name }}</h1>
           <div class="cartoon-overview__tags">
             <el-tag v-if="styleLabel" size="small">{{ styleLabel }}</el-tag>
+            <el-tag v-if="detail.project.av_mode" size="small" type="danger">AV</el-tag>
             <el-tag v-if="novelBrief?.title" size="small" effect="plain">{{ novelBrief.title }}</el-tag>
             <el-tag size="small" effect="light">{{ detail.project.status || 'draft' }}</el-tag>
           </div>
@@ -47,6 +49,7 @@
           <dl class="cartoon-overview__facts">
             <div><dt>项目名称</dt><dd>{{ detail.project.name }}</dd></div>
             <div><dt>画面风格</dt><dd>{{ styleLabel || '未选择' }}</dd></div>
+            <div v-if="supportsAv(detail.project.content_type)"><dt>AV</dt><dd>{{ detail.project.av_mode ? '开启' : '关闭' }}</dd></div>
             <div v-if="isLocal"><dt>文案</dt><dd>本地文案</dd></div>
             <div v-else><dt>来源小说</dt><dd>{{ novelBrief?.title || '未绑定' }}</dd></div>
             <div><dt>章节快照</dt><dd>{{ liveImports.length }}</dd></div>
@@ -55,7 +58,7 @@
           </dl>
           <section class="cartoon-module">
             <h3 class="cartoon-module__title">壳上登记的成员</h3>
-            <p class="cartoon-module__hint">名单来自壳，这里只展示，不在视频项目里另行邀请。</p>
+            <p class="cartoon-module__hint">这是主应用里登记的项目访问成员，只有账号和角色。视频项目不在这里加人，只把名单读出来展示。</p>
             <el-alert v-if="shellNote" type="info" :title="shellNote" show-icon :closable="false" />
             <el-empty v-else-if="!shellMembers.length" description="壳上还没有登记这个项目的成员" />
             <el-table v-else :data="shellMembers" size="small">
@@ -114,8 +117,11 @@
                 <el-table-column label="运镜" width="180">
                   <template #default="{ row }">{{ (row.camera_moves || []).join('、') || row.camera_move || '—' }}</template>
                 </el-table-column>
-                <el-table-column label="描述" width="360">
-                  <template #default="{ row }"><ClampText title="描述" :text="row.description || ''" /></template>
+                <el-table-column label="剧本信息" width="360">
+                  <template #default="{ row }"><ClampText title="剧本信息" :text="row.description || ''" /></template>
+                </el-table-column>
+                <el-table-column label="对白" width="240">
+                  <template #default="{ row }"><ClampText title="对白" :text="row.dialogue || ''" /></template>
                 </el-table-column>
                 <el-table-column label="正向提示词" width="480">
                   <template #default="{ row }"><ClampText title="正向提示词" :text="row.prompt?.positive_zh || ''" /></template>
@@ -145,11 +151,59 @@
         </section>
       </div>
     </div>
+    <el-dialog v-model="editOpen" title="编辑基础信息" width="720px">
+      <el-form label-position="top">
+        <div class="cartoon-edit-grid">
+          <el-form-item label="项目名称"><el-input v-model="editForm.name" /></el-form-item>
+          <el-form-item label="画面风格">
+            <el-select v-model="editForm.visual_style" filterable style="width: 100%">
+              <el-option v-for="item in styles" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item v-if="supportsAv(detail.project.content_type)" label="AV">
+            <el-checkbox v-model="editForm.av_mode">开启</el-checkbox>
+          </el-form-item>
+        </div>
+        <template v-if="novelBrief">
+          <el-form-item label="类型">
+            <el-select v-model="editForm.genre_category_id" clearable style="width: 100%" @change="onGenre">
+              <el-option v-for="item in novelEnums.genres" :key="item.id" :label="item.name" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="子类">
+            <el-select v-model="editForm.genre_subcategory_id" clearable style="width: 100%">
+              <el-option v-for="item in genreChildren" :key="item.id" :label="item.name" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="题材">
+            <el-select v-model="editForm.theme_ids" multiple filterable style="width: 100%">
+              <el-option v-for="item in novelEnums.themes" :key="item.id" :label="item.name" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="篇幅">
+            <el-select v-model="editForm.length_id" clearable style="width: 100%">
+              <el-option v-for="item in novelEnums.lengths" :key="item.id" :label="item.name" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="目标读者">
+            <el-select v-model="editForm.audience_id" clearable style="width: 100%">
+              <el-option v-for="item in novelEnums.audiences" :key="item.id" :label="item.name" :value="item.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="创作立意"><el-input v-model="editForm.creative_intent" type="textarea" :rows="3" /></el-form-item>
+          <el-form-item label="小说简介"><el-input v-model="editForm.summary" type="textarea" :rows="3" /></el-form-item>
+        </template>
+      </el-form>
+      <template #footer>
+        <el-button @click="editOpen = false">取消</el-button>
+        <el-button type="primary" :disabled="!canMake()" :loading="saving" @click="saveEdit">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import NovelBriefPanel from '../components/NovelBriefPanel.vue';
@@ -162,7 +216,7 @@ import ReviewBox from '../components/ReviewBox.vue';
 import ClampText from '../components/ClampText.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
-import { hasPanel, isLocalType } from '../lib/contentTypes.js';
+import { hasPanel, isLocalType, supportsAv } from '../lib/contentTypes.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -183,6 +237,25 @@ const novelLoading = ref(false);
 const shellMembers = ref([]);
 const shellNote = ref('');
 const selectedImportKey = ref('');
+const editOpen = ref(false);
+const saving = ref(false);
+const novelEnums = reactive({ genres: [], themes: [], audiences: [], lengths: [] });
+const editForm = reactive({
+  name: '',
+  visual_style: '',
+  av_mode: false,
+  genre_category_id: null,
+  genre_subcategory_id: null,
+  theme_ids: [],
+  length_id: null,
+  audience_id: null,
+  creative_intent: '',
+  summary: '',
+});
+const genreChildren = computed(() => {
+  const hit = novelEnums.genres.find(item => item.id === editForm.genre_category_id);
+  return hit?.children || [];
+});
 
 const tabTitle = computed(() => tabs.value.find(item => item.step === tab.value)?.title || '概览');
 const mark = computed(() => (detail.value?.project?.name || '漫').trim().slice(0, 1));
@@ -234,6 +307,74 @@ function ensureBoard() {
   }
   if (!items.some(item => item.key === selectedImportKey.value)) {
     selectedImportKey.value = (items.find(item => !item.deleted) || items[0]).key;
+  }
+}
+function onGenre() {
+  if (!genreChildren.value.some(item => item.id === editForm.genre_subcategory_id)) {
+    editForm.genre_subcategory_id = null;
+  }
+}
+async function openEdit() {
+  const project = detail.value?.project;
+  if (!project) return;
+  editForm.name = project.name || '';
+  editForm.visual_style = project.visual_style || '';
+  editForm.av_mode = Boolean(project.av_mode);
+  const novel = novelBrief.value;
+  editForm.genre_category_id = novel?.genre_category_id || null;
+  editForm.genre_subcategory_id = novel?.genre_subcategory_id || null;
+  editForm.theme_ids = Array.isArray(novel?.theme_ids) ? novel.theme_ids.slice() : [];
+  editForm.length_id = novel?.length_id || null;
+  editForm.audience_id = novel?.audience_id || null;
+  editForm.creative_intent = novel?.creative_intent || '';
+  editForm.summary = novel?.summary || '';
+  if (!novelEnums.genres.length) {
+    try {
+      const data = await request('/novel-enums');
+      novelEnums.genres = data.genres || [];
+      novelEnums.themes = data.themes || [];
+      novelEnums.audiences = data.audiences || [];
+      novelEnums.lengths = data.lengths || [];
+    } catch (err) {
+      ElMessage.error(err.message);
+    }
+  }
+  editOpen.value = true;
+}
+async function saveEdit() {
+  const project = detail.value?.project;
+  if (!project) return;
+  saving.value = true;
+  try {
+    await request(`/projects/${project.id}`, {
+      method: 'put',
+      data: {
+        name: editForm.name,
+        visual_style: editForm.visual_style || '',
+        av_mode: supportsAv(project.content_type) && editForm.av_mode,
+      },
+    });
+    if (novelBrief.value?.id) {
+      novelBrief.value = await request(`/novel-catalog/${novelBrief.value.id}`, {
+        method: 'put',
+        data: {
+          genre_category_id: editForm.genre_category_id,
+          genre_subcategory_id: editForm.genre_subcategory_id,
+          theme_ids: editForm.theme_ids,
+          length_id: editForm.length_id,
+          audience_id: editForm.audience_id,
+          creative_intent: editForm.creative_intent,
+          summary: editForm.summary,
+        },
+      });
+    }
+    editOpen.value = false;
+    await load();
+    ElMessage.success('已保存');
+  } catch (err) {
+    ElMessage.error(err.message);
+  } finally {
+    saving.value = false;
   }
 }
 function openWorkbench(node, shot) {
@@ -291,6 +432,7 @@ onMounted(async () => {
 
 <style scoped>
 .cartoon-overview { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; padding: 16px 20px 24px; gap: 12px; box-sizing: border-box; }
+.cartoon-edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
 .cartoon-overview__bar, .cartoon-overview__actions, .cartoon-overview__tags { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cartoon-overview__bar { justify-content: space-between; }
 .cartoon-overview__hero { display: flex; gap: 16px; align-items: center; margin-top: 12px; }
@@ -357,8 +499,8 @@ onMounted(async () => {
   background: rgba(47, 138, 91, 0.22);
 }
 .cartoon-overview__pane { flex: 1; min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
-.cartoon-overview__pane > .cartoon-module { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
-.cartoon-overview__pane > .cartoon-module:has(.el-table) { overflow: hidden; }
+.cartoon-overview__pane > .cartoon-module { flex: 1; min-height: 0; overflow: auto; }
+.cartoon-overview__pane > .cartoon-module:has(.cartoon-board) { overflow: hidden; display: flex; flex-direction: column; }
 .cartoon-overview__nav { min-height: 0; overflow: auto; }
 .cartoon-overview__facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; margin: 0; }
 .cartoon-overview__facts dt { color: #5c6b62; font-size: 12px; }

@@ -8,10 +8,7 @@ const { listVideoTemplates, videoTemplateDraft } = require('../lib/videoTemplate
 function ok(ctx, data) {
   ctx.body = { code: 0, message: 'ok', data };
 }
-function fail(ctx, err) {
-  ctx.status = err.status || 500;
-  ctx.body = { code: ctx.status, message: err.message, data: null };
-}
+const { fail } = require('../lib/httpError');
 
 class ProjectController extends Controller {
   async index() {
@@ -87,6 +84,50 @@ class ProjectController extends Controller {
   async novel() {
     try {
       ok(this.ctx, await this.ctx.service.project.novelBrief(this.ctx.params.novelId));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async novelEnums() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.novelEnums());
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async updateNovel() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.updateNovelBrief(this.ctx.params.novelId, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async saveScriptRoster() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.saveScriptRoster(
+        this.ctx.params.id,
+        this.ctx.params.importId,
+        this.ctx.request.body || {},
+      ));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async novelEnums() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.novelEnums());
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async updateNovel() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.updateNovelBrief(this.ctx.params.novelId, this.ctx.request.body || {}));
     } catch (err) {
       fail(this.ctx, err);
     }

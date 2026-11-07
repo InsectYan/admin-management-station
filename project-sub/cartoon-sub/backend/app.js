@@ -3,6 +3,11 @@
 const { syncSchemaOnStartup } = require('./app/lib/schemaSync');
 
 module.exports = app => {
+  app.once('server', server => {
+    server.requestTimeout = 17 * 60 * 1000;
+    server.timeout = 0;
+  });
+
   app.beforeStart(async () => {
     await syncSchemaOnStartup(app);
     try {

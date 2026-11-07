@@ -13,7 +13,10 @@ function productionInput(project, extra = {}) {
     err.status = 400;
     throw err;
   }
-  const fields = { content_type: project?.content_type || '' };
+  const fields = {
+    content_type: project?.content_type || '',
+    av_mode: Boolean(project?.av_mode),
+  };
   if (project?.id != null && String(project.id).trim() !== '') {
     fields.project_id = project.id;
     fields.work_id = String(project.id);

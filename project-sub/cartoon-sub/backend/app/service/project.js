@@ -12,6 +12,7 @@ const { sameBody, keepsProductionText, withOverride } = require('../lib/rebasePl
 const { reportAudit } = require('../lib/reportAudit');
 const { videoTemplateDraft, templateGaps } = require('../lib/videoTemplates');
 const { auditShot, mentionedAssetIds, shotText } = require('../lib/shotAssets');
+const { characterTag, placeTag, normalizeScript } = require('../lib/rosterNames');
 const {
   contentType,
   isLocal,
@@ -21,6 +22,19 @@ const {
   panelReady: fieldsReady,
   normalizePanel,
 } = require('../lib/contentCatalog');
+
+function avModeOf(contentTypeId, value) {
+  const allowed = contentTypeId === 'ai_comic' || contentTypeId === 'ai_short';
+  return allowed && Boolean(value);
+}
+
+function presentPrompt(row) {
+  if (!row) return null;
+  const json = row.toJSON ? row.toJSON() : { ...row };
+  json.positive_zh = String(json.positive_zh || '').replace(/\n*【后期与对白备注】[\s\S]*$/u, '').trim();
+  return json;
+}
+
 function assetFileNames(projectId, row) {
   const marker = `/projects/${projectId}/asset-files/`;
   const raw = [ row.front_path, row.side_path, row.back_path, row.reference_path, row.angle_paths ]
@@ -93,6 +107,12 @@ function novelBriefOf(novel) {
     genre_subcategory: novel?.genre_subcategory || '',
     novel_type: novel?.novel_type || '',
     themes,
+    theme_ids: Array.isArray(novel?.theme_ids) ? novel.theme_ids.map(id => Number(id)).filter(id => id > 0) : [],
+    genre_category_id: novel?.genre_category_id || null,
+    genre_subcategory_id: novel?.genre_subcategory_id || null,
+    length_id: novel?.length_id || null,
+    audience_id: novel?.audience_id || null,
+    update_pace_id: novel?.update_pace_id || null,
     target_audience: novel?.target_audience || '',
     update_cadence: novel?.update_cadence || '',
     author_name: novel?.author_name || '',
@@ -192,7 +212,7 @@ class ProjectService extends Service {
           shot_sizes: sizes,
           camera_move: serializeCameraMoves(moves),
           camera_moves: moves,
-          prompt: promptByShot.get(shot.id) || null,
+          prompt: presentPrompt(promptByShot.get(shot.id)),
           asset_marks: this.assetMarksFor(shot, assets, importById, promptByShot, bindings),
         };
       }),
@@ -257,6 +277,7 @@ class ProjectService extends Service {
       status: 'draft',
       content_type: contentTypeId,
       pin_mode: pinModeOf(contentTypeId),
+      av_mode: avModeOf(contentTypeId, payload.av_mode),
     });
   }
 
@@ -305,6 +326,9 @@ class ProjectService extends Service {
     }
     if (payload.visual_style !== undefined) {
       patch.visual_style = assertEnum(payload.visual_style, VISUAL_STYLES, '画面风格');
+    }
+    if (payload.av_mode !== undefined) {
+      patch.av_mode = avModeOf(project.content_type, payload.av_mode);
     }
     await project.update(patch);
     return project;
@@ -377,16 +401,42 @@ class ProjectService extends Service {
     }
   }
 
-  async fetchNovel(urlPath) {
+  async fetchNovel(urlPath, options = {}) {
     const base = this.config.novel.baseUrl.replace(/\/$/, '');
     let res;
     try {
-      res = await fetch(`${base}${urlPath}`, { signal: AbortSignal.timeout(15000) });
+      res = await fetch(`${base}${urlPath}`, {
+        method: options.method || 'GET',
+        headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
+        body: options.body ? JSON.stringify(options.body) : undefined,
+        signal: AbortSignal.timeout(15000),
+      });
     } catch (err) {
       this.ctx.throw(502, `无法连接小说平台：${err.message}`);
     }
-    if (!res.ok) this.ctx.throw(502, `小说接口返回 ${res.status}`);
-    return unwrap(await res.json());
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) this.ctx.throw(res.status >= 500 ? 502 : res.status, json.message || `小说接口返回 ${res.status}`);
+    return unwrap(json);
+  }
+
+  novelEnums() {
+    return this.fetchNovel('/api/novel-enums');
+  }
+
+  async updateNovelBrief(novelId, payload) {
+    const body = {};
+    [
+      'title', 'creative_intent', 'summary', 'story_overview',
+      'genre_category_id', 'genre_subcategory_id', 'length_id', 'audience_id', 'update_pace_id',
+    ].forEach(key => {
+      if (payload[key] !== undefined) body[key] = payload[key] || null;
+    });
+    if (payload.title != null) body.title = String(payload.title || '').trim();
+    if (Array.isArray(payload.theme_ids)) body.theme_ids = payload.theme_ids.map(id => Number(id)).filter(id => id > 0);
+    if (body.title === '') this.ctx.throw(400, '小说名称不能为空');
+    const novel = await this.fetchNovel(`/api/novels/${encodeURIComponent(novelId)}`, { method: 'PUT', body });
+    if (!novel?.id) this.ctx.throw(502, '小说基础信息没有保存');
+    return novelBriefOf(novel);
   }
 
   async addImport(projectId, payload) {
@@ -489,7 +539,10 @@ class ProjectService extends Service {
     if (!project) this.ctx.throw(404, '项目不存在');
     if (payload.package_id && payload.version) return this.pullPackage(project, payload);
     if ((project.pin_mode || 'required') !== 'legacy') {
-      this.ctx.throw(400, '请先在叙事工作台发布故事包，再按版本拉取');
+      const desk = await this.listNovelPackages(payload.novel_id).catch(() => null);
+      if ((desk?.versions || []).length) {
+        this.ctx.throw(400, '已有故事包，请按版本拉取');
+      }
     }
     let novel;
     let chapter;
@@ -948,10 +1001,53 @@ class ProjectService extends Service {
     return { id: Number(assetId), refmods: packs.length, images: names.length };
   }
 
+  async saveScriptRoster(projectId, importId, payload) {
+    const chapter = await this.ctx.model.Import.findOne({ where: { id: importId, project_id: projectId } });
+    if (!chapter) this.ctx.throw(404, '章节快照不存在');
+    const current = chapter.script_data && typeof chapter.script_data === 'object' ? chapter.script_data : {};
+    const characters = normalizeScript({ characters: payload.characters }).characters;
+    const places = (Array.isArray(payload.places) ? payload.places : []).map(item => ({
+      name: placeTag(item?.name),
+      note: String(item?.note || '').trim(),
+    })).filter(item => item.name);
+    await chapter.update({
+      characters,
+      script_data: { ...current, characters, places },
+    });
+    if (payload.ensure_assets) {
+      await this.ensureCharacterDrafts(projectId, characters.map(item => ({
+        name: item.name,
+        description: item.look,
+      })));
+      await this.ensureSceneDrafts(projectId, places);
+    }
+    return this.show(projectId);
+  }
+
+  async ensureSceneDrafts(projectId, places) {
+    const list = Array.isArray(places) ? places : [];
+    for (const item of list) {
+      const name = placeTag(item?.name);
+      if (!name) continue;
+      const existing = await this.ctx.model.Asset.findOne({
+        where: { project_id: projectId, kind: 'scene', name },
+      });
+      if (existing) continue;
+      await this.ctx.model.Asset.create({
+        project_id: Number(projectId),
+        kind: 'scene',
+        name,
+        description: String(item?.note || ''),
+        scene_type: '室内',
+        disabled: false,
+      });
+    }
+  }
+
   async ensureCharacterDrafts(projectId, characters) {
     const list = Array.isArray(characters) ? characters : [];
     for (const item of list) {
-      const name = String(typeof item === 'string' ? item : (item?.name || '')).trim();
+      const name = characterTag(typeof item === 'string' ? item : item?.name).name;
       if (!name) continue;
       const characterId = String(typeof item === 'string' ? '' : (item.character_id || item.id || '')).trim();
       const existing = await this.ctx.model.Asset.findOne({
@@ -1245,6 +1341,17 @@ class ProjectService extends Service {
     if (!type?.panel?.length) return true;
     const row = await this.ctx.model.TypePanel.findOne({ where: { project_id: project.id } });
     return fieldsReady(type, row);
+  }
+
+  async missingPanelLabels(projectOrId) {
+    const project = projectOrId && projectOrId.content_type
+      ? projectOrId
+      : await this.ctx.model.Project.findByPk(projectOrId);
+    if (!project) this.ctx.throw(404, '项目不存在');
+    const type = contentType(project.content_type);
+    if (!type?.panel?.length) return [];
+    const row = await this.ctx.model.TypePanel.findOne({ where: { project_id: project.id } });
+    return panelFields(type, row).filter(field => !field.optional && !field.value).map(field => field.label);
   }
 }
 

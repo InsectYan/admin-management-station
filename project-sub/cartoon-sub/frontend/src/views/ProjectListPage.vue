@@ -45,6 +45,10 @@
             <el-option v-for="item in novels" :key="item.id" :label="item.title" :value="String(item.id)" />
           </el-select>
         </el-form-item>
+        <el-form-item v-if="supportsAv(form.content_type)" label="AV">
+          <el-checkbox v-model="form.av_mode">开启</el-checkbox>
+          <p class="cartoon-module__hint">开启后仍先走常规提示词，再由 AV 技能收口成时间片画面。对白单独存放。人体和道具用实际外形，不用美化说法。</p>
+        </el-form-item>
         <el-form-item label="画面风格">
           <el-select v-model="form.visual_style" filterable placeholder="选择风格" style="width: 100%">
             <el-option-group v-for="group in styleGroups" :key="group.label" :label="group.label">
@@ -69,7 +73,7 @@ import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
-import { CONTENT_TYPES, isLocalType, isOptionalType, typeLabel } from '../lib/contentTypes.js';
+import { CONTENT_TYPES, isLocalType, isOptionalType, supportsAv, typeLabel } from '../lib/contentTypes.js';
 import { groupVisualStyles, styleDisplayLabel } from '../utils/visualStyles.js';
 
 const router = useRouter();
@@ -86,7 +90,7 @@ const loadError = ref('');
 const saving = ref(false);
 const visible = ref(false);
 const summary = reactive({ generating: 0, failed: 0, unpinned: 0, created_today: 0, success_rate_24h: null });
-const form = reactive({ name: '', content_type: 'ai_comic', source_novel_id: '', visual_style: '' });
+const form = reactive({ name: '', content_type: 'ai_comic', source_novel_id: '', visual_style: '', av_mode: false });
 const opsHref = computed(() => {
   const path = '/media/ops/overview';
   const port = window.location.port;
@@ -125,12 +129,14 @@ async function load() {
 }
 function onType(value) {
   if (isLocalType(value)) form.source_novel_id = '';
+  if (!supportsAv(value)) form.av_mode = false;
 }
 function openCreate() {
   form.name = '';
   form.content_type = 'ai_comic';
   form.source_novel_id = '';
   form.visual_style = styles.value[0]?.value || '';
+  form.av_mode = false;
   visible.value = true;
 }
 async function create() {
@@ -147,6 +153,7 @@ async function create() {
         content_type: form.content_type,
         source_novel_id: isLocalType(form.content_type) ? null : (form.source_novel_id || null),
         visual_style: form.visual_style || '',
+        av_mode: supportsAv(form.content_type) && form.av_mode,
       },
     });
     visible.value = false;

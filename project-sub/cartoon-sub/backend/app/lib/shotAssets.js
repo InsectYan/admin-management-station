@@ -1,5 +1,7 @@
 'use strict';
 
+const { characterTag, placeTag } = require('./rosterNames');
+
 const VISUAL_KINDS = [ 'character', 'scene', 'prop' ];
 
 function cleanName(value) {
@@ -27,10 +29,15 @@ function catalogOf(assets, script) {
   });
   const data = script || {};
   (data.characters || []).forEach(item => {
-    pushName(list, seen, { name: typeof item === 'string' ? item : item?.name, kind: 'character' });
+    const raw = typeof item === 'string' ? item : item?.name;
+    pushName(list, seen, { name: characterTag(raw).name, kind: 'character' });
+  });
+  (data.places || []).forEach(item => {
+    const raw = typeof item === 'string' ? item : item?.name;
+    pushName(list, seen, { name: placeTag(raw), kind: 'scene' });
   });
   (data.scenes || []).forEach(item => {
-    pushName(list, seen, { name: item?.title || item?.name, kind: 'scene' });
+    pushName(list, seen, { name: placeTag(item?.place || item?.title || item?.name), kind: 'scene' });
   });
   return list.sort((a, b) => b.name.length - a.name.length);
 }

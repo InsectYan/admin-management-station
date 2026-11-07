@@ -223,7 +223,8 @@ class GenerateService extends Service {
     try {
     const shot = await this.ctx.model.Shot.findByPk(shotId);
     if (!shot || String(shot.project_id) !== String(projectId)) this.ctx.throw(404, '分镜不存在');
-    if (!await this.ctx.service.project.panelReady(projectId)) this.ctx.throw(400, '面板还没填完');
+    const missingPanel = await this.ctx.service.project.missingPanelLabels(projectId);
+    if (missingPanel.length) this.ctx.throw(400, `面板还没填完：${missingPanel.join('、')}`);
     const text = String(payload.positive_zh || '').trim();
     if (!text) this.ctx.throw(400, '需要一句提示词');
     const requestedIds = (Array.isArray(payload.asset_ids) ? payload.asset_ids : [])

@@ -5,10 +5,7 @@ const Controller = require('egg').Controller;
 function ok(ctx, data) {
   ctx.body = { code: 0, message: 'ok', data };
 }
-function fail(ctx, err) {
-  ctx.status = err.status || 500;
-  ctx.body = { code: ctx.status, message: err.message, data: null };
-}
+const { fail } = require('../lib/httpError');
 
 class ReviewController extends Controller {
   async index() {

@@ -27,6 +27,10 @@ export function isOptionalType(value) {
   return typeOf(value)?.bind === 'optional';
 }
 
+export function supportsAv(value) {
+  return value === 'ai_comic' || value === 'ai_short';
+}
+
 export function hasPanel(value) {
   return Boolean(typeOf(value)?.panel);
 }
