@@ -97,8 +97,6 @@ const HF_WAN21 = 'https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/bl
 const MS_WAN21 = 'https://www.modelscope.cn/models/Comfy-Org/Wan_2.1_ComfyUI_repackaged/files';
 const HF_QWEN = 'https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/blob/main/split_files';
 const MS_QWEN = 'https://www.modelscope.cn/models/Comfy-Org/Qwen-Image_ComfyUI/files';
-const HF_LIGHT = 'https://huggingface.co/lightx2v/Qwen-Image-Lightning';
-
 function umt5Slot() {
   return {
     id: 'clip',
@@ -214,17 +212,6 @@ const FAMILIES = [
       },
       qwenClipSlot(),
       qwenVaeSlot(),
-      {
-        id: 'lora',
-        label: '加速 LoRA',
-        folder: 'loras',
-        optional: true,
-        match: /qwen-image-lightning/i,
-        options: [
-          modelOption('4steps', 'Hugging Face', 'Qwen-Image-Lightning-4steps-V1.0.safetensors', 'loras', HF_LIGHT),
-          modelOption('8steps', 'Hugging Face', 'Qwen-Image-Lightning-8steps-V1.0.safetensors', 'loras', HF_LIGHT),
-        ],
-      },
     ],
   },
   {

@@ -12,6 +12,7 @@ import { consumeHandedToken } from './lib/amsAuth.js';
 import './styles/base.css';
 import './styles/shell.css';
 import './App.css';
+import { installFitTable } from './lib/fitTable.js';
 
 let app = null;
 let router = null;
@@ -30,6 +31,7 @@ function render(props = {}) {
   app = createApp(App);
   app.use(createPinia());
   app.use(ElementPlus, { locale: zhCn });
+  installFitTable(app);
   app.use(router);
   app.mount(container);
 }

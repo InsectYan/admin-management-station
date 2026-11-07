@@ -264,6 +264,52 @@ class SkillSuggestService extends Service {
     return { cues: await this.voiceCues(project.id), audio_note: audioNote };
   }
 
+  async assignLibraryVoice(projectId, payload) {
+    const project = await this.project(projectId);
+    const voice = await this.ctx.service.voiceLibrary.requireVoice(payload.voice_id);
+    const shotIds = [ ...new Set((Array.isArray(payload.shot_ids) ? payload.shot_ids : []).map(id => Number(id)).filter(id => id > 0)) ];
+    if (!shotIds.length) this.ctx.throw(400, '先选择要配音的镜头');
+    const shots = await this.ctx.model.Shot.findAll({ where: { project_id: project.id, id: { [Op.in]: shotIds } } });
+    if (shots.length !== shotIds.length) this.ctx.throw(400, '镜头不存在');
+    const silent = shots.find(item => !String(item.dialogue || '').trim());
+    if (silent) this.ctx.throw(400, `镜头 ${silent.shot_code || silent.id} 没有台词`);
+    const asset = await this.upsertLibraryVoice(project.id, voice);
+    await this.ctx.model.VoiceCue.destroy({ where: { project_id: project.id, shot_id: { [Op.in]: shotIds } } });
+    await this.ctx.model.VoiceCue.bulkCreate(shots.map(shot => {
+      const duration = Number(shot.duration_ms) > 0 ? Number(shot.duration_ms) : 3000;
+      return {
+        project_id: project.id,
+        shot_id: shot.id,
+        text: String(shot.dialogue).slice(0, 500),
+        start_ms: 0,
+        end_ms: duration,
+        voice_key: asset.voice_key,
+        media_ref: '',
+      };
+    }));
+    return { asset, cues: await this.voiceCues(project.id) };
+  }
+
+  async upsertLibraryVoice(projectId, voice) {
+    const fields = {
+      name: String(voice.name || '音色').slice(0, 200),
+      kind: 'voice',
+      description: voice.rel,
+      reference_path: String(voice.rel || '').slice(0, 300),
+      voice_key: voice.voice_key,
+      speaker_name: String(voice.folder || '').slice(0, 80),
+      disabled: false,
+    };
+    const existing = await this.ctx.model.Asset.findOne({
+      where: { project_id: projectId, kind: 'voice', voice_key: voice.voice_key },
+    });
+    if (existing) {
+      await existing.update(fields);
+      return existing;
+    }
+    return this.ctx.model.Asset.create({ project_id: projectId, ...fields });
+  }
+
   async fillAudio(cues) {
     const profiles = await listMediaProfiles(this.ctx);
     const audio = profiles.find(item => Array.isArray(item.modalities) && item.modalities.includes('audio') && item.generateReady);

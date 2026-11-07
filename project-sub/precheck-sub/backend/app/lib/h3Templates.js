@@ -218,7 +218,8 @@ const H3_TEMPLATES = [
     category: 'text_to_video',
     suggested_vram_gb: 24,
     api_json: h3Graph({
-      unet: UNET_LIGHT,
+      // fl2va 的 int8 权重带上参考图会把 Comfy 卡死，轻量参考必须用 ref2va。
+      unet: UNET_REF,
       prompt: PROMPT_REFMOD,
       steps: 20,
       reference: true,

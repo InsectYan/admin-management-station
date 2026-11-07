@@ -18,7 +18,23 @@ function resolveInvokeTimeout(ctx, timeoutMs) {
   return 600000;
 }
 
-async function invokeSkill(ctx, { skill, action, payload, timeoutMs }) {
+function linkSignals(signals) {
+  const list = signals.filter(Boolean);
+  if (!list.length) return undefined;
+  if (list.length === 1) return list[0];
+  if (typeof AbortSignal.any === 'function') return AbortSignal.any(list);
+  const controller = new AbortController();
+  for (const signal of list) {
+    if (signal.aborted) {
+      controller.abort();
+      break;
+    }
+    signal.addEventListener('abort', () => controller.abort(), { once: true });
+  }
+  return controller.signal;
+}
+
+async function invokeSkill(ctx, { skill, action, payload, timeoutMs, signal }) {
   const url = `${platformBase(ctx)}/api/skills/${skill}/invoke`;
   const waitMs = resolveInvokeTimeout(ctx, timeoutMs);
   ctx.logger.info('[cartoon] agent POST %s action=%s timeoutMs=%s', url, action, waitMs);
@@ -28,9 +44,14 @@ async function invokeSkill(ctx, { skill, action, payload, timeoutMs }) {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ action, ...payload }),
-      signal: AbortSignal.timeout(waitMs),
+      signal: linkSignals([ AbortSignal.timeout(waitMs), signal ]),
     });
   } catch (err) {
+    if (signal?.aborted) {
+      const stopped = new Error('已停止');
+      stopped.status = 499;
+      throw stopped;
+    }
     const aborted = err?.name === 'AbortError' || /aborted due to timeout/i.test(String(err?.message || ''));
     const message = aborted
       ? `Agent 调用超时（${Math.round(waitMs / 1000)} 秒仍未返回，技能 ${skill}/${action}）`

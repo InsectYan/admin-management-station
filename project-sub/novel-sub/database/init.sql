@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS novels (
   audience_id INTEGER,
   update_pace_id INTEGER,
   style_preset VARCHAR(32),
+  source_kind VARCHAR(20) NOT NULL DEFAULT 'original',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

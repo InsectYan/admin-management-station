@@ -7,6 +7,7 @@
         <el-breadcrumb-item>列表页</el-breadcrumb-item>
       </el-breadcrumb>
       <el-button type="primary" :icon="Plus" @click="openCreate">新建小说</el-button>
+      <el-button @click="openImport">导入 TXT</el-button>
       <el-button @click="openTemplate">从模板创建</el-button>
       <el-button :icon="MagicStick" @click="openAiBook">AI 开书</el-button>
     </template>
@@ -51,6 +52,15 @@
         @change="applyFilters"
       >
         <el-option v-for="p in PROGRESS_OPTIONS" :key="p.value" :label="p.label" :value="p.value" />
+      </el-select>
+      <el-select
+        v-model="filters.source_kind"
+        placeholder="来源"
+        clearable
+        style="width: 120px"
+        @change="applyFilters"
+      >
+        <el-option v-for="p in SOURCE_KIND_OPTIONS" :key="p.value" :label="p.label" :value="p.value" />
       </el-select>
       <el-button type="primary" @click="applyFilters">筛选</el-button>
       <el-button @click="resetFilters">重置</el-button>
@@ -103,6 +113,9 @@
                 <h4 class="novel-card__title">{{ item.title }}</h4>
               </el-tooltip>
               <div class="novel-card__tags">
+                <el-tag size="small" :type="item.source_kind === 'imported' ? 'warning' : 'success'" effect="plain">
+                  {{ sourceKindLabel(item.source_kind) }}
+                </el-tag>
                 <el-tag v-if="item.genre" size="small" :type="GENRE_TAG_TYPE[item.genre] || 'info'">
                   {{ formatGenreLabel(item) }}
                 </el-tag>
@@ -247,6 +260,18 @@
               </template>
             </el-table-column>
             <el-table-column
+              v-if="visibleColumns.includes('source_kind')"
+              prop="source_kind"
+              label="来源"
+              width="90"
+            >
+              <template #default="{ row }">
+                <el-tag size="small" :type="row.source_kind === 'imported' ? 'warning' : 'success'" effect="plain">
+                  {{ sourceKindLabel(row.source_kind) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column
               v-if="visibleColumns.includes('genre')"
               prop="genre"
               label="小说类型"
@@ -386,6 +411,36 @@
         <el-button type="primary" :loading="templateSaving" @click="submitTemplate">创建</el-button>
       </template>
     </el-dialog>
+    <el-dialog v-model="importVisible" title="导入 TXT 小说" width="520px" @closed="resetImportForm">
+      <el-form label-width="84px">
+        <el-form-item label="TXT 文件" required>
+          <el-upload
+            :auto-upload="false"
+            :limit="1"
+            accept=".txt,text/plain"
+            :on-change="onImportFileChange"
+            :on-remove="onImportFileRemove"
+          >
+            <el-button>选择文件</el-button>
+            <template #tip>
+              <div class="el-upload__tip">支持《书名》[txt未删版]_站点.txt；GBK/UTF-8；服务端按「楔子 / 第X章」拆章</div>
+            </template>
+          </el-upload>
+        </el-form-item>
+        <el-form-item label="标题">
+          <el-input v-model="importForm.title" placeholder="可空，默认从文件名/首行识别" />
+        </el-form-item>
+        <el-form-item label="作者">
+          <el-input v-model="importForm.author_name" placeholder="可空，默认识别「作者：」行" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="importVisible = false">取消</el-button>
+        <el-button type="primary" :loading="importSaving" :disabled="!importForm.filename" @click="submitImport">
+          导入并拆章
+        </el-button>
+      </template>
+    </el-dialog>
   </PageShell>
 </template>
 
@@ -407,15 +462,18 @@ import {
   deleteNovel,
   fetchNovels,
   fetchStoryTemplates,
+  importNovelTxt,
   updateNovel,
 } from '../services/novelService.js';
 import {
   GENRE_TAG_TYPE,
   PROGRESS_OPTIONS,
+  SOURCE_KIND_OPTIONS,
   TABLE_COLUMNS,
   coverFallback,
   formatGenreLabel,
   progressLabel,
+  sourceKindLabel,
 } from '../utils/novelMeta.js';
 import { healthStatusLabel, healthTagType } from '../utils/novelQa.js';
 import { formatDateTime } from '../utils/formatDateTime.js';
@@ -456,6 +514,14 @@ const templateSaving = ref(false);
 const templates = ref([]);
 const templateId = ref('web_serial');
 const templateTitle = ref('');
+const importVisible = ref(false);
+const importSaving = ref(false);
+const importForm = ref({
+  title: '',
+  author_name: '',
+  filename: '',
+  data_base64: '',
+});
 
 const visibleColumns = ref(
   TABLE_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key),
@@ -466,6 +532,7 @@ const filters = ref({
   genre: '',
   novel_type: '',
   progress_status: '',
+  source_kind: '',
 });
 
 const viewMode = computed({
@@ -507,6 +574,7 @@ function readFiltersFromQuery() {
     genre: route.query.genre || '',
     novel_type: route.query.novel_type || '',
     progress_status: route.query.progress_status || '',
+    source_kind: route.query.source_kind || '',
   };
 }
 
@@ -517,6 +585,7 @@ function applyFilters() {
     genre: filters.value.genre || undefined,
     novel_type: filters.value.novel_type || undefined,
     progress_status: filters.value.progress_status || undefined,
+    source_kind: filters.value.source_kind || undefined,
     page: 1,
   });
 }
@@ -524,13 +593,14 @@ function applyFilters() {
 function resetFilters() {
   boardPage.value = 1;
   filters.value = {
-    title: '', genre: '', novel_type: '', progress_status: '',
+    title: '', genre: '', novel_type: '', progress_status: '', source_kind: '',
   };
   syncQuery({
     title: undefined,
     genre: undefined,
     novel_type: undefined,
     progress_status: undefined,
+    source_kind: undefined,
     page: 1,
   });
 }
@@ -629,6 +699,66 @@ function openQueue(row) {
 
 function openCreate() {
   router.push({ name: 'novel-create' });
+}
+
+function openImport() {
+  resetImportForm();
+  importVisible.value = true;
+}
+
+function resetImportForm() {
+  importForm.value = {
+    title: '',
+    author_name: '',
+    filename: '',
+    data_base64: '',
+  };
+}
+
+function onImportFileRemove() {
+  importForm.value.filename = '';
+  importForm.value.data_base64 = '';
+}
+
+function onImportFileChange(file) {
+  const raw = file?.raw;
+  if (!raw) return;
+  importForm.value.filename = raw.name || 'import.txt';
+  const reader = new FileReader();
+  reader.onload = () => {
+    const result = String(reader.result || '');
+    const base64 = result.includes(',') ? result.split(',')[1] : result;
+    importForm.value.data_base64 = base64;
+  };
+  reader.onerror = () => {
+    ElMessage.error('读取文件失败');
+    onImportFileRemove();
+  };
+  reader.readAsDataURL(raw);
+}
+
+async function submitImport() {
+  if (!importForm.value.data_base64) {
+    ElMessage.warning('请先选择 TXT 文件');
+    return;
+  }
+  importSaving.value = true;
+  try {
+    const row = await importNovelTxt({
+      filename: importForm.value.filename,
+      title: importForm.value.title.trim() || undefined,
+      author_name: importForm.value.author_name.trim() || undefined,
+      data_base64: importForm.value.data_base64,
+    });
+    importVisible.value = false;
+    ElMessage.success(`已导入「${row.title}」，共 ${row.chapter_count || row.chapter_total || 0} 章`);
+    await loadNovels();
+    if (row?.id) openDetail(row);
+  } catch (err) {
+    ElMessage.error(err.message || '导入失败');
+  } finally {
+    importSaving.value = false;
+  }
 }
 
 function openAiBook() {

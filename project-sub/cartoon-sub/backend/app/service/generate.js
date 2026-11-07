@@ -6,6 +6,7 @@ const Service = require('egg').Service;
 const { outputRoot, resolveInside } = require('../lib/mediaPaths');
 const { reportAudit } = require('../lib/reportAudit');
 const { complianceCheck } = require('../lib/complianceCheck');
+const { clientAbort } = require('../lib/clientAbort');
 const { usageSummary } = require('../lib/usageSummary');
 
 function unwrap(json) {
@@ -79,6 +80,87 @@ function mediaOf(row, detail) {
   return videoCategory || looksLikeVideo(detail?.api_json) ? 'video' : 'image';
 }
 
+const PROMPT_KEYS = [ 'text', 'prompt', 'positive_prompt', 'caption', 'string', 'text_g', 'text_l', 'value', 'negative_prompt' ];
+
+function parseBrief(raw) {
+  if (!raw) return null;
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw); } catch { return null; }
+  }
+  return typeof raw === 'object' ? raw : null;
+}
+
+function linkedText(graph, field) {
+  if (!graph || typeof graph !== 'object') return '';
+  const seeds = [];
+  Object.values(graph).forEach(node => {
+    if (Array.isArray(node?.inputs?.[field])) seeds.push(node.inputs[field]);
+  });
+  for (const seed of seeds) {
+    let currentId = String(seed[0]);
+    const seen = new Set();
+    while (currentId && !seen.has(currentId)) {
+      seen.add(currentId);
+      const node = graph[currentId];
+      if (!node) break;
+      const key = PROMPT_KEYS.find(item => typeof node.inputs?.[item] === 'string' && String(node.inputs[item]).trim());
+      if (key) return node.inputs[key];
+      const next = node.inputs?.[field];
+      if (!Array.isArray(next)) break;
+      currentId = String(next[0]);
+    }
+  }
+  return '';
+}
+
+function directPrompt(graph) {
+  const preferred = [];
+  const rest = [];
+  Object.values(graph || {}).forEach(node => {
+    const inputs = node?.inputs || {};
+    [ 'prompt', 'positive_prompt', 'text', 'caption' ].forEach(key => {
+      const value = inputs[key];
+      if (typeof value !== 'string' || !value.trim()) return;
+      const bucket = /MiniMax|CLIPText|TextEncode|Prompt/i.test(node?.class_type || '') ? preferred : rest;
+      bucket.push(value);
+    });
+  });
+  const pool = preferred.length ? preferred : rest;
+  return pool.reduce((best, value) => (value.length > best.length ? value : best), '');
+}
+
+function directNumber(graph, key) {
+  for (const node of Object.values(graph || {})) {
+    const value = node?.inputs?.[key];
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+  }
+  return null;
+}
+
+function mentionsInPrompt(text) {
+  const found = [];
+  const seen = new Set();
+  const re = /(人物|角色|场景|道具)「([^」]{1,40})」/g;
+  let match;
+  while ((match = re.exec(String(text || '')))) {
+    const kind = { 人物: 'character', 角色: 'character', 场景: 'scene', 道具: 'prop' }[match[1]];
+    const name = match[2].trim();
+    const id = `${kind}:${name}`;
+    if (!name || seen.has(id)) continue;
+    seen.add(id);
+    found.push({ id, name, kind });
+  }
+  return found;
+}
+
+function briefFromSnapshot(graph) {
+  return {
+    positive: linkedText(graph, 'positive') || directPrompt(graph),
+    negative: linkedText(graph, 'negative'),
+    seed: directNumber(graph, 'noise_seed') ?? directNumber(graph, 'seed'),
+  };
+}
+
 function precheckGap(diff, workflowId) {
   return {
     workflow_id: workflowId,
@@ -98,15 +180,38 @@ class GenerateService extends Service {
   }
 
   async start(projectId, shotId, payload, kind = 'image') {
+    const stop = clientAbort(this.ctx);
+    try {
     const shot = await this.ctx.model.Shot.findByPk(shotId);
     if (!shot || String(shot.project_id) !== String(projectId)) this.ctx.throw(404, '分镜不存在');
     if (!await this.ctx.service.project.panelReady(projectId)) this.ctx.throw(400, '面板还没填完');
     const text = String(payload.positive_zh || '').trim();
     if (!text) this.ctx.throw(400, '需要一句提示词');
-    const assetIds = (Array.isArray(payload.asset_ids) ? payload.asset_ids : [])
+    const requestedIds = (Array.isArray(payload.asset_ids) ? payload.asset_ids : [])
       .map(id => Number(id))
       .filter(id => id > 0);
-    const composed = await this.ctx.service.refmod.composePrompt(projectId, assetIds, text, kind === 'refmod');
+    const videoKind = [ 'video', 'i2v', 't2v', 'refmod' ].includes(kind);
+    let storedNegative = '';
+    if (videoKind && payload.negative_zh == null) {
+      const stored = await this.ctx.model.Prompt.findOne({ where: { shot_id: shot.id } });
+      storedNegative = stored?.negative_zh || '';
+    }
+    const assetIds = videoKind
+      ? await this.ctx.service.refmod.lockCharacterIds(projectId, shot, requestedIds, {
+        description: shot.description,
+        dialogue: shot.dialogue,
+        positive_zh: text,
+        negative_zh: payload.negative_zh != null ? payload.negative_zh : storedNegative,
+      })
+      : requestedIds;
+    const picks = this.ctx.service.refmod.normalizePicks(payload.refmod_files)
+      ?? await this.ctx.service.refmod.storedPicks(projectId, shot.id);
+    const composed = await this.ctx.service.refmod.composePrompt(
+      projectId,
+      assetIds,
+      text,
+      videoKind ? { pictures: kind === 'refmod', lock: true, picks } : false,
+    );
     const positive = composed.positive;
     const compliance = await complianceCheck(this.ctx, positive);
     const hit = compliance?.hits?.[0];
@@ -124,10 +229,14 @@ class GenerateService extends Service {
       const usage = await usageSummary(this.ctx, projectId);
       if (usage && Number(usage.call_count) >= cap) this.ctx.throw(400, '超过成本上限');
     }
-    await this.ctx.service.project.updateShot(shot.id, { positive_zh: text });
+    const shotPatch = { positive_zh: text };
+    if (payload.negative_zh != null) shotPatch.negative_zh = String(payload.negative_zh);
+    if (payload.shot_sizes != null) shotPatch.shot_sizes = payload.shot_sizes;
+    if (payload.camera_moves != null) shotPatch.camera_moves = payload.camera_moves;
+    else if (payload.camera_move != null) shotPatch.camera_move = payload.camera_move;
+    await this.ctx.service.project.updateShot(shot.id, shotPatch);
     const refmodIds = kind === 'refmod' ? composed.refmodIds : [];
     const workflowOverride = Number(payload.workflow_id) || 0;
-    const videoKind = [ 'video', 'i2v', 't2v', 'refmod' ].includes(kind);
     let durationSec;
     if (videoKind) {
       const seconds = Number(payload.duration_sec);
@@ -137,7 +246,7 @@ class GenerateService extends Service {
     }
     if (kind === 'refmod') {
       if (!workflowOverride) this.ctx.throw(400, '请选择一条 [RefMod] 工作流');
-      if (!refmodIds.length) this.ctx.throw(400, '请选择已经绑了 RefMod 的角色、场景或道具');
+      if (!refmodIds.length) this.ctx.throw(400, '请勾选已经绑了 RefMod 的角色，并至少留一张参考图');
       await this.assertRefmodWorkflow(workflowOverride);
     }
 
@@ -161,12 +270,23 @@ class GenerateService extends Service {
     });
     const seed = Number(payload.seed);
     if (durationSec) await shot.update({ duration_ms: Math.round(durationSec * 1000) });
-    return this.execute(task, positive, Array.isArray(payload.images) ? payload.images : [], {
+    if (stop.stopped()) {
+      await task.update({ status: 'cancelled', error_message: '已停止' });
+      return task.reload();
+    }
+    return await this.execute(task, positive, Array.isArray(payload.images) ? payload.images : [], {
       refmodIds,
       workflowOverride,
+      assetIds,
       seed: Number.isSafeInteger(seed) && seed >= 0 ? seed : undefined,
       durationSec,
+      negative: payload.negative_zh != null ? String(payload.negative_zh) : '',
+      signal: stop.signal,
+      refmodPicks: picks,
     });
+    } finally {
+      stop.release();
+    }
   }
 
   workflowEnvId(kind) {
@@ -250,6 +370,17 @@ class GenerateService extends Service {
     return this.execute(task, text, []);
   }
 
+  async workflowNames() {
+    const cached = this.app.cartoonWorkflowNames;
+    if (cached && Date.now() - cached.at < 60000) return cached.map;
+    const res = await fetch(`${this.precheckBase()}/api/workflows`, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(`预检返回 ${res.status}`);
+    const rows = unwrap(await res.json()) || [];
+    const map = new Map(rows.map(row => [ Number(row.id), row.name || '' ]));
+    this.app.cartoonWorkflowNames = { at: Date.now(), map };
+    return map;
+  }
+
   async choices() {
     const cached = this.app.cartoonWorkflowChoices;
     if (cached && Date.now() - cached.at < 20000) return cached.rows;
@@ -317,12 +448,13 @@ class GenerateService extends Service {
     return result;
   }
 
-  async bindWorkflow(workflowId, positive, images, refImages = [], seed, durationSec) {
+  async bindWorkflow(workflowId, positive, images, refImages = [], seed, durationSec, negative) {
     const res = await fetch(`${this.precheckBase()}/api/workflows/${workflowId}/bind`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         positive,
+        negative,
         images: images || [],
         ref_images: refImages,
         seed,
@@ -341,19 +473,78 @@ class GenerateService extends Service {
     return data.prompt;
   }
 
+  async stopped(task, signal) {
+    const fresh = await this.ctx.model.Task.findByPk(task.id);
+    if (!fresh) return true;
+    if (fresh.status === 'cancelled') return true;
+    if (!signal?.aborted) return false;
+    if ([ 'success', 'failed' ].includes(fresh.status)) return true;
+    await fresh.update({ status: 'cancelled', error_message: '已停止' });
+    return true;
+  }
+
+  async dropComfyPrompts(promptIds) {
+    const ids = [ ...new Set((promptIds || []).filter(Boolean)) ];
+    if (!ids.length) return;
+    const base = this.comfyBase();
+    try {
+      await fetch(`${base}/queue`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ delete: ids }),
+        signal: AbortSignal.timeout(8000),
+      });
+    } catch (err) {
+      this.ctx.logger.warn('[cartoon] queue delete %s', err.message);
+    }
+    const queue = await this.comfyQueue();
+    const running = queue?.queue_running || [];
+    const hit = ids.some(id => running.some(row => row?.[1] === id));
+    if (!hit) return;
+    try {
+      await fetch(`${base}/interrupt`, { method: 'POST', signal: AbortSignal.timeout(8000) });
+    } catch (err) {
+      this.ctx.logger.warn('[cartoon] interrupt %s', err.message);
+    }
+  }
+
+  async stopProject(projectId) {
+    const project = await this.ctx.model.Project.findByPk(projectId);
+    if (!project) this.ctx.throw(404, '项目不存在');
+    const tasks = await this.ctx.model.Task.findAll({
+      where: {
+        project_id: project.id,
+        status: [ 'pending', 'queued', 'running', 'saving' ],
+      },
+    });
+    await this.dropComfyPrompts(tasks.map(item => item.prompt_id));
+    let stopped = 0;
+    for (const task of tasks) {
+      const [ count ] = await this.ctx.model.Task.update(
+        { status: 'cancelled', error_message: '已停止' },
+        { where: { id: task.id, status: [ 'pending', 'queued', 'running', 'saving' ] } },
+      );
+      stopped += count;
+    }
+    return { stopped };
+  }
+
   async execute(task, text, images = [], options = {}) {
+    if (await this.stopped(task, options.signal)) return task.reload();
     let workflowId;
+    let workflowName = '';
     let refImages = [];
     try {
       if (options.workflowOverride) {
         workflowId = options.workflowOverride;
         const chosen = await this.choiceById(workflowId);
+        workflowName = chosen.name || '';
         const expectVideo = [ 'video', 'i2v', 't2v', 'refmod' ].includes(task.kind);
         if (expectVideo && chosen.media !== 'video') throw new Error('请选择生视频工作流');
         if (!expectVideo && chosen.media !== 'image') throw new Error('请选择生图工作流');
         if (task.kind === 'refmod') {
           if (!String(chosen.name || '').includes('[RefMod]')) throw new Error('这条工作流不能挂 RefMod 包');
-          refImages = await this.ctx.service.refmod.imageFiles(task.project_id, options.refmodIds || []);
+          refImages = await this.ctx.service.refmod.imageFiles(task.project_id, options.refmodIds || [], options.refmodPicks || null);
         }
       } else if (task.kind === 'refmod') {
         throw new Error('请选择一条 [RefMod] 工作流');
@@ -361,9 +552,12 @@ class GenerateService extends Service {
         workflowId = await this.workflowIdFor(task.kind);
       }
     } catch (err) {
+      if (await this.stopped(task, options.signal)) return task.reload();
       await task.update({ status: 'failed', error_message: err.message });
       return task.reload();
     }
+    if (await this.stopped(task, options.signal)) return task.reload();
+    await this.rememberGeneration(task, workflowId, text, options, workflowName);
     const depUrl = `${this.precheckBase()}/api/workflows/${workflowId}/dependencies`;
     this.ctx.logger.info('[cartoon] precheck GET %s', depUrl);
     let diff;
@@ -372,6 +566,7 @@ class GenerateService extends Service {
       if (!res.ok) throw new Error(`预检返回 ${res.status}`);
       diff = unwrap(await res.json());
     } catch (err) {
+      if (await this.stopped(task, options.signal)) return task.reload();
       await task.update({
         status: 'failed',
         error_message: `连不上预检：${err.message}`,
@@ -400,17 +595,20 @@ class GenerateService extends Service {
       return task.reload();
     }
 
+    if (await this.stopped(task, options.signal)) return task.reload();
     let graph;
     try {
-      graph = await this.bindWorkflow(workflowId, text, images, refImages, options.seed, options.durationSec);
+      graph = await this.bindWorkflow(workflowId, text, images, refImages, options.seed, options.durationSec, options.negative);
     } catch (err) {
+      if (await this.stopped(task, options.signal)) return task.reload();
       await task.update({ status: 'failed', error_message: err.message, precheck_workflow_id: workflowId });
       return task.reload();
     }
-    return this.submit(task, graph, workflowId);
+    return this.submit(task, graph, workflowId, options.signal);
   }
 
-  async submit(task, graph, workflowId) {
+  async submit(task, graph, workflowId, signal) {
+    if (await this.stopped(task, signal)) return task.reload();
     const promptUrl = `${this.comfyBase()}/prompt`;
     this.ctx.logger.info('[cartoon] comfy POST %s', promptUrl);
     let submitted;
@@ -427,6 +625,7 @@ class GenerateService extends Service {
         throw new Error(message);
       }
     } catch (err) {
+      if (await this.stopped(task, signal)) return task.reload();
       await task.update({
         status: 'failed',
         error_message: `连不上 ComfyUI：${err.message}`,
@@ -436,6 +635,10 @@ class GenerateService extends Service {
       return task.reload();
     }
 
+    if (await this.stopped(task, signal)) {
+      await this.dropComfyPrompts([ submitted.prompt_id ]);
+      return task.reload();
+    }
     await task.update({
       status: 'running',
       prompt_id: submitted.prompt_id,
@@ -466,17 +669,39 @@ class GenerateService extends Service {
     const tasks = await this.ctx.model.Task.findAll({
       where: { project_id: projectId, status: 'running' },
     });
+    if (!tasks.length) return;
+    const queue = await this.comfyQueue();
     for (const task of tasks) {
-      await this.settleTask(task);
+      await this.settleTask(task, queue);
     }
   }
 
-  async settleTask(task) {
+  async comfyQueue() {
+    try {
+      const res = await fetch(`${this.comfyBase()}/queue`, { signal: AbortSignal.timeout(4000) });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (err) {
+      this.ctx.logger.warn('[cartoon] queue %s', err.message);
+      return null;
+    }
+  }
+
+  promptPlace(queue, promptId) {
+    if (!queue) return 'unknown';
+    const running = queue.queue_running || [];
+    const pending = queue.queue_pending || [];
+    if (running.some(row => row?.[1] === promptId)) return 'running';
+    if (pending.some(row => row?.[1] === promptId)) return 'pending';
+    return 'gone';
+  }
+
+  async settleTask(task, queue) {
     if (!task.prompt_id) return task;
     const historyUrl = `${this.comfyBase()}/history/${task.prompt_id}`;
     let item;
     try {
-      const res = await fetch(historyUrl, { signal: AbortSignal.timeout(15000) });
+      const res = await fetch(historyUrl, { signal: AbortSignal.timeout(4000) });
       if (!res.ok) return task;
       const history = await res.json();
       item = history[task.prompt_id];
@@ -484,7 +709,14 @@ class GenerateService extends Service {
       this.ctx.logger.warn('[cartoon] history %s %s', task.prompt_id, err.message);
       return task;
     }
-    if (!item) return task;
+    if (!item) {
+      const place = this.promptPlace(queue, task.prompt_id);
+      if (place !== 'gone') return task;
+      const started = new Date(task.updatedAt || task.createdAt || 0).getTime();
+      if (Number.isFinite(started) && Date.now() - started < 30000) return task;
+      await task.update({ status: 'failed', error_message: 'ComfyUI 里已经没有这个任务，生成中断了' });
+      return task.reload();
+    }
     const statusStr = item.status?.status_str;
     if (statusStr === 'error') {
       await task.update({ status: 'failed', error_message: 'ComfyUI 执行失败' });
@@ -502,8 +734,11 @@ class GenerateService extends Service {
       const files = collectMedia(item.outputs);
       if (!files.length) throw new Error('ComfyUI 没有返回图片');
       for (const file of files) await this.saveOutput(task, file);
-      await task.update({ status: 'success', error_message: '' });
-      if (task.shot_id) {
+      const [ saved ] = await this.ctx.model.Task.update(
+        { status: 'success', error_message: '' },
+        { where: { id: task.id, status: 'saving' } },
+      );
+      if (saved && task.shot_id) {
         await this.ctx.model.Shot.update({ upstream_stale: false }, { where: { id: task.shot_id } });
       }
     } catch (err) {
@@ -606,6 +841,69 @@ class GenerateService extends Service {
       }
     }
     return { id: Number(outputId) };
+  }
+
+  async rememberGeneration(task, workflowId, positive, options, workflowName) {
+    try {
+      const ids = [ ...new Set((options.assetIds || []).map(id => Number(id)).filter(id => id > 0)) ];
+      let assets = [];
+      if (ids.length) {
+        const rows = await this.ctx.model.Asset.findAll({
+          where: { project_id: task.project_id, id: ids },
+        });
+        const byId = new Map(rows.map(row => [ row.id, row ]));
+        assets = ids.filter(id => byId.has(id)).map(id => {
+          const row = byId.get(id);
+          return { id: row.id, name: row.name, kind: row.kind };
+        });
+      }
+      let name = workflowName || '';
+      if (!name && workflowId) {
+        try {
+          const rows = await this.choices();
+          name = rows.find(item => item.id === Number(workflowId))?.name || '';
+        } catch (err) {
+          this.ctx.logger.warn('[cartoon] workflow name %s', err.message);
+        }
+      }
+      await task.update({
+        precheck_workflow_id: workflowId || task.precheck_workflow_id,
+        generation_brief: {
+          workflow_id: workflowId || null,
+          workflow_name: name,
+          positive: String(positive || ''),
+          negative: String(options.negative || ''),
+          assets,
+          seed: Number.isSafeInteger(options.seed) ? options.seed : null,
+          duration_sec: Number(options.durationSec) > 0 ? Number(options.durationSec) : null,
+        },
+      });
+    } catch (err) {
+      this.ctx.logger.warn('[cartoon] generation brief %s', err.message);
+    }
+  }
+
+  presentTask(task) {
+    const json = task.toJSON ? task.toJSON() : { ...task };
+    const stored = parseBrief(json.generation_brief);
+    const extracted = briefFromSnapshot(json.workflow_snapshot);
+    const positive = stored?.positive || extracted.positive || '';
+    const recorded = Array.isArray(stored?.assets);
+    const mentioned = recorded ? [] : mentionsInPrompt(positive);
+    const generation = {
+      workflow_id: stored?.workflow_id || json.precheck_workflow_id || null,
+      workflow_name: stored?.workflow_name || '',
+      positive,
+      negative: stored?.negative || extracted.negative || '',
+      assets: recorded ? stored.assets : mentioned,
+      assets_recorded: recorded,
+      assets_from_prompt: !recorded && mentioned.length > 0,
+      seed: stored?.seed ?? extracted.seed ?? null,
+      duration_sec: stored?.duration_sec ?? null,
+    };
+    delete json.workflow_snapshot;
+    delete json.generation_brief;
+    return { ...json, generation };
   }
 
   async removeTask(taskId) {

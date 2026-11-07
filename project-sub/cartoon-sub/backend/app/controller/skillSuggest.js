@@ -51,6 +51,14 @@ class SkillSuggestController extends Controller {
     }
   }
 
+  async assignLibraryVoice() {
+    try {
+      ok(this.ctx, await this.ctx.service.skillSuggest.assignLibraryVoice(this.ctx.params.id, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async suggestReview() {
     try {
       ok(this.ctx, await this.ctx.service.skillSuggest.suggestReview(this.ctx.params.id));

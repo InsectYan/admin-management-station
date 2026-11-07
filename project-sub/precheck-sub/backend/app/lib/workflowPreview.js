@@ -163,7 +163,7 @@ function durationSeconds(values) {
 function applyPreviewValues(apiJson, values) {
   const graph = JSON.parse(JSON.stringify(apiJson));
   (values || []).forEach(item => {
-    if (item?.type === 'duration' || item?.key === 'duration_sec') return;
+    if (item?.type === 'duration' || item?.key === 'duration_sec' || item?.type === 'image') return;
     const node = graph[String(item.node_id)];
     if (!node?.inputs || Array.isArray(node.inputs[item.key])) return;
     if (item.type === 'number') {

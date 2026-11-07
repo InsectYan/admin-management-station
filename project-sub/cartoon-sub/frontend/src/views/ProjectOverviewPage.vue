@@ -106,21 +106,35 @@
             </aside>
             <div class="cartoon-board__main">
               <el-empty v-if="!selectedBoard" description="先选择一条章节快照" />
-              <el-table v-else :data="boardShots">
-                <el-table-column prop="sort_order" label="#" width="60" />
-                <el-table-column prop="shot_size" label="景别" width="90" />
-                <el-table-column prop="camera_move" label="运镜" width="90" />
-                <el-table-column prop="description" label="描述" min-width="180" />
-                <el-table-column label="正向提示词" min-width="180">
-                  <template #default="{ row }">{{ row.prompt?.positive_zh || '—' }}</template>
+              <el-table v-else class="cartoon-shot-table" :data="boardPageRows">
+                <el-table-column prop="sort_order" label="#" width="70" />
+                <el-table-column label="景别" width="160">
+                  <template #default="{ row }">{{ (row.shot_sizes || []).join('、') || row.shot_size || '—' }}</template>
                 </el-table-column>
-                <el-table-column label="操作" width="168" fixed="right">
+                <el-table-column label="运镜" width="180">
+                  <template #default="{ row }">{{ (row.camera_moves || []).join('、') || row.camera_move || '—' }}</template>
+                </el-table-column>
+                <el-table-column label="描述" width="360">
+                  <template #default="{ row }"><ClampText title="描述" :text="row.description || ''" /></template>
+                </el-table-column>
+                <el-table-column label="正向提示词" width="480">
+                  <template #default="{ row }"><ClampText title="正向提示词" :text="row.prompt?.positive_zh || ''" /></template>
+                </el-table-column>
+                <el-table-column label="操作" width="180" fixed="right">
                   <template #default="{ row }">
                     <el-button link type="primary" :disabled="!canMake()" @click.stop="openGenerate(row)">生成产物</el-button>
                     <el-button link type="primary" @click.stop="openOutputs(row)">查看产物</el-button>
                   </template>
                 </el-table-column>
               </el-table>
+              <el-pagination
+                v-if="selectedBoard && boardShots.length"
+                v-model:current-page="boardPage"
+                class="cartoon-pager"
+                :page-size="10"
+                :total="boardShots.length"
+                layout="total, prev, pager, next"
+              />
             </div>
           </div>
         </section>
@@ -137,6 +151,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
 import NovelBriefPanel from '../components/NovelBriefPanel.vue';
 import CartoonMarkdown from '../components/CartoonMarkdown.vue';
 import CopyBlocks from '../components/CopyBlocks.vue';
@@ -144,6 +159,7 @@ import BatchPanel from '../components/BatchPanel.vue';
 import TypePanel from '../components/TypePanel.vue';
 import ExportSpecs from '../components/ExportSpecs.vue';
 import ReviewBox from '../components/ReviewBox.vue';
+import ClampText from '../components/ClampText.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 import { hasPanel, isLocalType } from '../lib/contentTypes.js';
@@ -200,6 +216,15 @@ const boardShots = computed(() => {
   if (current.importId == null) return shots.filter(shot => shot.import_id == null);
   return shots.filter(shot => String(shot.import_id) === String(current.importId));
 });
+const boardPage = ref(1);
+const boardPageRows = computed(() => boardShots.value.slice((boardPage.value - 1) * 10, boardPage.value * 10));
+watch(selectedImportKey, () => {
+  boardPage.value = 1;
+});
+watch(boardShots, (rows) => {
+  const max = Math.max(1, Math.ceil(rows.length / 10));
+  if (boardPage.value > max) boardPage.value = max;
+});
 
 function ensureBoard() {
   const items = boardItems.value;
@@ -245,6 +270,7 @@ async function loadShell() {
   } catch (err) {
     shellMembers.value = [];
     shellNote.value = err.message || '壳上的成员名单暂时读不到';
+    ElMessage.error(shellNote.value);
   }
 }
 async function load() {
@@ -264,7 +290,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.cartoon-overview { display: flex; flex-direction: column; min-height: 0; padding: 16px 20px 24px; gap: 12px; }
+.cartoon-overview { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; padding: 16px 20px 24px; gap: 12px; box-sizing: border-box; }
 .cartoon-overview__bar, .cartoon-overview__actions, .cartoon-overview__tags { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cartoon-overview__bar { justify-content: space-between; }
 .cartoon-overview__hero { display: flex; gap: 16px; align-items: center; margin-top: 12px; }
@@ -275,7 +301,7 @@ onMounted(async () => {
   background: rgba(47, 138, 91, 0.16); color: #1f3d2c; font-size: 28px; font-weight: 700;
   border: 1px solid rgba(47, 138, 91, 0.2);
 }
-.cartoon-overview__body { display: flex; gap: 16px; align-items: flex-start; min-height: 0; }
+.cartoon-overview__body { display: flex; gap: 16px; align-items: stretch; flex: 1; min-height: 0; overflow: hidden; }
 .cartoon-overview__nav {
   flex: 0 0 200px;
   display: flex;
@@ -330,7 +356,10 @@ onMounted(async () => {
 .cartoon-overview__tab.is-active span {
   background: rgba(47, 138, 91, 0.22);
 }
-.cartoon-overview__pane { flex: 1; min-width: 0; }
+.cartoon-overview__pane { flex: 1; min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.cartoon-overview__pane > .cartoon-module { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+.cartoon-overview__pane > .cartoon-module:has(.el-table) { overflow: hidden; }
+.cartoon-overview__nav { min-height: 0; overflow: auto; }
 .cartoon-overview__facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; margin: 0; }
 .cartoon-overview__facts dt { color: #5c6b62; font-size: 12px; }
 .cartoon-overview__facts dd { margin: 4px 0 0; }
@@ -340,7 +369,7 @@ onMounted(async () => {
   max-height: 8.4em;
   overflow: hidden;
 }
-.cartoon-board { display: flex; gap: 16px; align-items: flex-start; width: 100%; min-width: 0; }
+.cartoon-board { display: flex; gap: 16px; align-items: stretch; width: 100%; min-width: 0; min-height: 0; flex: 1; overflow: hidden; }
 .cartoon-board__snaps { flex: 0 0 240px; display: flex; flex-direction: column; gap: 8px; }
 .cartoon-board__label { margin: 0; color: #5c6b62; font-size: 13px; }
 .cartoon-board__snap {
@@ -351,7 +380,9 @@ onMounted(async () => {
 .cartoon-board__snap.is-active { border-color: rgba(47, 138, 91, 0.45); background: rgba(255, 255, 255, 0.92); }
 .cartoon-board__snap-title { flex: 1 1 100%; font-weight: 600; }
 .cartoon-board__snap-count { color: #5c6b62; font-size: 12px; }
-.cartoon-board__main { flex: 1; min-width: 0; overflow: hidden; }
+.cartoon-board__main { flex: 1; min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.cartoon-shot-table { width: 100%; }
+.cartoon-pager { margin-top: 12px; justify-content: flex-end; }
 @media (max-width: 900px) {
   .cartoon-overview__body, .cartoon-board { flex-direction: column; }
   .cartoon-overview__nav, .cartoon-board__snaps { flex-basis: auto; width: 100%; }

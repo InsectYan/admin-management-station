@@ -9,6 +9,7 @@ module.exports = app => {
     kind: { type: STRING(16), allowNull: false, defaultValue: 'character' },
     name: { type: STRING(200), allowNull: false },
     images: { type: TEXT, allowNull: false, defaultValue: '[]' },
+    image_notes: { type: TEXT, allowNull: false, defaultValue: '{}' },
     created_at: { type: DATE, allowNull: false },
   }, {
     tableName: 'cartoon_refmods',

@@ -43,6 +43,7 @@ module.exports = app => {
   router.put('/api/projects/:id', controller.project.update);
   router.get('/api/projects/:id/refmods', controller.refmod.index);
   router.post('/api/projects/:id/refmods', controller.refmod.create);
+  router.put('/api/projects/:id/refmods/:packId', controller.refmod.update);
   router.get('/api/projects/:id/refmods/:packId/files/:name', controller.refmod.file);
   router.delete('/api/projects/:id/refmods/:packId', controller.refmod.destroy);
   router.post('/api/projects/:id/imports', controller.project.addImport);
@@ -59,6 +60,7 @@ module.exports = app => {
   router.post('/api/projects/:id/nodes/:nodeKey/run', controller.customNode.run);
   router.post('/api/projects/:id/shots', controller.project.addShot);
   router.post('/api/projects/:id/shots/purge', controller.project.purgeShots);
+  router.post('/api/projects/:id/imports/:importId/shots/clear', controller.project.clearImportShots);
   router.get('/api/projects/:id/copy-blocks', controller.project.listCopyBlocks);
   router.post('/api/projects/:id/copy-blocks', controller.project.addCopyBlock);
   router.put('/api/projects/:id/copy-blocks/:blockId', controller.project.updateCopyBlock);
@@ -82,8 +84,11 @@ module.exports = app => {
   router.post('/api/projects/:id/assets/match', controller.skillSuggest.matchAssets);
   router.post('/api/projects/:id/assets/suggest', controller.skillSuggest.suggestAssets);
   router.post('/api/projects/:id/assets/apply', controller.skillSuggest.applyAssets);
+  router.get('/api/voice-library', controller.voiceLibrary.index);
+  router.get('/api/voice-library/file', controller.voiceLibrary.file);
   router.post('/api/projects/:id/voice/suggest', controller.skillSuggest.suggestVoice);
   router.post('/api/projects/:id/voice/apply', controller.skillSuggest.applyVoice);
+  router.post('/api/projects/:id/voice/library-assign', controller.skillSuggest.assignLibraryVoice);
   router.post('/api/projects/:id/review-findings/suggest', controller.skillSuggest.suggestReview);
   router.post('/api/projects/:id/review-findings/apply', controller.skillSuggest.applyReview);
   router.post('/api/projects/:id/subtitles/build', controller.skillSuggest.buildSubtitles);
@@ -98,10 +103,12 @@ module.exports = app => {
   router.post('/api/batches/:id/resume', controller.batch.resume);
   router.post('/api/batches/:id/cancel', controller.batch.cancel);
   router.post('/api/projects/:id/assets', controller.project.addAsset);
+  router.put('/api/projects/:id/shots/:shotId/assets', controller.project.saveShotAssets);
   router.put('/api/shots/:id', controller.project.updateShot);
   router.delete('/api/shots/:id', controller.project.removeShot);
   router.post('/api/shots/:id/promote', controller.project.promoteShot);
   router.get('/api/generate-inputs', controller.project.generateInputs);
+  router.post('/api/projects/:id/generate/stop', controller.project.stopGenerate);
   router.post('/api/projects/:id/shots/:shotId/generate', controller.project.generate);
   router.get('/api/media-tools', controller.edit.tools);
   router.get('/api/projects/:id/edit', controller.edit.show);

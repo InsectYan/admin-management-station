@@ -23,6 +23,7 @@ module.exports = (app) => {
     status: { type: STRING(20), defaultValue: 'draft' },
     project_kind: { type: STRING(32), allowNull: false, defaultValue: 'novel' },
     style_preset: { type: STRING(32), allowNull: true },
+    source_kind: { type: STRING(20), allowNull: false, defaultValue: 'original' },
     genre_category_id: { type: INTEGER, allowNull: true },
     genre_subcategory_id: { type: INTEGER, allowNull: true },
     length_id: { type: INTEGER, allowNull: true },

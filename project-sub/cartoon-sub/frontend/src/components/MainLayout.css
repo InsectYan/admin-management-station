@@ -73,9 +73,15 @@
 .cartoon-sub-content {
   flex: 1;
   min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   padding: 0;
   box-sizing: border-box;
+}
+.cartoon-sub-content > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
 }
 .cartoon-sub-content.el-main { --el-main-padding: 0; padding: 0 !important; }

@@ -265,6 +265,104 @@ function assertEnum(value, options, label) {
   return text;
 }
 
+function normalizeOneShotSize(value) {
+  const text = String(value || '').trim();
+  if (SHOT_SIZES.includes(text)) return text;
+  if (/大特写|极特写/.test(text)) return '大特写';
+  if (/特写|微距/.test(text)) return '特写';
+  if (/近景/.test(text)) return '近景';
+  if (/中景|半身/.test(text)) return '中景';
+  if (/全景|全身/.test(text)) return '全景';
+  if (/极远|大远/.test(text)) return '极远景';
+  if (/远景/.test(text)) return '远景';
+  return '';
+}
+
+/** 主景别多选：接受数组 / 逗号串 / 单值，返回去重后的合法景别列表 */
+function normalizeShotSizes(value, fallback = '中景') {
+  let raw = [];
+  if (Array.isArray(value)) raw = value;
+  else if (value && typeof value === 'object') {
+    if (Array.isArray(value.shot_sizes)) raw = value.shot_sizes;
+    else if (value.shot_size != null) raw = Array.isArray(value.shot_size) ? value.shot_size : [ value.shot_size ];
+  } else if (value != null && value !== '') {
+    raw = String(value).split(/[,，、|/]+/);
+  }
+  const list = [];
+  for (const item of raw) {
+    const size = normalizeOneShotSize(item);
+    if (size && !list.includes(size)) list.push(size);
+  }
+  if (!list.length) {
+    const fb = normalizeOneShotSize(fallback) || '中景';
+    return [ fb ];
+  }
+  return list;
+}
+
+function serializeShotSizes(value, fallback = '中景') {
+  return normalizeShotSizes(value, fallback).join(',');
+}
+
+function assertShotSizes(value, label = '景别') {
+  const list = normalizeShotSizes(value);
+  for (const item of list) {
+    assertEnum(item, SHOT_SIZES, label);
+  }
+  return serializeShotSizes(list);
+}
+
+function matchCameraMove(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  if (CAMERA_MOVES.includes(text)) return text;
+  if (/急推|快速推/.test(text)) return '急推';
+  if (/急拉|快速拉/.test(text)) return '急拉';
+  if (/推/.test(text)) return '推';
+  if (/拉/.test(text)) return '拉';
+  if (/摇/.test(text)) return '摇';
+  if (/移|横移/.test(text)) return '移';
+  if (/跟/.test(text)) return '跟';
+  if (/升/.test(text)) return '升';
+  if (/降/.test(text)) return '降';
+  if (/甩/.test(text)) return '甩';
+  if (/震|抖/.test(text)) return '震颤';
+  if (/旋|环绕/.test(text)) return '旋转';
+  if (/固定/.test(text)) return '固定';
+  return '';
+}
+
+/** 运镜多选：接受数组 / 逗号、顿号、箭头串，按出现顺序去重 */
+function normalizeCameraMoves(value, fallback = '固定') {
+  let raw = [];
+  if (Array.isArray(value)) raw = value;
+  else if (value && typeof value === 'object') {
+    if (Array.isArray(value.camera_moves)) raw = value.camera_moves;
+    else if (value.camera_move != null) raw = Array.isArray(value.camera_move) ? value.camera_move : [ value.camera_move ];
+  } else if (value != null && value !== '') {
+    raw = String(value).split(/[,，、|/→>]+/);
+  }
+  const list = [];
+  for (const item of raw) {
+    const move = matchCameraMove(item);
+    if (move && !list.includes(move)) list.push(move);
+  }
+  if (!list.length) return [ matchCameraMove(fallback) || '固定' ];
+  return list;
+}
+
+function serializeCameraMoves(value, fallback = '固定') {
+  return normalizeCameraMoves(value, fallback).join(',');
+}
+
+function assertCameraMoves(value, label = '运镜') {
+  const list = normalizeCameraMoves(value);
+  for (const item of list) {
+    assertEnum(item, CAMERA_MOVES, label);
+  }
+  return serializeCameraMoves(list);
+}
+
 module.exports = {
   VISUAL_STYLES,
   SHOT_SIZES,
@@ -275,6 +373,13 @@ module.exports = {
   styleLabelOf,
   detectXianxia,
   assertEnum,
+  normalizeOneShotSize,
+  normalizeShotSizes,
+  serializeShotSizes,
+  assertShotSizes,
+  normalizeCameraMoves,
+  serializeCameraMoves,
+  assertCameraMoves,
   meta() {
     return {
       visual_styles: VISUAL_STYLES.map(item => ({

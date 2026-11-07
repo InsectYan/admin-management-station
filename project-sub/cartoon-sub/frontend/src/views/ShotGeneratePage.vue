@@ -4,33 +4,57 @@
       <el-button link type="primary" @click="back">← 返回</el-button>
       <el-button @click="openOutputs">查看产物</el-button>
     </template>
-    <el-alert v-if="notice" :title="notice" :type="noticeType" show-icon class="cartoon-module" />
     <section class="cartoon-module">
-      <p class="cartoon-module__hint">{{ chapterTitle }} · {{ shot.shot_size || '中景' }} / {{ shot.camera_move || '固定' }}</p>
+      <p class="cartoon-module__hint">{{ chapterTitle }}</p>
       <el-form label-position="top">
         <el-form-item label="关联资产">
-          <el-select v-model="assetIds" multiple filterable placeholder="可多选角色、场景、道具" style="width: 100%">
+          <el-select v-model="assetIds" multiple filterable :disabled="readOnly" placeholder="可多选角色、场景、道具" style="width: 100%">
             <el-option-group v-for="group in assetGroups" :key="group.kind" :label="group.label">
               <el-option v-for="item in group.items" :key="item.id" :label="item.name" :value="item.id" />
             </el-option-group>
           </el-select>
-          <p class="cartoon-module__hint">按选择顺序带上人物、场景、道具的描述。镜头提示词单独附在最后。生图和生视频都用这组条件。</p>
+          <div v-if="assetMarks.length" class="cartoon-asset-marks">
+            <span
+              v-for="item in assetMarks"
+              :key="`${item.asset_id || 'x'}-${item.name}`"
+              class="cartoon-asset-mark"
+              :class="item.state === 'have' ? 'is-have' : 'is-miss'"
+            >{{ item.name }}</span>
+          </div>
+          <p class="cartoon-module__hint">绿色是已经关联的资产。红色是当前剧情或提示词里还没有关联上的，没有资产记录的名字也不能选。</p>
+          <p v-if="!readOnly" class="cartoon-module__hint">生图按选择顺序带上人物、场景、道具的描述，镜头提示词附在最后。生视频只要选中角色（含剧情里自动关联上的），就把该角色的 RefMod 锁定写在提示词开头。保存时按当前提示词和剧情再校验一次。</p>
+          <div v-if="refmodChoices.length" class="cartoon-refmod-pick">
+            <p class="cartoon-module__hint">勾选这镜要用的参考图。说明写在资产的 RefMod 里，生成时按编号分开写。</p>
+            <div v-for="item in refmodChoices" :key="item.id" class="cartoon-refmod-pick__asset">
+              <p>{{ kindLabel(item.kind) }}「{{ item.name }}」</p>
+              <label v-for="image in item.images" :key="image.name" class="cartoon-refmod-pick__row">
+                <el-checkbox
+                  :model-value="image.checked"
+                  :disabled="readOnly"
+                  @change="checked => setRefmodPick(item.id, image.name, checked)"
+                />
+                <img :src="image.url" alt="" />
+                <span>{{ image.note || '参考图' }}</span>
+              </label>
+            </div>
+          </div>
         </el-form-item>
         <el-form-item label="类型">
-          <el-button :type="media === 'image' ? 'primary' : 'default'" @click="media = 'image'">生图</el-button>
-          <el-button :type="media === 'video' ? 'primary' : 'default'" @click="media = 'video'">生视频</el-button>
+          <el-button :type="media === 'image' ? 'primary' : 'default'" :disabled="readOnly" @click="media = 'image'">生图</el-button>
+          <el-button :type="media === 'video' ? 'primary' : 'default'" :disabled="readOnly" @click="media = 'video'">生视频</el-button>
         </el-form-item>
         <el-form-item label="工作流">
-          <el-select v-model="workflowId" filterable placeholder="选择工作流" style="width: 100%">
+          <el-select v-model="workflowId" filterable :disabled="readOnly" placeholder="选择工作流" style="width: 100%">
             <el-option v-for="item in choices" :key="item.id" :label="workflowLabel(item)" :value="item.id" />
           </el-select>
-          <p class="cartoon-module__hint">生图列出文生图和改图。生视频列出文生视频、首尾帧、图生视频和带 [RefMod] 的工作流。</p>
+          <p class="cartoon-module__hint">生图列出文生图和改图。生视频列出文生视频、首尾帧、图生视频。带 [RefMod] 的工作流会把参考图和开头的角色锁定一起交给模型。</p>
         </el-form-item>
         <el-form-item v-if="needsRefmod" label="RefMod 对应">
-          <p v-if="!picturePlan.length" class="cartoon-module__hint">先在关联资产里选择已经绑了 RefMod 的角色、场景或道具。</p>
+          <p v-if="!picturePlan.length" class="cartoon-module__hint">先选中已经绑了 RefMod 的角色。剧情里自动关联上的角色也算。</p>
           <div v-for="item in picturePlan" :key="item.id" class="cartoon-refmod-bind">
             <p class="cartoon-module__hint">
               <template v-if="item.count">{{ kindLabel(item.kind) }}「{{ item.name }}」 · {{ item.count }} 张</template>
+              <template v-else-if="item.hasPack">{{ kindLabel(item.kind) }}「{{ item.name }}」这镜没有勾选参考图</template>
               <template v-else>{{ kindLabel(item.kind) }}「{{ item.name }}」还没有 RefMod，只写入提示词</template>
             </p>
             <button v-if="item.count" type="button" class="cartoon-refmod-strip" @click="openRefmodDetail(item)">
@@ -38,16 +62,29 @@
               <span v-if="item.images.length > 4">+{{ item.images.length - 4 }}</span>
             </button>
           </div>
-          <p class="cartoon-module__hint">点图片组查看全部参考图。生成时按这个顺序补上图片对应，不写进下面的提示词。</p>
+          <p class="cartoon-module__hint">点图片组查看全部参考图。生成时按这个顺序把角色锁定写在提示词开头，并挂上对应参考图。</p>
+        </el-form-item>
+        <el-form-item label="主景别">
+          <el-select v-model="shotSizes" multiple collapse-tags :disabled="readOnly" style="width: 100%" placeholder="多选景别">
+            <el-option v-for="item in sizeOptions" :key="item" :label="item" :value="item" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="主运镜">
+          <el-select v-model="cameraMoves" multiple collapse-tags :disabled="readOnly" style="width: 100%" placeholder="多选运镜">
+            <el-option v-for="item in moveOptions" :key="item" :label="item" :value="item" />
+          </el-select>
         </el-form-item>
         <el-form-item label="镜头提示词">
-          <el-input v-model="promptText" type="textarea" :rows="12" />
+          <el-input v-model="promptText" type="textarea" :rows="12" :readonly="readOnly" />
         </el-form-item>
-        <el-form-item v-if="selectedAssets.length" label="这次的生成条件">
+        <el-form-item label="负向提示词">
+          <el-input v-model="negativeText" type="textarea" :rows="4" :readonly="readOnly" />
+        </el-form-item>
+        <el-form-item v-if="conditionAssets.length" :label="media === 'video' ? '送给模型的提示词' : '这次的生成条件'">
           <el-input :model-value="conditionPreview" type="textarea" :rows="6" readonly />
         </el-form-item>
         <el-form-item v-if="media === 'video'" label="时长（秒）">
-          <el-input-number v-model="durationSec" :min="1" :max="60" :step="1" :precision="0" />
+          <el-input-number v-model="durationSec" :min="1" :max="60" :step="1" :precision="0" :disabled="readOnly" />
           <p class="cartoon-module__hint">按这条工作流的帧率写成帧数，并对齐到模型要求的倍数。生图不用填。</p>
         </el-form-item>
         <p v-if="contractError" class="cartoon-module__hint">{{ contractError }}</p>
@@ -61,6 +98,7 @@
               list-type="picture"
               accept="image/png,image/jpeg,image/webp"
               :auto-upload="false"
+              :disabled="readOnly"
               :limit="1"
               :on-change="file => onImage(slot, file)"
               :on-remove="() => clearImage(slot)"
@@ -71,19 +109,14 @@
             <p class="cartoon-module__hint">{{ slot.spec }}</p>
           </div>
         </el-form-item>
-        <div class="cartoon-generate-actions">
-          <el-button type="primary" :disabled="!canMake()" :loading="generating" @click="generate">生成</el-button>
-          <el-button v-if="plain" @click="openOutputs">查看产物</el-button>
-          <RandomSeedField ref="seedField" v-model="seed" />
-        </div>
-        <p class="cartoon-module__hint">同一提示词、同一种子只会出同一张图或同一段视频。开关打开时，每次生成先换成一个 8 到 10 位的新种子。关掉后只使用手填的数字。</p>
-        <el-progress v-if="jobLive" :percentage="jobPercent" :stroke-width="8" color="#2f8a5b" class="cartoon-job-progress" />
-        <p v-if="jobLive" class="cartoon-module__hint">{{ jobNote }}</p>
       </el-form>
     </section>
     <el-dialog v-model="refmodDetailOpen" :title="refmodDetailTitle" width="720px" append-to-body>
       <div v-if="refmodDetail" class="cartoon-refmod-detail">
-        <img v-for="image in refmodDetail.images" :key="image.name" :src="image.url" alt="" />
+        <figure v-for="image in refmodDetail.images" :key="image.name">
+          <img :src="image.url" alt="" />
+          <figcaption>{{ image.note || '参考图' }}</figcaption>
+        </figure>
       </div>
     </el-dialog>
   </PageShell>
@@ -94,20 +127,26 @@ import { computed, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
-import RandomSeedField from '../components/RandomSeedField.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
-import { canMake } from '../lib/appAccess.js';
 
 const props = defineProps({
   plain: { type: Boolean, default: false },
   shotIdOverride: { type: [ String, Number ], default: '' },
+  mode: { type: String, default: 'detail' },
 });
+const emit = defineEmits([ 'saved', 'running' ]);
+const readOnly = computed(() => props.mode === 'detail');
 const route = useRoute();
 const router = useRouter();
 const shot = ref(null);
 const chapterTitle = ref('');
 const promptText = ref('');
-const media = ref('image');
+const negativeText = ref('');
+const shotSizes = ref([ '中景' ]);
+const cameraMoves = ref([ '固定' ]);
+const sizeOptions = ref([ '极远景', '远景', '全景', '中景', '近景', '特写', '大特写' ]);
+const moveOptions = ref([ '固定', '推', '急推', '拉', '急拉', '摇', '移', '跟', '升', '降', '甩', '震颤', '旋转' ]);
+const media = ref('video');
 const durationSec = ref(10);
 const workflowId = ref(null);
 const contracts = ref({});
@@ -115,16 +154,16 @@ const IMAGE_TYPES = new Set([ 'image/png', 'image/jpeg', 'image/webp' ]);
 const files = reactive({});
 const imageLists = reactive({});
 const generating = ref(false);
-const seed = ref(null);
-const seedField = ref(null);
-const notice = ref('');
-const noticeType = ref('info');
 const packs = ref([]);
 const projectAssets = ref([]);
 const assetIds = ref([]);
+const assetMarks = ref([]);
+const refmodPicks = ref({});
+const savingAssets = ref(false);
 const refmodDetailOpen = ref(false);
 const refmodDetail = ref(null);
 let pollTimer = null;
+let pollToken = 0;
 
 const projectId = computed(() => route.params.id);
 const shotId = computed(() => props.shotIdOverride || route.params.shotId || route.query.shot);
@@ -142,12 +181,108 @@ const assetGroups = computed(() => [
 const selectedAssets = computed(() => assetIds.value
   .map(id => visualAssets.value.find(item => item.id === id))
   .filter(Boolean));
+const assetsLocked = computed(() => {
+  const fields = shot.value?.overridden_fields;
+  return Array.isArray(fields) && fields.includes('assets');
+});
+function mentionedCharacterIds(text, assets) {
+  const catalog = assets
+    .filter(asset => asset.kind === 'character' && String(asset.name || '').trim())
+    .slice()
+    .sort((a, b) => b.name.length - a.name.length);
+  const source = String(text || '');
+  const occupied = [];
+  const ids = [];
+  catalog.forEach(asset => {
+    let from = 0;
+    while (from < source.length) {
+      const at = source.indexOf(asset.name, from);
+      if (at < 0) break;
+      const end = at + asset.name.length;
+      const overlap = occupied.some(span => at < span.end && end > span.start);
+      if (!overlap) {
+        occupied.push({ start: at, end });
+        ids.push(asset.id);
+        break;
+      }
+      from = at + 1;
+    }
+  });
+  return ids;
+}
+const lockCharacters = computed(() => {
+  const ids = [];
+  assetIds.value.forEach(id => {
+    const asset = visualAssets.value.find(item => item.id === id);
+    if (asset?.kind === 'character' && !ids.includes(id)) ids.push(id);
+  });
+  if (!assetsLocked.value) {
+    const text = [ shot.value?.description, shot.value?.dialogue, promptText.value, negativeText.value ]
+      .filter(Boolean)
+      .join('\n');
+    mentionedCharacterIds(text, visualAssets.value).forEach(id => {
+      if (!ids.includes(id)) ids.push(id);
+    });
+  }
+  return ids.map(id => visualAssets.value.find(item => item.id === id)).filter(Boolean);
+});
+const conditionAssets = computed(() => (media.value === 'video' ? lockCharacters.value : selectedAssets.value));
+function packOf(assetId) {
+  return packs.value.find(item => item.asset_id === assetId) || null;
+}
+function pickedNames(assetId, pack) {
+  const names = pack?.images || [];
+  const picked = refmodPicks.value[String(assetId)];
+  if (!Array.isArray(picked)) return names.slice();
+  const allow = new Set(picked);
+  return names.filter(name => allow.has(name));
+}
+function setRefmodPick(assetId, name, checked) {
+  const pack = packOf(assetId);
+  const names = pack?.images || [];
+  const current = Array.isArray(refmodPicks.value[String(assetId)])
+    ? refmodPicks.value[String(assetId)].slice()
+    : names.slice();
+  const next = new Set(current);
+  if (checked) next.add(name);
+  else next.delete(name);
+  refmodPicks.value = {
+    ...refmodPicks.value,
+    [String(assetId)]: names.filter(item => next.has(item)),
+  };
+}
+function refmodFilesPayload() {
+  const out = {};
+  assetIds.value.forEach(id => {
+    const pack = packOf(id);
+    if (!pack?.images?.length) return;
+    out[id] = pickedNames(id, pack);
+  });
+  return out;
+}
+const refmodChoices = computed(() => selectedAssets.value.map(asset => {
+  const pack = packOf(asset.id);
+  if (!pack?.images?.length) return null;
+  const picked = new Set(pickedNames(asset.id, pack));
+  return {
+    id: asset.id,
+    name: asset.name,
+    kind: asset.kind,
+    images: pack.images.map(name => ({
+      name,
+      note: pack.notes?.[name] || '',
+      url: packFileUrl(pack, name),
+      checked: picked.has(name),
+    })),
+  };
+}).filter(Boolean));
 const picturePlan = computed(() => {
   let cursor = 1;
-  return selectedAssets.value.map(asset => {
-    const pack = packs.value.find(item => item.asset_id === asset.id);
-    const names = pack?.images?.length ? pack.images : (pack?.cover ? [ pack.cover ] : []);
+  return lockCharacters.value.map(asset => {
+    const pack = packOf(asset.id);
+    const names = pack ? pickedNames(asset.id, pack) : [];
     const count = names.length;
+    const hasPack = Boolean(pack?.images?.length);
     const from = count ? cursor : 0;
     if (count) cursor += count;
     return {
@@ -155,16 +290,27 @@ const picturePlan = computed(() => {
       name: asset.name,
       kind: asset.kind,
       count,
+      hasPack,
       from,
       to: count ? from + count - 1 : 0,
-      images: names.map(name => ({ name, url: packFileUrl(pack, name) })),
+      images: names.map(name => ({
+        name,
+        note: pack?.notes?.[name] || '',
+        url: packFileUrl(pack, name),
+      })),
     };
   });
 });
 const refmodDetailTitle = computed(() => (
   refmodDetail.value ? `${kindLabel(refmodDetail.value.kind)}「${refmodDetail.value.name}」` : 'RefMod'
 ));
-const conditionPreview = computed(() => composeCondition(selectedAssets.value, promptText.value, false, packs.value));
+const conditionPreview = computed(() => composeCondition(
+  conditionAssets.value,
+  promptText.value,
+  media.value === 'video' && needsRefmod.value,
+  packs.value,
+  media.value === 'video',
+));
 const submitKind = computed(() => {
   if (needsRefmod.value) return 'refmod';
   if (media.value === 'image') return slots.value.length ? 'edit' : 'image';
@@ -199,23 +345,36 @@ function assetBrief(asset) {
   if (asset.kind === 'prop') push(asset.prop_category);
   return bits.join('。');
 }
-function composeCondition(assets, shotPrompt, pictures, packRows) {
+function composeCondition(assets, shotPrompt, pictures, packRows, lock) {
+  const rows = lock ? assets.filter(asset => asset.kind === 'character') : assets;
   const lines = [];
   let cursor = 1;
-  assets.forEach(asset => {
+  rows.forEach(asset => {
     const pack = packRows.find(item => item.asset_id === asset.id);
-    const count = pictures ? (pack?.image_count || 0) : 0;
-    const tags = [];
-    if (count) {
-      for (let index = 0; index < count; index += 1) tags.push(`<Picture ${cursor + index}>`);
-      cursor += count;
-    }
+    const names = pictures && pack ? pickedNames(asset.id, pack) : [];
+    const who = lock ? `角色「${asset.name}」` : `${kindLabel(asset.kind)}「${asset.name}」`;
+    const pictureLines = names.map(name => {
+      const note = String(pack?.notes?.[name] || '').trim();
+      const line = note
+        ? `<Picture ${cursor}>：${note}。这张图属于${who}`
+        : `<Picture ${cursor}> 是${who}的参考图`;
+      cursor += 1;
+      return line;
+    });
     const brief = assetBrief(asset);
-    const head = tags.length ? `${tags.join(' ')} 是${kindLabel(asset.kind)}「${asset.name}」` : `${kindLabel(asset.kind)}「${asset.name}」`;
+    if (lock) {
+      const head = pictureLines.length
+        ? `${pictureLines.join('\n')}\n这些图都是${who}，按每张图自己的说明使用，不要互相替代`
+        : `${who}。锁定这张脸、体态和服装，本段画面保持一致`;
+      lines.push(brief ? `${head}。${brief}` : head);
+      return;
+    }
+    const head = pictureLines.length ? pictureLines.join('\n') : who;
     lines.push(brief ? `${head}。${brief}` : head);
   });
   const shot = String(shotPrompt || '').trim();
   if (!lines.length) return shot;
+  if (lock) return [ lines.join('\n'), shot ].filter(Boolean).join('\n');
   return [ lines.join('\n'), shot ? `镜头：${shot}` : '' ].filter(Boolean).join('\n');
 }
 
@@ -225,7 +384,9 @@ function workflowLabel(item) {
 }
 const jobLive = ref(false);
 const jobPercent = ref(0);
+const jobMax = ref(0);
 const jobNote = ref('');
+const jobWaiting = computed(() => jobLive.value && jobPercent.value === 0 && jobMax.value === 0);
 function progressText(task) {
   if (task.status === 'saving') return '正在保存产物';
   if (task.phase === 'queued') {
@@ -235,10 +396,23 @@ function progressText(task) {
     const node = task.node ? `节点 ${task.node} ` : '';
     return `${node}${task.progress_value}/${task.progress_max}`;
   }
+  if (task.node) return `节点 ${task.node}，等待这一步的步数`;
   return '正在生成，等待 ComfyUI 回报步数';
 }
 function statusLabel(status) {
-  return { queued: '排队', running: '生成中', saving: '生成中', success: '成功', failed: '失败' }[status] || status;
+  return { queued: '排队', running: '生成中', saving: '生成中', success: '成功', failed: '失败', cancelled: '已停止' }[status] || status;
+}
+let activeTaskId = '';
+let generateAbort = null;
+let haltQuiet = false;
+function publishRunning(live, taskId) {
+  emit('running', { live: Boolean(live), taskId: taskId || activeTaskId || '' });
+}
+function isStop(err) {
+  return err?.code === 'ERR_CANCELED'
+    || err?.name === 'CanceledError'
+    || err?.name === 'AbortError'
+    || [ 'canceled', '已停止' ].includes(err?.message);
 }
 function back() {
   if (inWorkbench.value) {
@@ -251,6 +425,18 @@ function back() {
   }
   router.push({ path: `/projects/${projectId.value}`, query: { tab: route.query.tab || '3' } });
 }
+function rollSeed() {
+  const digits = 8 + Math.floor(Math.random() * 3);
+  const min = 10 ** (digits - 1);
+  return min + Math.floor(Math.random() * (10 ** digits - min));
+}
+function openAssets() {
+  if (inWorkbench.value) {
+    router.replace({ query: { node: 'assets' } });
+    return;
+  }
+  router.push({ path: `/projects/${projectId.value}`, query: { tab: 'assets' } });
+}
 function openOutputs() {
   if (inWorkbench.value) {
     router.replace({ query: { node: 'preview', shot: String(shotId.value) } });
@@ -262,6 +448,7 @@ function openOutputs() {
   });
 }
 function stopPoll() {
+  pollToken += 1;
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = null;
 }
@@ -306,7 +493,12 @@ function replaceImage(slot, picked) {
   readImage(slot, file);
 }
 async function load() {
-  const detail = await request(`/projects/${projectId.value}`);
+  const [detail, meta] = await Promise.all([
+    request(`/projects/${projectId.value}`),
+    request('/meta').catch(() => null),
+  ]);
+  if (meta?.shot_sizes?.length) sizeOptions.value = meta.shot_sizes;
+  if (meta?.camera_moves?.length) moveOptions.value = meta.camera_moves;
   const found = (detail.shots || []).find(item => String(item.id) === String(shotId.value));
   if (!found) {
     ElMessage.error('分镜不存在');
@@ -319,7 +511,24 @@ async function load() {
     .filter(item => String(item.shot_id) === String(found.id))
     .map(item => item.asset_id);
   assetIds.value = bound.filter(id => projectAssets.value.some(asset => asset.id === id && [ 'character', 'scene', 'prop' ].includes(asset.kind) && !asset.disabled));
+  assetMarks.value = Array.isArray(found.asset_marks) ? found.asset_marks : [];
+  const picks = {};
+  (detail.bindings || []).filter(item => String(item.shot_id) === String(found.id)).forEach(item => {
+    if (item.refmod_files == null || item.refmod_files === '') return;
+    try {
+      const names = JSON.parse(item.refmod_files);
+      if (Array.isArray(names)) picks[String(item.asset_id)] = names;
+    } catch {
+      // 旧绑定没有图集选择时，默认用全部参考图。
+    }
+  });
+  refmodPicks.value = picks;
   promptText.value = found.prompt?.positive_zh || '';
+  negativeText.value = found.prompt?.negative_zh || '';
+  shotSizes.value = Array.isArray(found.shot_sizes) && found.shot_sizes.length ? found.shot_sizes.slice() : [ '中景' ];
+  cameraMoves.value = Array.isArray(found.camera_moves) && found.camera_moves.length
+    ? found.camera_moves.slice()
+    : String(found.camera_move || '固定').split(/[,，、|/]+/).map(item => item.trim()).filter(Boolean);
   if (Number(found.duration_ms) > 0) {
     durationSec.value = Math.min(60, Math.max(1, Math.round(found.duration_ms / 1000)));
   } else {
@@ -330,17 +539,138 @@ async function load() {
   try {
     contracts.value = await request('/generate-inputs');
     packs.value = await request(`/projects/${projectId.value}/refmods`) || [];
-    pickDefault(media.value);
+    const savedWorkflow = (contracts.value.workflows || []).find(item => item.id === Number(found.workflow_id));
+    if (savedWorkflow) {
+      echoing = true;
+      media.value = savedWorkflow.media || 'video';
+      workflowId.value = savedWorkflow.id;
+      echoing = false;
+    } else {
+      pickDefault(media.value);
+    }
+    const live = (detail.tasks || [])
+      .filter(item => String(item.shot_id) === String(found.id) && [ 'queued', 'running', 'saving' ].includes(item.status))
+      .sort((a, b) => Number(b.id) - Number(a.id))[0];
+    if (live) {
+      const workflow = (contracts.value.workflows || []).find(item => item.id === live.precheck_workflow_id);
+      if (workflow) {
+        echoing = true;
+        media.value = workflow.media || 'video';
+        workflowId.value = workflow.id;
+        echoing = false;
+      }
+      beginPoll(live);
+    }
   } catch (err) {
-    notice.value = err.message;
-    noticeType.value = 'error';
+    ElMessage.error(err.message);
   }
 }
+let echoing = false;
 function pickDefault(nextMedia) {
   const list = (contracts.value.workflows || []).filter(item => item.media === nextMedia);
-  const preferred = nextMedia === 'image' ? contracts.value.image?.workflow_id : contracts.value.video?.workflow_id;
-  const found = list.find(item => item.id === preferred) || list[0];
+  const nameOf = item => String(item?.name || '');
+  const textToVideo = nextMedia === 'video'
+    ? (list.find(item => /满血-h3-文生视频/i.test(nameOf(item)) && /\[refmod\]/i.test(nameOf(item)))
+      || list.find(item => nameOf(item).includes('文生视频') && /\[refmod\]/i.test(nameOf(item)))
+      || list.find(item => nameOf(item) === '满血-h3-文生视频'))
+    : null;
+  const preferred = nextMedia === 'image' ? contracts.value.image?.workflow_id : null;
+  const found = textToVideo || list.find(item => item.id === preferred) || list[0];
   workflowId.value = found ? found.id : null;
+}
+function jobPercentOf(task) {
+  if (!task) return 0;
+  if (task.status === 'success') return 100;
+  if (task.status === 'saving') return 99;
+  const max = Number(task.progress_max) || 0;
+  const value = Number(task.progress_value) || 0;
+  if (max > 0) return Math.min(99, Math.round((value / max) * 100));
+  const percent = Number(task.progress_percent);
+  return Number.isFinite(percent) ? Math.min(99, Math.max(0, Math.round(percent))) : 0;
+}
+function beginPoll(task) {
+  stopPoll();
+  const taskId = task.id;
+  activeTaskId = taskId;
+  jobLive.value = true;
+  publishRunning(true, taskId);
+  jobPercent.value = jobPercentOf(task);
+  jobMax.value = Number(task?.progress_max) || 0;
+  jobNote.value = progressText(task);
+  pollTimer = setInterval(async () => {
+    const ticket = ++pollToken;
+    try {
+      const detail = await request(`/projects/${projectId.value}`);
+      if (ticket !== pollToken) return;
+      const latest = (detail.tasks || []).find(item => String(item.id) === String(taskId));
+      if (!latest || [ 'queued', 'running', 'saving' ].includes(latest.status)) {
+        if (!latest) return;
+        jobPercent.value = jobPercentOf(latest);
+        jobMax.value = Number(latest.progress_max) || 0;
+        jobNote.value = progressText(latest);
+        return;
+      }
+      stopPoll();
+      jobPercent.value = latest.status === 'success' ? 100 : 0;
+      jobLive.value = false;
+      publishRunning(false, taskId);
+      if (latest.status === 'success') ElMessage.success('生成成功');
+      else if (latest.status === 'cancelled') {
+        jobNote.value = '已停止';
+        if (!haltQuiet) ElMessage.info(latest.error_message || '已停止');
+      } else if (!haltQuiet) ElMessage.error(latest.error_message || statusLabel(latest.status));
+    } catch (err) {
+      if (ticket !== pollToken) return;
+      stopPoll();
+      jobLive.value = false;
+      publishRunning(false, taskId);
+      if (!haltQuiet && !isStop(err)) ElMessage.error(err.message);
+    }
+  }, 1000);
+}
+function haltJob() {
+  haltQuiet = true;
+  generateAbort?.abort();
+  stopPoll();
+  generating.value = false;
+  jobLive.value = false;
+  jobNote.value = '已停止';
+  publishRunning(false, activeTaskId);
+}
+async function saveAssets() {
+  savingAssets.value = true;
+  try {
+    await request(`/shots/${shotId.value}`, {
+      method: 'put',
+      data: {
+        shot_sizes: shotSizes.value,
+        camera_moves: cameraMoves.value,
+        duration_sec: Number(durationSec.value) || undefined,
+        workflow_id: workflowId.value,
+        positive_zh: promptText.value,
+        negative_zh: negativeText.value,
+      },
+    });
+    const saved = await request(`/projects/${projectId.value}/shots/${shotId.value}/assets`, {
+      method: 'put',
+      data: {
+        asset_ids: assetIds.value,
+        positive_zh: promptText.value,
+        negative_zh: negativeText.value,
+        description: shot.value?.description || '',
+        dialogue: shot.value?.dialogue || '',
+        refmod_files: refmodFilesPayload(),
+      },
+    });
+    assetMarks.value = saved?.marks || [];
+    if (assetMarks.value.some(item => item.state === 'miss')) ElMessage.warning('已保存，还有没对上的资产');
+    else ElMessage.success('已保存');
+    emit('saved');
+  } catch (err) {
+    ElMessage.error(err.message);
+  } finally {
+    savingAssets.value = false;
+  }
 }
 async function generate() {
   if (!workflowId.value) {
@@ -348,7 +678,7 @@ async function generate() {
     return;
   }
   if (needsRefmod.value && !picturePlan.value.some(item => item.count)) {
-    ElMessage.error('请选择已经绑了 RefMod 的角色、场景或道具');
+    ElMessage.error('请选择已经绑了 RefMod 的角色');
     return;
   }
   const missing = slots.value.filter(slot => !files[slot.id]?.data_base64);
@@ -360,19 +690,32 @@ async function generate() {
     ElMessage.warning('请填写视频时长');
     return;
   }
-  const nextSeed = seedField.value?.takeSeed();
-  if (nextSeed == null) {
-    ElMessage.warning('请填写种子，或打开随机开关');
+  if (!shotSizes.value.length) {
+    ElMessage.warning('请至少选一个主景别');
     return;
   }
+  if (!cameraMoves.value.length) {
+    ElMessage.warning('请至少选一个主运镜');
+    return;
+  }
+  const nextSeed = rollSeed();
+  haltQuiet = false;
+  generateAbort = new AbortController();
   generating.value = true;
-  notice.value = '排队';
-  noticeType.value = 'info';
+  jobLive.value = true;
+  publishRunning(true);
+  jobPercent.value = 0;
+  jobMax.value = 0;
+  jobNote.value = '排队';
   try {
     const task = await request(`/projects/${projectId.value}/shots/${shotId.value}/generate?kind=${submitKind.value}`, {
       method: 'post',
+      signal: generateAbort.signal,
       data: {
         positive_zh: promptText.value,
+        negative_zh: negativeText.value,
+        shot_sizes: shotSizes.value,
+        camera_moves: cameraMoves.value,
         images: slots.value.map(slot => ({
           slot_id: slot.id,
           filename: files[slot.id].filename,
@@ -380,49 +723,36 @@ async function generate() {
         })),
         workflow_id: workflowId.value,
         asset_ids: assetIds.value,
+        refmod_files: refmodFilesPayload(),
         duration_sec: media.value === 'video' ? Number(durationSec.value) : undefined,
         seed: nextSeed,
       },
     });
-    notice.value = task.error_message ? `${statusLabel(task.status)}：${task.error_message}` : statusLabel(task.status);
-    noticeType.value = task.status === 'failed' ? 'error' : 'info';
-    if ([ 'queued', 'running', 'saving' ].includes(task.status)) {
-      stopPoll();
-      const taskId = task.id;
-      jobLive.value = true;
-      jobPercent.value = task.progress_percent || 0;
-      jobNote.value = progressText(task);
-      pollTimer = setInterval(async () => {
-        try {
-          const detail = await request(`/projects/${projectId.value}`);
-          const latest = (detail.tasks || []).find(item => String(item.id) === String(taskId));
-          if (!latest || [ 'queued', 'running', 'saving' ].includes(latest.status)) {
-            if (!latest) return;
-            jobPercent.value = latest.status === 'saving' ? 99 : (latest.progress_percent || 0);
-            jobNote.value = progressText(latest);
-            notice.value = jobNote.value;
-            noticeType.value = 'info';
-            return;
-          }
-          stopPoll();
-          jobPercent.value = latest.status === 'success' ? 100 : 0;
-          jobLive.value = latest.status === 'success';
-          notice.value = latest.error_message ? `${statusLabel(latest.status)}：${latest.error_message}` : statusLabel(latest.status);
-          noticeType.value = latest.status === 'success' ? 'success' : 'error';
-        } catch (err) {
-          notice.value = err.message;
-          noticeType.value = 'error';
-        }
-      }, 1000);
+    if (task.status === 'cancelled') {
+      jobLive.value = false;
+      jobNote.value = '已停止';
+      publishRunning(false);
+      if (!haltQuiet) ElMessage.info(task.error_message || '已停止');
+    } else if (task.status === 'failed') {
+      jobLive.value = false;
+      publishRunning(false);
+      ElMessage.error(task.error_message || '生成失败');
+    } else if (task.status === 'success') {
+      jobLive.value = false;
+      publishRunning(false);
+      ElMessage.success('生成成功');
     }
+    if ([ 'queued', 'running', 'saving' ].includes(task.status)) beginPoll(task);
   } catch (err) {
-    notice.value = err.message;
-    noticeType.value = 'error';
+    jobLive.value = false;
+    publishRunning(false);
+    if (!haltQuiet && !isStop(err)) ElMessage.error(err.message);
   } finally {
     generating.value = false;
   }
 }
 watch(media, () => {
+  if (echoing) return;
   pickDefault(media.value);
   resetFiles();
 });
@@ -431,13 +761,34 @@ watch(slots, next => {
   (next || []).forEach(slot => ensureList(slot.id));
 }, { immediate: true });
 watch(shotId, (id) => { if (id) load(); }, { immediate: true });
-onUnmounted(stopPoll);
+onUnmounted(() => {
+  const live = jobLive.value;
+  const taskId = activeTaskId;
+  stopPoll();
+  if (live) emit('running', { live: true, taskId });
+});
+defineExpose({
+  saveAssets,
+  generate,
+  haltJob,
+  openAssets,
+  savingAssets,
+  generating,
+  jobLive,
+  jobPercent,
+  jobWaiting,
+  jobNote,
+});
 </script>
 
 <style scoped>
 .cartoon-image-field { width: 100%; max-width: 420px; }
 .cartoon-image-upload { display: block; }
 .cartoon-generate-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cartoon-asset-marks { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.cartoon-asset-mark { padding: 0 8px; border-radius: 6px; line-height: 22px; font-size: 12px; }
+.cartoon-asset-mark.is-have { color: #1f7a45; background: #e7f6ee; }
+.cartoon-asset-mark.is-miss { color: #c45656; background: #fdecec; }
 .cartoon-job-progress { max-width: 420px; margin-top: 12px; }
 .cartoon-refmod-bind + .cartoon-refmod-bind { margin-top: 8px; }
 .cartoon-refmod-strip {
@@ -462,6 +813,11 @@ onUnmounted(stopPoll);
   flex-wrap: wrap;
   gap: 8px;
 }
+.cartoon-refmod-pick__asset + .cartoon-refmod-pick__asset { margin-top: 8px; }
+.cartoon-refmod-pick__row { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+.cartoon-refmod-pick__row img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; }
+.cartoon-refmod-detail figure { margin: 0; }
+.cartoon-refmod-detail figcaption { margin-top: 4px; color: #5c6b62; font-size: 12px; }
 .cartoon-refmod-detail img {
   width: 160px;
   height: 160px;

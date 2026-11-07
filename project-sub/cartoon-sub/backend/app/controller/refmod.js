@@ -30,6 +30,14 @@ class RefmodController extends Controller {
     }
   }
 
+  async update() {
+    try {
+      ok(this.ctx, await this.ctx.service.refmod.update(this.ctx.params.id, this.ctx.params.packId, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async destroy() {
     try {
       ok(this.ctx, await this.ctx.service.refmod.remove(this.ctx.params.id, this.ctx.params.packId));

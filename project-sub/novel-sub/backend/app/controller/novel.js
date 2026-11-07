@@ -60,8 +60,20 @@ class NovelController extends Controller {
       this.ctx.body = { code: 400, message: '标题不能为空' };
       return;
     }
+    if (!payload.source_kind) payload.source_kind = 'original';
     const row = await this.ctx.service.novel.create(payload);
     this.ctx.body = { code: 0, message: 'ok', data: row };
+  }
+
+  async importTxt() {
+    try {
+      const body = this.ctx.request.body || {};
+      const row = await this.ctx.service.novel.importFromTxt(body);
+      this.ctx.body = { code: 0, message: 'ok', data: row };
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
   }
 
   async update() {

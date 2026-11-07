@@ -197,7 +197,19 @@ class ProjectController extends Controller {
 
   async draftShotOutline() {
     try {
-      ok(this.ctx, await this.ctx.service.draft.suggestShotOutline(this.ctx.params.id, this.ctx.params.importId));
+      ok(this.ctx, await this.ctx.service.draft.suggestShotOutline(
+        this.ctx.params.id,
+        this.ctx.params.importId,
+        this.ctx.request.body || {},
+      ));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async clearImportShots() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.clearImportShots(this.ctx.params.id, this.ctx.params.importId));
     } catch (err) {
       fail(this.ctx, err);
     }
@@ -335,6 +347,18 @@ class ProjectController extends Controller {
     }
   }
 
+  async saveShotAssets() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.saveShotAssets(
+        this.ctx.params.id,
+        this.ctx.params.shotId,
+        this.ctx.request.body || {},
+      ));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async updateShot() {
     try {
       ok(this.ctx, await this.ctx.service.project.updateShot(this.ctx.params.id, this.ctx.request.body || {}));
@@ -354,6 +378,14 @@ class ProjectController extends Controller {
   async generateInputs() {
     try {
       ok(this.ctx, await this.ctx.service.generate.inputs());
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async stopGenerate() {
+    try {
+      ok(this.ctx, await this.ctx.service.generate.stopProject(this.ctx.params.id));
     } catch (err) {
       fail(this.ctx, err);
     }

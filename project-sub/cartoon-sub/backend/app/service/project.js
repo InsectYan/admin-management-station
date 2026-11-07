@@ -4,10 +4,14 @@ const fs = require('fs');
 const path = require('path');
 const Service = require('egg').Service;
 const { outputRoot, resolveInside } = require('../lib/mediaPaths');
-const { VISUAL_STYLES, SHOT_SIZES, CAMERA_MOVES, assertEnum } = require('../lib/cartoonMeta');
+const {
+  VISUAL_STYLES, assertEnum, assertShotSizes, serializeShotSizes, normalizeShotSizes,
+  assertCameraMoves, serializeCameraMoves, normalizeCameraMoves,
+} = require('../lib/cartoonMeta');
 const { sameBody, keepsProductionText, withOverride } = require('../lib/rebasePlan');
 const { reportAudit } = require('../lib/reportAudit');
 const { videoTemplateDraft, templateGaps } = require('../lib/videoTemplates');
+const { auditShot, mentionedAssetIds, shotText } = require('../lib/shotAssets');
 const {
   contentType,
   isLocal,
@@ -109,13 +113,9 @@ class ProjectService extends Service {
     const project = await this.ctx.model.Project.findByPk(id);
     if (!project) this.ctx.throw(404, '项目不存在');
     const episode = await this.ensureEpisode(project.id);
-    try {
-      await this.ctx.service.generate.settleProject(id);
-    } catch (err) {
-      this.ctx.logger.warn('[cartoon] settle %s', err.message);
-    }
     const imports = await this.ctx.model.Import.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] });
     await this.repairSnapshotTitles(project, imports);
+    await this.ensureShotCodes(id);
     const [ assets, shots ] = await Promise.all([
       this.ctx.model.Asset.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] }),
       this.ctx.model.Shot.findAll({ where: { project_id: id }, order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]] }),
@@ -125,13 +125,29 @@ class ProjectService extends Service {
       ? await this.ctx.model.Prompt.findAll({ where: { shot_id: shotIds } })
       : [];
     const promptByShot = new Map(prompts.map(item => [ item.shot_id, item ]));
+    const importById = new Map(imports.map(item => [ item.id, item ]));
+    let bindings = await this.ctx.model.ShotBinding.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] });
+    bindings = await this.fillMentionedAssets(id, shots, assets, importById, promptByShot, bindings);
+    const pendingTasks = await this.ctx.model.Task.findAll({
+      where: { project_id: id },
+      order: [[ 'id', 'DESC' ]],
+    });
+    const promptIds = pendingTasks
+      .filter(item => item.prompt_id && [ 'queued', 'running', 'saving' ].includes(item.status))
+      .map(item => item.prompt_id);
+    const [ , live ] = await Promise.all([
+      this.ctx.service.generate.settleProject(id).catch(err => {
+        this.ctx.logger.warn('[cartoon] settle %s', err.message);
+      }),
+      this.ctx.service.generate.liveProgress(promptIds).catch(err => {
+        this.ctx.logger.warn('[cartoon] progress %s', err.message);
+        return {};
+      }),
+    ]);
     const tasks = await this.ctx.model.Task.findAll({
       where: { project_id: id },
       order: [[ 'id', 'DESC' ]],
     });
-    const live = await this.ctx.service.generate.liveProgress(
-      tasks.filter(item => item.prompt_id && [ 'queued', 'running', 'saving' ].includes(item.status)).map(item => item.prompt_id),
-    );
     const taskIds = tasks.map(item => item.id);
     const outputs = taskIds.length
       ? await this.ctx.model.Output.findAll({ where: { task_id: taskIds }, order: [[ 'id', 'ASC' ]] })
@@ -141,23 +157,47 @@ class ProjectService extends Service {
       where: { project_id: id },
       order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
     });
+    let taskViews = tasks.map(task => ({
+      ...this.ctx.service.generate.presentTask(task),
+      ...(live[task.prompt_id] || {}),
+      shot_description: shotById.get(task.shot_id)?.description || '',
+      outputs: outputs.filter(item => item.task_id === task.id),
+    }));
+    if (taskViews.some(item => item.generation?.workflow_id && !item.generation.workflow_name)) {
+      try {
+        const names = await this.ctx.service.generate.workflowNames();
+        taskViews = taskViews.map(item => {
+          if (!item.generation?.workflow_id || item.generation.workflow_name) return item;
+          const name = names.get(Number(item.generation.workflow_id)) || '';
+          if (!name) return item;
+          return { ...item, generation: { ...item.generation, workflow_name: name } };
+        });
+      } catch (err) {
+        this.ctx.logger.warn('[cartoon] workflow names %s', err.message);
+      }
+    }
     return {
       project,
       imports,
       assets,
       copy_blocks: copyBlocks,
       gaps: templateGaps(project.template_id, project, assets),
-      shots: shots.map(shot => ({
-        ...shot.toJSON(),
-        prompt: promptByShot.get(shot.id) || null,
-      })),
-      tasks: tasks.map(task => ({
-        ...task.toJSON(),
-        ...(live[task.prompt_id] || {}),
-        shot_description: shotById.get(task.shot_id)?.description || '',
-        outputs: outputs.filter(item => item.task_id === task.id),
-      })),
-      bindings: await this.ctx.model.ShotBinding.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] }),
+      shots: shots.map(shot => {
+        const json = shot.toJSON();
+        const sizes = normalizeShotSizes(json.shot_size);
+        const moves = normalizeCameraMoves(json.camera_move);
+        return {
+          ...json,
+          shot_size: serializeShotSizes(sizes),
+          shot_sizes: sizes,
+          camera_move: serializeCameraMoves(moves),
+          camera_moves: moves,
+          prompt: promptByShot.get(shot.id) || null,
+          asset_marks: this.assetMarksFor(shot, assets, importById, promptByShot, bindings),
+        };
+      }),
+      tasks: taskViews,
+      bindings,
       voice_cues: await this.ctx.model.VoiceCue.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] }),
       review_findings: await this.ctx.model.ReviewFinding.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] }),
       episodes: [ episode ],
@@ -367,11 +407,79 @@ class ProjectService extends Service {
     });
   }
 
+  async maxShotCodeNum(projectId) {
+    const rows = await this.ctx.model.Shot.findAll({
+      where: { project_id: projectId },
+      attributes: [ 'shot_code' ],
+    });
+    let max = 0;
+    for (const row of rows) {
+      const match = String(row.shot_code || '').trim().match(/^[A-Za-z](\d{6})$/);
+      if (match) max = Math.max(max, Number(match[1]));
+    }
+    return max;
+  }
+
+  async nextShotCode(projectId) {
+    return `S${String((await this.maxShotCodeNum(projectId)) + 1).padStart(6, '0')}`;
+  }
+
+  async allocateShotCodes(projectId, count) {
+    const start = await this.maxShotCodeNum(projectId);
+    return Array.from({ length: Math.max(0, Number(count) || 0) }, (_, index) => (
+      `S${String(start + index + 1).padStart(6, '0')}`
+    ));
+  }
+
+  async destroyShotsByIds(ids) {
+    if (!ids.length) return 0;
+    const { Op } = this.app.Sequelize;
+    const tasks = await this.ctx.model.Task.findAll({ where: { shot_id: { [Op.in]: ids } } });
+    const busy = tasks.find(item => [ 'queued', 'running', 'saving' ].includes(item.status));
+    if (busy) this.ctx.throw(400, '有镜头正在生成，等它结束再删除');
+    const taskIds = tasks.map(item => item.id);
+    const outputs = taskIds.length
+      ? await this.ctx.model.Output.findAll({ where: { task_id: { [Op.in]: taskIds } } })
+      : [];
+    const outputIds = outputs.map(item => item.id);
+    if (outputIds.length) {
+      await this.ctx.model.EditClip.update(
+        { source_output_id: null },
+        { where: { source_output_id: { [Op.in]: outputIds } } },
+      );
+      await this.ctx.model.ExportSpec.update(
+        { source_output_id: null },
+        { where: { source_output_id: { [Op.in]: outputIds } } },
+      );
+    }
+    for (const task of tasks) await this.ctx.service.generate.removeTask(task.id);
+    await this.ctx.model.Prompt.destroy({ where: { shot_id: { [Op.in]: ids } } });
+    await this.ctx.model.ShotBinding.destroy({ where: { shot_id: { [Op.in]: ids } } });
+    await this.ctx.model.VoiceCue.destroy({ where: { shot_id: { [Op.in]: ids } } });
+    await this.ctx.model.ReviewFinding.destroy({ where: { shot_id: { [Op.in]: ids } } });
+    await this.ctx.model.Shot.destroy({ where: { id: { [Op.in]: ids } } });
+    return ids.length;
+  }
+
+  async clearImportShots(projectId, importId) {
+    await this.show(projectId);
+    const chapter = await this.ctx.model.Import.findOne({ where: { id: importId, project_id: projectId } });
+    if (!chapter) this.ctx.throw(404, '章节快照不存在');
+    const shots = await this.ctx.model.Shot.findAll({ where: { project_id: projectId, import_id: chapter.id } });
+    const removed = await this.destroyShotsByIds(shots.map(item => item.id));
+    if (chapter.script_data && typeof chapter.script_data === 'object') {
+      await chapter.update({ script_data: { ...chapter.script_data, shot_omissions: [] } });
+    }
+    return { removed, import_id: Number(chapter.id) };
+  }
+
   async removeImport(projectId, importId) {
     const row = await this.ctx.model.Import.findOne({
       where: { id: importId, project_id: projectId },
     });
     if (!row) this.ctx.throw(404, '章节快照不存在');
+    const shots = await this.ctx.model.Shot.findAll({ where: { project_id: projectId, import_id: row.id } });
+    await this.destroyShotsByIds(shots.map(item => item.id));
     if (!row.deleted_at) await row.update({ deleted_at: new Date() });
     return row;
   }
@@ -669,15 +777,25 @@ class ProjectService extends Service {
     }
     const episode = await this.ensureEpisode(projectId);
     const max = await this.ctx.model.Shot.max('sort_order', { where: { project_id: projectId } });
+    const durationSec = Number(payload.duration_sec);
+    const durationMs = Number.isFinite(durationSec) && durationSec > 0
+      ? Math.round(durationSec * 1000)
+      : (Number(payload.duration_ms) > 0 ? Math.round(Number(payload.duration_ms)) : null);
     const shot = await this.ctx.model.Shot.create({
       project_id: Number(projectId),
       import_id: importId,
       video_task_id: episode.id,
       sort_order: Number.isFinite(max) ? max + 1 : 0,
-      shot_size: assertEnum(payload.shot_size || '中景', SHOT_SIZES, '景别') || '中景',
-      camera_move: assertEnum(payload.camera_move || '固定', CAMERA_MOVES, '运镜') || '固定',
+      shot_code: payload.shot_code || await this.nextShotCode(projectId),
+      shot_size: assertShotSizes(
+        payload.shot_sizes != null ? payload.shot_sizes : (payload.shot_size || '中景'),
+      ),
+      camera_move: assertCameraMoves(
+        payload.camera_moves != null ? payload.camera_moves : (payload.camera_move || '固定'),
+      ),
       description: payload.description || '',
       dialogue: payload.dialogue || '',
+      duration_ms: durationMs,
     });
     if (payload.positive_zh || payload.negative_zh) {
       await this.ctx.model.Prompt.create({
@@ -781,7 +899,6 @@ class ProjectService extends Service {
 
   async purgeShotGroup(projectId, payload) {
     await this.show(projectId);
-    const { Op } = this.app.Sequelize;
     const importId = payload?.import_id;
     let chapter = null;
     let shots;
@@ -790,38 +907,14 @@ class ProjectService extends Service {
     } else {
       chapter = await this.ctx.model.Import.findOne({ where: { id: importId, project_id: projectId } });
       if (!chapter) this.ctx.throw(404, '章节快照不存在');
-      if (!chapter.deleted_at) this.ctx.throw(400, '只能删除已删除快照下的分镜，或未关联快照的分镜');
+      if (!chapter.deleted_at && !payload?.clear_only) {
+        this.ctx.throw(400, '只能删除已删除快照下的分镜，或未关联快照的分镜');
+      }
       shots = await this.ctx.model.Shot.findAll({ where: { project_id: projectId, import_id: chapter.id } });
     }
-    const ids = shots.map(item => item.id);
-    if (ids.length) {
-      const tasks = await this.ctx.model.Task.findAll({ where: { shot_id: { [Op.in]: ids } } });
-      const busy = tasks.find(item => [ 'queued', 'running', 'saving' ].includes(item.status));
-      if (busy) this.ctx.throw(400, '有分镜正在生成，等它结束再删除');
-      const taskIds = tasks.map(item => item.id);
-      const outputs = taskIds.length
-        ? await this.ctx.model.Output.findAll({ where: { task_id: { [Op.in]: taskIds } } })
-        : [];
-      const outputIds = outputs.map(item => item.id);
-      if (outputIds.length) {
-        await this.ctx.model.EditClip.update(
-          { source_output_id: null },
-          { where: { source_output_id: { [Op.in]: outputIds } } },
-        );
-        await this.ctx.model.ExportSpec.update(
-          { source_output_id: null },
-          { where: { source_output_id: { [Op.in]: outputIds } } },
-        );
-      }
-      for (const task of tasks) await this.ctx.service.generate.removeTask(task.id);
-      await this.ctx.model.Prompt.destroy({ where: { shot_id: { [Op.in]: ids } } });
-      await this.ctx.model.ShotBinding.destroy({ where: { shot_id: { [Op.in]: ids } } });
-      await this.ctx.model.VoiceCue.destroy({ where: { shot_id: { [Op.in]: ids } } });
-      await this.ctx.model.ReviewFinding.destroy({ where: { shot_id: { [Op.in]: ids } } });
-      await this.ctx.model.Shot.destroy({ where: { id: { [Op.in]: ids } } });
-    }
-    if (chapter) await chapter.destroy();
-    return { removed: ids.length, snapshot: chapter ? Number(chapter.id) : null };
+    const removed = await this.destroyShotsByIds(shots.map(item => item.id));
+    if (chapter && !payload?.clear_only) await chapter.destroy();
+    return { removed, snapshot: chapter ? Number(chapter.id) : null };
   }
 
   async disableAsset(projectId, assetId) {
@@ -879,6 +972,147 @@ class ProjectService extends Service {
     }
   }
 
+  scriptOf(chapter) {
+    if (!chapter) return {};
+    const data = chapter.script_data && typeof chapter.script_data === 'object' ? chapter.script_data : {};
+    return {
+      ...data,
+      characters: Array.isArray(data.characters) && data.characters.length ? data.characters : (chapter.characters || []),
+    };
+  }
+
+  assetMarksFor(shot, assets, importById, promptByShot, bindings) {
+    const prompt = promptByShot.get(shot.id);
+    const boundIds = bindings
+      .filter(item => Number(item.shot_id) === Number(shot.id))
+      .map(item => item.asset_id);
+    return auditShot({
+      text: shotText({
+        description: shot.description,
+        dialogue: shot.dialogue,
+        positive_zh: prompt?.positive_zh,
+        negative_zh: prompt?.negative_zh,
+      }),
+      assets,
+      script: this.scriptOf(importById.get(shot.import_id)),
+      boundIds,
+    });
+  }
+
+  async fillMentionedAssets(projectId, shots, assets, importById, promptByShot, bindings) {
+    const boundByShot = new Map();
+    bindings.forEach(item => {
+      const key = Number(item.shot_id);
+      const list = boundByShot.get(key) || [];
+      list.push(Number(item.asset_id));
+      boundByShot.set(key, list);
+    });
+    const creating = [];
+    shots.forEach(shot => {
+      const fields = Array.isArray(shot.overridden_fields) ? shot.overridden_fields : [];
+      if (fields.includes('assets')) return;
+      const prompt = promptByShot.get(shot.id);
+      const text = shotText({
+        description: shot.description,
+        dialogue: shot.dialogue,
+        positive_zh: prompt?.positive_zh,
+        negative_zh: prompt?.negative_zh,
+      });
+      const have = new Set(boundByShot.get(Number(shot.id)) || []);
+      mentionedAssetIds(text, assets).forEach(assetId => {
+        const id = Number(assetId);
+        if (have.has(id)) return;
+        have.add(id);
+        creating.push({
+          project_id: Number(projectId),
+          shot_id: Number(shot.id),
+          asset_id: id,
+          reason: '名称出现在剧情或提示词里',
+        });
+      });
+    });
+    if (!creating.length) return bindings;
+    const rows = await this.ctx.model.ShotBinding.bulkCreate(creating);
+    return bindings.concat(rows);
+  }
+
+  async saveShotAssets(projectId, shotId, payload) {
+    const shot = await this.ctx.model.Shot.findByPk(shotId);
+    if (!shot || String(shot.project_id) !== String(projectId)) this.ctx.throw(404, '分镜不存在');
+    const assets = await this.ctx.model.Asset.findAll({ where: { project_id: projectId } });
+    const allowed = new Set(assets
+      .filter(asset => !asset.disabled && [ 'character', 'scene', 'prop' ].includes(asset.kind))
+      .map(asset => Number(asset.id)));
+    const assetIds = [ ...new Set((Array.isArray(payload.asset_ids) ? payload.asset_ids : [])
+      .map(id => Number(id))
+      .filter(id => id > 0)) ];
+    if (assetIds.some(id => !allowed.has(id))) this.ctx.throw(400, '关联资产不在本项目里');
+    const picks = payload.refmod_files && typeof payload.refmod_files === 'object' && !Array.isArray(payload.refmod_files)
+      ? payload.refmod_files
+      : {};
+    await this.ctx.model.ShotBinding.destroy({ where: { project_id: projectId, shot_id: shot.id } });
+    if (assetIds.length) {
+      await this.ctx.model.ShotBinding.bulkCreate(assetIds.map(assetId => {
+        const files = picks[assetId] ?? picks[String(assetId)];
+        return {
+          project_id: Number(projectId),
+          shot_id: shot.id,
+          asset_id: assetId,
+          reason: '生成表单保存',
+          refmod_files: Array.isArray(files) ? JSON.stringify(files) : null,
+        };
+      }));
+    }
+    if (payload.positive_zh != null || payload.negative_zh != null) {
+      await this.updateShot(shot.id, {
+        positive_zh: payload.positive_zh,
+        negative_zh: payload.negative_zh,
+      });
+    }
+    const fresh = await this.ctx.model.Shot.findByPk(shot.id);
+    const fields = new Set(Array.isArray(fresh.overridden_fields) ? fresh.overridden_fields : []);
+    fields.add('assets');
+    await fresh.update({ overridden_fields: [ ...fields ] });
+    const chapter = fresh.import_id ? await this.ctx.model.Import.findByPk(fresh.import_id) : null;
+    const prompt = await this.ctx.model.Prompt.findOne({ where: { shot_id: fresh.id } });
+    const marks = auditShot({
+      text: shotText({
+        description: payload.description != null ? payload.description : fresh.description,
+        dialogue: payload.dialogue != null ? payload.dialogue : fresh.dialogue,
+        positive_zh: payload.positive_zh != null ? payload.positive_zh : prompt?.positive_zh,
+        negative_zh: payload.negative_zh != null ? payload.negative_zh : prompt?.negative_zh,
+      }),
+      assets,
+      script: this.scriptOf(chapter),
+      boundIds: assetIds,
+    });
+    return { marks, asset_ids: assetIds };
+  }
+
+  async bindMatchedAssets(projectId, shotId, text) {
+    const source = String(text || '');
+    const assets = await this.ctx.model.Asset.findAll({
+      where: { project_id: projectId, disabled: false },
+    });
+    const hits = assets
+      .filter(asset => [ 'character', 'scene', 'prop' ].includes(asset.kind) && asset.name && source.includes(asset.name))
+      .sort((a, b) => String(b.name).length - String(a.name).length);
+    const previous = await this.ctx.model.ShotBinding.findAll({
+      where: { project_id: projectId, shot_id: shotId },
+    });
+    const keptFiles = new Map(previous.map(row => [ Number(row.asset_id), row.refmod_files ]));
+    await this.ctx.model.ShotBinding.destroy({ where: { project_id: projectId, shot_id: shotId } });
+    if (!hits.length) return [];
+    await this.ctx.model.ShotBinding.bulkCreate(hits.map(asset => ({
+      project_id: Number(projectId),
+      shot_id: Number(shotId),
+      asset_id: asset.id,
+      reason: '名称出现在剧情或提示词里',
+      refmod_files: keptFiles.has(Number(asset.id)) ? keptFiles.get(Number(asset.id)) : null,
+    })));
+    return hits.map(asset => asset.id);
+  }
+
   async markRevised(shotId) {
     const tasks = await this.ctx.model.Task.findAll({ where: { shot_id: shotId, status: 'success' } });
     if (!tasks.length) return;
@@ -892,13 +1126,36 @@ class ProjectService extends Service {
     const shot = await this.ctx.model.Shot.findByPk(id);
     if (!shot) this.ctx.throw(404, '分镜不存在');
     const before = shot.toJSON();
+    let durationMs = shot.duration_ms;
+    if (payload.duration_sec != null) {
+      const sec = Number(payload.duration_sec);
+      if (Number.isFinite(sec) && sec > 0) durationMs = Math.round(sec * 1000);
+    } else if (payload.duration_ms != null) {
+      const ms = Number(payload.duration_ms);
+      if (Number.isFinite(ms) && ms > 0) durationMs = Math.round(ms);
+    }
+    const nextShotSize = payload.shot_sizes != null || payload.shot_size != null
+      ? assertShotSizes(payload.shot_sizes != null ? payload.shot_sizes : payload.shot_size)
+      : shot.shot_size;
+    const nextCamera = payload.camera_moves != null || payload.camera_move != null
+      ? assertCameraMoves(payload.camera_moves != null ? payload.camera_moves : payload.camera_move)
+      : shot.camera_move;
+    const workflowId = Number(payload.workflow_id);
+    const nextWorkflow = payload.workflow_id != null
+      ? (Number.isInteger(workflowId) && workflowId > 0 ? workflowId : null)
+      : shot.workflow_id;
     await shot.update({
-      shot_size: payload.shot_size ?? shot.shot_size,
-      camera_move: payload.camera_move ?? shot.camera_move,
+      shot_size: nextShotSize,
+      camera_move: nextCamera,
       description: payload.description ?? shot.description,
       sort_order: payload.sort_order ?? shot.sort_order,
       dialogue: payload.dialogue ?? shot.dialogue,
-      overridden_fields: withOverride(shot, payload),
+      duration_ms: durationMs,
+      workflow_id: nextWorkflow,
+      overridden_fields: withOverride(shot, {
+        ...payload,
+        shot_size: nextShotSize,
+      }),
     });
     if (payload.positive_zh != null || payload.negative_zh != null) {
       const existing = await this.ctx.model.Prompt.findOne({ where: { shot_id: shot.id } });
@@ -915,42 +1172,38 @@ class ProjectService extends Service {
         });
       }
     }
-    const changed = [ 'description', 'shot_size', 'camera_move', 'dialogue' ].some(key => (
-      payload[key] != null && String(payload[key]) !== String(before[key] ?? '')
-    ));
+    const changed = [ 'description', 'shot_size', 'camera_move', 'dialogue' ].some(key => {
+      if (key === 'shot_size') {
+        return nextShotSize != null && String(nextShotSize) !== String(before.shot_size ?? '');
+      }
+      return payload[key] != null && String(payload[key]) !== String(before[key] ?? '');
+    });
     if (changed || payload.positive_zh != null || payload.negative_zh != null) await this.markRevised(shot.id);
     return shot;
   }
 
   async removeShot(id) {
-    const { Op } = this.app.Sequelize;
     const shot = await this.ctx.model.Shot.findByPk(id);
     if (!shot) this.ctx.throw(404, '镜头不存在');
-    const tasks = await this.ctx.model.Task.findAll({ where: { shot_id: shot.id } });
-    const busy = tasks.find(item => [ 'queued', 'running', 'saving' ].includes(item.status));
-    if (busy) this.ctx.throw(400, '该镜头正在生成，等它结束再删除');
-    const taskIds = tasks.map(item => item.id);
-    const outputs = taskIds.length
-      ? await this.ctx.model.Output.findAll({ where: { task_id: { [Op.in]: taskIds } } })
-      : [];
-    const outputIds = outputs.map(item => item.id);
-    if (outputIds.length) {
-      await this.ctx.model.EditClip.update(
-        { source_output_id: null },
-        { where: { source_output_id: { [Op.in]: outputIds } } },
-      );
-      await this.ctx.model.ExportSpec.update(
-        { source_output_id: null },
-        { where: { source_output_id: { [Op.in]: outputIds } } },
-      );
-    }
-    for (const task of tasks) await this.ctx.service.generate.removeTask(task.id);
-    await this.ctx.model.Prompt.destroy({ where: { shot_id: shot.id } });
-    await this.ctx.model.ShotBinding.destroy({ where: { shot_id: shot.id } });
-    await this.ctx.model.VoiceCue.destroy({ where: { shot_id: shot.id } });
-    await this.ctx.model.ReviewFinding.destroy({ where: { shot_id: shot.id } });
-    await shot.destroy();
+    await this.destroyShotsByIds([ shot.id ]);
     return { id: Number(id) };
+  }
+
+  async ensureShotCodes(projectId) {
+    try {
+      const rows = await this.ctx.model.Shot.findAll({
+        where: { project_id: projectId },
+        order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
+      });
+      let cursor = await this.maxShotCodeNum(projectId);
+      for (const row of rows) {
+        if (row.shot_code) continue;
+        cursor += 1;
+        await row.update({ shot_code: `S${String(cursor).padStart(6, '0')}` });
+      }
+    } catch (err) {
+      this.ctx.logger.warn('[cartoon] ensureShotCodes %s', err.message);
+    }
   }
 
   async savePanel(projectId, payload) {

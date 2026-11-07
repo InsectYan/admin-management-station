@@ -24,111 +24,18 @@
         <div class="cartoon-toolbar">
           <el-button v-for="item in customNodes" :key="item.node_key" @click="runCustom(item)">运行{{ item.title }}</el-button>
         </div>
-        <p v-if="customNote" class="cartoon-module__hint">{{ customNote }}</p>
       </section>
-      <ProjectDetailPage v-if="scriptStep" :forced-step="scriptStep" :launch-shot-id="launchShotId" />
-      <section v-else-if="node === 'assets'" class="cartoon-module cartoon-workbench__note">
-        <h3 class="cartoon-module__title">资产</h3>
-        <p class="cartoon-module__hint">图片直接上传，保存后记下访问链接。角色点表格后可以改人物编号；新增时不填编号，保存时由系统生成。道具选择分类。配音登记语种和发音人。字幕样式和转场只记名称和说明。停用后记录还在。RefMod 要先点选已保存的角色、场景或道具，再新增，一份资产一份。</p>
-        <el-form label-position="top" class="cartoon-entry-form" @submit.prevent="createAsset">
-          <div class="cartoon-entry-grid">
-            <el-form-item label="名称"><el-input v-model="assetForm.name" /></el-form-item>
-            <el-form-item label="类型">
-              <el-select v-model="assetForm.kind" style="width: 100%">
-                <el-option label="角色" value="character" />
-                <el-option label="场景" value="scene" />
-                <el-option label="道具" value="prop" />
-                <el-option label="配音" value="voice" />
-                <el-option label="背景音乐" value="bgm" />
-                <el-option label="音效" value="sfx" />
-                <el-option label="字幕样式" value="subtitle_style" />
-                <el-option label="转场" value="transition" />
-              </el-select>
-            </el-form-item>
-            <el-form-item class="is-wide" label="描述">
-              <el-input v-model="assetForm.description" type="textarea" :rows="2" />
-            </el-form-item>
-            <template v-if="assetForm.kind === 'character'">
-              <p class="cartoon-entry-label">角色</p>
-              <el-form-item v-if="editingAssetId" label="人物编号"><el-input v-model="assetForm.character_id" /></el-form-item>
-              <el-form-item label="一致性备注"><el-input v-model="assetForm.consistency_note" /></el-form-item>
-              <el-form-item label="正面图"><AssetImageField v-model="assetForm.front_path" :project-id="projectId" /></el-form-item>
-              <el-form-item label="侧面图"><AssetImageField v-model="assetForm.side_path" :project-id="projectId" /></el-form-item>
-              <el-form-item label="背面图"><AssetImageField v-model="assetForm.back_path" :project-id="projectId" /></el-form-item>
-              <el-form-item class="is-wide" label="参考图">
-                <div class="cartoon-upload-row">
-                  <AssetImageField v-model="assetForm.reference_path" :project-id="projectId" />
-                  <el-button @click="openRefmod">新增refmod</el-button>
-                </div>
-              </el-form-item>
-              <el-form-item label="表情"><el-input v-model="assetForm.expression_note" /></el-form-item>
-              <el-form-item label="服装"><el-input v-model="assetForm.costume_note" /></el-form-item>
-              <el-form-item class="is-wide" label="LoRA 引用"><el-input v-model="assetForm.lora_ref" /></el-form-item>
-            </template>
-            <template v-else-if="assetForm.kind === 'scene'">
-              <p class="cartoon-entry-label">场景</p>
-              <el-form-item label="场景类型">
-                <el-select v-model="assetForm.scene_type" placeholder="选择类型" style="width: 100%">
-                  <el-option v-for="item in sceneTypes" :key="item" :label="item" :value="item" />
-                </el-select>
-              </el-form-item>
-              <el-form-item class="is-wide" label="多角度图片">
-                <div class="cartoon-upload-row">
-                  <AssetImageField v-model="assetForm.angle_paths" :project-id="projectId" multiple />
-                  <el-button @click="openRefmod">新增refmod</el-button>
-                </div>
-              </el-form-item>
-            </template>
-            <template v-else-if="assetForm.kind === 'prop'">
-              <p class="cartoon-entry-label">道具</p>
-              <el-form-item label="道具分类">
-                <el-select v-model="assetForm.prop_category" placeholder="选择分类" style="width: 100%">
-                  <el-option v-for="item in propCategories" :key="item" :label="item" :value="item" />
-                </el-select>
-              </el-form-item>
-              <el-form-item label="RefMod">
-                <el-button @click="openRefmod">新增refmod</el-button>
-              </el-form-item>
-            </template>
-            <template v-else-if="assetForm.kind === 'voice'">
-              <p class="cartoon-entry-label">配音</p>
-              <el-form-item label="音色标识"><el-input v-model="assetForm.voice_key" /></el-form-item>
-              <el-form-item label="语速"><el-input v-model="assetForm.speech_rate" /></el-form-item>
-              <el-form-item label="情绪"><el-input v-model="assetForm.emotion" /></el-form-item>
-              <el-form-item label="语种"><el-input v-model="assetForm.voice_lang" /></el-form-item>
-              <el-form-item label="发音人"><el-input v-model="assetForm.speaker_name" /></el-form-item>
-            </template>
-            <template v-else-if="assetForm.kind === 'bgm' || assetForm.kind === 'sfx'">
-              <el-form-item class="is-wide" label="文件路径"><el-input v-model="assetForm.reference_path" /></el-form-item>
-            </template>
-          </div>
-          <RefModPacks
-            variant="cards"
-            :project-id="projectId"
-            :revision="refmodRevision"
-            :asset-id="editingAssetId"
-            :asset-name="refmodAsset?.name || ''"
-            :asset-kind="refmodAsset?.kind || ''"
-          />
-          <div class="cartoon-entry-actions">
-            <el-button type="primary" @click="createAsset">新增</el-button>
-            <el-button @click="saveAsset">保存</el-button>
-          </div>
-        </el-form>
-        <el-drawer v-model="refmodOpen" title="新增 RefMod" size="520px" append-to-body>
-          <RefModPacks
-            v-if="refmodOpen"
-            :key="editingAssetId"
-            variant="form"
-            :project-id="projectId"
-            :asset-id="editingAssetId"
-            :asset-name="refmodAsset?.name || ''"
-            :asset-kind="refmodAsset?.kind || ''"
-            @changed="refmodRevision += 1"
-          />
-        </el-drawer>
+      <ProjectDetailPage v-if="scriptStep" :forced-step="scriptStep" :nav-target="navTarget" :launch-shot-id="launchShotId" />
+      <section v-else-if="node === 'assets'" class="cartoon-module cartoon-asset-page">
+        <div class="cartoon-asset-head">
+          <h3 class="cartoon-module__title">资产</h3>
+          <el-button type="primary" @click="openAssetCreate">新增</el-button>
+        </div>
+        <p class="cartoon-module__hint">点一行打开编辑。新增会清空表单。角色、场景和道具的 RefMod 就在这个抽屉里，每张图写一句说明。</p>
+        <el-tabs v-model="assetTab" class="cartoon-asset-tabs">
+          <el-tab-pane label="资产清单" name="list">
         <el-empty v-if="!assets.length" description="还没有资产" />
-        <el-table v-else :data="assets" size="small" highlight-current-row class="cartoon-asset-table" @row-click="fillAsset">
+        <el-table v-else :data="assets" size="small" highlight-current-row class="cartoon-asset-table" @row-click="openAssetEdit">
           <el-table-column label="类型" width="80">
             <template #default="{ row }">{{ assetKind(row.kind) }}</template>
           </el-table-column>
@@ -155,45 +62,163 @@
             </template>
           </el-table-column>
         </el-table>
-        <p v-if="staleShots.length" class="cartoon-module__hint">资产已更新，这些镜头已经出过画面，不会自动重跑：{{ staleShots.map(item => item.id).join('、') }}</p>
-        <el-form label-position="top" class="cartoon-entry-form" @submit.prevent="linkShared">
+        <p v-if="staleShots.length" class="cartoon-module__hint">资产已更新，这些镜头已经出过画面，不会自动重跑：{{ staleShots.map(item => item.shot_code || item.id).join('、') }}</p>
+          </el-tab-pane>
+          <el-tab-pane label="镜头绑定" name="bind">
+        <div class="cartoon-toolbar">
+          <el-input v-model="sharedAssetId" placeholder="共享资产编号" style="width: 180px" />
+          <el-button @click="linkShared">引用共享资产</el-button>
+          <el-button @click="matchAssets">同名匹配</el-button>
+          <el-button @click="suggestAssets">请技能建议</el-button>
+          <el-button type="primary" :disabled="!assetSuggestions.length" @click="applyAssets">写入绑定</el-button>
+        </div>
+        <el-table :data="bindingRows" size="small">
+          <el-table-column prop="shot_code" label="镜头" width="120" />
+          <el-table-column prop="asset_name" label="资产名称" width="160" />
+          <el-table-column prop="asset_kind" label="类型" width="90" />
+          <el-table-column prop="reason" label="原因" />
+        </el-table>
+        <el-table v-if="suggestionRows.length" :data="suggestionRows" size="small">
+          <el-table-column prop="shot_code" label="镜头" width="120" />
+          <el-table-column prop="asset_name" label="资产名称" width="160" />
+          <el-table-column prop="reason" label="原因" />
+        </el-table>
+          </el-tab-pane>
+        </el-tabs>
+        <el-drawer v-model="assetDrawerOpen" :title="editingAssetId ? '编辑资产' : '新增资产'" size="640px" append-to-body>
+        <el-form label-position="top" class="cartoon-entry-form" @submit.prevent="editingAssetId ? saveAsset() : createAsset()">
           <div class="cartoon-entry-grid">
-            <el-form-item label="共享资产编号"><el-input v-model="sharedAssetId" /></el-form-item>
+            <el-form-item label="名称"><el-input v-model="assetForm.name" /></el-form-item>
+            <el-form-item label="类型">
+              <el-select v-model="assetForm.kind" style="width: 100%">
+                <el-option label="角色" value="character" />
+                <el-option label="场景" value="scene" />
+                <el-option label="道具" value="prop" />
+                <el-option label="配音" value="voice" />
+                <el-option label="背景音乐" value="bgm" />
+                <el-option label="音效" value="sfx" />
+                <el-option label="字幕样式" value="subtitle_style" />
+                <el-option label="转场" value="transition" />
+              </el-select>
+            </el-form-item>
+            <el-form-item class="is-wide" label="描述">
+              <el-input v-model="assetForm.description" type="textarea" :rows="2" />
+            </el-form-item>
+            <template v-if="assetForm.kind === 'character'">
+              <p class="cartoon-entry-label">角色</p>
+              <el-form-item v-if="editingAssetId" label="人物编号"><el-input v-model="assetForm.character_id" /></el-form-item>
+              <el-form-item label="一致性备注"><el-input v-model="assetForm.consistency_note" /></el-form-item>
+              <el-form-item label="正面图"><AssetImageField v-model="assetForm.front_path" :project-id="projectId" /></el-form-item>
+              <el-form-item label="侧面图"><AssetImageField v-model="assetForm.side_path" :project-id="projectId" /></el-form-item>
+              <el-form-item label="背面图"><AssetImageField v-model="assetForm.back_path" :project-id="projectId" /></el-form-item>
+              <el-form-item class="is-wide" label="参考图">
+                <AssetImageField v-model="assetForm.reference_path" :project-id="projectId" />
+              </el-form-item>
+              <el-form-item label="表情"><el-input v-model="assetForm.expression_note" /></el-form-item>
+              <el-form-item label="服装"><el-input v-model="assetForm.costume_note" /></el-form-item>
+              <el-form-item class="is-wide" label="LoRA 引用"><el-input v-model="assetForm.lora_ref" /></el-form-item>
+            </template>
+            <template v-else-if="assetForm.kind === 'scene'">
+              <p class="cartoon-entry-label">场景</p>
+              <el-form-item label="场景类型">
+                <el-select v-model="assetForm.scene_type" placeholder="选择类型" style="width: 100%">
+                  <el-option v-for="item in sceneTypes" :key="item" :label="item" :value="item" />
+                </el-select>
+              </el-form-item>
+              <el-form-item class="is-wide" label="多角度图片">
+                <AssetImageField v-model="assetForm.angle_paths" :project-id="projectId" multiple />
+              </el-form-item>
+            </template>
+            <template v-else-if="assetForm.kind === 'prop'">
+              <p class="cartoon-entry-label">道具</p>
+              <el-form-item label="道具分类">
+                <el-select v-model="assetForm.prop_category" placeholder="选择分类" style="width: 100%">
+                  <el-option v-for="item in propCategories" :key="item" :label="item" :value="item" />
+                </el-select>
+              </el-form-item>
+            </template>
+            <template v-else-if="assetForm.kind === 'voice'">
+              <p class="cartoon-entry-label">配音</p>
+              <el-form-item label="音色标识"><el-input v-model="assetForm.voice_key" /></el-form-item>
+              <el-form-item label="语速"><el-input v-model="assetForm.speech_rate" /></el-form-item>
+              <el-form-item label="情绪"><el-input v-model="assetForm.emotion" /></el-form-item>
+              <el-form-item label="语种"><el-input v-model="assetForm.voice_lang" /></el-form-item>
+              <el-form-item label="发音人"><el-input v-model="assetForm.speaker_name" /></el-form-item>
+            </template>
+            <template v-else-if="assetForm.kind === 'bgm' || assetForm.kind === 'sfx'">
+              <el-form-item class="is-wide" label="文件路径"><el-input v-model="assetForm.reference_path" /></el-form-item>
+            </template>
           </div>
+          <el-form-item v-if="[ 'character', 'scene', 'prop' ].includes(assetForm.kind)" class="is-wide" label="RefMod 图集">
+            <RefModPacks
+              ref="refmodEditor"
+              variant="editor"
+              :project-id="projectId"
+              :asset-id="editingAssetId"
+              :asset-name="assetForm.name"
+              :asset-kind="assetForm.kind"
+            />
+          </el-form-item>
           <div class="cartoon-entry-actions">
-            <el-button @click="linkShared">引用共享资产</el-button>
-            <el-button @click="matchAssets">同名匹配</el-button>
-            <el-button @click="suggestAssets">请技能建议</el-button>
-            <el-button type="primary" :disabled="!assetSuggestions.length" @click="applyAssets">写入绑定</el-button>
+            <el-button v-if="!editingAssetId" type="primary" @click="createAsset">创建</el-button>
+            <el-button v-else type="primary" @click="saveAsset">保存</el-button>
           </div>
         </el-form>
-        <p v-if="actionNote" class="cartoon-module__hint">{{ actionNote }}</p>
-        <el-table v-if="assetSuggestions.length" :data="assetSuggestions" size="small">
-          <el-table-column prop="shot_id" label="镜头" width="80" />
-          <el-table-column prop="asset_id" label="资产" width="80" />
-          <el-table-column prop="reason" label="原因" />
-        </el-table>
-        <el-table v-if="bindings.length" :data="bindings" size="small">
-          <el-table-column prop="shot_id" label="已绑定镜头" width="120" />
-          <el-table-column prop="asset_id" label="资产" width="80" />
-          <el-table-column prop="reason" label="原因" />
-        </el-table>
+        </el-drawer>
       </section>
-      <section v-else-if="node === 'voice'" class="cartoon-module cartoon-workbench__note">
-        <h3 class="cartoon-module__title">配音</h3>
-        <p class="cartoon-module__hint">需要已登记音色，并且配音节点和档位都已启用。建议先出现在这里，确认后才写入时间轴。</p>
-        <div class="cartoon-toolbar">
-          <el-button @click="suggestVoice">请技能建议</el-button>
-          <el-checkbox v-model="requestAudio">档位能出音频时再生成</el-checkbox>
-          <el-button type="primary" :disabled="!voiceSuggestions.length" @click="applyVoice">写入时间轴</el-button>
+      <section v-else-if="node === 'voice'" class="cartoon-module cartoon-voice-page">
+        <div class="cartoon-asset-head">
+          <h3 class="cartoon-module__title">配音</h3>
+          <el-button type="primary" :disabled="!selectedVoice || !voiceShotIds.length" @click="assignLibraryVoice">用这个音色配音</el-button>
         </div>
-        <p v-if="actionNote" class="cartoon-module__hint">{{ actionNote }}</p>
-        <el-table v-if="voiceSuggestions.length" :data="voiceSuggestions" size="small">
-          <el-table-column prop="shot_id" label="镜头" width="80" />
-          <el-table-column prop="text" label="台词" />
-          <el-table-column prop="start_ms" label="开始" width="80" />
-          <el-table-column prop="end_ms" label="结束" width="80" />
-        </el-table>
+        <p class="cartoon-module__hint">先在音色库里试听，选定一条后勾选有台词的镜头。配音会把这条音色登记到项目，并写上这些镜头的时间轴。试听播放的是样本，不是这条台词的成片。</p>
+        <p v-if="voiceSkipped.length" class="cartoon-module__hint">这些分组的文件名过长，读不到：{{ voiceSkipped.join('、') }}</p>
+        <div class="cartoon-voice">
+          <div class="cartoon-voice__library">
+            <div class="cartoon-toolbar">
+              <el-input v-model="voiceQuery" clearable placeholder="搜索音色" style="width: 180px" />
+              <el-select v-model="voiceFolder" clearable placeholder="全部分组" style="width: 180px">
+                <el-option v-for="folder in voiceFolders" :key="folder" :label="folder" :value="folder" />
+              </el-select>
+            </div>
+            <el-table
+              :data="voicePageRows"
+              size="small"
+              highlight-current-row
+              class="cartoon-voice-table"
+              @row-click="selectLibraryVoice"
+            >
+              <el-table-column prop="name" label="音色" min-width="140" />
+              <el-table-column prop="folder" label="分组" width="140" show-overflow-tooltip />
+              <el-table-column label="" width="72">
+                <template #default="{ row }">
+                  <el-button link type="primary" @click.stop="previewLibraryVoice(row)">试听</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <el-pagination
+              v-model:current-page="voicePage"
+              class="cartoon-pager"
+              :page-size="10"
+              :total="voiceFiltered.length"
+              layout="total, prev, pager, next"
+            />
+            <audio ref="voiceAudio" class="cartoon-voice-player" controls></audio>
+            <p v-if="selectedVoice" class="cartoon-module__hint">已选 {{ selectedVoice.folder }} / {{ selectedVoice.name }}</p>
+          </div>
+          <div class="cartoon-voice__shots">
+            <el-table :data="spokenShots" size="small" @selection-change="voiceShotIds = $event.map(item => item.id)">
+              <el-table-column type="selection" width="42" />
+              <el-table-column prop="shot_code" label="镜头" width="110" />
+              <el-table-column label="台词" min-width="180">
+                <template #default="{ row }"><ClampText title="台词" :text="row.dialogue || ''" /></template>
+              </el-table-column>
+              <el-table-column label="当前音色" width="140">
+                <template #default="{ row }">{{ voiceNameOf(row.id) }}</template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </div>
       </section>
       <section v-else-if="node === 'subtitle'" class="cartoon-module cartoon-workbench__note">
         <h3 class="cartoon-module__title">字幕</h3>
@@ -201,7 +226,6 @@
         <div class="cartoon-toolbar">
           <el-button type="primary" @click="buildSubtitles">按台词排时间轴</el-button>
         </div>
-        <p v-if="actionNote" class="cartoon-module__hint">{{ actionNote }}</p>
       </section>
       <section v-else-if="node === 'review'" class="cartoon-module cartoon-workbench__note">
         <h3 class="cartoon-module__title">AI 初审</h3>
@@ -210,7 +234,6 @@
           <el-button @click="suggestReview">请技能建议</el-button>
           <el-button type="primary" :disabled="!reviewSuggestions.length" @click="applyReview">记下问题</el-button>
         </div>
-        <p v-if="actionNote" class="cartoon-module__hint">{{ actionNote }}</p>
         <el-table v-if="findings.length" :data="findings" size="small">
           <el-table-column prop="level" label="级别" width="90" />
           <el-table-column prop="message" label="问题" />
@@ -223,13 +246,32 @@
           <el-empty v-if="!shots.length" description="还没有镜头">
             <el-button type="primary" @click="selectNode('storyboard')">去镜头</el-button>
           </el-empty>
-          <el-table v-else :data="shots" @row-click="pickShot">
-            <el-table-column label="镜头" min-width="220">
-              <template #default="{ row }">{{ row.description || `镜头 ${row.id}` }}</template>
+          <el-table v-else class="cartoon-preview-table" :data="previewPageRows" @row-click="pickShot">
+            <el-table-column prop="shot_code" label="镜头" width="130" />
+            <el-table-column prop="chapter_title" label="章节" width="220" show-overflow-tooltip />
+            <el-table-column label="描述" width="560">
+              <template #default="{ row }"><ClampText title="描述" :text="row.description || ''" /></template>
             </el-table-column>
-            <el-table-column prop="shot_size" label="景别" width="100" />
-            <el-table-column prop="camera_move" label="运镜" width="100" />
+            <el-table-column label="景别" width="160">
+              <template #default="{ row }">{{ (row.shot_sizes || []).join('、') || row.shot_size || '—' }}</template>
+            </el-table-column>
+            <el-table-column label="运镜" width="180">
+              <template #default="{ row }">{{ (row.camera_moves || []).join('、') || row.camera_move || '—' }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="140" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="primary" @click.stop="pickShot(row)">查看产物</el-button>
+              </template>
+            </el-table-column>
           </el-table>
+          <el-pagination
+            v-if="previewShots.length"
+            v-model:current-page="previewPage"
+            class="cartoon-pager"
+            :page-size="10"
+            :total="previewShots.length"
+            layout="total, prev, pager, next"
+          />
         </section>
         <ShotOutputsPage v-if="shotQuery" :key="`preview-${shotQuery}`" />
       </template>
@@ -253,14 +295,15 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessageBox } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import ProjectDetailPage from './ProjectDetailPage.vue';
+import ClampText from '../components/ClampText.vue';
 import ShotOutputsPage from './ShotOutputsPage.vue';
 import ProjectEditPage from './ProjectEditPage.vue';
 import ExportSpecs from '../components/ExportSpecs.vue';
 import RefModPacks from '../components/RefModPacks.vue';
 import AssetImageField from '../components/AssetImageField.vue';
-import { request } from '../services/apiConfig.js';
+import { request, resolveApiBase } from '../services/apiConfig.js';
 import { isLocalType, typeLabel } from '../lib/contentTypes.js';
 import { styleDisplayLabel } from '../utils/visualStyles.js';
 
@@ -289,18 +332,21 @@ const error = ref('');
 const sceneTypes = [ '室内', '室外', '城市', '自然', '古风', '品牌' ];
 const propCategories = [ '服饰', '器物', '食物', '文书', '交通', '其他' ];
 const editingAssetId = ref(null);
-const refmodOpen = ref(false);
-const refmodRevision = ref(0);
-const refmodAsset = computed(() => assets.value.find(item => item.id === editingAssetId.value) || null);
-function openRefmod() {
-  if (!refmodAsset.value || ![ 'character', 'scene', 'prop' ].includes(refmodAsset.value.kind)) {
-    actionNote.value = '先在表格里点选已保存的角色、场景或道具，再新增 RefMod';
-    return;
-  }
-  actionNote.value = '';
-  refmodOpen.value = true;
-}
+const assetDrawerOpen = ref(false);
+const assetTab = ref('list');
+const voiceRows = ref([]);
+const voiceSkipped = ref([]);
+const voiceFolders = ref([]);
+const voiceQuery = ref('');
+const voiceFolder = ref('');
+const voicePage = ref(1);
+const selectedVoice = ref(null);
+const voicePreviewUrl = ref('');
+const voiceAudio = ref(null);
+const voiceShotIds = ref([]);
+const refmodEditor = ref(null);
 const launchShotId = ref('');
+const navTarget = ref('');
 const assetForm = reactive({
   name: '', kind: 'character', description: '', reference_path: '', character_id: '', voice_key: '', speech_rate: '', emotion: '',
   consistency_note: '', scene_type: '', front_path: '', side_path: '', back_path: '', expression_note: '', costume_note: '', lora_ref: '',
@@ -308,14 +354,45 @@ const assetForm = reactive({
 });
 const assets = computed(() => bundle.value?.assets || []);
 const bindings = computed(() => bundle.value?.bindings || []);
+const bindingRows = computed(() => bindings.value.map(item => {
+  const asset = assets.value.find(row => String(row.id) === String(item.asset_id));
+  const shot = shots.value.find(row => String(row.id) === String(item.shot_id));
+  return {
+    ...item,
+    asset_name: asset?.name || '未找到资产',
+    asset_kind: assetKind(asset?.kind),
+    shot_code: shot?.shot_code || item.shot_id,
+    reason: item.reason || '',
+  };
+}));
+const suggestionRows = computed(() => assetSuggestions.value.map(item => {
+  const asset = assets.value.find(row => String(row.id) === String(item.asset_id));
+  const shot = shots.value.find(row => String(row.id) === String(item.shot_id));
+  return {
+    ...item,
+    asset_name: asset?.name || item.asset_id,
+    shot_code: shot?.shot_code || item.shot_id,
+  };
+}));
+const voiceFiltered = computed(() => voiceRows.value.filter(item => {
+  if (voiceFolder.value && item.folder !== voiceFolder.value) return false;
+  const keyword = voiceQuery.value.trim();
+  return !keyword || item.name.includes(keyword);
+}));
+const voicePageRows = computed(() => voiceFiltered.value.slice((voicePage.value - 1) * 10, voicePage.value * 10));
+const spokenShots = computed(() => shots.value.filter(item => String(item.dialogue || '').trim()));
+function voiceNameOf(shotId) {
+  const cue = (bundle.value?.voice_cues || []).find(item => String(item.shot_id) === String(shotId));
+  if (!cue) return '—';
+  const asset = assets.value.find(item => item.kind === 'voice' && item.voice_key === cue.voice_key);
+  return asset?.name || cue.voice_key;
+}
 const staleShots = computed(() => (bundle.value?.shots || []).filter(item => item.asset_stale));
 const findings = computed(() => bundle.value?.review_findings || []);
 const assetSuggestions = ref([]);
 const voiceSuggestions = ref([]);
 const reviewSuggestions = ref([]);
-const actionNote = ref('');
 const customNodes = ref([]);
-const customNote = ref('');
 const sharedAssetId = ref('');
 const requestAudio = ref(false);
 const nodeTitle = computed(() => nodes.find(item => item.id === node.value)?.title || '');
@@ -328,6 +405,22 @@ const node = computed(() => {
 });
 const scriptStep = computed(() => stepByNode[node.value] || 0);
 const shotQuery = computed(() => String(route.query.shot || ''));
+const previewShots = computed(() => {
+  const imports = bundle.value?.imports || [];
+  return shots.value.map(item => {
+    const chapter = imports.find(row => String(row.id) === String(item.import_id));
+    return {
+      ...item,
+      chapter_title: chapter?.chapter_title || (item.import_id ? '未命名章节' : '未关联快照'),
+    };
+  });
+});
+const previewPage = ref(1);
+const previewPageRows = computed(() => previewShots.value.slice((previewPage.value - 1) * 10, previewPage.value * 10));
+watch(previewShots, (rows) => {
+  const max = Math.max(1, Math.ceil(rows.length / 10));
+  if (previewPage.value > max) previewPage.value = max;
+});
 const episodeTitle = computed(() => episode.value?.title || '第1集');
 const typeName = computed(() => typeLabel(project.value?.content_type));
 const styleLabel = computed(() => styleDisplayLabel(styles.value, project.value?.visual_style));
@@ -343,14 +436,18 @@ function assetKind(kind) {
   return { character: '角色', scene: '场景', prop: '道具', voice: '配音', bgm: '背景音乐', sfx: '音效', subtitle_style: '字幕样式', transition: '转场' }[kind] || kind;
 }
 async function runCustom(item) {
-  customNote.value = '';
   try {
     const data = await request(`/projects/${projectId.value}/nodes/${item.node_key}/run`, { method: 'post', data: {} });
     const count = data?.findings?.length || 0;
-    customNote.value = data?.warning || data?.note || (count ? `记下 ${count} 条问题` : '这项检查没有发现问题');
-    if (data?.warning) await load();
+    const text = data?.warning || data?.note || (count ? `记下 ${count} 条问题` : '这项检查没有发现问题');
+    if (data?.warning) {
+      ElMessage.warning(text);
+      await load();
+    } else {
+      ElMessage.success(text);
+    }
   } catch (err) {
-    customNote.value = err.message;
+    ElMessage.error(err.message);
   }
 }
 async function linkShared() {
@@ -360,7 +457,7 @@ async function linkShared() {
       data: { library_asset_id: Number(sharedAssetId.value) },
     });
     sharedAssetId.value = '';
-    actionNote.value = '已引用共享资产';
+    ElMessage.success('已引用共享资产');
   });
 }
 function nodeMark(id) {
@@ -410,6 +507,15 @@ function assetPayload(includeCharacterId) {
     voice_lang: assetForm.voice_lang,
     speaker_name: assetForm.speaker_name,
   };
+}
+function openAssetCreate() {
+  resetAssetForm();
+  assetDrawerOpen.value = true;
+}
+function openAssetEdit(row) {
+  resetAssetForm();
+  fillAsset(row);
+  assetDrawerOpen.value = true;
 }
 function resetAssetForm() {
   editingAssetId.value = null;
@@ -461,16 +567,18 @@ async function createAsset() {
   if (!assetForm.name.trim()) return;
   try {
     const created = await request(`/projects/${projectId.value}/assets`, { method: 'post', data: assetPayload(false) });
+    if (created?.id) await refmodEditor.value?.flush?.(created.id);
+    assetDrawerOpen.value = false;
     resetAssetForm();
     await load();
-    actionNote.value = created?.character_id ? `已新增，人物编号 ${created.character_id}` : '已新增';
+    ElMessage.success(created?.character_id ? `已新增，人物编号 ${created.character_id}` : '已新增');
   } catch (err) {
-    actionNote.value = err.message || '没有新增';
+    ElMessage.error(err.message || '没有新增');
   }
 }
 async function saveAsset() {
   if (!editingAssetId.value) {
-    actionNote.value = '先点一条资产，再保存修改';
+    ElMessage.warning('先点一条资产，再保存修改');
     return;
   }
   if (!assetForm.name.trim()) return;
@@ -480,46 +588,81 @@ async function saveAsset() {
       data: assetPayload(true),
     });
     if (saved?.character_id) assetForm.character_id = saved.character_id;
+    await refmodEditor.value?.flush?.(editingAssetId.value);
+    assetDrawerOpen.value = false;
     await load();
-    actionNote.value = '资产已保存';
+    ElMessage.success('资产已保存');
   } catch (err) {
-    actionNote.value = err.message || '没有保存';
+    ElMessage.error(err.message || '没有保存');
   }
 }
 async function runAction(work) {
-  actionNote.value = '';
   try {
     await work();
     await load();
   } catch (err) {
-    actionNote.value = err.message || '没有完成';
+    ElMessage.error(err.message || '没有完成');
   }
 }
 async function matchAssets() {
   await runAction(async () => {
     await request(`/projects/${projectId.value}/assets/match`, { method: 'post' });
-    actionNote.value = '已按名称写入绑定';
+    ElMessage.success('已按名称写入绑定');
   });
 }
 async function suggestAssets() {
   await runAction(async () => {
     const data = await request(`/projects/${projectId.value}/assets/suggest`, { method: 'post' });
     assetSuggestions.value = data?.suggestions || [];
-    actionNote.value = assetSuggestions.value.length ? '建议还没有写入' : '没有可绑定的资产';
+    if (assetSuggestions.value.length) ElMessage.info('建议还没有写入');
+    else ElMessage.warning('没有可绑定的资产');
   });
 }
 async function applyAssets() {
   await runAction(async () => {
     await request(`/projects/${projectId.value}/assets/apply`, { method: 'post', data: { suggestions: assetSuggestions.value } });
     assetSuggestions.value = [];
-    actionNote.value = '绑定已写入';
+    ElMessage.success('绑定已写入');
+  });
+}
+async function loadVoiceLibrary() {
+  try {
+    const data = await request('/voice-library');
+    voiceRows.value = data?.rows || [];
+    voiceFolders.value = data?.folders || [];
+    voiceSkipped.value = data?.skipped || [];
+  } catch (err) {
+    voiceRows.value = [];
+    voiceFolders.value = [];
+    voiceSkipped.value = [];
+    ElMessage.error(err.message || '音色库没有打开');
+  }
+}
+function selectLibraryVoice(row) {
+  selectedVoice.value = row;
+}
+function previewLibraryVoice(row) {
+  selectedVoice.value = row;
+  const audio = voiceAudio.value;
+  if (!audio) return;
+  audio.src = `${resolveApiBase()}/voice-library/file?id=${encodeURIComponent(row.id)}`;
+  audio.play().catch(() => {});
+}
+async function assignLibraryVoice() {
+  if (!selectedVoice.value || !voiceShotIds.value.length) return;
+  await runAction(async () => {
+    await request(`/projects/${projectId.value}/voice/library-assign`, {
+      method: 'post',
+      data: { voice_id: selectedVoice.value.id, shot_ids: voiceShotIds.value },
+    });
+    ElMessage.success(`已用「${selectedVoice.value.name}」给 ${voiceShotIds.value.length} 条镜头配音`);
   });
 }
 async function suggestVoice() {
   await runAction(async () => {
     const data = await request(`/projects/${projectId.value}/voice/suggest`, { method: 'post' });
     voiceSuggestions.value = data?.cues || [];
-    actionNote.value = '时间轴还没有写入';
+    ElMessage.info('时间轴还没有写入');
   });
 }
 async function applyVoice() {
@@ -529,32 +672,37 @@ async function applyVoice() {
       data: { cues: voiceSuggestions.value, request_audio: requestAudio.value },
     });
     voiceSuggestions.value = [];
-    actionNote.value = data?.audio_note || '时间轴已写入';
+    ElMessage.success(data?.audio_note || '时间轴已写入');
   });
 }
 async function buildSubtitles() {
   await runAction(async () => {
     const data = await request(`/projects/${projectId.value}/subtitles/build`, { method: 'post' });
-    actionNote.value = data?.style ? `已按「${data.style}」排好字幕` : '已按台词排好字幕';
+    ElMessage.success(data?.style ? `已按「${data.style}」排好字幕` : '已按台词排好字幕');
   });
 }
 async function suggestReview() {
   await runAction(async () => {
     const data = await request(`/projects/${projectId.value}/review-findings/suggest`, { method: 'post' });
     reviewSuggestions.value = data?.issues || [];
-    actionNote.value = '问题还没有记下';
+    ElMessage.info('问题还没有记下');
   });
 }
 async function applyReview() {
   await runAction(async () => {
     await request(`/projects/${projectId.value}/review-findings/apply`, { method: 'post', data: { issues: reviewSuggestions.value } });
     reviewSuggestions.value = [];
-    actionNote.value = '问题已记下';
+    ElMessage.success('问题已记下');
   });
 }
 async function disableAsset(row) {
-  await request(`/projects/${projectId.value}/assets/${row.id}/disable`, { method: 'post' });
-  await load();
+  try {
+    await request(`/projects/${projectId.value}/assets/${row.id}/disable`, { method: 'post' });
+    await load();
+    ElMessage.success('已停用');
+  } catch (err) {
+    ElMessage.error(err.message || '没有停用');
+  }
 }
 async function removeAsset(row) {
   try {
@@ -570,15 +718,15 @@ async function removeAsset(row) {
     await request(`/projects/${projectId.value}/assets/${row.id}`, { method: 'delete' });
     if (editingAssetId.value === row.id) {
       resetAssetForm();
-      refmodOpen.value = false;
     }
-    actionNote.value = '已删除资产和对应的 RefMod、图片';
+    ElMessage.success('已删除资产和对应的 RefMod、图片');
     await load();
   } catch (err) {
-    actionNote.value = err.message || '没有删除';
+    ElMessage.error(err.message || '没有删除');
   }
 }
 function selectNode(id) {
+  navTarget.value = `${id}:${Date.now()}`;
   const query = { node: id };
   if (id === 'preview' && route.query.shot) query.shot = String(route.query.shot);
   router.replace({ query });
@@ -642,14 +790,23 @@ watch(() => route.query.node, (value) => {
   }
 }, { immediate: true });
 watch(node, (value) => {
-  actionNote.value = '';
   persistNode(value);
+  if (value === 'voice' && !voiceRows.value.length) loadVoiceLibrary();
+});
+watch([ voiceQuery, voiceFolder ], () => {
+  voicePage.value = 1;
 });
 watch(() => route.params.taskId, () => {
-  load().catch((err) => { error.value = err.message || '打不开工作台'; });
+  load().catch((err) => {
+    error.value = err.message || '打不开工作台';
+    ElMessage.error(error.value);
+  });
 });
 onMounted(() => {
-  load().catch((err) => { error.value = err.message || '打不开工作台'; });
+  load().catch((err) => {
+    error.value = err.message || '打不开工作台';
+    ElMessage.error(error.value);
+  });
 });
 </script>
 
@@ -743,10 +900,93 @@ onMounted(() => {
   border-radius: 2px;
   background: #2f8a5b;
 }
-.cartoon-workbench__main { min-width: 0; min-height: 0; overflow: auto; }
+.cartoon-workbench__main {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.cartoon-workbench__main > .cartoon-page {
+  flex: 1 1 0;
+  min-height: 0;
+}
+.cartoon-workbench__main > .cartoon-workbench__note:not(:has(.el-table)) {
+  flex: 0 0 auto;
+  max-height: 30%;
+  overflow: auto;
+}
+.cartoon-workbench__main > .cartoon-module:has(.el-table) {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+.cartoon-workbench__main > .cartoon-module:has(.el-table) > .el-table {
+  flex: 1 1 0;
+  min-height: 120px;
+}
+.cartoon-workbench__main > .cartoon-module:has(.el-table) > .cartoon-entry-form {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 42%;
+  overflow: auto;
+}
 .cartoon-upload-row { display: flex; gap: 12px; align-items: flex-start; }
 .cartoon-upload-row > .el-button { flex: none; }
+.cartoon-asset-page,
+.cartoon-voice-page {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  margin: 12px 16px;
+}
+.cartoon-asset-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cartoon-asset-head .cartoon-module__title { margin: 0; }
+.cartoon-asset-page :deep(.el-tabs) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.cartoon-asset-page :deep(.el-tabs__content) {
+  flex: 1;
+  min-height: 0;
+}
+.cartoon-asset-page :deep(.el-tab-pane) {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.cartoon-voice {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 16px;
+}
+.cartoon-voice__library,
+.cartoon-voice__shots {
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.cartoon-voice-player { width: 100%; margin-top: 8px; }
 .cartoon-asset-table { cursor: pointer; }
+.cartoon-preview-table { width: 100%; }
+.cartoon-pager { margin-top: 12px; justify-content: flex-end; }
+.cartoon-preview-table :deep(.el-table__row),
+.cartoon-preview-table :deep(.el-button) { cursor: pointer; }
 .cartoon-workbench__note { margin: 16px 20px 0; }
-.cartoon-workbench__main :deep(.cartoon-page) { padding-top: 12px; }
 </style>

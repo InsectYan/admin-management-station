@@ -66,5 +66,8 @@ module.exports = appInfo => {
     ffmpeg: process.env.CARTOON_FFMPEG_BIN || 'ffmpeg',
     ffprobe: process.env.CARTOON_FFPROBE_BIN || 'ffprobe',
   };
+  config.voiceLibrary = {
+    dir: process.env.VOICE_LIBRARY_DIR || 'F:\\热门漫剧音色',
+  };
   return config;
 };

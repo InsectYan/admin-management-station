@@ -5,6 +5,7 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
 import { request } from '../services/apiConfig.js';
 
 const route = useRoute();
@@ -24,6 +25,7 @@ onMounted(async () => {
     await router.replace({ path: `/projects/${route.params.id}/tasks/${episode.id}`, query });
   } catch (err) {
     error.value = err.message || '打不开工作台';
+    ElMessage.error(error.value);
   }
 });
 </script>

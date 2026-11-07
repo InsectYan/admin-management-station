@@ -1,0 +1,1 @@
+ALTER TABLE cartoon_shots ADD COLUMN IF NOT EXISTS workflow_id INTEGER;

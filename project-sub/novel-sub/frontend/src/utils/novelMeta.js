@@ -11,6 +11,15 @@ export const PROGRESS_OPTIONS = [
   { value: 'completed', label: '已完结' },
 ];
 
+export const SOURCE_KIND_OPTIONS = [
+  { value: 'original', label: '原创' },
+  { value: 'imported', label: '导入' },
+];
+
+export function sourceKindLabel(kind) {
+  return SOURCE_KIND_OPTIONS.find((o) => o.value === kind)?.label || (kind === 'imported' ? '导入' : '原创');
+}
+
 export const TARGET_AUDIENCE_OPTIONS = [
   '青少年', '成人', '全年龄',
 ];
@@ -38,6 +47,7 @@ export function coverFallback(title) {
 
 export const TABLE_COLUMNS = [
   { key: 'title', label: '小说名称', defaultVisible: true, minWidth: 200 },
+  { key: 'source_kind', label: '来源', defaultVisible: true, width: 90 },
   { key: 'genre', label: '小说类型', defaultVisible: true, width: 140 },
   { key: 'novel_type', label: '篇幅', defaultVisible: true, width: 90 },
   { key: 'health_score', label: '健康度', defaultVisible: true, width: 110 },

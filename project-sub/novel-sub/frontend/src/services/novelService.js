@@ -34,6 +34,11 @@ export function createNovel(payload) {
   return request('/novels', { method: 'POST', data: payload });
 }
 
+/** TXT 导入：正文 + 可选文件名/标题/作者；服务端按「第X章/楔子」拆章 */
+export function importNovelTxt(payload) {
+  return request('/novels/import-txt', { method: 'POST', data: payload, timeout: 300000 });
+}
+
 export function fetchStoryTemplates() {
   return request('/story-templates');
 }

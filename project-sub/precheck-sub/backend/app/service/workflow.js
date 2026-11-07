@@ -6,10 +6,12 @@ const { buildSupplies } = require('../lib/supplyCatalog');
 const { H3_TEMPLATES } = require('../lib/h3Templates');
 const { ZIMAGE_TEMPLATES } = require('../lib/zImageTemplates');
 const { QWEN21_TEMPLATES } = require('../lib/qwen21Templates');
+const { QWEN_EDIT_TEMPLATES } = require('../lib/qwenEditTemplates');
+const { IMAGE_CATALOG_TEMPLATES } = require('../lib/imageCatalogTemplates');
 
 class WorkflowService extends Service {
   async ensureTemplates() {
-    for (const item of [ ...H3_TEMPLATES, ...ZIMAGE_TEMPLATES, ...QWEN21_TEMPLATES ]) {
+    for (const item of [ ...H3_TEMPLATES, ...ZIMAGE_TEMPLATES, ...QWEN21_TEMPLATES, ...QWEN_EDIT_TEMPLATES, ...IMAGE_CATALOG_TEMPLATES ]) {
       const parsed = parseApiWorkflow(item.api_json);
       const existing = await this.ctx.model.Workflow.findOne({ where: { name: item.name } });
       const fields = {

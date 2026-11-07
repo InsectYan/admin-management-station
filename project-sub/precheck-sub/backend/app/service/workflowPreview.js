@@ -54,9 +54,13 @@ function sampleNode(nodes) {
   return chosen || null;
 }
 
-function socketText(data) {
+async function socketText(data) {
   if (typeof data === 'string') return data;
+  if (typeof Blob !== 'undefined' && data instanceof Blob) {
+    try { return await data.text(); } catch { return ''; }
+  }
   if (Buffer.isBuffer(data)) return data.toString('utf8');
+  if (data instanceof ArrayBuffer) return Buffer.from(data).toString('utf8');
   return '';
 }
 
@@ -165,15 +169,18 @@ class WorkflowPreviewService extends Service {
     const names = {};
     for (const slot of call.images) {
       const existing = apiJson[slot.node_id]?.inputs?.image;
-      if (slot.role === 'reference' && typeof existing === 'string' && existing) continue;
       const file = byId.get(slot.id);
       const payload = file?.data_base64 || file?.data;
-      if (!payload) {
-        const error = new Error(`需要上传${slot.label}`);
-        error.status = 400;
-        throw error;
+      if (payload) {
+        names[slot.id] = await this.uploadImage({ ...file, data_base64: payload }, `slot-${slot.node_id}`);
+        continue;
       }
-      names[slot.id] = await this.uploadImage({ ...file, data_base64: payload }, `slot-${slot.node_id}`);
+      const base = String(existing || '').split(/[/\\]/).pop();
+      const placeholder = !base || [ 'reference.png', 'start.png', 'first.png', 'last.png', 'example.png' ].includes(base);
+      if (!placeholder) continue;
+      const error = new Error(`需要上传${slot.label}`);
+      error.status = 400;
+      throw error;
     }
     return names;
   }
@@ -181,6 +188,7 @@ class WorkflowPreviewService extends Service {
   async bind(workflowId, payload) {
     const row = await this.ctx.service.workflow.show(workflowId);
     const positive = String(payload.positive ?? payload.positive_zh ?? '').trim();
+    const negative = String(payload.negative ?? payload.negative_zh ?? '');
     if (!positive) {
       const error = new Error('需要一句正向提示词');
       error.status = 400;
@@ -194,7 +202,7 @@ class WorkflowPreviewService extends Service {
       source = applyRefmod(source, uploaded);
     }
     const names = await this.imageNames(source, payload.images || []);
-    let graph = applySeed(applyCallInputs(source, { positive, imageNames: names }), payload.seed);
+    let graph = applySeed(applyCallInputs(source, { positive, negative, imageNames: names }), payload.seed);
     const seconds = Number(payload.duration_sec);
     if (Number.isFinite(seconds) && seconds > 0) {
       graph = applyPreviewValues(graph, [{ type: 'duration', key: 'duration_sec', value: seconds }]);
@@ -306,43 +314,86 @@ class WorkflowPreviewService extends Service {
   }
 
   ensureWatcher() {
-    if (this.app.precheckComfyWatch) return;
     const WS = global.WebSocket;
     if (typeof WS !== 'function') {
-      this.app.precheckComfyWatch = { disabled: true };
-      this.app.logger.warn('[precheck] 当前 Node 没有 WebSocket，无法同步 ComfyUI 步数');
+      if (!this.app.precheckComfyWatch) {
+        this.app.precheckComfyWatch = { disabled: true };
+        this.app.logger.warn('[precheck] 当前 Node 没有 WebSocket，无法同步 ComfyUI 步数');
+      }
       return;
     }
+    const socket = this.app.precheckComfySocket;
+    if (socket && (socket.readyState === 0 || socket.readyState === 1)) return;
+    if (this.app.precheckComfyOpening) return;
+    this.app.precheckComfyOpening = true;
+    this.openProgressSocket(WS);
+  }
+
+  async soleRunningPrompt() {
+    const now = Date.now();
+    const cached = this.app.precheckSolePrompt;
+    if (cached && now - cached.at < 4000) return cached.id;
+    try {
+      const res = await fetch(`${this.comfyBase()}/queue`, { signal: AbortSignal.timeout(3000) });
+      if (!res.ok) return '';
+      const body = await res.json();
+      const running = body.queue_running || [];
+      const id = running.length === 1 ? String(running[0]?.[1] || '') : '';
+      this.app.precheckSolePrompt = { at: now, id };
+      return id;
+    } catch {
+      return '';
+    }
+  }
+
+  openProgressSocket(WS) {
     const store = this.progressStore();
     const url = `${this.comfyBase().replace(/^http/, 'ws')}/ws?clientId=${COMFY_CLIENT_ID}`;
-    const open = () => {
-      let socket;
-      try {
-        socket = new WS(url);
-      } catch (err) {
-        this.app.logger.warn('[precheck] progress socket %s', err.message);
-        setTimeout(open, 5000);
-        return;
-      }
-      let closed = false;
-      const retry = () => {
-        if (closed) return;
-        closed = true;
-        if (this.app.precheckComfySocket === socket) this.app.precheckComfySocket = null;
-        setTimeout(open, 3000);
-      };
-      socket.addEventListener('message', (event) => {
-        const text = socketText(event.data);
+    let socket;
+    try {
+      socket = new WS(url);
+    } catch (err) {
+      this.app.precheckComfyOpening = false;
+      this.app.logger.warn('[precheck] progress socket %s', err.message);
+      setTimeout(() => this.ensureWatcher(), 5000);
+      return;
+    }
+    this.app.precheckComfySocket = socket;
+    let closed = false;
+    const retry = () => {
+      if (closed) return;
+      closed = true;
+      this.app.precheckComfyOpening = false;
+      if (this.app.precheckComfySocket === socket) this.app.precheckComfySocket = null;
+      setTimeout(() => this.ensureWatcher(), 3000);
+    };
+    let activePromptId = '';
+    const remember = (promptId, patch) => {
+      if (!promptId) return;
+      const current = store.get(promptId) || { value: 0, max: 0, node: '', phase: 'running', error: '' };
+      store.set(promptId, { ...current, ...patch });
+    };
+    socket.addEventListener('open', () => {
+      this.app.precheckComfyOpening = false;
+    });
+    socket.addEventListener('message', (event) => {
+      Promise.resolve(socketText(event.data)).then(async text => {
         if (!text || text[0] !== '{') return;
         let msg;
         try { msg = JSON.parse(text); } catch { return; }
         const data = msg?.data || {};
-        const promptId = data.prompt_id;
+        if ((msg.type === 'execution_start' || msg.type === 'executing') && data.prompt_id) {
+          activePromptId = data.prompt_id;
+        }
+        let promptId = data.prompt_id || activePromptId;
+        if (!promptId) {
+          promptId = await this.soleRunningPrompt();
+          if (promptId) activePromptId = promptId;
+        }
         if (!promptId) return;
         const current = store.get(promptId) || { value: 0, max: 0, node: '', phase: 'running', error: '' };
         if (msg.type === 'progress') {
-          store.set(promptId, {
-            ...current,
+          remember(promptId, {
             value: Number(data.value) || 0,
             max: Number(data.max) || 0,
             node: data.node || current.node,
@@ -352,8 +403,7 @@ class WorkflowPreviewService extends Service {
         } else if (msg.type === 'progress_state') {
           const sample = sampleNode(data.nodes);
           if (!sample) return;
-          store.set(promptId, {
-            ...current,
+          remember(promptId, {
             value: Number(sample.value) || 0,
             max: Number(sample.max) || 0,
             node: sample.display_node_id || sample.node_id || current.node,
@@ -361,28 +411,25 @@ class WorkflowPreviewService extends Service {
             error: sample.state === 'error' ? (current.error || 'ComfyUI 执行失败') : '',
           });
         } else if (msg.type === 'executing') {
-          store.set(promptId, {
-            ...current,
-            node: data.node || '',
+          remember(promptId, {
+            node: data.node || current.node || '',
             phase: data.node ? 'running' : current.phase,
           });
         } else if (msg.type === 'execution_error') {
-          store.set(promptId, {
-            ...current,
+          remember(promptId, {
             phase: 'error',
             node: data.node_id || current.node,
             error: String(data.exception_message || 'ComfyUI 执行失败').slice(0, 400),
           });
         }
-      });
-      socket.addEventListener('error', (err) => {
-        this.app.logger.warn('[precheck] progress socket %s', err.message || err);
-      });
-      socket.addEventListener('close', retry);
-      this.app.precheckComfySocket = socket;
-    };
-    this.app.precheckComfyWatch = { started: true };
-    open();
+      }).catch(() => {});
+    });
+    socket.addEventListener('error', (err) => {
+      this.app.logger.warn('[precheck] progress socket %s', err.message || err);
+      retry();
+      try { socket.close(); } catch { /* 已经关闭 */ }
+    });
+    socket.addEventListener('close', retry);
   }
 
   placeOf(body, promptId) {

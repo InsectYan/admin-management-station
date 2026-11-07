@@ -91,6 +91,12 @@ function describeCallInputs(apiJson) {
     if (Array.isArray(inputs.start_image)) mark(inputs.start_image, 'start');
     if (Array.isArray(inputs.first_frame)) mark(inputs.first_frame, 'start');
     if (node?.class_type === 'TextEncodeQwenImageEdit' && Array.isArray(inputs.image)) mark(inputs.image, 'reference');
+    if (node?.class_type === 'TextEncodeQwenImageEditPlus') {
+      [ 'image1', 'image2', 'image3' ].forEach(key => {
+        if (Array.isArray(inputs[key])) mark(inputs[key], 'reference');
+      });
+    }
+    if (node?.class_type === 'FluxKontextImageScale' && Array.isArray(inputs.image)) mark(inputs.image, 'reference');
     Object.entries(inputs).forEach(([ key, value ]) => {
       if (Array.isArray(value) && /^ref_images\.ref_image_\d+$/.test(key)) mark(value, 'reference');
     });
@@ -131,7 +137,41 @@ function describeCallInputs(apiJson) {
     const order = { start: 0, end: 1, reference: 2, image: 3, mask: 4 };
     return (order[a.role] ?? 9) - (order[b.role] ?? 9) || Number(a.node_id) - Number(b.node_id);
   });
-  return { positive: findPositive(graph), images };
+  return { positive: findPositive(graph), negative: findNegative(graph), images };
+}
+
+function findNegative(graph) {
+  const seeds = [];
+  Object.values(graph || {}).forEach(node => {
+    if (Array.isArray(node?.inputs?.negative)) seeds.push(node.inputs.negative);
+  });
+  for (const seed of seeds) {
+    let currentId = String(seed[0]);
+    const seen = new Set();
+    while (currentId && !seen.has(currentId)) {
+      seen.add(currentId);
+      const node = graph[currentId];
+      if (!node) break;
+      const keys = promptKeysOf(node);
+      if (keys.length) {
+        return { node_id: currentId, key: keys[0], keys, value: node.inputs[keys[0]] };
+      }
+      const next = node.inputs?.negative;
+      if (!Array.isArray(next)) break;
+      currentId = String(next[0]);
+    }
+  }
+  for (const [ nodeId, node ] of Object.entries(graph || {})) {
+    if (typeof node?.inputs?.negative_prompt === 'string') {
+      return {
+        node_id: nodeId,
+        key: 'negative_prompt',
+        keys: [ 'negative_prompt' ],
+        value: node.inputs.negative_prompt,
+      };
+    }
+  }
+  return null;
 }
 
 function applySeed(graph, seed) {
@@ -151,7 +191,7 @@ function applySeed(graph, seed) {
   return graph;
 }
 
-function applyCallInputs(apiJson, { positive, imageNames } = {}) {
+function applyCallInputs(apiJson, { positive, negative, imageNames } = {}) {
   const graph = JSON.parse(JSON.stringify(apiJson));
   const call = describeCallInputs(graph);
   if (positive != null) {
@@ -163,6 +203,13 @@ function applyCallInputs(apiJson, { positive, imageNames } = {}) {
     const node = graph[call.positive.node_id];
     call.positive.keys.forEach(key => {
       node.inputs[key] = String(positive);
+    });
+  }
+  const negativeText = negative != null ? String(negative).trim() : '';
+  if (negativeText && call.negative) {
+    const node = graph[call.negative.node_id];
+    call.negative.keys.forEach(key => {
+      node.inputs[key] = negativeText;
     });
   }
   Object.entries(imageNames || {}).forEach(([ slotId, filename ]) => {

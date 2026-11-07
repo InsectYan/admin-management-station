@@ -11,6 +11,7 @@ module.exports = (app) => {
   router.get('/api/style-presets', controller.novel.stylePresets);
   router.get('/api/novels', controller.novel.index);
   router.post('/api/novels/from-template', controller.novel.createFromTemplate);
+  router.post('/api/novels/import-txt', controller.novel.importTxt);
   router.post('/api/novels', controller.novel.create);
   router.post('/api/novels/batch-delete', controller.novel.batchDestroy);
   router.get('/api/novels/:id', controller.novel.show);

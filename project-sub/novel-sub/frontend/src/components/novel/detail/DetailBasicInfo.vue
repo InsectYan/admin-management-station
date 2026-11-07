@@ -89,13 +89,21 @@
         </div>
         <div class="novel-detail-fields__row novel-detail-fields__row--split">
           <div>
-            <dt>更新节奏</dt>
-            <dd>{{ displayText(form.update_cadence) }}</dd>
+            <dt>来源</dt>
+            <dd>
+              <el-tag size="small" :type="form.source_kind === 'imported' ? 'warning' : 'success'" effect="plain">
+                {{ form.source_kind === 'imported' ? '导入' : '原创' }}
+              </el-tag>
+            </dd>
           </div>
           <div>
             <dt>作者</dt>
             <dd>{{ displayText(form.author_name) }}</dd>
           </div>
+        </div>
+        <div class="novel-detail-fields__row">
+          <dt>更新节奏</dt>
+          <dd>{{ displayText(form.update_cadence) }}</dd>
         </div>
       </dl>
     </section>

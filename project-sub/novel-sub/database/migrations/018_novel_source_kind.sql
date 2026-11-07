@@ -1,0 +1,1 @@
+ALTER TABLE novels ADD COLUMN IF NOT EXISTS source_kind VARCHAR(20) NOT NULL DEFAULT 'original';

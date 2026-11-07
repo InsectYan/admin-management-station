@@ -48,6 +48,9 @@ class NovelService extends Service {
       where.title = { [Op.iLike]: `%${query.title}%` };
     }
     if (query.genre) where.genre = query.genre;
+    if (query.source_kind === 'imported' || query.source_kind === 'original') {
+      where.source_kind = query.source_kind;
+    }
     if (query.genre_category_id) where.genre_category_id = Number(query.genre_category_id);
     if (query.novel_type) where.novel_type = query.novel_type;
     if (query.length_id) where.length_id = Number(query.length_id);
@@ -160,12 +163,65 @@ class NovelService extends Service {
   async create(payload) {
     const aiRecord = payload?.ai_record;
     const { fields, themes } = await this.resolveEnumFields(payload);
+    if (!fields.source_kind) fields.source_kind = 'original';
     const row = await this.ctx.model.Novel.create(fields);
     if (themes) await row.setThemes(themes);
     if (aiRecord?.source === 'ai') {
       await this.ctx.service.generationRecord.captureBasic(row.id, {}, fields);
     }
     return this.findById(row.id);
+  }
+
+  /**
+   * TXT 导入：解析章节并写入 setting.chapters + novel_chapter_bodies。
+   * payload: { text, filename?, title?, author_name? } 或 { buffer, filename? }
+   */
+  async importFromTxt(payload = {}) {
+    const { buildImportPayload, decodeTxtBuffer } = require('../lib/txtNovelImport');
+    let text = payload.text;
+    if (!text && payload.buffer) text = decodeTxtBuffer(payload.buffer);
+    if (!text && payload.data_base64) {
+      text = decodeTxtBuffer(Buffer.from(String(payload.data_base64).replace(/^data:[^;]+;base64,/, ''), 'base64'));
+    }
+    const draft = buildImportPayload({
+      text,
+      filename: payload.filename || '',
+      title: payload.title,
+      author_name: payload.author_name,
+    });
+    const { bodies, chapter_count: chapterCount, ...novelFields } = draft;
+    const transaction = await this.ctx.model.transaction();
+    let row;
+    try {
+      row = await this.ctx.model.Novel.create({
+        title: novelFields.title,
+        author_name: novelFields.author_name,
+        source_kind: 'imported',
+        progress_status: novelFields.progress_status,
+        progress_percent: novelFields.progress_percent,
+        status: novelFields.status,
+        summary: novelFields.summary,
+        setting_json: novelFields.setting_json,
+        project_kind: 'novel',
+      }, { transaction });
+      if (bodies.length) {
+        await this.ctx.model.NovelChapterBody.bulkCreate(
+          bodies.map(body => ({
+            novel_id: row.id,
+            chapter_id: body.chapter_id,
+            body: body.body,
+            word_count: body.word_count,
+          })),
+          { transaction },
+        );
+      }
+      await transaction.commit();
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+    const item = await this.findById(row.id);
+    return { ...item, chapter_count: chapterCount };
   }
 
   async createFromTemplate(payload) {
