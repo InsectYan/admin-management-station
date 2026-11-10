@@ -4,11 +4,46 @@
   color: #2c4336;
   background: #f3f8f4;
 }
-.precheck-page { padding: 16px 20px 24px; box-sizing: border-box; }
+.precheck-page {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 16px 20px 24px;
+  box-sizing: border-box;
+}
 .precheck-page-header {
+  flex: none;
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
 }
+.precheck-page-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.precheck-page--table .precheck-page-body {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.precheck-table-page {
+  flex: 1 1 0;
+  min-height: 0;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.precheck-table-page__bar { flex: none; margin-bottom: 12px; }
+.precheck-table-page > .el-table {
+  flex: 1 1 0;
+  min-height: 0;
+  height: 100%;
+}
+.precheck-table-page > .el-table .el-table__inner-wrapper { height: 100%; }
+.precheck-table-page > .el-empty { flex: 1; }
 .precheck-page-title { margin: 0; font-size: 18px; font-weight: 600; color: #1f3d2c; }
 .precheck-module {
   margin-bottom: 16px;
@@ -18,6 +53,7 @@
   border: 1px solid rgba(47, 138, 91, 0.2);
 }
 .precheck-module__title { margin: 0 0 12px; font-size: 15px; font-weight: 600; color: #1f3d2c; }
+.precheck-pager { flex: none; margin-top: 12px; justify-content: flex-end; }
 .precheck-sub-root .el-button--primary {
   --el-button-bg-color: #2f8a5b;
   --el-button-border-color: #2f8a5b;

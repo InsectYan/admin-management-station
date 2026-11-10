@@ -1,6 +1,6 @@
 'use strict';
 
-const TEXT_KEYS = new Set([ 'text', 'prompt', 'positive_prompt', 'negative_prompt' ]);
+const TEXT_KEYS = new Set([ 'text', 'prompt', 'positive_prompt', 'negative_prompt', 'text_input', 'custom_prompt' ]);
 const NUMBER_KEYS = new Set([
   'seed', 'noise_seed', 'steps', 'cfg', 'denoise', 'width', 'height',
   'batch_size', 'length', 'frames', 'frame_rate', 'fps', 'resolution',
@@ -8,12 +8,15 @@ const NUMBER_KEYS = new Set([
 const CHOICE_KEYS = new Set([ 'sampler_name', 'scheduler' ]);
 const FRAME_KEYS = new Set([ 'length', 'frames', 'num_frames', 'frame_count' ]);
 const FPS_KEYS = new Set([ 'fps', 'frame_rate' ]);
-const VIDEO_CLASS = /video|wan|vhs_|svd|hunyuan|ltxv|animatediff|mochi/i;
+const VIDEO_CLASS = /video|(?:^|[^a-z])wan|vhs_|svd|hunyuan|ltxv|animatediff|mochi/i;
 const LABEL = {
   text: '提示词',
   prompt: '提示词',
   positive_prompt: '正向提示词',
   negative_prompt: '负向提示词',
+  text_input: '补充说明',
+  custom_prompt: '补充说明',
+  max_tokens: '最长回答',
   seed: '种子',
   noise_seed: '种子',
   steps: '步数',
@@ -52,6 +55,7 @@ function fieldType(key, value) {
 function isVideoWorkflow(graph) {
   return Object.values(graph || {}).some(node => {
     if (!node?.class_type) return false;
+    if (node.class_type === 'LoadVideo' || node.class_type === 'GetVideoComponents') return false;
     if (VIDEO_CLASS.test(node.class_type)) return true;
     const inputs = node.inputs || {};
     return [ ...FPS_KEYS, ...FRAME_KEYS ].some(key => {
@@ -163,7 +167,7 @@ function durationSeconds(values) {
 function applyPreviewValues(apiJson, values) {
   const graph = JSON.parse(JSON.stringify(apiJson));
   (values || []).forEach(item => {
-    if (item?.type === 'duration' || item?.key === 'duration_sec' || item?.type === 'image') return;
+    if (item?.type === 'duration' || item?.key === 'duration_sec' || item?.type === 'image' || item?.type === 'video') return;
     const node = graph[String(item.node_id)];
     if (!node?.inputs || Array.isArray(node.inputs[item.key])) return;
     if (item.type === 'number') {
@@ -175,6 +179,23 @@ function applyPreviewValues(apiJson, values) {
   });
   applyDuration(graph, durationSeconds(values));
   return graph;
+}
+
+function collectText(outputs) {
+  const parts = [];
+  const push = (value) => {
+    if (Array.isArray(value)) {
+      value.forEach(push);
+      return;
+    }
+    const text = String(value ?? '').trim();
+    if (text) parts.push(text);
+  };
+  Object.values(outputs || {}).forEach(entry => {
+    push(entry?.text);
+    push(entry?.tags);
+  });
+  return parts.join('\n');
 }
 
 function collectMedia(outputs) {
@@ -194,6 +215,7 @@ module.exports = {
   listPreviewFields,
   applyPreviewValues,
   collectMedia,
+  collectText,
   framesForDuration,
   readFps,
 };

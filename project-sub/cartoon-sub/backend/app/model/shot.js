@@ -21,5 +21,9 @@ module.exports = app => {
     overridden_fields: { type: JSONB, allowNull: false, defaultValue: [] },
     upstream_stale: { type: BOOLEAN, allowNull: false, defaultValue: false },
     asset_stale: { type: BOOLEAN, allowNull: false, defaultValue: false },
+    first_frame_path: { type: STRING(500), allowNull: true },
+    manual_frame_path: { type: STRING(500), allowNull: true },
+    stage_notes: { type: JSONB, allowNull: true },
+    dialogue_lines: { type: JSONB, allowNull: true },
   }, { tableName: 'cartoon_shots' });
 };

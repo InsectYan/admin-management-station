@@ -79,6 +79,22 @@ class LibraryController extends Controller {
       fail(this.ctx, err);
     }
   }
+
+  async outputs() {
+    try {
+      ok(this.ctx, await this.ctx.service.library.outputs());
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async output() {
+    try {
+      ok(this.ctx, await this.ctx.service.library.output(this.ctx.params.id));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
 }
 
 module.exports = LibraryController;

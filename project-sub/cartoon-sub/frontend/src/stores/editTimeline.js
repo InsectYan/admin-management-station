@@ -43,6 +43,56 @@ export const useEditTimelineStore = defineStore('editTimeline', {
     },
   },
   actions: {
+    useLatestPerShot() {
+      const track = this.videoTrack;
+      if (!track || !this.edit) return false;
+      const playable = (this.videos || []).filter(item => item.shot_id && !item.missing && item.duration_ms);
+      const latest = new Map();
+      playable.forEach(item => {
+        const prev = latest.get(item.shot_id);
+        if (!prev || item.id > prev.id) latest.set(item.shot_id, item);
+      });
+      const videoById = new Map((this.videos || []).map(item => [ item.id, item ]));
+      const usedShots = new Set();
+      let changed = false;
+      track.clips.forEach(clip => {
+        const shotId = videoById.get(clip.source_output_id)?.shot_id;
+        if (!shotId) return;
+        usedShots.add(shotId);
+        const next = latest.get(shotId);
+        if (!next || next.id === clip.source_output_id) return;
+        clip.source_output_id = next.id;
+        clip.trim_in_ms = 0;
+        clip.duration_ms = next.duration_ms;
+        clip.missing = false;
+        clip.source_duration_ms = next.duration_ms;
+        clip.shot_description = next.description || '';
+        changed = true;
+      });
+      const extras = [ ...latest.values() ]
+        .filter(item => !usedShots.has(item.shot_id))
+        .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.shot_id - b.shot_id);
+      extras.forEach((item, index) => {
+        track.clips.push({
+          id: -1 - index,
+          sort_order: track.clips.length,
+          source_output_id: item.id,
+          start_ms: 0,
+          duration_ms: item.duration_ms,
+          trim_in_ms: 0,
+          text: '',
+          missing: false,
+          source_duration_ms: item.duration_ms,
+          shot_description: item.description || '',
+        });
+        changed = true;
+      });
+      if (!changed) return false;
+      reflow(this.edit);
+      this.dirty = true;
+      this.selectedClipId = this.clips[0]?.id || null;
+      return true;
+    },
     applyPayload(payload) {
       this.project = payload.project;
       this.edit = payload.edit;

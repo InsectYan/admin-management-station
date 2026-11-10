@@ -18,6 +18,12 @@ module.exports = app => {
     }
     try {
       const ctx = app.createAnonymousContext();
+      await ctx.service.autoJob.failInterrupted();
+    } catch (err) {
+      app.logger.warn('[cartoon] 清理自动生成队列失败：%s', err.message);
+    }
+    try {
+      const ctx = app.createAnonymousContext();
       const ids = await ctx.service.generate.ensureFixtures();
       app.logger.info('[cartoon] workflow ids %j', ids);
     } catch (err) {

@@ -114,7 +114,7 @@ html.{prefix}-sub-standalone #app { height: 100%; overflow: hidden; }
 
 - 白底卡片：`border-radius: 8px`；`padding: 0`（内边距由页面区块自行控制）
 - 标题：`18px / 600`
-- 提供 `{prefix}-page-body`（`flex: 1; min-height: 0`）与可选 `table-layout`（表格页配合 `DataTablePanel`）
+- 提供 `{prefix}-page-body`（`flex: 1; min-height: 0`）。表格页打开 `table-layout`：模块占满剩余高度，分页器吸底。做法见 **`development-standards.mdc`「表格页」**。
 
 ## 主应用宿主（Qiankun）
 

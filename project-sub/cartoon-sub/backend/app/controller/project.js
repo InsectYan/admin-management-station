@@ -66,6 +66,14 @@ class ProjectController extends Controller {
     }
   }
 
+  async remove() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.remove(this.ctx.params.id));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async novels() {
     try {
       ok(this.ctx, await this.ctx.service.project.listNovels());
@@ -109,6 +117,30 @@ class ProjectController extends Controller {
   async saveScriptRoster() {
     try {
       ok(this.ctx, await this.ctx.service.project.saveScriptRoster(
+        this.ctx.params.id,
+        this.ctx.params.importId,
+        this.ctx.request.body || {},
+      ));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async assignImportWorkflow() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.assignImportWorkflow(
+        this.ctx.params.id,
+        this.ctx.params.importId,
+        this.ctx.request.body || {},
+      ));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async applySnapshotFields() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.applySnapshotFields(
         this.ctx.params.id,
         this.ctx.params.importId,
         this.ctx.request.body || {},
@@ -409,6 +441,26 @@ class ProjectController extends Controller {
     }
   }
 
+  async saveFrame() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.saveManualFrame(
+        this.ctx.params.id,
+        this.ctx.params.shotId,
+        this.ctx.request.body || {},
+      ));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async frameFile() {
+    try {
+      await this.ctx.service.project.sendFrame(this.ctx.params.id, this.ctx.params.shotId, this.ctx.params.which);
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async removeShot() {
     try {
       ok(this.ctx, await this.ctx.service.project.removeShot(this.ctx.params.id));
@@ -450,6 +502,23 @@ class ProjectController extends Controller {
     }
   }
 
+  async startAutoJob() {
+    try {
+      const body = this.ctx.request.body || {};
+      ok(this.ctx, await this.ctx.service.autoJob.start(this.ctx.params.id, body.shot_ids));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async currentAutoJob() {
+    try {
+      ok(this.ctx, await this.ctx.service.autoJob.current(this.ctx.params.id));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async generate() {
     const kinds = [ 'image', 'video', 'i2v', 'edit', 'refmod', 't2v' ];
     const kind = kinds.includes(this.ctx.query.kind) ? this.ctx.query.kind : 'image';
@@ -486,6 +555,14 @@ class ProjectController extends Controller {
   async removeOutput() {
     try {
       ok(this.ctx, await this.ctx.service.generate.removeOutput(this.ctx.params.id));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async removeOutputs() {
+    try {
+      ok(this.ctx, await this.ctx.service.generate.removeOutputs(this.ctx.request.body?.ids));
     } catch (err) {
       fail(this.ctx, err);
     }

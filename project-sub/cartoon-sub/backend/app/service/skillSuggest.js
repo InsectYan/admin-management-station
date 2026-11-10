@@ -268,26 +268,32 @@ class SkillSuggestService extends Service {
   async assignLibraryVoice(projectId, payload) {
     const project = await this.project(projectId);
     const voice = await this.ctx.service.voiceLibrary.requireVoice(payload.voice_id);
-    const shotIds = [ ...new Set((Array.isArray(payload.shot_ids) ? payload.shot_ids : []).map(id => Number(id)).filter(id => id > 0)) ];
-    if (!shotIds.length) this.ctx.throw(400, '先选择要配音的镜头');
+    const picked = Array.isArray(payload.lines) ? payload.lines : [];
+    const shotIds = picked.length
+      ? [ ...new Set(picked.map(item => Number(item.shot_id)).filter(id => id > 0)) ]
+      : [ ...new Set((Array.isArray(payload.shot_ids) ? payload.shot_ids : []).map(id => Number(id)).filter(id => id > 0)) ];
+    if (!shotIds.length) this.ctx.throw(400, '先选择要配音的对白');
     const shots = await this.ctx.model.Shot.findAll({ where: { project_id: project.id, id: { [Op.in]: shotIds } } });
     if (shots.length !== shotIds.length) this.ctx.throw(400, '镜头不存在');
-    const silent = shots.find(item => !String(item.dialogue || '').trim());
-    if (silent) this.ctx.throw(400, `镜头 ${silent.shot_code || silent.id} 没有台词`);
+    const cues = await this.ctx.model.VoiceCue.findAll({ where: { project_id: project.id, shot_id: { [Op.in]: shotIds } } });
     const asset = await this.upsertLibraryVoice(project.id, voice);
-    await this.ctx.model.VoiceCue.destroy({ where: { project_id: project.id, shot_id: { [Op.in]: shotIds } } });
-    await this.ctx.model.VoiceCue.bulkCreate(shots.map(shot => {
-      const duration = Number(shot.duration_ms) > 0 ? Number(shot.duration_ms) : 3000;
-      return {
-        project_id: project.id,
-        shot_id: shot.id,
-        text: String(shot.dialogue).slice(0, 500),
-        start_ms: 0,
-        end_ms: duration,
-        voice_key: asset.voice_key,
-        media_ref: '',
-      };
-    }));
+    for (const shot of shots) {
+      const lines = this.ctx.service.project.linesOf(shot, cues);
+      if (!lines.length) this.ctx.throw(400, `镜头 ${shot.shot_code || shot.id} 没有台词`);
+      const indexes = picked.length
+        ? picked.filter(item => Number(item.shot_id) === shot.id).map(item => Number(item.index))
+        : lines.map((_, index) => index);
+      if (!indexes.length) continue;
+      indexes.forEach(index => {
+        if (!lines[index]) this.ctx.throw(400, '对白不存在');
+        lines[index].voice_key = asset.voice_key;
+      });
+      await shot.update({
+        dialogue_lines: lines,
+        dialogue: lines.map(item => item.text).join('\n'),
+      });
+      await this.ctx.service.project.syncLineCues(shot, lines);
+    }
     return { asset, cues: await this.voiceCues(project.id) };
   }
 

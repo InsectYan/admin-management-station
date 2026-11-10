@@ -8,10 +8,17 @@ const { ZIMAGE_TEMPLATES } = require('../lib/zImageTemplates');
 const { QWEN21_TEMPLATES } = require('../lib/qwen21Templates');
 const { QWEN_EDIT_TEMPLATES } = require('../lib/qwenEditTemplates');
 const { IMAGE_CATALOG_TEMPLATES } = require('../lib/imageCatalogTemplates');
+const { CAPTION_TEMPLATES, CAPTION_RENAMES } = require('../lib/captionTemplates');
 
 class WorkflowService extends Service {
   async ensureTemplates() {
-    for (const item of [ ...H3_TEMPLATES, ...ZIMAGE_TEMPLATES, ...QWEN21_TEMPLATES, ...QWEN_EDIT_TEMPLATES, ...IMAGE_CATALOG_TEMPLATES ]) {
+    for (const [ from, to ] of Object.entries(CAPTION_RENAMES)) {
+      const previous = await this.ctx.model.Workflow.findOne({ where: { name: from } });
+      if (!previous) continue;
+      const taken = await this.ctx.model.Workflow.findOne({ where: { name: to } });
+      if (!taken) await previous.update({ name: to });
+    }
+    for (const item of [ ...H3_TEMPLATES, ...ZIMAGE_TEMPLATES, ...QWEN21_TEMPLATES, ...QWEN_EDIT_TEMPLATES, ...IMAGE_CATALOG_TEMPLATES, ...CAPTION_TEMPLATES ]) {
       const parsed = parseApiWorkflow(item.api_json);
       const existing = await this.ctx.model.Workflow.findOne({ where: { name: item.name } });
       const fields = {

@@ -1,12 +1,17 @@
 'use strict';
 
+const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { promisify } = require('util');
 const Service = require('egg').Service;
+const { writeStoredZip } = require('../lib/frameZip');
+
+const execFileAsync = promisify(execFile);
 const { parseApiWorkflow } = require('../lib/workflowParse');
 const { buildSupplies } = require('../lib/supplyCatalog');
-const { listPreviewFields, applyPreviewValues, collectMedia } = require('../lib/workflowPreview');
-const { describeCallInputs, applyCallInputs, applySeed, withCallFields } = require('../lib/workflowInputs');
+const { listPreviewFields, applyPreviewValues, collectMedia, collectText } = require('../lib/workflowPreview');
+const { describeCallInputs, applyCallInputs, applySeed, withCallFields, expandReferenceImages } = require('../lib/workflowInputs');
 const { applyRefmod } = require('../lib/refmodApply');
 
 function previewRoot() {
@@ -119,27 +124,42 @@ class WorkflowPreviewService extends Service {
     };
   }
 
-  decodeImage(file) {
+  decodeMedia(file, kind) {
     const raw = String(file?.data_base64 || file?.data || '');
     const marker = ';base64,';
     const encoded = raw.includes(marker) ? raw.slice(raw.indexOf(marker) + marker.length) : raw;
     const bytes = Buffer.from(encoded, 'base64');
+    const video = kind === 'video';
     if (!bytes.length) {
-      const error = new Error('图片是空的');
+      const error = new Error(video ? '视频是空的' : '图片是空的');
       error.status = 400;
       throw error;
     }
-    if (bytes.length > 12 * 1024 * 1024) {
-      const error = new Error('图片超过 12MB');
+    const limit = video ? 64 * 1024 * 1024 : 12 * 1024 * 1024;
+    if (bytes.length > limit) {
+      const error = new Error(video ? '视频超过 64MB' : '图片超过 12MB');
       error.status = 400;
       throw error;
+    }
+    if (video) {
+      const ext = String(file.filename || '').toLowerCase().match(/\.(mp4|webm|mov)$/);
+      if (!ext) {
+        const error = new Error('请上传 mp4、webm 或 mov');
+        error.status = 400;
+        throw error;
+      }
+      return { bytes, ext: ext[0] };
     }
     const ext = String(file.filename || '').toLowerCase().match(/\.(png|jpe?g|webp)$/);
     return { bytes, ext: ext ? ext[0].replace('jpeg', 'jpg') : '.png' };
   }
 
-  async uploadImage(file, prefix) {
-    const image = this.decodeImage(file);
+  decodeImage(file) {
+    return this.decodeMedia(file, 'image');
+  }
+
+  async uploadImage(file, prefix, kind = 'image') {
+    const image = this.decodeMedia(file, kind);
     const filename = `${prefix}-${Date.now()}${image.ext}`.replace(/[^\w.-]/g, '');
     const boundary = `----precheck${Date.now()}`;
     const head = Buffer.from(
@@ -167,22 +187,34 @@ class WorkflowPreviewService extends Service {
     const call = describeCallInputs(apiJson);
     const byId = new Map((images || []).map(item => [ item.slot_id || item.id, item ]));
     const names = {};
+    const extras = {};
     for (const slot of call.images) {
       const existing = apiJson[slot.node_id]?.inputs?.image;
       const file = byId.get(slot.id);
+      const listed = Array.isArray(file?.files) ? file.files.filter(item => item?.data || item?.data_base64) : [];
       const payload = file?.data_base64 || file?.data;
-      if (payload) {
-        names[slot.id] = await this.uploadImage({ ...file, data_base64: payload }, `slot-${slot.node_id}`);
+      const batch = listed.length ? listed : (payload ? [{ ...file, data_base64: payload }] : []);
+      if (batch.length) {
+        const uploaded = [];
+        for (const item of batch.slice(0, slot.limit || batch.length)) {
+          uploaded.push(await this.uploadImage({
+            filename: item.filename || file.filename,
+            data_base64: item.data_base64 || item.data,
+          }, `slot-${slot.node_id}`, slot.role === 'video' ? 'video' : 'image'));
+        }
+        names[slot.id] = uploaded[0];
+        if (uploaded.length > 1) extras[slot.id] = uploaded.slice(1);
         continue;
       }
+      if (slot.role === 'end') continue;
       const base = String(existing || '').split(/[/\\]/).pop();
-      const placeholder = !base || [ 'reference.png', 'start.png', 'first.png', 'last.png', 'example.png' ].includes(base);
+      const placeholder = !base || [ 'reference.png', 'start.png', 'first.png', 'last.png', 'example.png', 'reference.mp4' ].includes(base);
       if (!placeholder) continue;
       const error = new Error(`需要上传${slot.label}`);
       error.status = 400;
       throw error;
     }
-    return names;
+    return { names, extras };
   }
 
   async bind(workflowId, payload) {
@@ -201,8 +233,9 @@ class WorkflowPreviewService extends Service {
       for (const file of refImages) uploaded.push(await this.uploadImage(file, 'refmod'));
       source = applyRefmod(source, uploaded);
     }
-    const names = await this.imageNames(source, payload.images || []);
-    let graph = applySeed(applyCallInputs(source, { positive, negative, imageNames: names }), payload.seed);
+    const resolved = await this.imageNames(source, payload.images || []);
+    let graph = applySeed(applyCallInputs(source, { positive, negative, imageNames: resolved.names }), payload.seed);
+    graph = expandReferenceImages(graph, describeCallInputs(source).images, resolved.extras);
     const seconds = Number(payload.duration_sec);
     if (Number.isFinite(seconds) && seconds > 0) {
       graph = applyPreviewValues(graph, [{ type: 'duration', key: 'duration_sec', value: seconds }]);
@@ -211,21 +244,28 @@ class WorkflowPreviewService extends Service {
     return { prompt: graph, call_inputs: describeCallInputs(row.api_json) };
   }
 
-  async start({ workflowId, draftKey, apiJson, values, refmodIds }) {
+  async start({ workflowId, draftKey, apiJson, values, refmodIds, refImages }) {
     let source = apiJson;
+    const referenceFiles = [];
     if (Array.isArray(refmodIds) && refmodIds.length) {
       const files = await this.ctx.service.refmod.imageFiles(refmodIds);
-      const uploaded = [];
-      for (const file of files) {
-        uploaded.push(await this.uploadImage(file, 'refmod'));
-      }
-      source = applyRefmod(apiJson, uploaded);
-    } else if (describeCallInputs(apiJson).images.length === 0
-      && Object.values(apiJson || {}).some(node => node?.class_type === 'MiniMaxH3ReferenceToVideo')) {
-      this.ctx.throw(400, '请选择至少一个包');
+      for (const file of files) referenceFiles.push(await this.uploadImage(file, 'refmod'));
     }
-    const names = await this.imageNames(source, (values || []).filter(item => item?.type === 'image'));
-    const graph = applyCallInputs(applyPreviewValues(source, values), { imageNames: names });
+    for (const file of Array.isArray(refImages) ? refImages : []) {
+      if (file?.data || file?.data_base64) referenceFiles.push(await this.uploadImage(file, 'ref'));
+    }
+    const needsReference = Object.values(apiJson || {}).some(node => node?.class_type === 'MiniMaxH3ReferenceToVideo');
+    if (referenceFiles.length) {
+      source = applyRefmod(apiJson, referenceFiles.slice(0, 9));
+    } else if (needsReference && describeCallInputs(apiJson).images.length === 0) {
+      this.ctx.throw(400, '请选择检测包或上传参考图');
+    }
+    const resolved = await this.imageNames(source, (values || []).filter(item => item?.type === 'image' || item?.type === 'video'));
+    const graph = expandReferenceImages(
+      applyCallInputs(applyPreviewValues(source, values), { imageNames: resolved.names }),
+      describeCallInputs(source).images,
+      resolved.extras,
+    );
     parseApiWorkflow(graph);
     let submitted;
     try {
@@ -275,8 +315,9 @@ class WorkflowPreviewService extends Service {
 
   summarizeValues(values) {
     return (values || []).map((field) => {
-      if (field?.type === 'image') {
-        return { label: field.label || '图片', type: 'image', text: field.filename || '已上传图片' };
+      if (field?.type === 'image' || field?.type === 'video') {
+        const video = field.type === 'video';
+        return { label: field.label || (video ? '视频' : '图片'), type: field.type, text: field.filename || (video ? '已上传视频' : '已上传图片') };
       }
       const text = String(field?.value ?? '').trim();
       if (!text) return null;
@@ -555,7 +596,9 @@ class WorkflowPreviewService extends Service {
     const runs = [];
     for (const run of board.runs) {
       let next = run;
-      if (next.status === 'running' && next.prompt_id) {
+      if (next.status === 'running' && next.phase === 'frames' && next.file_name) {
+        next = await this.finishFrames(workflowId, draftKey, next);
+      } else if (next.status === 'running' && next.prompt_id) {
         next = await this.settle(workflowId, draftKey, next);
         if (next?.status === 'running') next = await this.decorate(workflowId, draftKey, next);
       }
@@ -593,8 +636,20 @@ class WorkflowPreviewService extends Service {
       });
     }
     if (!item.status?.completed && item.status?.status_str !== 'success') return latest;
+    if (latest.phase === 'frames' && latest.file_name) return this.finishFrames(workflowId, draftKey, latest);
+    const caption = collectText(item.outputs);
     const files = collectMedia(item.outputs);
     const file = files[files.length - 1];
+    if (!file && caption) {
+      return this.patchRun(workflowId, draftKey, latest.id, {
+        status: 'success',
+        error: '',
+        media_kind: 'text',
+        caption,
+        file_name: '',
+        updated_at: new Date().toISOString(),
+      });
+    }
     if (!file) {
       return this.patchRun(workflowId, draftKey, latest.id, {
         status: 'failed',
@@ -603,13 +658,26 @@ class WorkflowPreviewService extends Service {
       });
     }
     try {
-      const saved = await this.saveFile(workflowId, draftKey, latest, file);
+      const saved = latest.file_name || await this.saveFile(workflowId, draftKey, latest, file);
+      if (file.media_kind === 'video') {
+        const marked = await this.patchRun(workflowId, draftKey, latest.id, {
+          status: 'running',
+          phase: 'frames',
+          error: '',
+          media_kind: 'video',
+          caption,
+          file_name: saved,
+          updated_at: new Date().toISOString(),
+        });
+        return this.finishFrames(workflowId, draftKey, marked || { ...latest, file_name: saved, phase: 'frames', media_kind: 'video', caption });
+      }
       const again = (await this.loadBoard(workflowId, draftKey)).runs.find(run => run.id === state.id);
       if (!again || again.prompt_id !== state.prompt_id) return again || state;
       return this.patchRun(workflowId, draftKey, again.id, {
         status: 'success',
         error: '',
         media_kind: file.media_kind,
+        caption,
         file_name: saved,
         updated_at: new Date().toISOString(),
       });
@@ -654,6 +722,11 @@ class WorkflowPreviewService extends Service {
       if (path.dirname(absolute) === dir && fs.existsSync(absolute)) {
         await fs.promises.unlink(absolute);
       }
+      if (run.zip_name) {
+        const zip = path.resolve(dir, path.basename(run.zip_name));
+        if (path.dirname(zip) === dir && fs.existsSync(zip)) await fs.promises.unlink(zip);
+      }
+      await fs.promises.rm(path.join(dir, `${run.id}-frames`), { recursive: true, force: true });
     }
     await this.withBoard(workflowId, draftKey, async () => {
       const current = await this.loadBoard(workflowId, draftKey);
@@ -674,6 +747,105 @@ class WorkflowPreviewService extends Service {
     if (path.dirname(absolute) !== dir || !fs.existsSync(absolute)) this.ctx.throw(404, '预览文件不在磁盘上');
     const ext = path.extname(absolute).toLowerCase();
     this.ctx.type = ext === '.mp4' || ext === '.webm' ? ext.slice(1) : 'png';
+    this.ctx.body = fs.createReadStream(absolute);
+  }
+
+  frameJobs() {
+    if (!this.app.previewFrameJobs) this.app.previewFrameJobs = new Map();
+    return this.app.previewFrameJobs;
+  }
+
+  frameJobKey(workflowId, draftKey, runId) {
+    return `${workflowId || safeKey(draftKey)}:${runId}`;
+  }
+
+  async finishFrames(workflowId, draftKey, run) {
+    const key = this.frameJobKey(workflowId, draftKey, run.id);
+    const jobs = this.frameJobs();
+    let job = jobs.get(key);
+    if (!job) {
+      job = {};
+      jobs.set(key, job);
+      this.packFrames(workflowId, draftKey, run).then(result => {
+        job.done = true;
+        job.result = result;
+      }).catch(err => {
+        job.done = true;
+        job.error = err;
+      });
+    }
+    if (!job.done) return run;
+    jobs.delete(key);
+    if (job.error) {
+      return this.patchRun(workflowId, draftKey, run.id, {
+        status: 'failed',
+        error: job.error.message || '导出帧失败',
+        updated_at: new Date().toISOString(),
+      });
+    }
+    return this.patchRun(workflowId, draftKey, run.id, {
+      status: 'success',
+      phase: 'done',
+      error: '',
+      media_kind: 'video',
+      zip_name: job.result.zip_name,
+      frame_count: job.result.frame_count,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  async packFrames(workflowId, draftKey, run) {
+    const dir = this.dirFor(workflowId ? 'workflows' : 'drafts', workflowId ? String(workflowId) : safeKey(draftKey));
+    const videoPath = path.resolve(dir, path.basename(run.file_name || ''));
+    if (path.dirname(videoPath) !== dir || !fs.existsSync(videoPath)) throw new Error('视频文件不在磁盘上');
+    const zipName = `${run.id}-frames.zip`;
+    const zipPath = path.join(dir, zipName);
+    const frameDir = path.join(dir, `${run.id}-frames`);
+    await fs.promises.rm(frameDir, { recursive: true, force: true });
+    await fs.promises.mkdir(frameDir, { recursive: true });
+    try {
+      await this.exportFrames(videoPath, frameDir);
+      const frames = (await fs.promises.readdir(frameDir))
+        .filter(name => name.toLowerCase().endsWith('.png'))
+        .sort();
+      if (!frames.length) throw new Error('没有从视频里导出帧');
+      await writeStoredZip(zipPath, frames.map(name => ({ name, filePath: path.join(frameDir, name) })));
+      return { zip_name: zipName, frame_count: frames.length };
+    } finally {
+      await fs.promises.rm(frameDir, { recursive: true, force: true });
+    }
+  }
+
+  async exportFrames(videoPath, frameDir) {
+    const output = path.join(frameDir, 'frame_%06d.png');
+    const attempts = [
+      [ '-hide_banner', '-loglevel', 'error', '-y', '-i', videoPath, '-fps_mode', 'passthrough', output ],
+      [ '-hide_banner', '-loglevel', 'error', '-y', '-i', videoPath, '-vsync', '0', output ],
+    ];
+    let last = null;
+    for (const args of attempts) {
+      try {
+        await execFileAsync('ffmpeg', args, { timeout: 10 * 60 * 1000 });
+        return;
+      } catch (err) {
+        last = err;
+        if (err.code === 'ENOENT') throw new Error('服务器没有 ffmpeg，无法导出视频帧');
+      }
+    }
+    const detail = String(last?.stderr || last?.message || '导出帧失败').trim();
+    throw new Error(detail.slice(0, 240) || '导出帧失败');
+  }
+
+  async sendFrames(workflowId, draftKey, runId) {
+    const board = await this.loadBoard(workflowId, draftKey);
+    const run = board.runs.find(item => item.id === String(runId || ''));
+    if (!run?.zip_name || run.status !== 'success' || run.media_kind !== 'video') this.ctx.throw(404, '帧压缩包还没有准备好');
+    const dir = this.dirFor(workflowId ? 'workflows' : 'drafts', workflowId ? String(workflowId) : safeKey(draftKey));
+    const absolute = path.resolve(dir, path.basename(run.zip_name));
+    if (path.dirname(absolute) !== dir || !fs.existsSync(absolute)) this.ctx.throw(404, '帧压缩包不在磁盘上');
+    const stamp = String(run.created_at || run.id).replace(/[^\d]/g, '').slice(0, 12) || run.id;
+    this.ctx.attachment(`frames-${stamp}.zip`);
+    this.ctx.set('Content-Type', 'application/zip');
     this.ctx.body = fs.createReadStream(absolute);
   }
 }

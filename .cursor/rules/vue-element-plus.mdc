@@ -14,8 +14,8 @@ alwaysApply: false
 
 - 页面放 `views/`，可复用组件放 `components/`。
 - 优先使用 Element Plus（`el-table`、`el-form`、`el-steps`、`el-container`）。
-- 表单：`el-form` + `v-model`；**分页列表**：`DataTablePanel` + `el-table`（吸底分页、可切换每页条数），`PageShell` 设 `table-layout`。
-- `DataTablePanel` 默认插槽为**作用域插槽**，可接收 `bodyHeight` 等布局参数绑定 `el-table` 的 `:height`。
+- 表单：`el-form` + `v-model`。**分页列表**按 `development-standards.mdc`「表格页」：PageShell 设 `table-layout`，内容模块占满剩余高度，`el-table` 用 `height="100%"` 在表体内滚动，`el-pagination` 吸在模块底部。可切换每页条数。
+- 已有 `DataTablePanel` 的页面可以继续用。新做或重排表格时按上面的 flex 方案，不要再把分页器做成随整页滚走。
 - **样式隔离**：类名 `{app_key}-*` 前缀；禁止裸 `html/body/.el-*`；见 **`subapp-style-isolation.mdc`**。
 
 ## 状态与服务

@@ -11,6 +11,7 @@
         </el-breadcrumb>
         <div class="cartoon-overview__actions">
           <el-button :disabled="!canMake()" @click="openEdit">编辑</el-button>
+          <el-button type="danger" plain :disabled="!canMake()" @click="removeProject">删除</el-button>
           <el-button @click="openWorkbench('compose')">剪辑成片</el-button>
           <el-button type="primary" @click="openWorkbench('input')">进入制作</el-button>
         </div>
@@ -207,7 +208,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import NovelBriefPanel from '../components/NovelBriefPanel.vue';
 import CartoonMarkdown from '../components/CartoonMarkdown.vue';
 import CopyBlocks from '../components/CopyBlocks.vue';
@@ -315,6 +316,26 @@ function ensureBoard() {
 function onGenre() {
   if (!genreChildren.value.some(item => item.id === editForm.genre_subcategory_id)) {
     editForm.genre_subcategory_id = null;
+  }
+}
+async function removeProject() {
+  const project = detail.value?.project;
+  if (!project) return;
+  try {
+    await ElMessageBox.confirm(
+      `删除项目「${project.name}」后，它不再出现在列表里。已经生成的产物会留在产物页。`,
+      '删除项目',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  try {
+    await request(`/projects/${project.id}`, { method: 'delete' });
+    ElMessage.success('项目已删除');
+    router.push('/projects');
+  } catch (err) {
+    ElMessage.error(err.message || '删除失败');
   }
 }
 async function openEdit() {

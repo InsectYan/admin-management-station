@@ -19,6 +19,7 @@ module.exports = app => {
   router.post('/api/workflows/drafts/:key/preview', controller.workflow.startDraftPreview);
   router.get('/api/workflows/drafts/:key/preview', controller.workflow.draftStatus);
   router.get('/api/workflows/drafts/:key/file', controller.workflow.draftFile);
+  router.get('/api/workflows/drafts/:key/frames', controller.workflow.draftFrames);
   router.delete('/api/workflows/drafts/:key/preview/:runId', controller.workflow.removeDraftPreview);
   router.put('/api/workflows/:id', controller.workflow.update);
   router.get('/api/workflows/:id/dependencies', controller.workflow.dependencies);
@@ -26,6 +27,7 @@ module.exports = app => {
   router.post('/api/workflows/:id/preview', controller.workflow.startPreview);
   router.get('/api/workflows/:id/preview', controller.workflow.previewStatus);
   router.get('/api/workflows/:id/preview/file', controller.workflow.previewFile);
+  router.get('/api/workflows/:id/preview/frames', controller.workflow.previewFrames);
   router.delete('/api/workflows/:id/preview/:runId', controller.workflow.removePreview);
   router.get('/api/workflows/:id', controller.workflow.show);
 };

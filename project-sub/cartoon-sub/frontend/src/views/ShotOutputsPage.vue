@@ -28,7 +28,7 @@
                 <div class="cartoon-output__head">
                   <p>
                     <span class="cartoon-record">记录 #{{ card.task.id }}</span>
-                    {{ statusLabel(card.task.status) }} · {{ kindLabel(card.task.kind) }}
+                    {{ statusLabel(card.task.status) }} · {{ taskKindLabel(card.task) }}
                     <template v-if="card.output"> · {{ stageLabel(card.output.version_stage) }} · {{ faceLabel(card.output) }}</template>
                   </p>
                   <el-button
@@ -74,7 +74,7 @@
         <el-tab-pane label="基础信息" name="info">
           <article v-for="task in tasks" :key="task.id" class="cartoon-brief">
             <header class="cartoon-brief__head">
-              <strong>{{ kindLabel(task.kind) }} · {{ statusLabel(task.status) }}</strong>
+              <strong>{{ taskKindLabel(task) }} · {{ statusLabel(task.status) }}</strong>
               <span class="cartoon-record">记录 #{{ task.id }}</span>
             </header>
             <dl class="cartoon-brief__list">
@@ -140,6 +140,7 @@ import PageShell from '../components/PageShell.vue';
 import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
+import { taskKindLabel } from '../lib/taskKind.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -202,9 +203,6 @@ function durationText(task) {
 function statusLabel(status) {
   return { queued: '排队', running: '生成中', saving: '生成中', success: '成功', failed: '失败', cancelled: '已取消' }[status] || status;
 }
-function kindLabel(kind) {
-  return { image: '文生图', video: '首尾帧', i2v: '图生视频', edit: '改图', refmod: '文生视频', t2v: '文生视频' }[kind] || kind;
-}
 function precheckHref(id) {
   const origin = import.meta.env.VITE_PRECHECK_ORIGIN || 'http://localhost:5104';
   return `${origin.replace(/\/$/, '')}/workflows?id=${id}`;
@@ -219,7 +217,7 @@ function fileItem(output) {
   };
 }
 function stageLabel(stage) {
-  return { draft: '草稿', generated: '生成版', revised: '修改版', final: '最终交付版' }[stage] || '生成版';
+  return { draft: '草稿', generated: '生成版', revised: '修改版', final: '最终交付版', frame_first: '视频首帧', frame_last: '视频尾帧' }[stage] || '生成版';
 }
 function faceLabel(output) {
   if (!output.face_checked) return '还没有标记串脸';
@@ -325,7 +323,7 @@ async function load() {
     await loadProfiles(outputs);
     loaded.value = true;
     const active = tasks.value.some(item => [ 'queued', 'running', 'saving' ].includes(item.status));
-    if (active && !pollTimer) pollTimer = setInterval(load, 1000);
+    if (active && !pollTimer) pollTimer = setInterval(load, 3000);
     if (!active) stopPoll();
   };
   if (first) await run(pull);

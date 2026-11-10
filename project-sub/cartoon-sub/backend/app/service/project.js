@@ -65,6 +65,27 @@ function decodeAssetImage(file) {
   return { bytes, ext: ext ? ext[0].replace('jpeg', 'jpg') : '.png' };
 }
 
+function cleanNoteMap(raw) {
+  const out = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  Object.entries(raw).forEach(([ key, value ]) => {
+    const name = String(key || '').trim().slice(0, 80);
+    if (!name) return;
+    out[name] = String(value ?? '').trim().slice(0, 500);
+  });
+  return out;
+}
+
+function stageNoteMap(list) {
+  const out = {};
+  (Array.isArray(list) ? list : []).forEach(item => {
+    const name = String(item?.name || '').trim().slice(0, 80);
+    if (!name) return;
+    out[name] = String(item?.stage_note || '').trim().slice(0, 500);
+  });
+  return out;
+}
+
 function unwrap(json) {
   if (json && Object.prototype.hasOwnProperty.call(json, 'data')) return json.data;
   return json;
@@ -94,6 +115,29 @@ function formatSnapshotTitle(volumeTitle, chapterTitle) {
   if (!volume || volume === '未关联大纲' || volume === '未命名卷') return chapter;
   if (chapter.startsWith(`${volume}·`)) return chapter;
   return `${volume}·${chapter}`;
+}
+
+async function frameFileMeta(app, relative) {
+  if (!relative) return null;
+  const absolute = resolveInside(outputRoot(app), relative);
+  if (!absolute) return null;
+  let handle;
+  try {
+    const stat = await fs.promises.stat(absolute);
+    handle = await fs.promises.open(absolute, 'r');
+    const header = Buffer.alloc(24);
+    await handle.read(header, 0, 24, 0);
+    const png = header.length >= 24 && header.toString('ascii', 1, 4) === 'PNG';
+    return {
+      mtime: Math.round(stat.mtimeMs),
+      width: png ? header.readUInt32BE(16) : 0,
+      height: png ? header.readUInt32BE(20) : 0,
+    };
+  } catch {
+    return null;
+  } finally {
+    if (handle) await handle.close().catch(() => {});
+  }
 }
 
 function novelBriefOf(novel) {
@@ -127,15 +171,25 @@ function novelBriefOf(novel) {
 
 class ProjectService extends Service {
   list() {
-    return this.ctx.model.Project.findAll({ order: [[ 'id', 'DESC' ]] });
+    return this.ctx.model.Project.findAll({
+      where: { deleted_at: null },
+      order: [[ 'id', 'DESC' ]],
+    });
+  }
+
+  async remove(id) {
+    const project = await this.ctx.model.Project.findByPk(id);
+    if (!project || project.deleted_at) this.ctx.throw(404, '项目不存在');
+    await this.ctx.service.generate.stopProject(project.id);
+    await project.update({ deleted_at: new Date() });
+    return { id: project.id };
   }
 
   async show(id) {
     const project = await this.ctx.model.Project.findByPk(id);
-    if (!project) this.ctx.throw(404, '项目不存在');
+    if (!project || project.deleted_at) this.ctx.throw(404, '项目不存在');
     const episode = await this.ensureEpisode(project.id);
     const imports = await this.ctx.model.Import.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] });
-    await this.repairSnapshotTitles(project, imports);
     await this.ensureShotCodes(id);
     const [ assets, shots ] = await Promise.all([
       this.ctx.model.Asset.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] }),
@@ -150,8 +204,8 @@ class ProjectService extends Service {
     let bindings = await this.ctx.model.ShotBinding.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] });
     bindings = await this.fillMentionedAssets(id, shots, assets, importById, promptByShot, bindings);
     const pendingTasks = await this.ctx.model.Task.findAll({
-      where: { project_id: id },
-      order: [[ 'id', 'DESC' ]],
+      where: { project_id: id, status: [ 'queued', 'running', 'saving' ] },
+      attributes: [ 'prompt_id', 'status' ],
     });
     const promptIds = pendingTasks
       .filter(item => item.prompt_id && [ 'queued', 'running', 'saving' ].includes(item.status))
@@ -167,6 +221,10 @@ class ProjectService extends Service {
     ]);
     const tasks = await this.ctx.model.Task.findAll({
       where: { project_id: id },
+      attributes: {
+        exclude: [ 'workflow_snapshot' ],
+        include: [[ this.app.Sequelize.literal('(workflow_snapshot IS NOT NULL)'), 'has_workflow_snapshot' ]],
+      },
       order: [[ 'id', 'DESC' ]],
     });
     const taskIds = tasks.map(item => item.id);
@@ -197,26 +255,37 @@ class ProjectService extends Service {
         this.ctx.logger.warn('[cartoon] workflow names %s', err.message);
       }
     }
+    const shotViews = await Promise.all(shots.map(async shot => {
+      const json = shot.toJSON();
+      const sizes = normalizeShotSizes(json.shot_size);
+      const moves = normalizeCameraMoves(json.camera_move);
+      const [ autoFrame, manualFrame ] = await Promise.all([
+        frameFileMeta(this.app, json.first_frame_path),
+        frameFileMeta(this.app, json.manual_frame_path),
+      ]);
+      return {
+        ...json,
+        shot_size: serializeShotSizes(sizes),
+        shot_sizes: sizes,
+        camera_move: serializeCameraMoves(moves),
+        camera_moves: moves,
+        first_frame_mtime: autoFrame?.mtime || 0,
+        first_frame_width: autoFrame?.width || 0,
+        first_frame_height: autoFrame?.height || 0,
+        manual_frame_mtime: manualFrame?.mtime || 0,
+        manual_frame_width: manualFrame?.width || 0,
+        manual_frame_height: manualFrame?.height || 0,
+        prompt: presentPrompt(promptByShot.get(shot.id)),
+        asset_marks: this.assetMarksFor(shot, assets, importById, promptByShot, bindings),
+      };
+    }));
     return {
       project,
       imports,
       assets,
       copy_blocks: copyBlocks,
       gaps: templateGaps(project.template_id, project, assets),
-      shots: shots.map(shot => {
-        const json = shot.toJSON();
-        const sizes = normalizeShotSizes(json.shot_size);
-        const moves = normalizeCameraMoves(json.camera_move);
-        return {
-          ...json,
-          shot_size: serializeShotSizes(sizes),
-          shot_sizes: sizes,
-          camera_move: serializeCameraMoves(moves),
-          camera_moves: moves,
-          prompt: presentPrompt(promptByShot.get(shot.id)),
-          asset_marks: this.assetMarksFor(shot, assets, importById, promptByShot, bindings),
-        };
-      }),
+      shots: shotViews,
       tasks: taskViews,
       bindings,
       voice_cues: await this.ctx.model.VoiceCue.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] }),
@@ -371,9 +440,17 @@ class ProjectService extends Service {
       .sort((a, b) => a.order - b.order);
   }
 
-  async repairSnapshotTitles(project, imports) {
-    const pending = imports.filter(item => item.source_novel_id && !String(item.chapter_title || '').includes('·'));
+  repairSnapshotTitles(project, imports) {
+    const done = this.app.cartoonTitleRepair || (this.app.cartoonTitleRepair = new Set());
+    const pending = imports.filter(item => item.source_novel_id && !done.has(Number(item.id)) && !String(item.chapter_title || '').includes('·'));
     if (!pending.length) return;
+    pending.forEach(item => done.add(Number(item.id)));
+    this.finishSnapshotTitles(project, pending).catch(err => {
+      this.ctx.logger.warn('[cartoon] retitle %s', err.message);
+    });
+  }
+
+  async finishSnapshotTitles(project, pending) {
     let reader;
     try {
       reader = await this.fetchNovel(`/api/novels/${encodeURIComponent(project.source_novel_id || pending[0].source_novel_id)}/reader`);
@@ -1010,6 +1087,7 @@ class ProjectService extends Service {
     const places = (Array.isArray(payload.places) ? payload.places : []).map(item => ({
       name: placeTag(item?.name),
       note: String(item?.note || '').trim(),
+      stage_note: String(item?.stage_note || '').trim().slice(0, 500),
     })).filter(item => item.name);
     await chapter.update({
       characters,
@@ -1023,6 +1101,86 @@ class ProjectService extends Service {
       await this.ensureSceneDrafts(projectId, places);
     }
     return this.show(projectId);
+  }
+
+  async assignImportWorkflow(projectId, importId, payload) {
+    const media = payload.media === 'image' || payload.media === 'video' ? payload.media : '';
+    const workflowId = Number(payload.workflow_id);
+    if (!media) this.ctx.throw(400, '请选择图片或视频');
+    if (!Number.isInteger(workflowId) || workflowId <= 0) this.ctx.throw(400, '请选择工作流');
+    const chapter = await this.ctx.model.Import.findOne({ where: { id: importId, project_id: projectId } });
+    if (!chapter) this.ctx.throw(404, '章节快照不存在');
+    const workflow = await this.ctx.service.generate.choiceById(workflowId);
+    if (workflow.media !== media) this.ctx.throw(400, '这个工作流和所选类型不一致');
+    const result = await this.ctx.model.Shot.update(
+      { workflow_id: workflowId },
+      { where: { project_id: projectId, import_id: importId } },
+    );
+    const updated = Array.isArray(result) ? result[0] : result;
+    if (!updated) this.ctx.throw(400, '这个快照还没有镜头');
+    return { updated, workflow_id: workflowId, media };
+  }
+
+  async applySnapshotFields(projectId, importId, payload) {
+    const mode = payload.mode === 'reset' ? 'reset' : 'fill';
+    const chapter = await this.ctx.model.Import.findOne({ where: { id: importId, project_id: projectId } });
+    if (!chapter) this.ctx.throw(404, '章节快照不存在');
+    const charNotes = stageNoteMap(payload.characters);
+    const placeNotes = stageNoteMap(payload.places);
+    let workflowId = 0;
+    if (payload.workflow_id != null && payload.workflow_id !== '') {
+      workflowId = Number(payload.workflow_id);
+      if (!Number.isInteger(workflowId) || workflowId <= 0) this.ctx.throw(400, '请选择工作流');
+      const media = payload.media === 'image' || payload.media === 'video' ? payload.media : '';
+      if (!media) this.ctx.throw(400, '请选择图片或视频');
+      const workflow = await this.ctx.service.generate.choiceById(workflowId);
+      if (workflow.media !== media) this.ctx.throw(400, '这个工作流和所选类型不一致');
+    }
+    const shots = await this.ctx.model.Shot.findAll({
+      where: { project_id: projectId, import_id: importId },
+    });
+    let notes = 0;
+    let workflows = 0;
+    for (const shot of shots) {
+      const saved = shot.stage_notes && typeof shot.stage_notes === 'object' ? shot.stage_notes : {};
+      const characters = { ...(saved.characters || {}) };
+      const places = { ...(saved.places || {}) };
+      let noteChanged = false;
+      const writeBucket = (bucket, source) => {
+        Object.entries(source).forEach(([ name, note ]) => {
+          const owned = Object.prototype.hasOwnProperty.call(bucket, name);
+          const current = owned ? String(bucket[name] || '').trim() : '';
+          if (mode === 'fill') {
+            if (current || !note) return;
+            bucket[name] = note;
+            noteChanged = true;
+            return;
+          }
+          if (owned && String(bucket[name] ?? '') === note) return;
+          bucket[name] = note;
+          noteChanged = true;
+        });
+      };
+      writeBucket(characters, charNotes);
+      writeBucket(places, placeNotes);
+      const patch = {};
+      if (noteChanged) {
+        patch.stage_notes = {
+          characters: cleanNoteMap(characters),
+          places: cleanNoteMap(places),
+        };
+        notes += 1;
+      }
+      if (workflowId) {
+        const hasWorkflow = Number(shot.workflow_id) > 0;
+        if ((mode === 'reset' || !hasWorkflow) && Number(shot.workflow_id) !== workflowId) {
+          patch.workflow_id = workflowId;
+          workflows += 1;
+        }
+      }
+      if (Object.keys(patch).length) await shot.update(patch);
+    }
+    return { shots: shots.length, notes, workflows, mode };
   }
 
   async ensureSceneDrafts(projectId, places) {
@@ -1219,6 +1377,100 @@ class ProjectService extends Service {
     }
   }
 
+  linesOf(shot, cues = []) {
+    const stored = shot?.dialogue_lines;
+    let list = stored;
+    if (typeof stored === 'string') {
+      try { list = JSON.parse(stored); } catch { list = null; }
+    }
+    if (Array.isArray(list) && list.length) {
+      return list.map(item => ({
+        text: String(item?.text || '').trim(),
+        voice_key: String(item?.voice_key || '').trim(),
+      })).filter(item => item.text);
+    }
+    const cue = (cues || []).find(item => String(item.shot_id) === String(shot?.id));
+    const voice = String(cue?.voice_key || '').trim();
+    return String(shot?.dialogue || '').split(/\n+/).map(text => text.trim()).filter(Boolean)
+      .map(text => ({ text, voice_key: voice }));
+  }
+
+  async syncLineCues(shot, lines) {
+    await this.ctx.model.VoiceCue.destroy({ where: { project_id: shot.project_id, shot_id: shot.id } });
+    const spoken = (lines || []).filter(item => item.text && item.voice_key);
+    if (!spoken.length) return;
+    const duration = Number(shot.duration_ms) > 0 ? Number(shot.duration_ms) : 3000;
+    const slice = Math.max(1, Math.floor(duration / spoken.length));
+    await this.ctx.model.VoiceCue.bulkCreate(spoken.map((item, index) => {
+      const start = Math.min(duration - 1, index * slice);
+      const end = index === spoken.length - 1 ? duration : Math.min(duration, start + slice);
+      return {
+        project_id: shot.project_id,
+        shot_id: shot.id,
+        text: item.text.slice(0, 500),
+        start_ms: start,
+        end_ms: Math.max(start + 1, end),
+        voice_key: item.voice_key,
+        media_ref: '',
+      };
+    }));
+  }
+
+  async stageSuffix(shot) {
+    if (!shot?.import_id) return '';
+    const chapter = await this.ctx.model.Import.findByPk(shot.import_id);
+    const data = chapter?.script_data && typeof chapter.script_data === 'object' ? chapter.script_data : {};
+    const saved = shot.stage_notes && typeof shot.stage_notes === 'object' ? shot.stage_notes : {};
+    const characters = saved.characters || {};
+    const places = saved.places || {};
+    const lines = [];
+    (Array.isArray(data.characters) ? data.characters : []).forEach(person => {
+      const name = String(person?.name || '').trim();
+      if (!name) return;
+      const note = Object.prototype.hasOwnProperty.call(characters, name)
+        ? String(characters[name] || '').trim()
+        : String(person?.stage_note || '').trim();
+      if (note) lines.push(`本章说明：角色「${name}」在这一章的差别：${note}`);
+    });
+    (Array.isArray(data.places) ? data.places : []).forEach(place => {
+      const name = String(place?.name || '').trim();
+      if (!name) return;
+      const note = Object.prototype.hasOwnProperty.call(places, name)
+        ? String(places[name] || '').trim()
+        : String(place?.stage_note || '').trim();
+      if (note) lines.push(`本章说明：场景「${name}」在这一章的差别：${note}`);
+    });
+    return lines.join('\n');
+  }
+
+  async saveManualFrame(projectId, shotId, payload) {
+    const shot = await this.ctx.model.Shot.findByPk(shotId);
+    if (!shot || String(shot.project_id) !== String(projectId)) this.ctx.throw(404, '分镜不存在');
+    const decoded = decodeAssetImage({ data_base64: payload?.data_base64 || payload?.data || '', filename: 'manual.png' });
+    if (decoded.bytes.length > 12 * 1024 * 1024) this.ctx.throw(400, '首帧图片过大');
+    const relative = `frames/${projectId}/${shot.id}/manual.png`;
+    const absolute = resolveInside(outputRoot(this.app), relative);
+    if (!absolute) this.ctx.throw(400, '首帧路径无效');
+    await fs.promises.mkdir(path.dirname(absolute), { recursive: true });
+    await fs.promises.writeFile(absolute, decoded.bytes);
+    await shot.update({ manual_frame_path: relative });
+    return { manual_frame_path: relative };
+  }
+
+  async sendFrame(projectId, shotId, which) {
+    const shot = await this.ctx.model.Shot.findByPk(shotId);
+    if (!shot || String(shot.project_id) !== String(projectId)) this.ctx.throw(404, '分镜不存在');
+    const column = which === 'manual' ? 'manual_frame_path' : 'first_frame_path';
+    if (which !== 'manual' && which !== 'auto') this.ctx.throw(404, '帧不存在');
+    const relative = shot[column];
+    if (!relative) this.ctx.throw(404, '帧不存在');
+    const root = outputRoot(this.app);
+    const absolute = resolveInside(root, relative);
+    if (!absolute || !fs.existsSync(absolute)) this.ctx.throw(404, '帧文件不在磁盘上');
+    this.ctx.type = 'png';
+    this.ctx.body = fs.createReadStream(absolute);
+  }
+
   async updateShot(id, payload) {
     const shot = await this.ctx.model.Shot.findByPk(id);
     if (!shot) this.ctx.throw(404, '分镜不存在');
@@ -1241,19 +1493,39 @@ class ProjectService extends Service {
     const nextWorkflow = payload.workflow_id != null
       ? (Number.isInteger(workflowId) && workflowId > 0 ? workflowId : null)
       : shot.workflow_id;
-    await shot.update({
+    let dialogueLines;
+    if (Array.isArray(payload.dialogue_lines)) {
+      dialogueLines = payload.dialogue_lines.map(item => ({
+        text: String(item?.text || '').trim().slice(0, 2000),
+        voice_key: String(item?.voice_key || '').trim().slice(0, 80),
+      })).filter(item => item.text);
+    }
+    const nextDialogue = dialogueLines
+      ? dialogueLines.map(item => item.text).join('\n')
+      : (payload.dialogue ?? shot.dialogue);
+    const overridePayload = dialogueLines ? { ...payload, dialogue: nextDialogue } : payload;
+    const next = {
       shot_size: nextShotSize,
       camera_move: nextCamera,
       description: payload.description ?? shot.description,
       sort_order: payload.sort_order ?? shot.sort_order,
-      dialogue: payload.dialogue ?? shot.dialogue,
+      dialogue: nextDialogue,
       duration_ms: durationMs,
       workflow_id: nextWorkflow,
       overridden_fields: withOverride(shot, {
-        ...payload,
+        ...overridePayload,
         shot_size: nextShotSize,
       }),
-    });
+    };
+    if (payload.stage_notes && typeof payload.stage_notes === 'object') {
+      next.stage_notes = {
+        characters: cleanNoteMap(payload.stage_notes.characters),
+        places: cleanNoteMap(payload.stage_notes.places),
+      };
+    }
+    if (dialogueLines) next.dialogue_lines = dialogueLines;
+    await shot.update(next);
+    if (dialogueLines) await this.syncLineCues(shot, dialogueLines);
     if (payload.positive_zh != null || payload.negative_zh != null) {
       const existing = await this.ctx.model.Prompt.findOne({ where: { shot_id: shot.id } });
       if (existing) {

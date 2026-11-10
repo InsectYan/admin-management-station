@@ -48,6 +48,7 @@ function normalizeScript(script) {
       ...source,
       name: tag.name,
       look: [ look, identity ].filter(Boolean).join(' '),
+      stage_note: String(source.stage_note || '').trim().slice(0, 500),
     };
   }).filter(Boolean);
   const scenes = (Array.isArray(data.scenes) ? data.scenes : []).map(scene => ({

@@ -11,8 +11,14 @@ $BridgeTaskName = "AMS Precheck Comfy Bridge"
 $BridgeScript = Join-Path $PSScriptRoot "comfy-bridge.ps1"
 
 function Test-BridgeListening {
-  $listen = Get-NetTCPConnection -LocalPort $BridgePort -State Listen -ErrorAction SilentlyContinue
-  return [bool]$listen
+  $client = [System.Net.Sockets.TcpClient]::new()
+  try {
+    return [bool]($client.ConnectAsync("127.0.0.1", $BridgePort).Wait(400) -and $client.Connected)
+  } catch {
+    return $false
+  } finally {
+    $client.Dispose()
+  }
 }
 
 function Install-ComfyBridgeShortcut {
@@ -46,9 +52,10 @@ function Start-ComfyBridgeNow {
   }
   $outLog = Join-Path $env:TEMP "ams-comfy-bridge.out.log"
   $errLog = Join-Path $env:TEMP "ams-comfy-bridge.err.log"
+  $arg = '-NoProfile -ExecutionPolicy Bypass -File "{0}"' -f $BridgeScript
   $proc = Start-Process -FilePath "powershell.exe" -WindowStyle Hidden -PassThru `
     -RedirectStandardOutput $outLog -RedirectStandardError $errLog `
-    -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $BridgeScript)
+    -ArgumentList $arg
   $deadline = (Get-Date).AddSeconds(8)
   do {
     Start-Sleep -Milliseconds 300

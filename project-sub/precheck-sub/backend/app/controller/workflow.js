@@ -119,6 +119,7 @@ class WorkflowController extends Controller {
         apiJson: body.api_json,
         values: body.values || [],
         refmodIds: body.refmod_ids || [],
+        refImages: body.ref_images || [],
       }));
     } catch (err) {
       this.ctx.status = err.status || 500;
@@ -137,6 +138,7 @@ class WorkflowController extends Controller {
         apiJson,
         values: body.values || [],
         refmodIds: body.refmod_ids || [],
+        refImages: body.ref_images || [],
       }));
     } catch (err) {
       this.ctx.status = err.status || 500;
@@ -165,6 +167,24 @@ class WorkflowController extends Controller {
   async previewFile() {
     try {
       await this.ctx.service.workflowPreview.sendFile(this.ctx.params.id, null, this.ctx.query.run);
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
+  async previewFrames() {
+    try {
+      await this.ctx.service.workflowPreview.sendFrames(this.ctx.params.id, null, this.ctx.query.run);
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
+  async draftFrames() {
+    try {
+      await this.ctx.service.workflowPreview.sendFrames(null, this.ctx.params.key, this.ctx.query.run);
     } catch (err) {
       this.ctx.status = err.status || 500;
       this.ctx.body = { code: this.ctx.status, message: err.message, data: null };

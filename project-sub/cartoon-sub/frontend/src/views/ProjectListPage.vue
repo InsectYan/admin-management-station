@@ -25,6 +25,11 @@
           <template #default="{ row }">{{ styleLabel(row.visual_style) }}</template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100" />
+        <el-table-column label="操作" width="88" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="danger" :disabled="!canMake()" @click.stop="removeProject(row)">删除</el-button>
+          </template>
+        </el-table-column>
       </el-table>
       <el-empty v-if="!loading && !rows.length" :description="loadError || '还没有视频项目'" />
     </div>
@@ -69,7 +74,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
@@ -165,6 +170,24 @@ async function create() {
   }
 }
 function open(row) { router.push(`/projects/${row.id}`); }
+async function removeProject(row) {
+  try {
+    await ElMessageBox.confirm(
+      `删除项目「${row.name}」后，它不再出现在列表里。已经生成的产物会留在产物页。`,
+      '删除项目',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  try {
+    await request(`/projects/${row.id}`, { method: 'delete' });
+    ElMessage.success('项目已删除');
+    await load();
+  } catch (err) {
+    ElMessage.error(err.message || '删除失败');
+  }
+}
 onMounted(load);
 </script>
 

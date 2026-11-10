@@ -11,13 +11,27 @@
             <el-option v-for="pack in scenePacks" :key="pack.id" :label="`${pack.name}（${pack.image_count} 张）`" :value="pack.id" />
           </el-option-group>
         </el-select>
-        <p class="precheck-preview-hint">按选择顺序对应 &lt;Picture 1&gt;、&lt;Picture 2&gt;。人物和场景可以一起选，总共不超过 9 张图。这里用的是预检检测包。首尾帧工作流不使用这个包。</p>
+        <p class="precheck-preview-hint">按选择顺序对应 &lt;Picture 1&gt;、&lt;Picture 2&gt;。人物和场景可以一起选。也可以不选包，直接上传最多 9 张参考图。总共不超过 9 张。首尾帧工作流不使用这个包。</p>
+        <el-upload
+          v-model:file-list="refFileList"
+          class="precheck-image-upload"
+          action="#"
+          list-type="picture"
+          multiple
+          accept="image/png,image/jpeg,image/webp"
+          :auto-upload="false"
+          :limit="9"
+          :on-change="onRefImages"
+          :on-remove="onRefImages"
+        >
+          <el-button type="primary" plain>上传参考图</el-button>
+        </el-upload>
       </el-form-item>
       <el-form-item
         v-for="field in fields"
         :key="field.id"
         :label="field.label"
-        :class="{ 'precheck-preview-duration': field.type === 'duration' || field.type === 'image' }"
+        :class="{ 'precheck-preview-duration': field.type === 'duration' || field.type === 'image' || field.type === 'video' }"
       >
         <template v-if="field.type === 'duration'">
           <el-input-number
@@ -32,22 +46,23 @@
           />
           <p class="precheck-preview-hint">{{ durationHint(field) }}</p>
         </template>
-        <template v-else-if="field.type === 'image'">
+        <template v-else-if="field.type === 'image' || field.type === 'video'">
           <div class="precheck-image-field">
             <el-upload
               :key="field.id"
               v-model:file-list="imageLists[field.id]"
               class="precheck-image-upload"
               action="#"
-              list-type="picture"
-              accept="image/png,image/jpeg,image/webp"
+              :list-type="field.type === 'video' ? 'text' : 'picture'"
+              :accept="field.type === 'video' ? 'video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov' : 'image/png,image/jpeg,image/webp'"
               :auto-upload="false"
-              :limit="1"
-              :on-change="file => onImage(field, file)"
-              :on-remove="() => clearImage(field)"
-              :on-exceed="files => replaceImage(field, files)"
+              :multiple="(field.limit || 1) > 1"
+              :limit="field.limit || 1"
+              :on-change="(file, files) => onImage(field, file, files)"
+              :on-remove="(file, files) => onImage(field, file, files)"
+              :on-exceed="files => onImageExceed(field, files)"
             >
-              <el-button type="primary" plain>选择图片</el-button>
+              <el-button type="primary" plain>{{ field.type === 'video' ? '选择视频' : '选择图片' }}</el-button>
             </el-upload>
             <p class="precheck-preview-hint">{{ field.spec }}</p>
           </div>
@@ -72,8 +87,12 @@
     </ul>
     <p v-if="notice" class="precheck-preview-note">{{ notice }}</p>
     <div v-if="runs.length" class="precheck-preview-list">
-      <article v-for="item in runs" :key="item.id" class="precheck-preview-card">
-        <MediaFileList v-if="item.status === 'success'" :items="[mediaItem(item)]" @remove="removeRun" />
+      <article v-for="item in runs" :key="item.id" class="precheck-preview-card" :class="{ 'precheck-preview-card-text': item.media_kind === 'text', 'precheck-preview-card-video': item.media_kind === 'video' && item.status === 'success' }">
+        <template v-if="item.status === 'success'">
+          <p v-if="item.caption" class="precheck-caption">{{ item.caption }}</p>
+          <MediaFileList v-if="item.media_kind !== 'text'" :items="[mediaItem(item)]" @remove="removeRun" />
+          <el-button v-else link type="danger" @click="removeRun(item)">删除</el-button>
+        </template>
         <template v-else>
           <p>{{ runLabel(item) }}</p>
           <el-progress v-if="item.status === 'running'" :percentage="item.progress_percent || 0" :stroke-width="8" color="#2f8a5b" />
@@ -83,6 +102,12 @@
         </template>
       </article>
     </div>
+    <ol v-if="framePacks.length" class="precheck-frame-packs">
+      <li v-for="item in framePacks" :key="item.id">
+        <span>{{ runLabel(item) }}<template v-if="item.frame_count"> · {{ item.frame_count }} 帧</template></span>
+        <el-button type="primary" plain size="small" @click="downloadFrames(item)">下载帧压缩包</el-button>
+      </li>
+    </ol>
   </div>
 </template>
 
@@ -100,11 +125,14 @@ const props = defineProps({
 
 const FRAME_KEYS = new Set([ 'length', 'frames', 'num_frames', 'frame_count' ]);
 const IMAGE_TYPES = new Set([ 'image/png', 'image/jpeg', 'image/webp' ]);
+const VIDEO_TYPES = new Set([ 'video/mp4', 'video/webm', 'video/quicktime' ]);
 const fields = ref([]);
 const packs = ref([]);
 const characterPacks = computed(() => packs.value.filter(item => item.kind !== 'scene'));
 const scenePacks = computed(() => packs.value.filter(item => item.kind === 'scene'));
 const refmodIds = ref([]);
+const refFileList = ref([]);
+const refImages = ref([]);
 const imageLists = reactive({});
 const loaded = ref(false);
 const frameBackup = ref(null);
@@ -113,11 +141,13 @@ const submitting = ref(false);
 const notice = ref('');
 const preview = ref(null);
 const runs = ref([]);
+const framePacks = computed(() => runs.value.filter(item => item.status === 'success' && item.media_kind === 'video' && item.zip_name));
 let timer = null;
 
 const progressText = computed(() => {
   const state = preview.value;
   if (!state || state.status !== 'running') return '';
+  if (state.phase === 'frames') return '视频已经生成，正在导出全部帧并打包。离开页面不会中断。';
   if (state.phase === 'queued') {
     return state.queue_ahead > 0
       ? `已离开页面也会继续生成。当前在排队，前面还有 ${state.queue_ahead} 个。`
@@ -172,7 +202,7 @@ function durationHint(field) {
   return `将按 ${fps} fps 写成约 ${frames} 帧${snap}。`;
 }
 function syncImageLists(next) {
-  const ids = new Set((next || []).filter(field => field.type === 'image').map(field => field.id));
+  const ids = new Set((next || []).filter(field => field.type === 'image' || field.type === 'video').map(field => field.id));
   Object.keys(imageLists).forEach(key => {
     if (!ids.has(key)) delete imageLists[key];
   });
@@ -180,27 +210,51 @@ function syncImageLists(next) {
     if (!imageLists[id]) imageLists[id] = [];
   });
 }
-function readImage(field, file) {
-  if (!file) return;
-  if (file.type && !IMAGE_TYPES.has(file.type)) {
-    ElMessage.warning('请上传 png、jpg 或 webp');
-    imageLists[field.id] = [];
-    clearImage(field);
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = () => {
-    field.filename = file.name;
-    field.data = String(reader.result || '');
-  };
-  reader.readAsDataURL(file);
+function readFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve({ filename: file.name, data: String(reader.result || '') });
+    reader.onerror = () => reject(new Error('读取文件失败'));
+    reader.readAsDataURL(file);
+  });
 }
-function onImage(field, uploadFile) {
-  readImage(field, uploadFile?.raw);
+function acceptedMedia(field, files) {
+  const video = field?.type === 'video';
+  const types = video ? VIDEO_TYPES : IMAGE_TYPES;
+  const names = video ? /\.(mp4|webm|mov)$/i : /\.(png|jpe?g|webp)$/i;
+  return (files || []).map(item => item.raw || item).filter(file => file && (types.has(file.type) || names.test(file.name || '')));
+}
+async function rememberImages(target, files) {
+  const accepted = acceptedMedia(target, files);
+  if ((files || []).length && !accepted.length) {
+    ElMessage.warning(target?.type === 'video' ? '请上传 mp4、webm 或 mov' : '请上传 png、jpg 或 webp');
+  }
+  const ready = [];
+  for (const file of accepted) ready.push(await readFile(file));
+  target.files = ready;
+  target.filename = ready.map(item => item.filename).join('、');
+  target.data = ready[0]?.data || '';
+}
+function onImage(field, uploadFile, uploadFiles) {
+  const list = uploadFiles || (uploadFile ? [ uploadFile ] : []);
+  rememberImages(field, list).catch(err => ElMessage.error(err.message));
 }
 function clearImage(field) {
   field.filename = '';
   field.data = '';
+  field.files = [];
+}
+async function onRefImages(uploadFile, uploadFiles) {
+  const holder = { files: [], filename: '', data: '' };
+  await rememberImages(holder, uploadFiles || (uploadFile ? [ uploadFile ] : []));
+  refImages.value = holder.files;
+}
+function onImageExceed(field, files) {
+  if ((field.limit || 1) <= 1) {
+    replaceImage(field, files);
+    return;
+  }
+  ElMessage.warning(field.type === 'video' ? `最多 ${field.limit} 个视频` : `最多 ${field.limit} 张`);
 }
 function replaceImage(field, files) {
   const file = files?.[0];
@@ -270,7 +324,29 @@ function mediaItem(item) {
     name: runLabel(item),
   };
 }
+async function downloadFrames(item) {
+  const base = props.workflowId
+    ? `/workflows/${props.workflowId}/preview/frames`
+    : `/workflows/drafts/${draftKey()}/frames`;
+  const url = `${resolveApiBase()}${base}?run=${encodeURIComponent(item.id)}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    ElMessage.error('下载帧压缩包失败');
+    return;
+  }
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const stamp = String(item.created_at || item.id).replace(/[^\d]/g, '').slice(0, 12) || item.id;
+  link.href = objectUrl;
+  link.download = `frames-${stamp}.zip`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
+}
 function runProgress(item) {
+  if (item.phase === 'frames') return '正在导出全部帧并打包';
   if (item.phase === 'queued') {
     return item.queue_ahead > 0 ? `排队，前面还有 ${item.queue_ahead} 个` : '排队中';
   }
@@ -322,7 +398,11 @@ async function refresh() {
     return;
   }
   if (active) {
-    notice.value = active.phase === 'queued' ? '已提交，正在排队' : '正在生成，完成后会留在下面的列表里';
+    notice.value = active.phase === 'queued'
+      ? '已提交，正在排队'
+      : active.phase === 'frames'
+        ? '视频已经生成，正在导出全部帧并打包'
+        : '正在生成，完成后会留在下面的列表里';
     follow(active);
     return;
   }
@@ -341,11 +421,11 @@ async function removeRun(item) {
 }
 async function generate() {
   if (!props.apiJson) return;
-  if (props.refmod && !refmodIds.value.length) {
-    ElMessage.error('请选择至少一个包');
+  if (props.refmod && !refmodIds.value.length && !refImages.value.length) {
+    ElMessage.error('请选择检测包或上传参考图');
     return;
   }
-  const missing = fields.value.filter(field => field.type === 'image' && !field.data);
+  const missing = fields.value.filter(field => (field.type === 'image' || field.type === 'video') && !field.data && !(field.files || []).length);
   if (missing.length) {
     ElMessage.error(`请上传${missing.map(field => field.label).join('、')}`);
     return;
@@ -353,7 +433,12 @@ async function generate() {
   submitting.value = true;
   notice.value = '已提交到 ComfyUI';
   try {
-    const data = { values: fields.value, api_json: props.apiJson, refmod_ids: refmodIds.value };
+    const data = {
+      values: fields.value,
+      api_json: props.apiJson,
+      refmod_ids: refmodIds.value,
+      ref_images: refImages.value,
+    };
     const saved = props.workflowId
       ? await request(`/workflows/${props.workflowId}/preview`, { method: 'post', data })
       : await request(`/workflows/drafts/${draftKey()}/preview`, { method: 'post', data });
@@ -392,11 +477,16 @@ onUnmounted(stop);
   border-color: rgba(47, 138, 91, 0.16);
 }
 .precheck-preview-hint { margin: 6px 0 0; color: #5c6b62; font-size: 13px; }
+.precheck-caption { margin: 0 0 8px; white-space: pre-wrap; color: #243028; font-size: 13px; line-height: 1.5; }
 .precheck-preview-progress { max-width: 420px; margin-top: 12px; }
 .precheck-preview-submitted { margin: 8px 0 0; padding-left: 18px; color: #5c6b62; font-size: 13px; }
 .precheck-preview-note { color: #5c6b62; }
-.precheck-preview-list { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; margin-top: 12px; }
+.precheck-preview-list { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; margin-top: 12px; }
 .precheck-preview-card { width: 220px; }
+.precheck-preview-card-video { width: min(100%, 640px); }
+.precheck-preview-card-text { width: min(100%, 520px); }
+.precheck-frame-packs { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.precheck-frame-packs li { display: flex; align-items: center; gap: 12px; color: #243028; font-size: 13px; }
 @media (max-width: 800px) {
   .precheck-preview-form { grid-template-columns: 1fr; }
 }

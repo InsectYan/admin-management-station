@@ -1,7 +1,7 @@
 <template>
   <PageShell v-if="detail" :title="embedded ? '' : detail.project.name" :loading="!region.covered && region.loading">
     <template v-if="!embedded" #extra>
-      <el-button link type="primary" @click="router.push(`/projects/${route.params.id}`)">返回详情</el-button>
+      <el-button link type="primary" @click="router.push(`/projects/${projectKey()}`)">返回详情</el-button>
     </template>
     <FlowSteps v-if="!embedded" :steps="steps" :current="step" @select="step = $event" />
 
@@ -144,7 +144,10 @@
             </div>
             <el-tabs v-if="activeScriptData" v-model="scriptTab" class="cartoon-script-tabs">
               <el-tab-pane label="概览" name="overview">
-                <h4>概要</h4>
+                <div class="cartoon-board__head cartoon-script__edithead">
+                  <h4>概要</h4>
+                  <el-button :disabled="!canMake()" @click="openScriptEdit">编辑</el-button>
+                </div>
                 <CartoonMarkdown :source="activeScriptData.summary || ''" empty-text="还没有概要" />
                 <div class="cartoon-board__head">
                   <el-button :disabled="!canMake()" @click="openRoster('character')">新增人物</el-button>
@@ -155,17 +158,23 @@
                 <el-empty v-if="!(activeScriptData.characters || []).length" description="还没有人物" />
                 <ul v-else class="cartoon-script__list">
                   <li v-for="(person, index) in activeScriptData.characters" :key="`${person.name}-${index}`">
-                    <strong>{{ person.name }}</strong> — {{ person.look }}
-                    <span v-if="!namedAsset('character', person.name)" class="cartoon-missing">缺少角色资产</span>
+                    <div>
+                      <strong>{{ person.name }}</strong> — {{ person.look }}
+                      <span v-if="!namedAsset('character', person.name)" class="cartoon-missing">缺少角色资产</span>
+                    </div>
+                    <p class="cartoon-script__note">{{ person.stage_note || '未填写本章说明' }}</p>
                   </li>
                 </ul>
                 <h4>所在场景</h4>
                 <el-empty v-if="!scriptPlaces.length" description="还没有场景" />
                 <ul v-else class="cartoon-script__list">
                   <li v-for="(place, index) in scriptPlaces" :key="`${place.name}-${index}`">
-                    <strong>{{ place.name }}</strong>
-                    <span v-if="place.note"> — {{ place.note }}</span>
-                    <span v-if="!namedAsset('scene', place.name)" class="cartoon-missing">缺少场景资产</span>
+                    <div>
+                      <strong>{{ place.name }}</strong>
+                      <span v-if="place.note"> — {{ place.note }}</span>
+                      <span v-if="!namedAsset('scene', place.name)" class="cartoon-missing">缺少场景资产</span>
+                    </div>
+                    <p class="cartoon-script__note">{{ place.stage_note || '未填写本章说明' }}</p>
                   </li>
                 </ul>
               </el-tab-pane>
@@ -207,6 +216,18 @@
               <el-table-column label="对白" width="280">
                 <template #default="{ row }"><ClampText title="对白" :text="row.dialogue || ''" /></template>
               </el-table-column>
+              <el-table-column label="上镜尾帧" width="120">
+                <template #default="{ row }">
+                  <img v-if="row.first_frame_path" class="cartoon-frame-thumb" :style="frameBox(row, 'auto')" :src="frameSrc(row, 'auto')" alt="" />
+                  <span v-else>—</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="指定首帧" width="120">
+                <template #default="{ row }">
+                  <img v-if="row.manual_frame_path" class="cartoon-frame-thumb" :style="frameBox(row, 'manual')" :src="frameSrc(row, 'manual')" alt="" />
+                  <span v-else>—</span>
+                </template>
+              </el-table-column>
               <el-table-column label="操作" width="200" fixed="right">
                 <template #default="{ row }">
                   <el-button
@@ -240,7 +261,10 @@
       <div class="cartoon-shot-head">
         <h3 class="cartoon-module__title">镜头</h3>
         <div class="cartoon-shot-head__side">
-          <span v-if="autoProgressLabel" class="cartoon-auto-progress">{{ autoProgressLabel }}</span>
+          <span v-if="autoProgressParts.length" class="cartoon-auto-progress" aria-live="polite">
+            <el-icon class="is-loading"><Loading /></el-icon>
+            <span v-for="part in autoProgressParts" :key="part.label" class="cartoon-auto-progress__item">{{ part.current }}/{{ part.total }} {{ part.label }}<i class="cartoon-auto-dots"></i></span>
+          </span>
           <el-button type="primary" :disabled="!canMake() || !selectedBoard || autoRunning" @click="openShotCreate">新增</el-button>
         </div>
       </div>
@@ -284,8 +308,8 @@
           <p v-if="!selectedBoard" class="cartoon-module__hint">先在左侧选择一条章节快照。</p>
           <div v-if="selectedBoard" class="cartoon-entry-actions">
             <el-button :disabled="autoRunning" @click="runAuto('prompt')">生成分镜提示词</el-button>
-            <el-button :disabled="autoRunning" @click="runAuto('video')">自动生成视频</el-button>
-            <el-button type="primary" plain :disabled="autoRunning" @click="runAuto('all')">全自动执行</el-button>
+            <el-button :disabled="autoRunning || runMark.videoLive" @click="openVideoAuto">自动生成视频</el-button>
+            <el-button type="primary" plain :disabled="autoRunning || runMark.videoLive" @click="runAuto('all')">全自动执行</el-button>
             <el-button type="danger" plain :disabled="!canStop" @click="stopWork">停止</el-button>
           </div>
           <el-table v-if="selectedBoard" class="cartoon-shot-table" :data="boardPageRows" style="margin-top: 12px">
@@ -311,6 +335,18 @@
             </el-table-column>
             <el-table-column label="对白" width="280">
               <template #default="{ row }"><ClampText title="对白" :text="row.dialogue || ''" /></template>
+            </el-table-column>
+            <el-table-column label="上镜尾帧" width="120">
+              <template #default="{ row }">
+                <img v-if="row.first_frame_path" class="cartoon-frame-thumb" :style="frameBox(row, 'auto')" :src="frameSrc(row, 'auto')" alt="" />
+                <span v-else>—</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="指定首帧" width="120">
+              <template #default="{ row }">
+                <img v-if="row.manual_frame_path" class="cartoon-frame-thumb" :style="frameBox(row, 'manual')" :src="frameSrc(row, 'manual')" alt="" />
+                <span v-else>—</span>
+              </template>
             </el-table-column>
             <el-table-column label="正向提示词" width="520">
               <template #default="{ row }"><ClampText title="正向提示词" :text="row.prompt?.positive_zh || ''" /></template>
@@ -436,6 +472,32 @@
         </div>
       </template>
     </el-drawer>
+    <el-dialog v-model="videoAutoOpen" title="自动生成视频" width="480px" :close-on-click-modal="false">
+      <p class="cartoon-module__hint">本次只执行下拉框里勾选的镜头，并按镜头顺序排列。</p>
+      <el-form label-position="top" @submit.prevent>
+        <el-form-item label="镜头ID">
+          <el-select
+            v-model="videoAutoIds"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            filterable
+            placeholder="选择镜头ID"
+            style="width: 100%"
+          >
+            <template #header>
+              <el-checkbox v-model="videoAutoAll" :indeterminate="videoAutoSome" @change="toggleVideoAutoAll">全选</el-checkbox>
+            </template>
+            <el-option v-for="row in boardShots" :key="row.id" :label="row.shot_code || String(row.id)" :value="row.id" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <p class="cartoon-module__hint">{{ videoAutoHint }}</p>
+      <template #footer>
+        <el-button @click="videoAutoOpen = false">取消</el-button>
+        <el-button type="primary" :disabled="!videoAutoIds.length" @click="confirmVideoAuto">开始生成</el-button>
+      </template>
+    </el-dialog>
     <el-dialog v-model="promoteVisible" title="提升到叙事工作台" width="520px">
       <p class="cartoon-module__hint">镜头对白是拆分进生产稿的句子，可以已经和小说不一样。原句必须是钉扎章节里的一整句，改后才是要写回小说的新句子。应用发生在叙事工作台，这里的生产稿不会被改回去。</p>
       <el-form label-position="top">
@@ -451,6 +513,31 @@
         <el-button type="primary" :disabled="!canMake()" @click="submitPromote">提交</el-button>
       </template>
     </el-dialog>
+    <el-drawer v-model="scriptEditOpen" title="编辑概要" size="640px" append-to-body>
+      <el-form label-position="top">
+        <p style="margin: 0 0 12px; color: #5c6b62; font-size: 13px">点保存时，镜头里空着的说明和工作流会按这里补上。点重置时，这一快照里的全部镜头改成当前说明；选了工作流就连工作流一起改。这次的类型和工作流选择不会留在概览上。</p>
+        <el-form-item v-for="(person, index) in scriptDraft.characters" :key="`person-${person.name}-${index}`" :label="`角色说明·${person.name}`">
+          <el-input v-model="person.stage_note" type="textarea" :rows="2" maxlength="500" placeholder="本章说明，可以不填。例如这章的衣服、饰品" />
+        </el-form-item>
+        <el-form-item v-for="(place, index) in scriptDraft.places" :key="`place-${place.name}-${index}`" :label="`场景说明·${place.name}`">
+          <el-input v-model="place.stage_note" type="textarea" :rows="2" maxlength="500" placeholder="本章说明，可以不填。例如这章多了件陈设" />
+        </el-form-item>
+        <el-form-item label="生成类型">
+          <el-button :type="bulkMedia === 'image' ? 'primary' : 'default'" @click="bulkMedia = 'image'">图片</el-button>
+          <el-button :type="bulkMedia === 'video' ? 'primary' : 'default'" @click="bulkMedia = 'video'">视频</el-button>
+        </el-form-item>
+        <el-form-item label="工作流">
+          <el-select v-model="bulkWorkflowId" clearable filterable placeholder="不选则不改镜头工作流" style="width: 100%">
+            <el-option v-for="item in bulkWorkflows" :key="item.id" :label="item.name" :value="item.id" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="scriptEditOpen = false">取消</el-button>
+        <el-button :loading="scriptSaving" @click="saveScriptEdit('reset')">重置</el-button>
+        <el-button type="primary" :loading="scriptSaving" @click="saveScriptEdit('fill')">保存</el-button>
+      </template>
+    </el-drawer>
     <el-dialog v-model="rosterOpen" :title="rosterKind === 'character' ? '新增人物' : '新增场景'" width="480px">
       <el-form label-position="top">
         <el-form-item :label="rosterKind === 'character' ? '人物名称' : '场景名称'">
@@ -469,9 +556,10 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { Loading } from '@element-plus/icons-vue';
 import PageShell from '../components/PageShell.vue';
 import FlowSteps from '../components/FlowSteps.vue';
 import NovelBriefPanel from '../components/NovelBriefPanel.vue';
@@ -480,8 +568,9 @@ import CopyBlocks from '../components/CopyBlocks.vue';
 import ShotGeneratePage from './ShotGeneratePage.vue';
 import RegionLoad from '../components/RegionLoad.vue';
 import { useRegionLoad } from '../lib/useRegionLoad.js';
+import { autoRunMark, rememberAutoRun } from '../lib/autoRunMark.js';
 import ClampText from '../components/ClampText.vue';
-import { request } from '../services/apiConfig.js';
+import { request, resolveApiBase } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 import { isLocalType, supportsAv } from '../lib/contentTypes.js';
 import { uncoveredScenes } from '../utils/sceneCoverage.js';
@@ -493,6 +582,24 @@ const props = defineProps({
 });
 const route = useRoute();
 const router = useRouter();
+let heldProjectId = '';
+let jobLock = '';
+function projectKey() {
+  if (jobLock) return jobLock;
+  const live = String(route.params.id || '');
+  if (live) heldProjectId = live;
+  return heldProjectId;
+}
+function lockJob() {
+  if (jobLock) return '';
+  const live = String(route.params.id || '');
+  if (live) heldProjectId = live;
+  jobLock = heldProjectId;
+  return jobLock;
+}
+function unlockJob(token) {
+  if (token && jobLock === token) jobLock = '';
+}
 const region = useRegionLoad();
 const steps = [
   { step: 1, title: '项目' },
@@ -565,22 +672,31 @@ const selectedImportKey = ref('');
 const snapOpen = reactive({});
 const generateOpen = ref(false);
 const generateShotId = ref('');
-const autoRunning = ref(false);
+const runMark = autoRunMark(projectKey());
+const autoRunning = computed({
+  get: () => runMark.running,
+  set: value => { runMark.running = value; },
+});
 const shotTab = ref('table');
-const autoRecords = ref([]);
+const videoAutoOpen = ref(false);
+const videoAutoIds = ref([]);
+const videoAutoAll = ref(false);
+const videoAutoSome = ref(false);
+const autoRecords = computed({
+  get: () => runMark.records,
+  set: value => { runMark.records = value; },
+});
 const recordPage = ref(1);
-const autoPrompt = reactive({ done: 0, total: 0 });
-const autoVideo = reactive({ done: 0, total: 0 });
-let autoToken = 0;
-let runController = null;
+const autoPrompt = runMark.prompt;
+const autoVideo = runMark.video;
 const manualJob = ref(false);
-const canStop = computed(() => autoRunning.value || Boolean(expandingKey.value) || manualJob.value || Boolean(shotPanel.value?.jobLive) || Boolean(shotPanel.value?.generating));
+const canStop = computed(() => autoRunning.value || runMark.videoLive || runMark.promptLive || Boolean(expandingKey.value) || manualJob.value || Boolean(shotPanel.value?.jobLive) || Boolean(shotPanel.value?.generating));
 function onShotRunning(payload) {
   manualJob.value = Boolean(payload?.live);
 }
 function ensureController() {
-  if (!runController) runController = new AbortController();
-  return runController;
+  if (!runMark.controller) runMark.controller = new AbortController();
+  return runMark.controller;
 }
 function stopError() {
   const err = new Error('已停止');
@@ -621,24 +737,47 @@ function pause(ms, signal) {
 }
 async function stopWork() {
   if (!canStop.value) return;
-  runController?.abort();
-  runController = null;
+  runMark.controller?.abort();
+  runMark.controller = null;
   shotPanel.value?.haltJob?.();
   manualJob.value = false;
   try {
-    await request(`/projects/${route.params.id}/generate/stop`, { method: 'post' });
+    await request(`/projects/${projectKey()}/generate/stop`, { method: 'post' });
     await load();
+    await syncServerRuns();
     ElMessage.info('已停止');
   } catch (err) {
     if (!isStop(err)) ElMessage.error(err.message || '没有停止');
   }
 }
-const autoProgressLabel = computed(() => {
-  const parts = [];
-  if (autoPrompt.total) parts.push(`${autoPrompt.done}/${autoPrompt.total}[生成提示词]`);
-  if (autoVideo.total) parts.push(`${autoVideo.done}/${autoVideo.total}[生成视频]`);
-  return parts.join(' ');
+function progressPart(bucket, live, label, hold) {
+  if (hold) return null;
+  const done = Number(bucket.done) || 0;
+  const active = Number(bucket.active) || 0;
+  const working = Boolean(runMark.running || live || active);
+  const total = Number(bucket.total) || active;
+  if (!working || !total) return null;
+  const stepping = done < total && working;
+  if (!stepping && !live && !active) return null;
+  const reached = done + (stepping ? 1 : 0);
+  return {
+    label,
+    total,
+    current: Math.min(total, Math.max(reached, active)),
+  };
+}
+const autoProgressParts = computed(() => {
+  const promptBusy = autoPrompt.total > 0 && autoPrompt.done < autoPrompt.total;
+  const prompt = progressPart(autoPrompt, runMark.promptLive, '生成提示词', false);
+  const video = progressPart(
+    autoVideo,
+    runMark.videoLive,
+    '生成视频',
+    promptBusy && !runMark.videoLive && !autoVideo.active,
+  );
+  return [ prompt, video ].filter(Boolean);
 });
+watch(runMark, () => rememberAutoRun(projectKey(), runMark), { deep: true });
 const recordPageRows = computed(() => autoRecords.value.slice((recordPage.value - 1) * pageSize, recordPage.value * pageSize));
 watch(autoRecords, (rows) => {
   const max = Math.max(1, Math.ceil(rows.length / pageSize));
@@ -689,6 +828,14 @@ const selectedScriptImport = computed(() => liveImports.value.find(item => Strin
 const activeScriptData = computed(() => selectedScriptImport.value?.script_data || null);
 const scriptTab = ref('overview');
 const rosterOpen = ref(false);
+const scriptEditOpen = ref(false);
+const scriptSaving = ref(false);
+const scriptDraft = reactive({ characters: [], places: [] });
+const bulkMedia = ref('video');
+const bulkWorkflowId = ref(null);
+const workflowChoices = ref([]);
+const bulkWorkflows = computed(() => workflowChoices.value.filter(item => item.media === bulkMedia.value));
+watch(bulkMedia, () => { bulkWorkflowId.value = null; });
 const rosterKind = ref('character');
 const rosterForm = reactive({ name: '', detail: '' });
 function derivePlaces(scenes) {
@@ -824,6 +971,17 @@ const boardShots = computed(() => {
   return shots.filter(shotRow => String(shotRow.import_id) === String(current.importId));
 });
 const boardPageRows = computed(() => boardShots.value.slice((boardPage.value - 1) * pageSize, boardPage.value * pageSize));
+const videoAutoHint = computed(() => {
+  const picked = videoAutoIds.value.length;
+  if (!picked) return '请至少选择一条镜头。';
+  return `已选 ${picked} 条，按镜头顺序执行。`;
+});
+watch(videoAutoIds, (ids) => {
+  const total = boardShots.value.length;
+  const count = ids.length;
+  videoAutoAll.value = total > 0 && count === total;
+  videoAutoSome.value = count > 0 && count < total;
+}, { deep: true });
 watch(selectedImportKey, () => {
   scriptPage.value = 1;
   boardPage.value = 1;
@@ -876,7 +1034,7 @@ async function removeShotGroup(item) {
     return;
   }
   try {
-    await request(`/projects/${route.params.id}/shots/purge`, {
+    await request(`/projects/${projectKey()}/shots/purge`, {
       method: 'post',
       data: { import_id: item.importId },
     });
@@ -897,7 +1055,7 @@ function openOutputs(row) {
     router.replace({ query: { node: 'preview', shot: String(row.id) } });
     return;
   }
-  router.push({ path: `/projects/${route.params.id}/shots/${row.id}/outputs`, query: { from: 'work' } });
+  router.push({ path: `/projects/${projectKey()}/shots/${row.id}/outputs`, query: { from: 'work' } });
 }
 function fillProject() {
   const project = detail.value?.project;
@@ -950,14 +1108,16 @@ async function onNovelChange() {
   ]);
 }
 async function load() {
-  detail.value = await request(`/projects/${route.params.id}`);
+  const id = projectKey();
+  if (!id) return;
+  detail.value = await request(`/projects/${id}`);
   fillProject();
   ensureBoard();
   await loadPackages(projectForm.source_novel_id);
 }
 async function saveProject() {
   try {
-    await request(`/projects/${route.params.id}`, {
+    await request(`/projects/${projectKey()}`, {
       method: 'put',
       data: {
         name: projectForm.name,
@@ -981,8 +1141,8 @@ async function pull() {
     }
     const updating = pullLabel.value === '更新到此版本';
     const result = updating
-      ? await request(`/projects/${route.params.id}/rebase`, { method: 'post', data: { version: packageVersion.value, chapter_id: chapterId.value } })
-      : await request(`/projects/${route.params.id}/imports/from-novel`, { method: 'post', data });
+      ? await request(`/projects/${projectKey()}/rebase`, { method: 'post', data: { version: packageVersion.value, chapter_id: chapterId.value } })
+      : await request(`/projects/${projectKey()}/imports/from-novel`, { method: 'post', data });
     await load();
     if (result?.unchanged) ElMessage.success(`这一章已经是故事包 v${result.package_version}`);
     else if (result?.preserved_shots) ElMessage.success(`已更新到 v${result.package_version}，${result.preserved_shots} 条已改过的台词或描述保持原样`);
@@ -1018,7 +1178,7 @@ async function saveImport() {
     ElMessage.warning('请填写正文');
     return;
   }
-  await request(`/projects/${route.params.id}/imports`, {
+  await request(`/projects/${projectKey()}/imports`, {
     method: 'post',
     data: {
       chapter_title: chapterTitle.value,
@@ -1040,7 +1200,7 @@ async function removeSnapshot(item) {
     return;
   }
   try {
-    await request(`/projects/${route.params.id}/imports/${item.id}`, { method: 'delete' });
+    await request(`/projects/${projectKey()}/imports/${item.id}`, { method: 'delete' });
     selectedImportKey.value = '';
     await load();
     ElMessage.success('已删除快照及关联镜头');
@@ -1082,10 +1242,113 @@ function openRoster(kind) {
   rosterForm.detail = '';
   rosterOpen.value = true;
 }
+function rosterPayload() {
+  return {
+    characters: (activeScriptData.value?.characters || []).map(item => ({
+      name: item.name,
+      look: item.look || '',
+      stage_note: String(item.stage_note || '').trim(),
+    })),
+    places: scriptPlaces.value.map(item => ({
+      name: item.name,
+      note: item.note || '',
+      stage_note: String(item.stage_note || '').trim(),
+    })),
+  };
+}
+function frameSrc(row, which) {
+  const stored = which === 'manual' ? row.manual_frame_path : row.first_frame_path;
+  if (!stored) return '';
+  const version = which === 'manual' ? row.manual_frame_mtime : row.first_frame_mtime;
+  return `${resolveApiBase()}/projects/${projectKey()}/shots/${row.id}/frame/${which}?v=${version || encodeURIComponent(stored)}`;
+}
+function frameBox(row, which) {
+  const width = Number(which === 'manual' ? row.manual_frame_width : row.first_frame_width) || 0;
+  const height = Number(which === 'manual' ? row.manual_frame_height : row.first_frame_height) || 0;
+  const long = 96;
+  if (!width || !height) return { height: `${long}px`, width: 'auto' };
+  if (height >= width) return { height: `${long}px`, width: `${Math.max(36, Math.round(long * width / height))}px` };
+  return { width: `${long}px`, height: `${Math.max(36, Math.round(long * height / width))}px` };
+}
+async function openScriptEdit() {
+  const data = activeScriptData.value || {};
+  scriptDraft.characters = (data.characters || []).map(item => ({
+    name: item.name,
+    look: item.look || '',
+    stage_note: String(item.stage_note || ''),
+  }));
+  scriptDraft.places = scriptPlaces.value.map(item => ({
+    name: item.name,
+    note: item.note || '',
+    stage_note: String(item.stage_note || ''),
+  }));
+  bulkMedia.value = 'video';
+  bulkWorkflowId.value = null;
+  scriptEditOpen.value = true;
+  if (workflowChoices.value.length) return;
+  try {
+    const inputs = await request('/generate-inputs');
+    workflowChoices.value = inputs?.workflows || [];
+  } catch (err) {
+    ElMessage.error(err.message || '工作流没有加载出来');
+  }
+}
+function applyMessage(reset, applied) {
+  const notes = Number(applied?.notes) || 0;
+  const workflows = Number(applied?.workflows) || 0;
+  if (reset) {
+    const parts = [ `说明写入 ${notes} 条镜头` ];
+    if (workflows) parts.push(`工作流改了 ${workflows} 条`);
+    return `已重置。${parts.join('，')}`;
+  }
+  if (!notes && !workflows) return '已保存。镜头里已有内容的字段没有改动';
+  const parts = [];
+  if (notes) parts.push(`${notes} 条镜头补上了说明`);
+  if (workflows) parts.push(`${workflows} 条镜头补上了工作流`);
+  return `已保存。${parts.join('，')}`;
+}
+async function saveScriptEdit(mode) {
+  const reset = mode === 'reset';
+  const chapter = selectedScriptImport.value;
+  const id = projectKey();
+  if (!chapter?.id || !id) return;
+  if (reset) {
+    try {
+      await ElMessageBox.confirm(
+        '这一快照里每个镜头的说明会改成当前表单。选了工作流的话，工作流也会一起改掉。',
+        '重置镜头',
+        { type: 'warning', confirmButtonText: '重置', cancelButtonText: '取消' },
+      );
+    } catch {
+      return;
+    }
+  }
+  scriptSaving.value = true;
+  try {
+    await writeRoster(scriptDraft.characters, scriptDraft.places, false);
+    const applied = await request(`/projects/${id}/imports/${chapter.id}/shots/apply`, {
+      method: 'post',
+      data: {
+        mode: reset ? 'reset' : 'fill',
+        characters: scriptDraft.characters,
+        places: scriptDraft.places,
+        ...(bulkWorkflowId.value ? { media: bulkMedia.value, workflow_id: bulkWorkflowId.value } : {}),
+      },
+    });
+    await load();
+    ElMessage.success(applyMessage(reset, applied));
+    bulkWorkflowId.value = null;
+    scriptEditOpen.value = false;
+  } catch (err) {
+    ElMessage.error(err.message || '没有保存');
+  } finally {
+    scriptSaving.value = false;
+  }
+}
 async function writeRoster(characters, places, ensure) {
   const chapter = selectedScriptImport.value;
   if (!chapter?.id) return;
-  detail.value = await request(`/projects/${route.params.id}/imports/${chapter.id}/roster`, {
+  detail.value = await request(`/projects/${projectKey()}/imports/${chapter.id}/roster`, {
     method: 'put',
     data: { characters, places, ensure_assets: ensure },
   });
@@ -1096,8 +1359,9 @@ async function submitRoster() {
     ElMessage.warning(rosterKind.value === 'character' ? '请填写人物名称' : '请填写场景名称');
     return;
   }
-  const characters = (activeScriptData.value?.characters || []).map(item => ({ name: item.name, look: item.look || '' }));
-  const places = scriptPlaces.value.map(item => ({ name: item.name, note: item.note || '' }));
+  const payload = rosterPayload();
+  const characters = payload.characters;
+  const places = payload.places;
   if (rosterKind.value === 'character') characters.push({ name, look: rosterForm.detail.trim() });
   else places.push({ name, note: rosterForm.detail.trim() });
   try {
@@ -1110,11 +1374,8 @@ async function submitRoster() {
 }
 async function ensureRosterAssets() {
   try {
-    await writeRoster(
-      (activeScriptData.value?.characters || []).map(item => ({ name: item.name, look: item.look || '' })),
-      scriptPlaces.value.map(item => ({ name: item.name, note: item.note || '' })),
-      true,
-    );
+    const payload = rosterPayload();
+    await writeRoster(payload.characters, payload.places, true);
     ElMessage.success('已补齐资产');
   } catch (err) {
     ElMessage.error(err.message);
@@ -1159,14 +1420,19 @@ async function removeShot(row) {
   }
 }
 async function generateScript(item) {
+  const token = lockJob();
+  if (!projectKey()) {
+    ElMessage.error('项目编号丢了');
+    return;
+  }
   draftingId.value = item.id;
   ElMessage.info('正在生成剧本并写入…');
   try {
-    const data = await request(`/projects/${route.params.id}/imports/${item.id}/draft/script`, {
+    const data = await request(`/projects/${projectKey()}/imports/${item.id}/draft/script`, {
       method: 'post',
       timeout: 1800000,
     });
-    await request(`/projects/${route.params.id}/imports/${item.id}/draft/script/apply`, {
+    await request(`/projects/${projectKey()}/imports/${item.id}/draft/script/apply`, {
       method: 'post',
       data: { script_data: data.script_data },
     });
@@ -1177,6 +1443,7 @@ async function generateScript(item) {
     ElMessage.error(err.message);
   } finally {
     draftingId.value = null;
+    unlockJob(token);
   }
 }
 async function generateShotOutline(item) {
@@ -1194,10 +1461,15 @@ async function generateShotOutline(item) {
       return;
     }
   }
+  const token = lockJob();
+  if (!projectKey()) {
+    ElMessage.error('项目编号丢了');
+    return;
+  }
   outliningId.value = item.id;
   ElMessage.info('正在按剧本拆分分镜并落库（8—15 秒/段）…');
   try {
-    const data = await request(`/projects/${route.params.id}/imports/${item.id}/draft/shot-outline`, {
+    const data = await request(`/projects/${projectKey()}/imports/${item.id}/draft/shot-outline`, {
       method: 'post',
       timeout: 1800000,
       data: { replace },
@@ -1227,6 +1499,7 @@ async function generateShotOutline(item) {
     ElMessage.error(err.message);
   } finally {
     outliningId.value = null;
+    unlockJob(token);
   }
 }
 async function clearScriptShots(item) {
@@ -1240,7 +1513,7 @@ async function clearScriptShots(item) {
     return;
   }
   try {
-    await request(`/projects/${route.params.id}/imports/${item.id}/shots/clear`, { method: 'post' });
+    await request(`/projects/${projectKey()}/imports/${item.id}/shots/clear`, { method: 'post' });
     await load();
     ElMessage.success('已清空分镜');
   } catch (err) {
@@ -1253,11 +1526,16 @@ async function expandOutlineRow(row) {
     ElMessage.warning('请先填写本段涵盖的剧本内容');
     return;
   }
+  const token = lockJob();
+  if (!projectKey()) {
+    ElMessage.error('项目编号丢了');
+    return;
+  }
   expandingKey.value = String(row.id);
   ElMessage.info(`正在生成 ${row.shot_code || row.id} 的分镜提示词（约 ${shotDurationSec(row)} 秒）…`);
   const signal = ensureController().signal;
   try {
-    await request(`/projects/${route.params.id}/imports/${item.id}/draft/shot-expand`, {
+    await request(`/projects/${projectKey()}/imports/${item.id}/draft/shot-expand`, {
       method: 'post',
       timeout: 1800000,
       signal,
@@ -1278,6 +1556,7 @@ async function expandOutlineRow(row) {
     if (!isStop(err)) ElMessage.error(err.message);
   } finally {
     expandingKey.value = '';
+    unlockJob(token);
   }
 }
 function rollSeed() {
@@ -1295,7 +1574,7 @@ function taskNote(task) {
 async function waitTask(taskId, item, signal) {
   for (;;) {
     if (signal?.aborted) throw stopError();
-    const fresh = await request(`/projects/${route.params.id}`, { signal });
+    const fresh = await request(`/projects/${projectKey()}`, { signal });
     detail.value = fresh;
     ensureBoard();
     const latest = (fresh.tasks || []).find(row => String(row.id) === String(taskId));
@@ -1303,7 +1582,7 @@ async function waitTask(taskId, item, signal) {
     writeNote(item, taskNote(latest));
     if (latest.status === 'cancelled') throw stopError();
     if ([ 'queued', 'running', 'saving' ].includes(latest.status)) {
-      await pause(1000, signal);
+      await pause(3000, signal);
       continue;
     }
     if (latest.status !== 'success') {
@@ -1334,7 +1613,7 @@ async function runPromptShot(row, item, signal) {
     if (signal?.aborted) throw stopError();
     writeNote(item, attempt === 1 ? '等待服务端写回提示词' : `第 ${attempt} 次生成提示词`);
     try {
-      await request(`/projects/${route.params.id}/imports/${current.importId}/draft/shot-expand`, {
+      await request(`/projects/${projectKey()}/imports/${current.importId}/draft/shot-expand`, {
         method: 'post',
         timeout: 1800000,
         signal,
@@ -1392,7 +1671,7 @@ async function runVideoShot(row, item, signal) {
   const bound = (detail.value.bindings || []).filter(entry => String(entry.shot_id) === String(row.id)).map(entry => Number(entry.asset_id));
   let hasRef = false;
   if (!savedWorkflow && bound.length) {
-    const packs = await request(`/projects/${route.params.id}/refmods`, { signal });
+    const packs = await request(`/projects/${projectKey()}/refmods`, { signal });
     const packAssets = new Set((Array.isArray(packs) ? packs : []).map(entry => Number(entry.asset_id)));
     hasRef = bound.some(id => packAssets.has(id));
   }
@@ -1409,7 +1688,7 @@ async function runVideoShot(row, item, signal) {
   const kind = /\[refmod\]/i.test(workflow.name) ? 'refmod' : 't2v';
   const seed = rollSeed();
   writeNote(item, `种子 ${seed}`);
-  const task = await request(`/projects/${route.params.id}/shots/${row.id}/generate?kind=${kind}`, {
+  const task = await request(`/projects/${projectKey()}/shots/${row.id}/generate?kind=${kind}`, {
     method: 'post',
     signal,
     data: {
@@ -1433,14 +1712,129 @@ async function runVideoShot(row, item, signal) {
   item.status = '完成';
   writeNote(item, '视频已生成');
 }
-async function runAuto(mode) {
+function toggleVideoAutoAll(checked) {
+  videoAutoSome.value = false;
+  videoAutoIds.value = checked ? boardShots.value.map(row => row.id) : [];
+}
+function openVideoAuto() {
   if (autoRunning.value) return;
-  const shots = boardShots.value.slice();
+  const shots = boardShots.value;
   if (!shots.length) {
     ElMessage.error('当前快照没有镜头');
     return;
   }
-  const token = ++autoToken;
+  videoAutoIds.value = shots.map(row => row.id);
+  videoAutoAll.value = true;
+  videoAutoSome.value = false;
+  videoAutoOpen.value = true;
+}
+function jobClock(value) {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = part => String(part).padStart(2, '0');
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+function jobRecords(job) {
+  const label = { success: '成功', failed: '失败', skipped: '跳过', stopped: '已停止', running: '进行中' };
+  return (job?.items || []).filter(item => item.status !== 'pending').slice().reverse().map(item => ({
+    id: `job-${item.id}`,
+    at: jobClock(item.updated_at),
+    shotCode: item.shot_code,
+    action: '生成视频',
+    result: label[item.status] || item.status,
+    reason: item.reason || '',
+  }));
+}
+function applyAutoJob(job) {
+  if (!job || job.status !== 'running') return;
+  autoVideo.done = Number(job.done) || 0;
+  autoVideo.total = Number(job.total) || 0;
+  autoVideo.active = 1;
+  runMark.videoLive = true;
+  runMark.serverJobId = job.id;
+  autoRecords.value = jobRecords(job);
+  autoRunning.value = true;
+}
+function finishedVideoBucket() {
+  const done = Number(autoVideo.done) || 0;
+  const total = Number(autoVideo.total) || 0;
+  return total > 0 && done >= total;
+}
+function continuingBatch(liveTasks) {
+  if (liveTasks.length !== 1) return null;
+  const live = liveTasks[0];
+  const shots = detail.value?.shots || [];
+  const current = shots.find(item => String(item.id) === String(live.shot_id));
+  if (!current) return null;
+  const board = shots
+    .filter(item => String(item.import_id || '') === String(current.import_id || ''))
+    .slice()
+    .sort((a, b) => (Number(a.sort_order) - Number(b.sort_order)) || (Number(a.id) - Number(b.id)));
+  const latest = new Map();
+  (detail.value?.tasks || []).forEach(task => {
+    const key = String(task.shot_id);
+    const prev = latest.get(key);
+    if (!prev || Number(task.id) > Number(prev.id)) latest.set(key, task);
+  });
+  const liveAt = new Date(latest.get(String(current.id))?.created_at || 0).getTime();
+  let done = 0;
+  for (const shot of board) {
+    if (String(shot.id) === String(current.id)) return { done, total: board.length };
+    const task = latest.get(String(shot.id));
+    const at = new Date(task?.created_at || 0).getTime();
+    if (!task || task.status !== 'success' || !liveAt || !at || at > liveAt || liveAt - at > 40 * 60 * 1000) return null;
+    done += 1;
+  }
+  return null;
+}
+async function startServerVideo(shotIds) {
+  try {
+    const job = await request(`/projects/${projectKey()}/auto-jobs`, {
+      method: 'post',
+      data: { shot_ids: shotIds },
+    });
+    applyAutoJob(job);
+    armServerPoll();
+    ElMessage.success(`已提交 ${job?.total || shotIds.length} 条，后台会按顺序生成`);
+  } catch (err) {
+    ElMessage.error(err.message || '没有提交');
+  }
+}
+function confirmVideoAuto() {
+  const picked = new Set(videoAutoIds.value.map(id => String(id)));
+  const chosen = boardShots.value.filter(row => picked.has(String(row.id)));
+  if (!chosen.length) {
+    ElMessage.error('请选择镜头');
+    return;
+  }
+  videoAutoOpen.value = false;
+  runAuto('video', chosen.map(row => row.id));
+}
+async function runAuto(mode, selectedIds) {
+  if (autoRunning.value) return;
+  if (!projectKey()) {
+    ElMessage.error('项目编号丢了');
+    return;
+  }
+  let shots = boardShots.value.slice();
+  if (!shots.length) {
+    ElMessage.error('当前快照没有镜头');
+    return;
+  }
+  if (mode === 'video' && Array.isArray(selectedIds)) {
+    const picked = new Set(selectedIds.map(id => String(id)));
+    shots = shots.filter(row => picked.has(String(row.id)));
+    if (!shots.length) {
+      ElMessage.error('请选择镜头');
+      return;
+    }
+  }
+  if (mode === 'video') {
+    await startServerVideo(shots.map(row => row.id));
+    return;
+  }
+  const jobToken = lockJob();
+  const token = ++runMark.token;
   const controller = ensureController();
   const signal = controller.signal;
   autoRunning.value = true;
@@ -1474,7 +1868,7 @@ async function runAuto(mode) {
   let stopped = false;
   try {
     for (const item of queue) {
-      if (token !== autoToken || signal.aborted) break;
+      if (token !== runMark.token || signal.aborted) break;
       const record = openRecord(item);
       item.record = record;
       try {
@@ -1514,8 +1908,9 @@ async function runAuto(mode) {
       else ElMessage.success('执行结束');
     }
   } finally {
-    if (token === autoToken) autoRunning.value = false;
-    if (runController === controller) runController = null;
+    if (token === runMark.token) autoRunning.value = false;
+    if (runMark.controller === controller) runMark.controller = null;
+    unlockJob(jobToken);
   }
 }
 function resetShotForm() {
@@ -1535,7 +1930,7 @@ async function addShot() {
   const sizes = Array.isArray(shot.shot_sizes) && shot.shot_sizes.length ? shot.shot_sizes : [ '中景' ];
   const moves = Array.isArray(shot.camera_moves) && shot.camera_moves.length ? shot.camera_moves : [ '固定' ];
   try {
-    await request(`/projects/${route.params.id}/shots`, {
+    await request(`/projects/${projectKey()}/shots`, {
       method: 'post',
       data: {
         ...shot,
@@ -1560,7 +1955,85 @@ watch(() => props.launchShotId, (id) => {
   generateShotId.value = id;
   generateOpen.value = true;
 }, { immediate: true });
+watch(step, (value, previous) => {
+  if (value === 4 && previous && previous !== 4) load().catch(() => {});
+});
+let serverRunTimer = null;
+let serverRunFlying = false;
+let serverRunAlive = true;
+const serverPollKey = '__cartoonServerRunTimer';
+function stopServerPoll() {
+  const previous = window[serverPollKey];
+  if (previous) clearInterval(previous);
+  window[serverPollKey] = null;
+  if (serverRunTimer) clearInterval(serverRunTimer);
+  serverRunTimer = null;
+}
+function armServerPoll() {
+  if (!serverRunAlive || serverRunTimer) return;
+  stopServerPoll();
+  serverRunTimer = setInterval(() => { syncServerRuns(); }, 3000);
+  window[serverPollKey] = serverRunTimer;
+}
+async function syncServerRuns() {
+  if (!serverRunAlive) {
+    stopServerPoll();
+    return;
+  }
+  if (serverRunFlying) return;
+  const id = projectKey();
+  if (!id) return;
+  serverRunFlying = true;
+  let busy = false;
+  try {
+    const [ data, job ] = await Promise.all([
+      request(`/projects/${id}/runs`),
+      request(`/projects/${id}/auto-jobs/current`).catch(() => null),
+    ]);
+    const promptRuns = (data?.runs || []).filter(item => item.kind === 'prompt');
+    const tasks = data?.tasks || [];
+    const jobRunning = job?.status === 'running';
+    const tasksLive = tasks.length > 0;
+    runMark.promptLive = promptRuns.length > 0;
+    runMark.prompt.active = promptRuns.length;
+    if (jobRunning) {
+      applyAutoJob(job);
+    } else if (!runMark.controller) {
+      if (job && (!autoRecords.value.length || String(autoRecords.value[0]?.id || '').startsWith('job-'))) {
+        autoRecords.value = jobRecords(job);
+      }
+      if (!tasksLive || finishedVideoBucket()) {
+        const resumed = tasksLive ? continuingBatch(tasks) : null;
+        autoVideo.done = resumed?.done || 0;
+        autoVideo.total = resumed?.total || 0;
+        autoVideo.active = 0;
+      }
+      autoRunning.value = false;
+      runMark.videoLive = tasksLive;
+      runMark.video.active = tasksLive ? tasks.length : 0;
+      if (runMark.videoLive && !autoVideo.total) {
+        autoVideo.total = tasks.length;
+        autoVideo.done = 0;
+      }
+    }
+    if (!jobRunning && !tasksLive && !runMark.controller) runMark.videoLive = false;
+    if (!runMark.running) {
+      if (runMark.promptLive && !runMark.prompt.total) {
+        runMark.prompt.total = promptRuns.length;
+        runMark.prompt.done = 0;
+      }
+    }
+    busy = Boolean(runMark.running || runMark.promptLive || jobRunning || tasksLive);
+  } catch {
+    busy = Boolean(serverRunTimer);
+  } finally {
+    serverRunFlying = false;
+    if (!serverRunAlive || !busy) stopServerPoll();
+    else armServerPoll();
+  }
+}
 onMounted(async () => {
+  serverRunAlive = true;
   await region.run(async () => {
   const [catalog, metaRes] = await Promise.all([
     request('/novel-catalog').catch(() => []),
@@ -1577,7 +2050,12 @@ onMounted(async () => {
     loadChapters(projectForm.source_novel_id),
     loadNovelBrief(projectForm.source_novel_id),
   ]);
+  await syncServerRuns();
   });
+});
+onUnmounted(() => {
+  serverRunAlive = false;
+  stopServerPoll();
 });
 </script>
 
@@ -1591,10 +2069,28 @@ onMounted(async () => {
 .cartoon-shot-head .cartoon-module__title { margin: 0; }
 .cartoon-shot-head__side { display: flex; align-items: center; gap: 12px; }
 .cartoon-auto-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   color: #1f3d2c;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+.cartoon-auto-progress .el-icon { color: #2f8a5b; font-size: 14px; }
+.cartoon-auto-progress__item { display: inline-flex; align-items: center; }
+.cartoon-auto-dots::after {
+  content: '';
+  display: inline-block;
+  width: 1.2em;
+  text-align: left;
+  animation: cartoon-auto-dots 1.2s steps(4, end) infinite;
+}
+@keyframes cartoon-auto-dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75%, 100% { content: '...'; }
 }
 .cartoon-shot-page {
   flex: 1 1 0;
@@ -1673,6 +2169,11 @@ onMounted(async () => {
 .cartoon-script { margin-top: 8px; }
 .cartoon-script h4 { margin: 16px 0 8px; font-size: 15px; }
 .cartoon-script__list { margin: 0; padding-left: 1.2em; }
+.cartoon-script__list li { margin-bottom: 10px; }
+.cartoon-script__note { margin: 6px 0 0; color: #5c6b62; white-space: pre-wrap; }
+.cartoon-script__edithead { justify-content: space-between; }
+.cartoon-script__edithead h4 { margin: 0; }
+.cartoon-frame-thumb { object-fit: contain; border-radius: 4px; background: #e7f3eb; display: block; }
 .cartoon-script__scene { margin-bottom: 12px; padding: 10px 12px; border: 1px solid rgba(47, 138, 91, 0.18); border-radius: 8px; background: #f7fbf8; }
 @media (max-width: 900px) {
   .cartoon-setting-grid { grid-template-columns: 1fr; }

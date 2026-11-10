@@ -178,6 +178,13 @@ async function startExport() {
 onMounted(async () => {
   try {
     await reload();
+    if (!store.edit && store.videos.some(item => item.shot_id && !item.missing && item.duration_ms)) {
+      await seed(false);
+      return;
+    }
+    if (store.useLatestPerShot()) {
+      ElMessage.info('已按每个镜头的最新视频选好，保存后写入时间线');
+    }
   } catch (err) {
     ElMessage.error(err.message);
   } finally {

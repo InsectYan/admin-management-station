@@ -74,13 +74,15 @@ function describeCallInputs(apiJson) {
   const tagged = new Map();
   Object.values(graph).forEach(node => {
     const inputs = node?.inputs || {};
-    const mark = (link, role) => {
+    const mark = (link, role, expand, limit) => {
       const found = traceLoader(graph, link);
       if (!found || tagged.has(found.nodeId)) return;
       const width = Number(inputs.width);
       const height = Number(inputs.height);
       tagged.set(found.nodeId, {
         role,
+        expand: expand || '',
+        limit: Number(limit) > 1 ? Number(limit) : 1,
         width: Number.isFinite(width) && width > 0 ? width : null,
         height: Number.isFinite(height) && height > 0 ? height : null,
         megapixels: found.megapixels,
@@ -93,10 +95,24 @@ function describeCallInputs(apiJson) {
     if (node?.class_type === 'TextEncodeQwenImageEdit' && Array.isArray(inputs.image)) mark(inputs.image, 'reference');
     if (node?.class_type === 'TextEncodeQwenImageEditPlus') {
       [ 'image1', 'image2', 'image3' ].forEach(key => {
-        if (Array.isArray(inputs[key])) mark(inputs[key], 'reference');
+        if (Array.isArray(inputs[key])) mark(inputs[key], 'reference', 'edit-plus', 3);
+      });
+    }
+    if (node?.class_type === 'TextEncodeQwenImage21') {
+      Object.entries(inputs).forEach(([ key, value ]) => {
+        if (Array.isArray(value) && /^images\.image_\d+$/.test(key)) mark(value, 'reference', 'qwen21', 8);
+      });
+    }
+    if (node?.class_type === 'MiniMaxH3ReferenceToVideo') {
+      Object.entries(inputs).forEach(([ key, value ]) => {
+        if (Array.isArray(value) && /^ref_images\.ref_image_\d+$/.test(key)) mark(value, 'reference', 'h3-ref', 9);
       });
     }
     if (node?.class_type === 'FluxKontextImageScale' && Array.isArray(inputs.image)) mark(inputs.image, 'reference');
+    if (node?.class_type === 'MiniMaxH3AddGuide' && Array.isArray(inputs.image)) {
+      const idx = Number(inputs.frame_idx);
+      mark(inputs.image, Number.isFinite(idx) && idx < 0 ? 'end' : 'start');
+    }
     Object.entries(inputs).forEach(([ key, value ]) => {
       if (Array.isArray(value) && /^ref_images\.ref_image_\d+$/.test(key)) mark(value, 'reference');
     });
@@ -104,6 +120,20 @@ function describeCallInputs(apiJson) {
 
   const images = [];
   Object.entries(graph).forEach(([ nodeId, node ]) => {
+    if (node?.class_type === 'LoadVideo' && typeof node.inputs?.file === 'string') {
+      images.push({
+        id: `${nodeId}.file`,
+        node_id: nodeId,
+        key: 'file',
+        role: 'video',
+        width: null,
+        height: null,
+        megapixels: null,
+        expand: '',
+        limit: 1,
+      });
+      return;
+    }
     if (!isLoader(node?.class_type) || typeof node.inputs?.image !== 'string') return;
     const meta = tagged.get(nodeId) || { role: node.class_type === 'LoadImageMask' ? 'mask' : 'image' };
     images.push({
@@ -114,6 +144,8 @@ function describeCallInputs(apiJson) {
       width: meta.width || null,
       height: meta.height || null,
       megapixels: meta.megapixels || null,
+      expand: meta.expand || '',
+      limit: meta.limit || 1,
     });
   });
   const hasEnd = images.some(slot => slot.role === 'end');
@@ -130,8 +162,12 @@ function describeCallInputs(apiJson) {
     else if (slot.role === 'end') slot.label = '尾帧';
     else if (slot.role === 'reference') slot.label = `参考图${suffix}`;
     else if (slot.role === 'mask') slot.label = `蒙版${suffix}`;
+    else if (slot.role === 'video') slot.label = `视频${suffix}`;
     else slot.label = `图片${suffix}`;
-    slot.spec = specOf(slot);
+    if (slot.role === 'video') slot.spec = '上传 mp4、webm 或 mov。模型从视频里抽 16 帧反推。';
+    else slot.spec = slot.limit > 1
+      ? `最多 ${slot.limit} 张，按选择顺序作为参考图`
+      : specOf(slot);
   });
   images.sort((a, b) => {
     const order = { start: 0, end: 1, reference: 2, image: 3, mask: 4 };
@@ -217,7 +253,42 @@ function applyCallInputs(apiJson, { positive, negative, imageNames } = {}) {
     if (!slot || !filename) return;
     graph[slot.node_id].inputs[slot.key] = filename;
   });
+  omitEmptyEnds(graph, imageNames, call.images);
   return graph;
+}
+
+function rewireGuide(graph, guideId, guide) {
+  const upstream = guide.inputs?.positive;
+  Object.values(graph).forEach(node => {
+    if (!node?.inputs || node === guide) return;
+    Object.entries(node.inputs).forEach(([ key, value ]) => {
+      if (!Array.isArray(value) || String(value[0]) !== String(guideId)) return;
+      if (Array.isArray(upstream)) node.inputs[key] = upstream.slice();
+    });
+  });
+}
+
+function omitEmptyEnds(graph, imageNames, images) {
+  const pending = (images || []).filter(slot => slot.role === 'end' && !imageNames?.[slot.id]);
+  pending.forEach(slot => {
+    const loaderId = String(slot.node_id);
+    const consumers = [];
+    Object.entries(graph).forEach(([ id, node ]) => {
+      if (!node?.inputs) return;
+      Object.entries(node.inputs).forEach(([ key, value ]) => {
+        if (Array.isArray(value) && String(value[0]) === loaderId) consumers.push({ id, key, node });
+      });
+    });
+    consumers.forEach(({ id, key, node }) => {
+      if (node.class_type === 'MiniMaxH3AddGuide') {
+        rewireGuide(graph, id, node);
+        delete graph[id];
+      } else {
+        delete node.inputs[key];
+      }
+    });
+    delete graph[loaderId];
+  });
 }
 
 function withCallFields(fields, apiJson) {
@@ -241,16 +312,53 @@ function withCallFields(fields, apiJson) {
     id: slot.id,
     node_id: slot.node_id,
     key: slot.key,
-    type: 'image',
+    type: slot.role === 'video' ? 'video' : 'image',
     label: slot.label,
     value: '',
     spec: slot.spec,
     width: slot.width,
     height: slot.height,
+    limit: slot.limit || 1,
+    expand: slot.expand || '',
   }));
   const durationAt = next.findIndex(field => field.type === 'duration');
   next.splice(durationAt >= 0 ? durationAt + 1 : 0, 0, ...imageFields);
   return next;
+}
+
+function nextNodeId(graph) {
+  return String(Object.keys(graph).reduce((max, id) => {
+    const value = Number(id);
+    return Number.isFinite(value) ? Math.max(max, value) : max;
+  }, 0) + 1);
+}
+
+function expandReferenceImages(graph, images, extras) {
+  const byId = new Map((images || []).map(slot => [ slot.id, slot ]));
+  Object.entries(extras || {}).forEach(([ slotId, filenames ]) => {
+    const slot = byId.get(slotId);
+    const files = (filenames || []).filter(Boolean);
+    if (!slot?.expand || !files.length) return;
+    files.forEach((filename, index) => {
+      const loaderId = nextNodeId(graph);
+      graph[loaderId] = { class_type: 'LoadImage', inputs: { image: filename } };
+      const ordinal = index + 2;
+      Object.values(graph).forEach(node => {
+        const inputs = node?.inputs;
+        if (!inputs) return;
+        let key = '';
+        if (slot.expand === 'edit-plus' && node.class_type === 'TextEncodeQwenImageEditPlus' && ordinal <= 3) {
+          key = `image${ordinal}`;
+        } else if (slot.expand === 'qwen21' && node.class_type === 'TextEncodeQwenImage21') {
+          key = `images.image_${ordinal}`;
+        } else if (slot.expand === 'h3-ref' && node.class_type === 'MiniMaxH3ReferenceToVideo') {
+          key = `ref_images.ref_image_${ordinal - 1}`;
+        }
+        if (key && !inputs[key]) inputs[key] = [ loaderId, 0 ];
+      });
+    });
+  });
+  return graph;
 }
 
 module.exports = {
@@ -258,4 +366,5 @@ module.exports = {
   applyCallInputs,
   applySeed,
   withCallFields,
+  expandReferenceImages,
 };

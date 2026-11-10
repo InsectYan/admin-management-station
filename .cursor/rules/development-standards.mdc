@@ -48,6 +48,16 @@ alwaysApply: true
 - 未经明确要求，不主动 commit 或 push。
 - 不执行破坏性 git 操作，除非明确要求。
 
+## 表格页：内容占满，分页器吸底
+
+后续子应用的表格页按 AI 视频的做法，不要让整页滚动把分页器顶出视口。
+
+页面是纵向 flex，高度锁在内容区里。标题栏固定。内容模块 `flex: 1 1 0`、`min-height: 0`、`overflow: hidden`，自己再排成一列：筛选条在上，表格占满中间，分页器 `flex: none` 留在模块底部。表格设 `height="100%"`，行在表体内滚动。
+
+内容区（`{prefix}-sub-content`）必须是有确定高度的 flex 列，子页面 `flex: 1`、`min-height: 0`。普通页在 `{prefix}-page-body` 里滚动；表格页给 PageShell 打开 `table-layout`，body 改为 `overflow: hidden`。
+
+参考：`project-sub/cartoon-sub/frontend/src/styles/shell.css` 的 `.cartoon-page`、`.cartoon-page-body`、`.cartoon-pager`，以及 `project-sub/precheck-sub/frontend/src/views/WorkflowPage.vue`。
+
 ## 技术栈规范索引
 
 | 规则文件 | 适用范围 |

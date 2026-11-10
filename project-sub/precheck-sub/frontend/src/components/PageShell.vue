@@ -1,5 +1,5 @@
 <template>
-  <div class="precheck-page">
+  <div class="precheck-page" :class="{ 'precheck-page--table': tableLayout }">
     <div v-if="title || $slots.extra" class="precheck-page-header">
       <h4 v-if="title" class="precheck-page-title">{{ title }}</h4>
       <div v-if="$slots.extra" class="precheck-page-extra"><slot name="extra" /></div>
@@ -9,5 +9,8 @@
 </template>
 
 <script setup>
-defineProps({ title: { type: String, default: '' } });
+defineProps({
+  title: { type: String, default: '' },
+  tableLayout: { type: Boolean, default: false },
+});
 </script>

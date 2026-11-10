@@ -14,5 +14,7 @@ module.exports = app => {
     package_version: { type: INTEGER, allowNull: true },
     pin_mode: { type: STRING(16), allowNull: false, defaultValue: 'required' },
     template_id: { type: STRING(64), allowNull: true },
+    av_mode: { type: BOOLEAN, allowNull: false, defaultValue: false },
+    deleted_at: { type: app.Sequelize.DATE, allowNull: true },
   }, { tableName: 'cartoon_projects' });
 };

@@ -11,6 +11,7 @@ export function createAppRouter(basename) {
         children: [
           { path: '', redirect: '/projects' },
           { path: 'projects', component: () => import('../views/ProjectListPage.vue') },
+          { path: 'outputs', component: () => import('../views/OutputsPage.vue') },
           { path: 'templates', component: () => import('../views/TemplateListPage.vue') },
           { path: 'templates/:id', component: () => import('../views/TemplateDetailPage.vue') },
           { path: 'pipelines', component: () => import('../views/PipelinePage.vue') },

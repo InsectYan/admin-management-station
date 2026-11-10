@@ -36,7 +36,7 @@ module.exports = appInfo => {
       hostname: '0.0.0.0',
     },
   };
-  config.bodyParser = { jsonLimit: '32mb', formLimit: '32mb' };
+  config.bodyParser = { jsonLimit: '96mb', formLimit: '96mb' };
   config.comfyui = {
     baseUrl: process.env.COMFYUI_BASE_URL || 'http://127.0.0.1:8188',
     expectedVersion: process.env.COMFYUI_EXPECTED_VERSION || '0.39.0',

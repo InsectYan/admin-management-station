@@ -1,13 +1,45 @@
 'use strict';
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
+const { Op } = require('sequelize');
 const Service = require('egg').Service;
 const { outputRoot, resolveInside } = require('../lib/mediaPaths');
+const { bins, run } = require('../lib/mediaTools');
 const { reportAudit } = require('../lib/reportAudit');
 const { complianceCheck } = require('../lib/complianceCheck');
 const { begin, finish, cancelProject } = require('../lib/activeRuns');
 const { usageSummary } = require('../lib/usageSummary');
+
+function snap32(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 32) return 0;
+  return Math.floor(n / 32) * 32;
+}
+
+function frameSize(apiJson) {
+  let graph = apiJson;
+  if (typeof graph === 'string') {
+    try { graph = JSON.parse(graph); } catch { graph = {}; }
+  }
+  const nodes = Object.values(graph || {});
+  const node = nodes.find(item => /video/i.test(item?.class_type || '') && Number(item?.inputs?.width) > 0 && Number(item?.inputs?.height) > 0)
+    || nodes.find(item => Number(item?.inputs?.width) > 0 && Number(item?.inputs?.height) > 0);
+  if (!node) return { width: 0, height: 0 };
+  return { width: snap32(node.inputs.width), height: snap32(node.inputs.height) };
+}
+
+function alignGraph(graph) {
+  Object.values(graph || {}).forEach(node => {
+    const width = snap32(node?.inputs?.width);
+    const height = snap32(node?.inputs?.height);
+    if (!width || !height) return;
+    node.inputs.width = width;
+    node.inputs.height = height;
+  });
+  return graph;
+}
 
 function unwrap(json) {
   if (json && Object.prototype.hasOwnProperty.call(json, 'data')) return json.data;
@@ -276,11 +308,18 @@ class GenerateService extends Service {
     if (useRefs && !composed.refmodIds.length) {
       this.ctx.throw(400, '请勾选已经绑了 RefMod 的角色或场景，并至少留一张参考图');
     }
-    const positive = composed.positive;
+    if (payload.stage_notes) {
+      await this.ctx.service.project.updateShot(shot.id, { stage_notes: payload.stage_notes });
+    }
+    const freshShot = await this.ctx.model.Shot.findByPk(shot.id);
+    const stageText = await this.ctx.service.project.stageSuffix(freshShot);
+    let positive = composed.positive;
+    if (stageText) positive = `${positive}\n${stageText}`;
     const compliance = await complianceCheck(this.ctx, positive);
     const hit = compliance?.hits?.[0];
     if (hit) this.ctx.throw(400, `命中规则 ${hit.id}`);
     const project = await this.ctx.model.Project.findByPk(projectId);
+    if (project?.deleted_at) this.ctx.throw(400, '项目已删除');
     const caps = project
       ? await this.ctx.model.Rule.findAll({ where: { content_type: project.content_type, kind: 'cost', enabled: true } })
       : [];
@@ -309,6 +348,7 @@ class GenerateService extends Service {
       durationSec = seconds;
     }
     if (useRefs) await this.assertRefmodWorkflow(workflowOverride);
+    const images = await this.attachFrames(freshShot, workflowOverride, Array.isArray(payload.images) ? payload.images : []);
 
     const profileRow = project
       ? await this.ctx.model.AgentConfig.findOne({ where: { content_type: project.content_type, role: 'video' } })
@@ -336,7 +376,7 @@ class GenerateService extends Service {
       finish(this.app, claim.row, null, cancelled);
       return cancelled;
     }
-    return await this.execute(task, positive, Array.isArray(payload.images) ? payload.images : [], {
+    return await this.execute(task, positive, images, {
       refmodIds,
       workflowOverride,
       assetIds,
@@ -355,6 +395,112 @@ class GenerateService extends Service {
     } finally {
       stop.release();
     }
+  }
+
+  async attachFrames(shot, workflowId, images) {
+    const list = Array.isArray(images) ? images.slice() : [];
+    if (!workflowId || !shot) return list;
+    const chosen = await this.choiceById(workflowId);
+    const start = (chosen.images || []).find(slot => slot.role === 'start');
+    if (!start) return list;
+    const uploaded = list.find(item => (item.slot_id || item.id) === start.id && (item.data_base64 || item.data));
+    if (uploaded) {
+      await this.ctx.service.project.saveManualFrame(shot.project_id, shot.id, uploaded);
+      return list;
+    }
+    const current = await this.ctx.model.Shot.findByPk(shot.id);
+    const relative = current?.manual_frame_path || current?.first_frame_path;
+    if (!relative) {
+      const error = new Error('这条工作流需要首帧。没有上镜尾帧时，请先上传指定首帧');
+      error.status = 400;
+      throw error;
+    }
+    const absolute = resolveInside(outputRoot(this.app), relative);
+    if (!absolute || !fs.existsSync(absolute)) {
+      const error = new Error('首帧文件不在磁盘上');
+      error.status = 400;
+      throw error;
+    }
+    const bytes = await this.scaleFrame(absolute, snap32(chosen.width), snap32(chosen.height));
+    list.push({
+      slot_id: start.id,
+      filename: 'first.png',
+      data_base64: bytes.toString('base64'),
+    });
+    return list;
+  }
+
+  async scaleFrame(absolute, width, height) {
+    const source = await fs.promises.readFile(absolute);
+    if (!width || !height) return source;
+    const { ffmpeg } = bins(this.app);
+    const target = path.join(os.tmpdir(), `cartoon-frame-${process.pid}-${Date.now()}.png`);
+    try {
+      await run(ffmpeg, [
+        '-y',
+        '-i', absolute,
+        '-vf', `scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height}`,
+        '-frames:v', '1',
+        '-update', '1',
+        target,
+      ]);
+      return await fs.promises.readFile(target);
+    } finally {
+      fs.promises.unlink(target).catch(() => {});
+    }
+  }
+
+  async captureFrames(task, output) {
+    const root = outputRoot(this.app);
+    const video = resolveInside(root, output.file_path);
+    if (!video) return;
+    const { ffmpeg } = bins(this.app);
+    const dir = path.join(path.dirname(video), 'frames');
+    await fs.promises.mkdir(dir, { recursive: true });
+    const first = path.join(dir, 'first.png');
+    const last = path.join(dir, 'last.png');
+    await run(ffmpeg, [ '-y', '-ss', '0', '-i', video, '-frames:v', '1', first ]);
+    await run(ffmpeg, [ '-y', '-sseof', '-0.08', '-i', video, '-frames:v', '1', last ]);
+    const relative = file => path.relative(root, file).split(path.sep).join('/');
+    await this.ctx.model.Output.create({
+      task_id: task.id,
+      file_path: relative(first),
+      media_kind: 'image',
+      version_stage: 'frame_first',
+    });
+    await this.ctx.model.Output.create({
+      task_id: task.id,
+      file_path: relative(last),
+      media_kind: 'image',
+      version_stage: 'frame_last',
+    });
+    await this.plantTail(task, last);
+  }
+
+  async plantTail(task, lastFile) {
+    if (!task.shot_id) return;
+    const shot = await this.ctx.model.Shot.findByPk(task.shot_id);
+    if (!shot) return;
+    const next = await this.ctx.model.Shot.findOne({
+      where: {
+        project_id: shot.project_id,
+        import_id: shot.import_id || null,
+        [Op.or]: [
+          { sort_order: { [Op.gt]: shot.sort_order } },
+          { sort_order: shot.sort_order, id: { [Op.gt]: shot.id } },
+        ],
+      },
+      order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
+    });
+    if (!next) return;
+    const relative = `frames/${shot.project_id}/${next.id}/auto.png`;
+    const absolute = resolveInside(outputRoot(this.app), relative);
+    if (!absolute) return;
+    await fs.promises.mkdir(path.dirname(absolute), { recursive: true });
+    await fs.promises.copyFile(lastFile, absolute);
+    next.set('first_frame_path', relative);
+    next.changed('first_frame_path', true);
+    await next.save();
   }
 
   workflowEnvId(kind) {
@@ -470,6 +616,8 @@ class GenerateService extends Service {
             name: row.name,
             media: mediaOf(row, detail),
             images: detail.call_inputs.images || [],
+            width: frameSize(detail.api_json).width,
+            height: frameSize(detail.api_json).height,
           });
         } catch (err) {
           this.ctx.logger.warn('[cartoon] workflow %s %s', row.id, err.message);
@@ -579,6 +727,7 @@ class GenerateService extends Service {
   async stopProject(projectId) {
     const project = await this.ctx.model.Project.findByPk(projectId);
     if (!project) this.ctx.throw(404, '项目不存在');
+    await this.ctx.service.autoJob.halt(project.id);
     cancelProject(this.app, project.id);
     const tasks = await this.ctx.model.Task.findAll({
       where: {
@@ -668,6 +817,7 @@ class GenerateService extends Service {
     let graph;
     try {
       graph = await this.bindWorkflow(workflowId, text, images, refImages, options.seed, options.durationSec, options.negative);
+      alignGraph(graph);
       if (refImages.length) assertReferenceGraph(graph, refImages.length);
     } catch (err) {
       if (await this.stopped(task, options.signal)) return task.reload();
@@ -739,6 +889,7 @@ class GenerateService extends Service {
   async settleProject(projectId) {
     const tasks = await this.ctx.model.Task.findAll({
       where: { project_id: projectId, status: 'running' },
+      attributes: { exclude: [ 'workflow_snapshot' ] },
     });
     if (!tasks.length) return;
     const queue = await this.comfyQueue();
@@ -790,7 +941,10 @@ class GenerateService extends Service {
     }
     const statusStr = item.status?.status_str;
     if (statusStr === 'error') {
-      await task.update({ status: 'failed', error_message: 'ComfyUI 执行失败' });
+      const messages = item.status?.messages || [];
+      const found = messages.find(row => Array.isArray(row) && row[0] === 'execution_error');
+      const detail = String(found?.[1]?.exception_message || '').replace(/\s+/g, ' ').trim().slice(0, 240);
+      await task.update({ status: 'failed', error_message: detail ? `ComfyUI 执行失败：${detail}` : 'ComfyUI 执行失败' });
       return task.reload();
     }
     if (!item.status?.completed && statusStr !== 'success') return task;
@@ -804,7 +958,16 @@ class GenerateService extends Service {
     try {
       const files = collectMedia(item.outputs);
       if (!files.length) throw new Error('ComfyUI 没有返回图片');
-      for (const file of files) await this.saveOutput(task, file);
+      for (const file of files) {
+        const output = await this.saveOutput(task, file);
+        if (output.media_kind === 'video') {
+          try {
+            await this.captureFrames(task, output);
+          } catch (err) {
+            this.ctx.logger.warn('[cartoon] frames %s', err.message);
+          }
+        }
+      }
       const [ saved ] = await this.ctx.model.Task.update(
         { status: 'success', error_message: '' },
         { where: { id: task.id, status: 'saving' } },
@@ -914,6 +1077,28 @@ class GenerateService extends Service {
     return { id: Number(outputId) };
   }
 
+  async removeOutputs(ids) {
+    const unique = [ ...new Set((Array.isArray(ids) ? ids : []).map(id => Number(id)).filter(id => id > 0)) ];
+    if (!unique.length) this.ctx.throw(400, '请选择产物');
+    if (unique.length > 200) this.ctx.throw(400, '一次最多删除 200 条');
+    const deleted = [];
+    const skipped = [];
+    for (const id of unique) {
+      try {
+        await this.removeOutput(id);
+        deleted.push(id);
+      } catch (err) {
+        const status = Number(err.status || err.statusCode || 500);
+        if (status === 400 || status === 404) {
+          skipped.push({ id, reason: err.message || '没有删除' });
+          continue;
+        }
+        throw err;
+      }
+    }
+    return { deleted, skipped };
+  }
+
   async rememberGeneration(task, workflowId, positive, options, workflowName) {
     try {
       const ids = [ ...new Set((options.assetIds || []).map(id => Number(id)).filter(id => id > 0)) ];
@@ -972,7 +1157,10 @@ class GenerateService extends Service {
       seed: stored?.seed ?? extracted.seed ?? null,
       duration_sec: stored?.duration_sec ?? null,
     };
-    const hasWorkflow = Boolean(json.workflow_snapshot && typeof json.workflow_snapshot === 'object' && Object.keys(json.workflow_snapshot).length);
+    const flagged = json.has_workflow_snapshot;
+    const hasWorkflow = flagged === true || flagged === 't' || flagged === 'true'
+      || Boolean(json.workflow_snapshot && typeof json.workflow_snapshot === 'object' && Object.keys(json.workflow_snapshot).length);
+    delete json.has_workflow_snapshot;
     delete json.workflow_snapshot;
     delete json.generation_brief;
     return { ...json, generation, has_workflow: hasWorkflow };

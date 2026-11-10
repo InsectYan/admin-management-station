@@ -21,11 +21,21 @@ function Write-Json($response, $status, $payload) {
   $response.OutputStream.Close()
 }
 
+function Test-LocalPort([int]$Port) {
+  $client = [System.Net.Sockets.TcpClient]::new()
+  try {
+    $connected = $client.ConnectAsync("127.0.0.1", $Port).Wait(400) -and $client.Connected
+    return [bool]$connected
+  } catch {
+    return $false
+  } finally {
+    $client.Dispose()
+  }
+}
+
 function Test-ComfyRunning {
-  $listen = Get-NetTCPConnection -LocalPort 8188 -State Listen -ErrorAction SilentlyContinue
-  if ($listen) { return $true }
-  $proc = Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -like "*run_v039.py*" }
+  if (Test-LocalPort 8188) { return $true }
+  $proc = Get-CimInstance Win32_Process -Filter "Name = 'python.exe' AND CommandLine LIKE '%run_v039.py%'" -ErrorAction SilentlyContinue
   return [bool]$proc
 }
 
@@ -41,7 +51,7 @@ function Start-ComfyUi {
   return @{ ok = $true; status = 200; already_running = $false; message = "已执行启动指令" }
 }
 
-$already = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+$already = Test-LocalPort $port
 if ($already) {
   Write-Host "ComfyUI start bridge already listening on $port"
   exit 0

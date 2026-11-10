@@ -27,6 +27,8 @@ module.exports = app => {
   router.get('/api/library/reviews/:id', controller.library.review);
   router.get('/api/library/versions', controller.library.versions);
   router.get('/api/library/exports', controller.library.exports);
+  router.get('/api/library/outputs', controller.library.outputs);
+  router.get('/api/library/outputs/:id', controller.library.output);
   router.post('/api/library/shared', controller.library.createShared);
   router.put('/api/library/shared/:id', controller.library.updateShared);
   router.get('/api/rules', controller.rule.index);
@@ -43,6 +45,7 @@ module.exports = app => {
   router.get('/api/projects/:id', controller.project.show);
   router.put('/api/projects/:id/tasks/:taskId', controller.project.touchNode);
   router.put('/api/projects/:id', controller.project.update);
+  router.delete('/api/projects/:id', controller.project.remove);
   router.get('/api/projects/:id/refmods', controller.refmod.index);
   router.post('/api/projects/:id/refmods', controller.refmod.create);
   router.put('/api/projects/:id/refmods/:packId', controller.refmod.update);
@@ -55,6 +58,8 @@ module.exports = app => {
   router.post('/api/projects/:id/imports/:importId/draft/suggest', controller.project.draftSuggest);
   router.post('/api/projects/:id/imports/:importId/draft/apply', controller.project.draftApply);
   router.put('/api/projects/:id/imports/:importId/roster', controller.project.saveScriptRoster);
+  router.post('/api/projects/:id/imports/:importId/shots/workflow', controller.project.assignImportWorkflow);
+  router.post('/api/projects/:id/imports/:importId/shots/apply', controller.project.applySnapshotFields);
   router.post('/api/projects/:id/imports/:importId/draft/script', controller.project.draftScript);
   router.post('/api/projects/:id/imports/:importId/draft/script/apply', controller.project.draftScriptApply);
   router.post('/api/projects/:id/imports/:importId/draft/shot-outline', controller.project.draftShotOutline);
@@ -108,11 +113,15 @@ module.exports = app => {
   router.post('/api/projects/:id/assets', controller.project.addAsset);
   router.put('/api/projects/:id/shots/:shotId/assets', controller.project.saveShotAssets);
   router.put('/api/shots/:id', controller.project.updateShot);
+  router.post('/api/projects/:id/shots/:shotId/frame', controller.project.saveFrame);
+  router.get('/api/projects/:id/shots/:shotId/frame/:which', controller.project.frameFile);
   router.delete('/api/shots/:id', controller.project.removeShot);
   router.post('/api/shots/:id/promote', controller.project.promoteShot);
   router.get('/api/generate-inputs', controller.project.generateInputs);
   router.get('/api/projects/:id/runs', controller.project.runs);
   router.post('/api/projects/:id/generate/stop', controller.project.stopGenerate);
+  router.post('/api/projects/:id/auto-jobs', controller.project.startAutoJob);
+  router.get('/api/projects/:id/auto-jobs/current', controller.project.currentAutoJob);
   router.post('/api/projects/:id/shots/:shotId/generate', controller.project.generate);
   router.get('/api/media-tools', controller.edit.tools);
   router.get('/api/projects/:id/edit', controller.edit.show);
@@ -120,6 +129,7 @@ module.exports = app => {
   router.post('/api/projects/:id/edit/seed', controller.edit.seed);
   router.post('/api/projects/:id/edit/export', controller.edit.startExport);
   router.get('/api/edit-jobs/:id', controller.edit.job);
+  router.post('/api/outputs/batch-delete', controller.project.removeOutputs);
   router.delete('/api/outputs/:id', controller.project.removeOutput);
   router.get('/api/tasks/:id/workflow', controller.project.taskWorkflow);
   router.delete('/api/tasks/:id', controller.project.removeTask);

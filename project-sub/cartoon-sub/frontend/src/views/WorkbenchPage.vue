@@ -29,7 +29,7 @@
           <el-button v-for="item in customNodes" :key="item.node_key" @click="runCustom(item)">运行{{ item.title }}</el-button>
         </div>
       </section>
-      <ProjectDetailPage v-if="scriptStep" :forced-step="scriptStep" :nav-target="navTarget" :launch-shot-id="launchShotId" />
+      <ProjectDetailPage v-if="scriptStep" :key="projectId" :forced-step="scriptStep" :nav-target="navTarget" :launch-shot-id="launchShotId" />
       <section v-else-if="node === 'assets'" class="cartoon-module cartoon-asset-page">
         <div class="cartoon-asset-head">
           <h3 class="cartoon-module__title">资产</h3>
@@ -175,9 +175,10 @@
       <section v-else-if="node === 'voice'" class="cartoon-module cartoon-voice-page">
         <div class="cartoon-asset-head">
           <h3 class="cartoon-module__title">配音</h3>
-          <el-button type="primary" :disabled="!selectedVoice || !voiceShotIds.length" @click="assignLibraryVoice">用这个音色配音</el-button>
+          <el-button type="primary" :disabled="!selectedVoice || !voicePicks.length" @click="assignLibraryVoice">用这个音色配音</el-button>
+          <el-button :disabled="!shots.length" @click="openAddLine">新增对白</el-button>
         </div>
-        <p class="cartoon-module__hint">先在音色库里试听，选定一条后勾选有台词的镜头。配音会把这条音色登记到项目，并写上这些镜头的时间轴。试听播放的是样本，不是这条台词的成片。</p>
+        <p class="cartoon-module__hint">先在音色库里试听并选定一条，再勾选对白。点「用这个音色配音」后，勾选的对白就把这条音色记成关联音色，同一镜头里没勾选的对白保持原样。试听播放的是样本，不是这句台词的成片。AI 把多句写进一条时，用「拆分」或「新增对白」拆开。</p>
         <p v-if="voiceSkipped.length" class="cartoon-module__hint">这些分组的文件名过长，读不到：{{ voiceSkipped.join('、') }}</p>
         <div class="cartoon-voice">
           <div class="cartoon-voice__library">
@@ -213,16 +214,40 @@
             <p v-if="selectedVoice" class="cartoon-module__hint">已选 {{ selectedVoice.folder }} / {{ selectedVoice.name }}</p>
           </div>
           <div class="cartoon-voice__shots">
-            <el-table :data="spokenShots" size="small" @selection-change="voiceShotIds = $event.map(item => item.id)">
+            <el-table :data="voiceLines" size="small" row-key="key" @selection-change="voicePicks = $event">
               <el-table-column type="selection" width="42" fixed="left" />
               <el-table-column prop="shot_code" label="镜头" width="110" />
-              <el-table-column label="台词" min-width="180">
-                <template #default="{ row }"><ClampText title="台词" :text="row.dialogue || ''" /></template>
+              <el-table-column label="对白" min-width="180">
+                <template #default="{ row }">
+                  <el-input :model-value="row.text" @change="value => saveLineText(row, value)" />
+                </template>
               </el-table-column>
               <el-table-column label="当前音色" width="140">
-                <template #default="{ row }">{{ voiceNameOf(row.id) }}</template>
+                <template #default="{ row }">{{ voiceLabel(row.voice_key) }}</template>
+              </el-table-column>
+              <el-table-column label="操作" width="120" fixed="right">
+                <template #default="{ row }">
+                  <el-button link type="primary" @click="openSplitLine(row)">拆分</el-button>
+                  <el-button link type="danger" @click="removeLine(row)">删除</el-button>
+                </template>
               </el-table-column>
             </el-table>
+            <el-dialog v-model="lineDialog" :title="lineMode === 'split' ? '拆分对白' : '新增对白'" width="520px" append-to-body>
+              <el-form label-position="top">
+                <el-form-item v-if="lineMode === 'add'" label="镜头">
+                  <el-select v-model="lineShotId" filterable style="width: 100%">
+                    <el-option v-for="item in shots" :key="item.id" :label="item.shot_code || `镜头 ${item.id}`" :value="item.id" />
+                  </el-select>
+                </el-form-item>
+                <el-form-item :label="lineMode === 'split' ? '一行一句' : '对白'">
+                  <el-input v-model="lineText" type="textarea" :rows="5" />
+                </el-form-item>
+              </el-form>
+              <template #footer>
+                <el-button @click="lineDialog = false">取消</el-button>
+                <el-button type="primary" @click="submitLineDialog">保存</el-button>
+              </template>
+            </el-dialog>
           </div>
         </div>
       </section>
@@ -282,10 +307,12 @@
         </section>
         <ShotOutputsPage v-if="shotQuery" :key="`preview-${shotQuery}`" />
       </template>
-      <template v-else-if="node === 'compose' || node === 'export'">
-        <ExportSpecs v-if="node === 'export'" class="cartoon-workbench__note" :project-id="projectId" />
-        <p v-if="node === 'export'" class="cartoon-module__hint cartoon-workbench__note">已有成片仍用本页右上角「导出成片」。下面的规格会重新编码，有台词时烧进画面，长版可以混入背景音乐。</p>
+      <template v-else-if="node === 'compose'">
         <ProjectEditPage />
+      </template>
+      <template v-else-if="node === 'export'">
+        <ExportSpecs class="cartoon-workbench__note" :project-id="projectId" />
+        <p class="cartoon-module__hint cartoon-workbench__note">这里按规格重新编码已有成片。有台词时烧进画面，长版可以混入背景音乐。原来的成片在「合成」页点「导出成片」。</p>
       </template>
     </RegionLoad>
     <aside class="cartoon-workbench__side">
@@ -366,7 +393,12 @@ const voicePage = ref(1);
 const selectedVoice = ref(null);
 const voicePreviewUrl = ref('');
 const voiceAudio = ref(null);
-const voiceShotIds = ref([]);
+const voicePicks = ref([]);
+const lineDialog = ref(false);
+const lineMode = ref('add');
+const lineShotId = ref(null);
+const lineIndex = ref(0);
+const lineText = ref('');
 const refmodEditor = ref(null);
 const launchShotId = ref('');
 const navTarget = ref('');
@@ -403,12 +435,100 @@ const voiceFiltered = computed(() => voiceRows.value.filter(item => {
   return !keyword || item.name.includes(keyword);
 }));
 const voicePageRows = computed(() => voiceFiltered.value.slice((voicePage.value - 1) * 10, voicePage.value * 10));
-const spokenShots = computed(() => shots.value.filter(item => String(item.dialogue || '').trim()));
-function voiceNameOf(shotId) {
-  const cue = (bundle.value?.voice_cues || []).find(item => String(item.shot_id) === String(shotId));
-  if (!cue) return '—';
-  const asset = assets.value.find(item => item.kind === 'voice' && item.voice_key === cue.voice_key);
-  return asset?.name || cue.voice_key;
+function lineList(shot) {
+  const stored = shot?.dialogue_lines;
+  if (Array.isArray(stored) && stored.length) {
+    return stored.map(item => ({
+      text: String(item?.text || '').trim(),
+      voice_key: String(item?.voice_key || '').trim(),
+    })).filter(item => item.text);
+  }
+  const cue = (bundle.value?.voice_cues || []).find(item => String(item.shot_id) === String(shot?.id));
+  return String(shot?.dialogue || '').split(/\n+/).map(text => text.trim()).filter(Boolean)
+    .map(text => ({ text, voice_key: cue?.voice_key || '' }));
+}
+const voiceLines = computed(() => shots.value.flatMap(shot => lineList(shot).map((line, index) => ({
+  key: `${shot.id}:${index}`,
+  shot_id: shot.id,
+  index,
+  shot_code: shot.shot_code || `镜头 ${shot.id}`,
+  text: line.text,
+  voice_key: line.voice_key,
+}))));
+function voiceLabel(key) {
+  if (!key) return '—';
+  const asset = assets.value.find(item => item.kind === 'voice' && item.voice_key === key);
+  return asset?.name || key;
+}
+function shotById(id) {
+  return shots.value.find(item => String(item.id) === String(id));
+}
+async function writeLines(shot, lines) {
+  await request(`/shots/${shot.id}`, {
+    method: 'put',
+    data: { dialogue_lines: lines },
+  });
+}
+async function saveLineText(row, value) {
+  const shot = shotById(row.shot_id);
+  if (!shot) return;
+  const text = String(value || '').trim();
+  if (!text) {
+    ElMessage.warning('对白不能是空的，不用这句就点删除');
+    return;
+  }
+  const lines = lineList(shot);
+  lines[row.index] = { ...lines[row.index], text };
+  await runAction(async () => {
+    await writeLines(shot, lines);
+    ElMessage.success('对白已保存');
+  });
+}
+function openAddLine() {
+  lineMode.value = 'add';
+  lineShotId.value = shots.value[0]?.id || null;
+  lineText.value = '';
+  lineDialog.value = true;
+}
+function openSplitLine(row) {
+  lineMode.value = 'split';
+  lineShotId.value = row.shot_id;
+  lineIndex.value = row.index;
+  lineText.value = row.text;
+  lineDialog.value = true;
+}
+async function removeLine(row) {
+  const shot = shotById(row.shot_id);
+  if (!shot) return;
+  const lines = lineList(shot).filter((_, index) => index !== row.index);
+  await runAction(async () => {
+    await writeLines(shot, lines);
+    ElMessage.success('已删除这条对白');
+  });
+}
+async function submitLineDialog() {
+  const shot = shotById(lineShotId.value);
+  if (!shot) {
+    ElMessage.warning('请选择镜头');
+    return;
+  }
+  const parts = String(lineText.value || '').split(/\n+/).map(text => text.trim()).filter(Boolean);
+  if (!parts.length) {
+    ElMessage.warning('请填写对白');
+    return;
+  }
+  const lines = lineList(shot);
+  if (lineMode.value === 'split') {
+    const current = lines[lineIndex.value] || { voice_key: '' };
+    lines.splice(lineIndex.value, 1, ...parts.map(text => ({ text, voice_key: current.voice_key || '' })));
+  } else {
+    parts.forEach(text => lines.push({ text, voice_key: '' }));
+  }
+  await runAction(async () => {
+    await writeLines(shot, lines);
+    lineDialog.value = false;
+    ElMessage.success(lineMode.value === 'split' ? '已拆开' : '已新增对白');
+  });
 }
 const staleShots = computed(() => (bundle.value?.shots || []).filter(item => item.asset_stale));
 const findings = computed(() => bundle.value?.review_findings || []);
@@ -421,6 +541,12 @@ const requestAudio = ref(false);
 const nodeTitle = computed(() => nodes.find(item => item.id === node.value)?.title || '');
 
 const projectId = computed(() => route.params.id);
+let heldProjectId = '';
+function projectKey() {
+  const live = String(route.params.id || '');
+  if (live) heldProjectId = live;
+  return heldProjectId;
+}
 const node = computed(() => {
   const raw = String(route.query.node || episode.value?.current_node || 'input');
   const value = raw === 'generate' ? 'storyboard' : (raw === 'refmods' ? 'assets' : raw);
@@ -460,7 +586,7 @@ function assetKind(kind) {
 }
 async function runCustom(item) {
   try {
-    const data = await request(`/projects/${projectId.value}/nodes/${item.node_key}/run`, { method: 'post', data: {} });
+    const data = await request(`/projects/${projectKey()}/nodes/${item.node_key}/run`, { method: 'post', data: {} });
     const count = data?.findings?.length || 0;
     const text = data?.warning || data?.note || (count ? `记下 ${count} 条问题` : '这项检查没有发现问题');
     if (data?.warning) {
@@ -475,7 +601,7 @@ async function runCustom(item) {
 }
 async function linkShared() {
   await runAction(async () => {
-    await request(`/projects/${projectId.value}/assets/link`, {
+    await request(`/projects/${projectKey()}/assets/link`, {
       method: 'post',
       data: { library_asset_id: Number(sharedAssetId.value) },
     });
@@ -589,7 +715,7 @@ function fillAsset(row) {
 async function createAsset() {
   if (!assetForm.name.trim()) return;
   try {
-    const created = await request(`/projects/${projectId.value}/assets`, { method: 'post', data: assetPayload(false) });
+    const created = await request(`/projects/${projectKey()}/assets`, { method: 'post', data: assetPayload(false) });
     if (created?.id) await refmodEditor.value?.flush?.(created.id);
     assetDrawerOpen.value = false;
     resetAssetForm();
@@ -606,7 +732,7 @@ async function saveAsset() {
   }
   if (!assetForm.name.trim()) return;
   try {
-    const saved = await request(`/projects/${projectId.value}/assets/${editingAssetId.value}`, {
+    const saved = await request(`/projects/${projectKey()}/assets/${editingAssetId.value}`, {
       method: 'put',
       data: assetPayload(true),
     });
@@ -629,13 +755,13 @@ async function runAction(work) {
 }
 async function matchAssets() {
   await runAction(async () => {
-    await request(`/projects/${projectId.value}/assets/match`, { method: 'post' });
+    await request(`/projects/${projectKey()}/assets/match`, { method: 'post' });
     ElMessage.success('已按名称写入绑定');
   });
 }
 async function suggestAssets() {
   await runAction(async () => {
-    const data = await request(`/projects/${projectId.value}/assets/suggest`, { method: 'post' });
+    const data = await request(`/projects/${projectKey()}/assets/suggest`, { method: 'post' });
     assetSuggestions.value = data?.suggestions || [];
     if (assetSuggestions.value.length) ElMessage.info('建议还没有写入');
     else ElMessage.warning('没有可绑定的资产');
@@ -643,7 +769,7 @@ async function suggestAssets() {
 }
 async function applyAssets() {
   await runAction(async () => {
-    await request(`/projects/${projectId.value}/assets/apply`, { method: 'post', data: { suggestions: assetSuggestions.value } });
+    await request(`/projects/${projectKey()}/assets/apply`, { method: 'post', data: { suggestions: assetSuggestions.value } });
     assetSuggestions.value = [];
     ElMessage.success('绑定已写入');
   });
@@ -675,25 +801,29 @@ function previewLibraryVoice(row) {
   audio.play().catch(() => {});
 }
 async function assignLibraryVoice() {
-  if (!selectedVoice.value || !voiceShotIds.value.length) return;
+  if (!selectedVoice.value || !voicePicks.value.length) return;
+  const count = voicePicks.value.length;
   await runAction(async () => {
-    await request(`/projects/${projectId.value}/voice/library-assign`, {
+    await request(`/projects/${projectKey()}/voice/library-assign`, {
       method: 'post',
-      data: { voice_id: selectedVoice.value.id, shot_ids: voiceShotIds.value },
+      data: {
+        voice_id: selectedVoice.value.id,
+        lines: voicePicks.value.map(item => ({ shot_id: item.shot_id, index: item.index })),
+      },
     });
-    ElMessage.success(`已用「${selectedVoice.value.name}」给 ${voiceShotIds.value.length} 条镜头配音`);
+    ElMessage.success(`已用「${selectedVoice.value.name}」给 ${count} 条对白配音`);
   });
 }
 async function suggestVoice() {
   await runAction(async () => {
-    const data = await request(`/projects/${projectId.value}/voice/suggest`, { method: 'post' });
+    const data = await request(`/projects/${projectKey()}/voice/suggest`, { method: 'post' });
     voiceSuggestions.value = data?.cues || [];
     ElMessage.info('时间轴还没有写入');
   });
 }
 async function applyVoice() {
   await runAction(async () => {
-    const data = await request(`/projects/${projectId.value}/voice/apply`, {
+    const data = await request(`/projects/${projectKey()}/voice/apply`, {
       method: 'post',
       data: { cues: voiceSuggestions.value, request_audio: requestAudio.value },
     });
@@ -703,27 +833,27 @@ async function applyVoice() {
 }
 async function buildSubtitles() {
   await runAction(async () => {
-    const data = await request(`/projects/${projectId.value}/subtitles/build`, { method: 'post' });
+    const data = await request(`/projects/${projectKey()}/subtitles/build`, { method: 'post' });
     ElMessage.success(data?.style ? `已按「${data.style}」排好字幕` : '已按台词排好字幕');
   });
 }
 async function suggestReview() {
   await runAction(async () => {
-    const data = await request(`/projects/${projectId.value}/review-findings/suggest`, { method: 'post' });
+    const data = await request(`/projects/${projectKey()}/review-findings/suggest`, { method: 'post' });
     reviewSuggestions.value = data?.issues || [];
     ElMessage.info('问题还没有记下');
   });
 }
 async function applyReview() {
   await runAction(async () => {
-    await request(`/projects/${projectId.value}/review-findings/apply`, { method: 'post', data: { issues: reviewSuggestions.value } });
+    await request(`/projects/${projectKey()}/review-findings/apply`, { method: 'post', data: { issues: reviewSuggestions.value } });
     reviewSuggestions.value = [];
     ElMessage.success('问题已记下');
   });
 }
 async function disableAsset(row) {
   try {
-    await request(`/projects/${projectId.value}/assets/${row.id}/disable`, { method: 'post' });
+    await request(`/projects/${projectKey()}/assets/${row.id}/disable`, { method: 'post' });
     await load();
     ElMessage.success('已停用');
   } catch (err) {
@@ -741,7 +871,7 @@ async function removeAsset(row) {
     return;
   }
   try {
-    await request(`/projects/${projectId.value}/assets/${row.id}`, { method: 'delete' });
+    await request(`/projects/${projectKey()}/assets/${row.id}`, { method: 'delete' });
     if (editingAssetId.value === row.id) {
       resetAssetForm();
     }
@@ -798,7 +928,7 @@ async function loadWorkflow() {
 async function persistNode(value) {
   if (!episode.value || !value || episode.value.current_node === value) return;
   try {
-    const saved = await request(`/projects/${projectId.value}/tasks/${episode.value.id}`, {
+    const saved = await request(`/projects/${projectKey()}/tasks/${episode.value.id}`, {
       method: 'PUT',
       data: { current_node: value },
     });
@@ -808,11 +938,17 @@ async function persistNode(value) {
   }
 }
 async function load(mask = false) {
+  const id = projectKey();
   const token = mask ? ++entryToken : 0;
   if (mask) entryLoading.value = true;
   error.value = '';
   try {
-  const detail = await request(`/projects/${projectId.value}`);
+  if (!id) {
+    error.value = '项目编号丢了';
+    return;
+  }
+  const detail = await request(`/projects/${id}`);
+  if (String(route.params.id || '') !== id) return;
   const episodes = detail.episodes || [];
   if (!episodes.length) {
     error.value = '还没有这一集';
@@ -820,7 +956,7 @@ async function load(mask = false) {
   }
   const current = episodes.find(item => String(item.id) === String(route.params.taskId));
   if (!current) {
-    await router.replace({ path: `/projects/${projectId.value}/tasks/${episodes[0].id}`, query: route.query });
+    await router.replace({ path: `/projects/${projectKey()}/tasks/${episodes[0].id}`, query: route.query });
     return;
   }
   project.value = detail.project;

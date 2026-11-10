@@ -15,6 +15,7 @@ const PROMPT_T2V = '一只橘猫从窗台走过，阳光落在木地板上，镜
 const PROMPT_FLF = '人物从门口走到窗边，动作连贯，光线从暖色变成傍晚的冷色，脚步声清晰。';
 const PROMPT_REF = '让 <Picture 1> 里的角色保持同一张脸和同一套衣服，走到窗边停下，光线柔和，有轻微的衣料声。';
 const PROMPT_REFMOD = '让 <Picture 1> 保持同一张脸和同一套衣服，从门口走到窗边停下，光线柔和，有轻微的衣料声。';
+const PROMPT_REF_FLF = '让 <Picture 1> 保持同一张脸和同一套衣服，从首帧开始往下演，动作连贯，光线自然。没有尾帧时按首帧继续，不要自己补一个结尾定格。';
 const PROMPT_LORA = '真实人物从门口走到窗边，皮肤和衣服细节清楚，动作自然，光线是傍晚室内光。';
 
 function h3Graph(options) {
@@ -76,6 +77,32 @@ function h3Graph(options) {
     nodes['22'] = { class_type: 'LoadImage', inputs: { image: 'last.png' } };
   }
   nodes['7'] = condition;
+  let positiveOut = [ '7', 0 ];
+  if (options.guides) {
+    nodes['21'] = { class_type: 'LoadImage', inputs: { image: 'first.png' } };
+    nodes['23'] = {
+      class_type: 'MiniMaxH3AddGuide',
+      inputs: {
+        positive: [ '7', 0 ],
+        latent: [ '7', 1 ],
+        vae: [ '4', 0 ],
+        image: [ '21', 0 ],
+        frame_idx: 0,
+      },
+    };
+    nodes['22'] = { class_type: 'LoadImage', inputs: { image: 'last.png' } };
+    nodes['24'] = {
+      class_type: 'MiniMaxH3AddGuide',
+      inputs: {
+        positive: [ '23', 0 ],
+        latent: [ '7', 1 ],
+        vae: [ '4', 0 ],
+        image: [ '22', 0 ],
+        frame_idx: -1,
+      },
+    };
+    positiveOut = [ '24', 0 ];
+  }
   nodes['8'] = { class_type: 'RandomNoise', inputs: { noise_seed: 1 } };
   nodes['9'] = { class_type: 'KSamplerSelect', inputs: { sampler_name: 'res_multistep' } };
   nodes['10'] = {
@@ -84,7 +111,7 @@ function h3Graph(options) {
   };
   nodes['11'] = {
     class_type: 'BasicGuider',
-    inputs: { model: [ '6', 0 ], conditioning: [ '7', 0 ] },
+    inputs: { model: [ '6', 0 ], conditioning: positiveOut },
   };
   nodes['12'] = {
     class_type: 'SamplerCustomAdvanced',
@@ -225,6 +252,37 @@ const H3_TEMPLATES = [
       reference: true,
       refmod: true,
       prefix: 'video/h3-light-t2v-refmod',
+    }),
+  },
+  {
+    name: '轻量-h3-首尾帧[RefMod]',
+    category: 'image_to_video',
+    suggested_vram_gb: 24,
+    api_json: h3Graph({
+      // fl2va 的 int8 权重带上参考图会把 Comfy 卡死，轻量参考必须用 ref2va。
+      // 首尾帧不走 ImageToVideo，用 AddGuide 钉在第 0 帧；没上传尾帧时绑定会拆掉末尾那个 AddGuide。
+      unet: UNET_REF,
+      prompt: PROMPT_REF_FLF,
+      steps: 20,
+      reference: true,
+      refmod: true,
+      guides: true,
+      prefix: 'video/h3-light-flf-refmod',
+    }),
+  },
+  {
+    name: '满血-h3-首尾帧[RefMod]',
+    category: 'image_to_video',
+    suggested_vram_gb: 64,
+    api_json: h3Graph({
+      unet: UNET_FULL,
+      clip: CLIP_BF16,
+      prompt: PROMPT_REF_FLF,
+      steps: 20,
+      reference: true,
+      refmod: true,
+      guides: true,
+      prefix: 'video/h3-full-flf-refmod',
     }),
   },
 ];
