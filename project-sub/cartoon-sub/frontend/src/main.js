@@ -22,7 +22,11 @@ function limitTooltipWidth() {
   if (document.getElementById('cartoon-tooltip-limit')) return;
   const style = document.createElement('style');
   style.id = 'cartoon-tooltip-limit';
-  style.textContent = '.el-popper[role="tooltip"]{max-width:300px !important;box-sizing:border-box;white-space:normal;word-break:break-word;overflow-wrap:anywhere;line-height:1.5}';
+  style.textContent = [
+    '.el-popper[role="tooltip"]:not(.el-select__popper):not(.el-dropdown__popper):not(.el-picker__popper):not(.el-cascader__dropdown):not(.el-autocomplete__popper){max-width:300px !important;box-sizing:border-box;white-space:normal;word-break:break-word;overflow-wrap:anywhere;line-height:1.5}',
+    '.el-select__popper.el-popper{width:max-content !important;max-width:min(70vw,720px) !important}',
+    '.el-select-dropdown__item{height:auto;min-height:34px;line-height:1.45;white-space:normal;overflow:visible;text-overflow:unset;padding-top:6px;padding-bottom:6px}',
+  ].join('');
   document.head.appendChild(style);
 }
 

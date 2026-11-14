@@ -10,7 +10,7 @@ const { writeStoredZip } = require('../lib/frameZip');
 const execFileAsync = promisify(execFile);
 const { parseApiWorkflow } = require('../lib/workflowParse');
 const { buildSupplies } = require('../lib/supplyCatalog');
-const { listPreviewFields, applyPreviewValues, collectMedia, collectText, resolveImageSeeds, pinBatchSize } = require('../lib/workflowPreview');
+const { listPreviewFields, applyPreviewValues, collectMedia, collectText, resolveImageSeeds, pinBatchSize, applyQwen21OutputSize, isVideoWorkflow } = require('../lib/workflowPreview');
 const { describeCallInputs, applyCallInputs, applySeed, withCallFields, expandReferenceImages } = require('../lib/workflowInputs');
 const { applyRefmod } = require('../lib/refmodApply');
 
@@ -26,6 +26,118 @@ function safeKey(value) {
     throw error;
   }
   return key;
+}
+
+function productBaseName(outputName) {
+  const raw = String(outputName || '').trim() || '产物';
+  return raw.replace(/[\\/:*?"<>|\r\n\t]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80) || '产物';
+}
+
+function decodePayload(file) {
+  const raw = String(file?.data || file?.data_base64 || '');
+  if (!raw) return null;
+  const marked = raw.match(/^data:([^;,]+);base64,([\s\S]*)$/);
+  const body = marked ? marked[2] : raw;
+  const mime = marked ? marked[1] : '';
+  const bytes = Buffer.from(body, 'base64');
+  if (!bytes.length) return null;
+  const fromName = path.extname(String(file.filename || '')).toLowerCase();
+  const known = /^\.(png|jpe?g|webp|gif|mp4|webm|mov)$/.test(fromName) ? (fromName === '.jpeg' ? '.jpg' : fromName) : '';
+  const ext = known
+    || (mime.includes('jpeg') ? '.jpg'
+      : mime.includes('webp') ? '.webp'
+        : mime.includes('gif') ? '.gif'
+          : mime.includes('mp4') ? '.mp4'
+            : mime.includes('webm') ? '.webm'
+              : mime.includes('quicktime') ? '.mov'
+                : '.png');
+  return {
+    bytes,
+    ext,
+    kind: /^\.(mp4|webm|mov)$/.test(ext) ? 'video' : 'image',
+    name: path.basename(String(file.filename || '')),
+  };
+}
+
+function fieldPayloads(field) {
+  const listed = Array.isArray(field?.files) ? field.files.filter(item => item?.data || item?.data_base64) : [];
+  if (listed.length) return listed;
+  if (field?.data || field?.data_base64) return [ field ];
+  return [];
+}
+
+function cleanNames(names) {
+  return (Array.isArray(names) ? names : [])
+    .map(item => String(item || '').trim())
+    .filter(Boolean)
+    .slice(0, 12)
+    .map(item => item.slice(0, 80));
+}
+
+function optionFileNames(run) {
+  const names = [];
+  for (const item of run?.options || []) {
+    for (const image of item?.images || []) {
+      const base = path.basename(String(image?.file || ''));
+      if (base && base === image.file) names.push(base);
+    }
+  }
+  return names;
+}
+
+function hiddenOptionField(field) {
+  const label = String(field?.label || '');
+  const key = String(field?.key || '');
+  return key === 'seed' || key === 'noise_seed' || label === '种子' || key === 'frame_idx' || /frame_idx/i.test(label);
+}
+
+function buildOptionRows({ values, styleNames, outputName, batchText, slotImages, refImages, refText }) {
+  const rows = [];
+  if (styleNames.length) rows.push({ label: '画风', text: styleNames.join('、') });
+  rows.push({ label: '产物名称', text: outputName || '产物' });
+  if (refImages.length) rows.push({ label: '参考图', text: refText || '', images: refImages });
+  let batchPlaced = false;
+  for (const field of values || []) {
+    if (!field || field.type === 'text' || field.key === 'batch_size' || hiddenOptionField(field)) continue;
+    if (field.type === 'image' || field.type === 'video') {
+      const images = slotImages.get(field.id || field.slot_id) || [];
+      if (!images.length) continue;
+      rows.push({ label: field.label || (field.type === 'video' ? '视频' : '图片'), images });
+      continue;
+    }
+    const text = String(field.value ?? '').trim();
+    if (!text) continue;
+    rows.push({ label: field.label || field.key || '参数', text });
+    if (batchText && (field.key === 'seed' || field.key === 'noise_seed')) {
+      rows.push({ label: '批次', text: batchText });
+      batchPlaced = true;
+    }
+  }
+  if (batchText && !batchPlaced) rows.push({ label: '批次', text: batchText });
+  return rows;
+}
+
+function seedFromValues(values) {
+  const hit = (values || []).find(item => item?.key === 'seed' || item?.key === 'noise_seed');
+  const num = Math.round(Number(hit?.value));
+  return Number.isSafeInteger(num) && num >= 0 ? num : null;
+}
+
+function mergeStylePrompt(values, stylePrompt) {
+  const style = String(stylePrompt || '').trim();
+  const rows = (values || []).map(item => ({ ...item }));
+  if (!style) return rows;
+  const target = rows.find(item => {
+    if (!item || item.type === 'image' || item.type === 'video' || item.type === 'number' || item.type === 'duration') return false;
+    const key = String(item.key || '').toLowerCase();
+    const label = String(item.label || '');
+    if (/negative|负向/.test(`${key} ${label}`)) return false;
+    return key === 'text' || key === 'prompt' || key === 'positive_prompt' || key === 'text_input' || key === 'custom_prompt' || /正向|提示词/.test(label);
+  });
+  if (!target) return rows;
+  const body = String(target.value || '').trim();
+  target.value = body ? `${style}\n${body}` : style;
+  return rows;
 }
 
 function boardOf(raw) {
@@ -236,6 +348,7 @@ class WorkflowPreviewService extends Service {
     const resolved = await this.imageNames(source, payload.images || []);
     let graph = applySeed(applyCallInputs(source, { positive, negative, imageNames: resolved.names }), payload.seed);
     graph = expandReferenceImages(graph, describeCallInputs(source).images, resolved.extras);
+    applyQwen21OutputSize(graph);
     const seconds = Number(payload.duration_sec);
     if (Number.isFinite(seconds) && seconds > 0) {
       graph = applyPreviewValues(graph, [{ type: 'duration', key: 'duration_sec', value: seconds }]);
@@ -266,16 +379,25 @@ class WorkflowPreviewService extends Service {
     return submitted;
   }
 
-  async start({ workflowId, draftKey, apiJson, values, refmodIds, refImages, batch, seeds }) {
+  async start({ workflowId, draftKey, apiJson, values, refmodIds, refImages, batch, seeds, stylePrompt, outputName, styleNames }) {
     const imageSeeds = resolveImageSeeds(apiJson, values, batch, seeds);
+    const styledValues = mergeStylePrompt(values, stylePrompt);
+    const outputBase = productBaseName(outputName);
     let source = apiJson;
     const referenceFiles = [];
+    const refPayloads = [];
     if (Array.isArray(refmodIds) && refmodIds.length) {
       const files = await this.ctx.service.refmod.imageFiles(refmodIds);
-      for (const file of files) referenceFiles.push(await this.uploadImage(file, 'refmod'));
+      for (const file of files) {
+        referenceFiles.push(await this.uploadImage(file, 'refmod'));
+        refPayloads.push(file);
+      }
     }
     for (const file of Array.isArray(refImages) ? refImages : []) {
-      if (file?.data || file?.data_base64) referenceFiles.push(await this.uploadImage(file, 'ref'));
+      if (file?.data || file?.data_base64) {
+        referenceFiles.push(await this.uploadImage(file, 'ref'));
+        refPayloads.push(file);
+      }
     }
     const needsReference = Object.values(apiJson || {}).some(node => node?.class_type === 'MiniMaxH3ReferenceToVideo');
     if (referenceFiles.length) {
@@ -285,13 +407,26 @@ class WorkflowPreviewService extends Service {
     }
     const resolved = await this.imageNames(source, (values || []).filter(item => item?.type === 'image' || item?.type === 'video'));
     const created = [];
+    const batchId = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    const optionDir = this.dirFor(workflowId ? 'workflows' : 'drafts', workflowId ? String(workflowId) : safeKey(draftKey));
+    const slotImages = new Map();
+    for (let index = 0; index < (values || []).length; index += 1) {
+      const field = values[index];
+      if (field?.type !== 'image' && field?.type !== 'video') continue;
+      const saved = await this.savePayloads(optionDir, `${batchId}-f${index}`, fieldPayloads(field));
+      if (saved.length) slotImages.set(field.id || field.slot_id, saved);
+    }
+    const savedRefs = await this.savePayloads(optionDir, `${batchId}-ref`, refPayloads);
+    const refText = [ ...new Set(refPayloads.map(file => String(file?.pack || '').trim()).filter(Boolean)) ].join('、');
+    const pickedStyles = cleanNames(styleNames);
+    const batchText = imageSeeds[0] == null ? '' : `${imageSeeds.length} ${isVideoWorkflow(apiJson) ? '条' : '张'}`;
     const stopKey = this.boardKey(workflowId, draftKey);
     const begun = Date.now();
     let failure = null;
     for (let index = 0; index < imageSeeds.length; index += 1) {
       if ((this.stopFlags().get(stopKey) || 0) > begun) break;
       const seed = imageSeeds[index];
-      const nextValues = seed == null ? values : (values || []).map(item => {
+      const nextValues = seed == null ? styledValues : styledValues.map(item => {
         if (item?.key === 'seed' || item?.key === 'noise_seed') return { ...item, value: seed };
         if (item?.key === 'batch_size') return { ...item, value: 1 };
         return item;
@@ -301,6 +436,7 @@ class WorkflowPreviewService extends Service {
         describeCallInputs(source).images,
         resolved.extras,
       );
+      applyQwen21OutputSize(graph);
       if (seed != null) {
         applySeed(graph, seed);
         pinBatchSize(graph);
@@ -322,8 +458,19 @@ class WorkflowPreviewService extends Service {
           progress_max: 0,
           queue_ahead: 0,
           node: '',
-          seed: seed == null ? undefined : seed,
+          seed: seed != null ? seed : seedFromValues(nextValues),
+          batch_id: batchId,
+          output_name: outputBase,
           submitted: this.summarizeValues(nextValues),
+          options: buildOptionRows({
+            values: nextValues,
+            styleNames: pickedStyles,
+            outputName: outputBase,
+            batchText,
+            slotImages,
+            refImages: savedRefs,
+            refText,
+          }),
           created_at: now,
           updated_at: now,
         });
@@ -353,8 +500,41 @@ class WorkflowPreviewService extends Service {
       : await this.loadBoard(workflowId, draftKey);
     if (halted && created.length) await this.dropComfyPrompts(created.map(item => item.prompt_id));
     if (created.length && !halted) this.ensureWatcher();
+    if (!created.length) {
+      const leftover = [ ...savedRefs, ...[ ...slotImages.values() ].flat() ];
+      await this.dropOptionFiles(workflowId, draftKey, [{ options: [{ images: leftover }] }], []);
+    }
     if (failure && !halted) throw failure;
     return { runs: board.runs, seeds: imageSeeds.filter(item => item != null) };
+  }
+
+  async savePayloads(dir, prefix, payloads) {
+    const saved = [];
+    const list = (payloads || []).filter(item => item?.data || item?.data_base64);
+    if (!list.length) return saved;
+    const safePrefix = String(prefix || '').replace(/[^\w-]/g, '').slice(0, 40);
+    if (!safePrefix) return saved;
+    await fs.promises.mkdir(dir, { recursive: true });
+    for (let index = 0; index < list.length; index += 1) {
+      const decoded = decodePayload(list[index]);
+      if (!decoded) continue;
+      const filename = `${safePrefix}-${index}${decoded.ext}`;
+      await fs.promises.writeFile(path.join(dir, filename), decoded.bytes);
+      saved.push({ name: decoded.name, file: filename, kind: decoded.kind });
+    }
+    return saved;
+  }
+
+  async dropOptionFiles(workflowId, draftKey, runs, keepRuns) {
+    const keep = new Set((keepRuns || []).flatMap(optionFileNames));
+    const names = [ ...new Set((runs || []).flatMap(optionFileNames)) ].filter(name => !keep.has(name));
+    if (!names.length) return;
+    const dir = this.dirFor(workflowId ? 'workflows' : 'drafts', workflowId ? String(workflowId) : safeKey(draftKey));
+    for (const name of names) {
+      const absolute = path.resolve(dir, name);
+      if (path.dirname(absolute) !== dir || !fs.existsSync(absolute)) continue;
+      await fs.promises.unlink(absolute).catch(() => {});
+    }
   }
 
   summarizeValues(values) {
@@ -368,7 +548,7 @@ class WorkflowPreviewService extends Service {
       return {
         label: field.label || field.key || '参数',
         type: field.type || 'text',
-        text: text.length > 180 ? `${text.slice(0, 180)}…` : text,
+        text: text.length > 8000 ? `${text.slice(0, 8000)}…` : text,
       };
     }).filter(Boolean);
   }
@@ -748,9 +928,14 @@ class WorkflowPreviewService extends Service {
     const dir = this.dirFor(workflowId ? 'workflows' : 'drafts', workflowId ? String(workflowId) : safeKey(draftKey));
     await fs.promises.mkdir(dir, { recursive: true });
     const ext = path.extname(filename) || (file.media_kind === 'video' ? '.mp4' : '.png');
-    const stored = run.id === 'legacy' && run.file_name
+    const suffix = ext.toLowerCase();
+    const named = run.output_name ? `${productBaseName(run.output_name)}${run.seed ?? ''}${suffix}` : '';
+    let stored = run.id === 'legacy' && run.file_name
       ? path.basename(run.file_name)
-      : `${run.id}${ext.toLowerCase()}`;
+      : (named || `${run.id}${suffix}`);
+    if (named && fs.existsSync(path.join(dir, stored)) && path.basename(run.file_name || '') !== stored) {
+      stored = `${productBaseName(run.output_name)}${run.seed ?? ''}-${String(run.id).slice(-6)}${suffix}`;
+    }
     await fs.promises.writeFile(path.join(dir, stored), bytes);
     return stored;
   }
@@ -843,6 +1028,8 @@ class WorkflowPreviewService extends Service {
     if (!run) this.ctx.throw(404, '产物不存在');
     if (run.status === 'running') this.ctx.throw(400, '正在生成的产物不能删除');
     await this.deleteRunFiles(workflowId, draftKey, run);
+    const remaining = board.runs.filter(item => item.id !== run.id);
+    await this.dropOptionFiles(workflowId, draftKey, [ run ], remaining);
     await this.withBoard(workflowId, draftKey, async () => {
       const current = await this.loadBoard(workflowId, draftKey);
       current.runs = current.runs.filter(item => item.id !== run.id);
@@ -858,6 +1045,8 @@ class WorkflowPreviewService extends Service {
     for (const run of removable) {
       await this.deleteRunFiles(workflowId, draftKey, run);
     }
+    const remaining = board.runs.filter(item => item.status === 'running');
+    await this.dropOptionFiles(workflowId, draftKey, removable, remaining);
     await this.withBoard(workflowId, draftKey, async () => {
       const current = await this.loadBoard(workflowId, draftKey);
       current.runs = current.runs.filter(item => !ids.has(item.id) || item.status === 'running');
@@ -877,6 +1066,24 @@ class WorkflowPreviewService extends Service {
     if (path.dirname(absolute) !== dir || !fs.existsSync(absolute)) this.ctx.throw(404, '预览文件不在磁盘上');
     const ext = path.extname(absolute).toLowerCase();
     this.ctx.type = ext === '.mp4' || ext === '.webm' ? ext.slice(1) : 'png';
+    if (run.output_name) {
+      const downloadName = `${productBaseName(run.output_name)}${run.seed ?? ''}${ext || '.png'}`;
+      this.ctx.set('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(downloadName)}`);
+    }
+    this.ctx.body = fs.createReadStream(absolute);
+  }
+
+  async sendOption(workflowId, draftKey, runId, filename) {
+    const base = path.basename(String(filename || ''));
+    if (!base || base !== String(filename || '')) this.ctx.throw(400, '文件名无效');
+    const board = await this.loadBoard(workflowId, draftKey);
+    const run = board.runs.find(item => item.id === String(runId || ''));
+    if (!run || !optionFileNames(run).includes(base)) this.ctx.throw(404, '图片不存在');
+    const dir = this.dirFor(workflowId ? 'workflows' : 'drafts', workflowId ? String(workflowId) : safeKey(draftKey));
+    const absolute = path.resolve(dir, base);
+    if (path.dirname(absolute) !== dir || !fs.existsSync(absolute)) this.ctx.throw(404, '图片不在磁盘上');
+    const types = { '.png': 'png', '.jpg': 'jpeg', '.jpeg': 'jpeg', '.webp': 'webp', '.gif': 'gif', '.mp4': 'mp4', '.webm': 'webm', '.mov': 'quicktime' };
+    this.ctx.type = types[path.extname(absolute).toLowerCase()] || 'png';
     this.ctx.body = fs.createReadStream(absolute);
   }
 

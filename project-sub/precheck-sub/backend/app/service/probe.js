@@ -6,7 +6,7 @@ const MODEL_FOLDERS = [
 ];
 
 async function readJson(url) {
-  const response = await fetch(url, { signal: AbortSignal.timeout(20000) });
+  const response = await fetch(url, { signal: AbortSignal.timeout(4000) });
   if (!response.ok) {
     const error = new Error(`${url} -> ${response.status}`);
     error.status = 502;

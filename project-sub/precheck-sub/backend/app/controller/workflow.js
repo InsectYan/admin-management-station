@@ -105,6 +105,15 @@ class WorkflowController extends Controller {
     }
   }
 
+  async visualStyles() {
+    try {
+      ok(this.ctx, await this.ctx.service.workflow.visualStyles());
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
   async startPreview() {
     await this.queuePreview(this.ctx.params.id);
   }
@@ -122,6 +131,9 @@ class WorkflowController extends Controller {
         refImages: body.ref_images || [],
         batch: body.batch,
         seeds: body.seeds || [],
+        stylePrompt: body.style_prompt || '',
+        outputName: body.output_name || '',
+        styleNames: body.style_names || [],
       }));
     } catch (err) {
       this.ctx.status = err.status || 500;
@@ -143,6 +155,9 @@ class WorkflowController extends Controller {
         refImages: body.ref_images || [],
         batch: body.batch,
         seeds: body.seeds || [],
+        stylePrompt: body.style_prompt || '',
+        outputName: body.output_name || '',
+        styleNames: body.style_names || [],
       }));
     } catch (err) {
       this.ctx.status = err.status || 500;
@@ -180,6 +195,24 @@ class WorkflowController extends Controller {
   async draftStatus() {
     try {
       ok(this.ctx, await this.ctx.service.workflowPreview.read(null, this.ctx.params.key));
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
+  async previewOption() {
+    try {
+      await this.ctx.service.workflowPreview.sendOption(this.ctx.params.id, null, this.ctx.query.run, this.ctx.query.file);
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
+  async draftOption() {
+    try {
+      await this.ctx.service.workflowPreview.sendOption(null, this.ctx.params.key, this.ctx.query.run, this.ctx.query.file);
     } catch (err) {
       this.ctx.status = err.status || 500;
       this.ctx.body = { code: this.ctx.status, message: err.message, data: null };

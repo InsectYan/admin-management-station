@@ -537,7 +537,7 @@ class ProjectController extends Controller {
   async startAutoJob() {
     try {
       const body = this.ctx.request.body || {};
-      ok(this.ctx, await this.ctx.service.autoJob.start(this.ctx.params.id, body.shot_ids));
+      ok(this.ctx, await this.ctx.service.autoJob.start(this.ctx.params.id, body.shot_ids, body.video_count));
     } catch (err) {
       fail(this.ctx, err);
     }

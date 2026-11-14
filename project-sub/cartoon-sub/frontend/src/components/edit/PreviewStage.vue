@@ -19,6 +19,7 @@
     </div>
     <div class="cartoon-edit-transport">
       <el-button @click="toggle">{{ playing ? '暂停' : '播放' }}</el-button>
+      <PlaybackRate v-model="speed" />
       <span>{{ clock(playheadMs) }} / {{ clock(duration) }}</span>
     </div>
   </section>
@@ -57,6 +58,12 @@ function fileUrl(id) {
 async function syncTo(target, offsetMs) {
   const video = videoRef.value;
   if (!video) return;
+function fileUrl(id) {
+  return `${resolveApiBase()}/outputs/${id}/file`;
+}
+async function syncTo(target, offsetMs) {
+  const video = videoRef.value;
+  if (!video) return;
   if (!target || target.missing || !target.source_output_id) {
     video.pause();
     return;
@@ -78,11 +85,7 @@ async function syncTo(target, offsetMs) {
         video.addEventListener('error', bad);
       });
     }
-    if (Math.abs((video.currentTime || 0) - at) > 0.08) {
-      await new Promise(resolve => {
-        const done = () => { video.removeEventListener('seeked', done); resolve(); };
-        video.addEventListener('seeked', done);
-        video.currentTime = at;
+    applyRate();
       });
     }
     if (playing.value) await video.play();
@@ -92,7 +95,14 @@ async function syncTo(target, offsetMs) {
   } finally {
     lock = false;
   }
+    applyRate();
 }
+watch(seekSerial, () => {
+  if (!clip.value) return;
+  syncTo(clip.value, playheadMs.value - clip.value.start_ms);
+});
+watch(playing, value => {
+watch(speed, applyRate);
 watch(seekSerial, () => {
   if (!clip.value) return;
   syncTo(clip.value, playheadMs.value - clip.value.start_ms);
@@ -167,5 +177,5 @@ function toggle() {
   font-size: 18px;
   text-shadow: 0 1px 2px #000;
 }
-.cartoon-edit-transport { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
-</style>
+.cartoon-edit-transport { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.cartoon-edit-transport :deep(.playback-rate) { margin-top: 0; }

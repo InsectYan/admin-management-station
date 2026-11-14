@@ -1,0 +1,2 @@
+ALTER TABLE cartoon_caption_boards ADD COLUMN IF NOT EXISTS max_tokens INTEGER NOT NULL DEFAULT 2048;
+ALTER TABLE cartoon_caption_boards ADD COLUMN IF NOT EXISTS video_fps DOUBLE PRECISION;

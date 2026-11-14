@@ -29,16 +29,20 @@
       </ul>
       <p v-if="showName && item.name" class="media-file-list__name">{{ item.name }}</p>
     </div>
-    <el-dialog v-model="visible" :title="current?.name || '预览'" width="720px" append-to-body destroy-on-close>
-      <video v-if="current?.kind === 'video'" class="media-file-list__preview" :src="current.url" controls autoplay />
-      <img v-else class="media-file-list__preview" :src="current?.url" alt="" />
+    <el-dialog v-model="visible" :title="current?.name || '预览'" width="70%" append-to-body destroy-on-close @opened="bindZoom" @closed="unbindZoom">
+      <div class="media-file-list__stage">
+        <VideoWithRate v-if="current?.kind === 'video'" class="media-file-list__preview" :style="zoomStyle" :src="current.url" controls autoplay />
+        <img v-else class="media-file-list__preview" :style="zoomStyle" :src="current?.url" alt="" />
+      </div>
+      <p class="media-file-list__zoom-hint">Ctrl + + 放大，Ctrl + - 缩小，Ctrl + 0 还原</p>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, onUnmounted, ref } from 'vue';
 import { Delete, ZoomIn } from '@element-plus/icons-vue';
+import VideoWithRate from './VideoWithRate.vue';
 
 defineProps({
   items: { type: Array, default: () => [] },

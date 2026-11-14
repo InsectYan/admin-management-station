@@ -3,7 +3,8 @@ export function rewriteLoopbackHost(url) {
   try {
     const parsed = new URL(url, window.location.origin);
     if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
-      parsed.hostname = window.location.hostname;
+      const pageHost = window.location.hostname;
+      parsed.hostname = pageHost === 'localhost' || pageHost === '127.0.0.1' ? '127.0.0.1' : pageHost;
     }
     return parsed.toString().replace(/\/$/, '');
   } catch {

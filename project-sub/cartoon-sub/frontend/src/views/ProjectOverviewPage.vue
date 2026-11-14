@@ -22,7 +22,9 @@
         <div>
           <h1>{{ detail.project.name }}</h1>
           <div class="cartoon-overview__tags">
-            <el-tag v-if="styleLabel" size="small">{{ styleLabel }}</el-tag>
+            <el-tooltip v-if="styleLabel" :content="styleLabel" placement="bottom" :show-after="300">
+              <el-tag size="small" class="cartoon-overview__style">{{ styleLabel }}</el-tag>
+            </el-tooltip>
             <el-tag v-if="detail.project.av_mode" size="small" type="danger">AV</el-tag>
             <el-tag v-if="novelBrief?.title" size="small" effect="plain">{{ novelBrief.title }}</el-tag>
             <el-tag size="small" effect="light">{{ detail.project.status || 'draft' }}</el-tag>
@@ -477,6 +479,13 @@ onMounted(async () => {
 .cartoon-overview { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; padding: 16px 20px 24px; gap: 12px; box-sizing: border-box; }
 .cartoon-edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
 .cartoon-overview__bar, .cartoon-overview__actions, .cartoon-overview__tags { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cartoon-overview__style { max-width: 180px; overflow: hidden; }
+.cartoon-overview__style :deep(.el-tag__content) {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .cartoon-overview__bar { justify-content: space-between; }
 .cartoon-overview__hero { display: flex; gap: 16px; align-items: center; margin-top: 12px; }
 .cartoon-overview__hero h1 { margin: 0 0 8px; font-size: 22px; color: #1f3d2c; }

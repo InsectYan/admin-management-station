@@ -19,7 +19,7 @@ function qwenCaption(modelName, quantization = 'None (FP16)') {
         attention_mode: 'auto',
         preset_prompt: '🖼️ Detailed Description',
         custom_prompt: '',
-        max_tokens: 512,
+        max_tokens: 2048,
         keep_model_loaded: false,
         seed: 1,
         image: [ '1', 0 ],
@@ -41,10 +41,11 @@ function qwenVideoCaption(modelName, quantization = 'None (FP16)') {
         attention_mode: 'auto',
         preset_prompt: '📹 Video Summary',
         custom_prompt: '',
-        max_tokens: 512,
+        max_tokens: 2048,
         keep_model_loaded: false,
         seed: 1,
         video: [ '2', 0 ],
+        fps: [ '2', 2 ],
       },
     },
     4: previewText([ '3', 0 ]),
@@ -74,6 +75,7 @@ const CAPTION_TEMPLATES = [
           prompt_style: 'Descriptive',
           caption_length: 'any',
           memory_management: 'Clear After Run',
+          max_new_tokens: 2048,
         },
       },
       3: previewText([ '2', 0 ]),
@@ -116,7 +118,7 @@ const CAPTION_TEMPLATES = [
           task: 'prompt_gen_mixed_caption',
           fill_mask: false,
           keep_model_loaded: false,
-          max_new_tokens: 1024,
+          max_new_tokens: 2048,
           num_beams: 3,
           do_sample: false,
           output_mask_select: '',
@@ -157,4 +159,25 @@ QWEN_CAPTIONS.forEach(([ name ]) => {
   CAPTION_RENAMES[name] = `${name}-图片`;
 });
 
-module.exports = { CAPTION_TEMPLATES, CAPTION_RENAMES };
+function patchCaptionGraph(apiJson) {
+  const graph = JSON.parse(JSON.stringify(apiJson || {}));
+  let componentsId = '';
+  Object.entries(graph).forEach(([ id, node ]) => {
+    if (node?.class_type === 'GetVideoComponents') componentsId = id;
+  });
+  Object.values(graph).forEach(node => {
+    const inputs = node?.inputs;
+    if (!inputs) return;
+    if (/^AILab_QwenVL/.test(node.class_type || '')) {
+      if (Number(inputs.max_tokens) === 512) inputs.max_tokens = 2048;
+      if (componentsId && inputs.fps == null) inputs.fps = [ componentsId, 2 ];
+    }
+    if (node.class_type === 'Florence2Run' && Number(inputs.max_new_tokens) === 1024) {
+      inputs.max_new_tokens = 2048;
+    }
+    if (node.class_type === 'JC' && inputs.max_new_tokens == null) inputs.max_new_tokens = 2048;
+  });
+  return graph;
+}
+
+module.exports = { CAPTION_TEMPLATES, CAPTION_RENAMES, patchCaptionGraph };

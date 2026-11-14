@@ -1,0 +1,1 @@
+ALTER TABLE cartoon_caption_boards ADD COLUMN IF NOT EXISTS batch_total INTEGER NOT NULL DEFAULT 0;

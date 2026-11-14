@@ -323,7 +323,7 @@
             </el-button-group>
             <el-button-group>
               <el-button :disabled="autoRunning || flowBusy || runMark.videoLive" @click="openVideoAuto">自动生成视频</el-button>
-              <el-button :disabled="autoRunning || flowBusy || runMark.videoLive" @click="resetAuto('video')">重置</el-button>
+              <el-button :disabled="autoRunning || flowBusy || runMark.videoLive" @click="openVideoReset">重置</el-button>
             </el-button-group>
             <el-button-group>
               <el-button type="primary" plain :disabled="autoRunning || flowBusy || runMark.videoLive" @click="runAuto('all')">全自动执行</el-button>
@@ -522,11 +522,23 @@
         <el-button type="primary" :disabled="!videoAutoIds.length" @click="confirmVideoAuto">开始生成</el-button>
       </template>
     </el-dialog>
+    <el-dialog v-model="videoResetOpen" title="重新生成视频" width="480px" append-to-body :close-on-click-modal="false">
+      <p class="cartoon-module__hint">会给当前快照里每一条镜头再生成这么多次视频。已经有的视频会保留。</p>
+      <el-form label-position="top" @submit.prevent>
+        <el-form-item label="每个镜头的生成次数">
+          <el-input-number v-model="videoResetCount" :min="1" :max="8" :step="1" :precision="0" controls-position="right" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="videoResetOpen = false">取消</el-button>
+        <el-button type="primary" @click="confirmVideoReset">重新生成</el-button>
+      </template>
+    </el-dialog>
     <el-dialog v-model="fullAutoOpen" title="全流程" width="560px" append-to-body :close-on-click-modal="false">
       <p class="cartoon-module__hint">这次会按顺序做到视频。人物和场景各出一张设定总图，视频固定用满血 H3 首尾帧 RefMod。</p>
       <el-checkbox v-model="fullAutoFresh">全新</el-checkbox>
       <p v-if="fullAutoFresh" class="cartoon-module__hint">勾选后会重新生成剧本、分镜、提示词、首尾帧和视频。已经有设定图的资产会保留，不会重画，也不会改已有说明。</p>
-      <p v-else class="cartoon-module__hint">不勾选时，已经有的剧本、分镜、提示词、图片和视频会跳过，只补还没有的，直到这一次做完。</p>
+      <p v-else class="cartoon-module__hint">不勾选时，已经有的剧本、分镜、提示词和图片会跳过。每个镜头已有的视频少于下面的条数时，会补到这个条数。</p>
       <p v-if="fullAutoFresh && fullAutoShotCount" class="cartoon-module__hint">当前快照已有 {{ fullAutoShotCount }} 条分镜，开始后会按新剧本替换。</p>
       <el-form label-position="top">
         <el-form-item label="人物和场景设定图">
@@ -557,6 +569,10 @@
             <span>高</span>
             <el-input-number v-model="fullAutoFrameHeight" :min="64" :max="2048" :step="32" :precision="0" controls-position="right" />
           </div>
+        </el-form-item>
+        <el-form-item label="每个镜头的视频条数">
+          <el-input-number v-model="fullAutoVideoCount" :min="1" :max="8" :step="1" :precision="0" controls-position="right" />
+          <p class="cartoon-module__hint">每个镜头生成这么多条视频，默认 1 条，最多 8 条。每条使用不同种子。</p>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -1527,6 +1543,9 @@ const fullAutoFrameRefCap = computed(() => referenceCap(fullAutoWorkflows.value.
 const fullAutoLoading = ref(false);
 const fullAutoStarting = ref(false);
 const fullAutoFresh = ref(false);
+const fullAutoVideoCount = ref(1);
+const videoResetOpen = ref(false);
+const videoResetCount = ref(1);
 const fullAutoShotCount = computed(() => {
   const id = fullAutoTarget.value?.id;
   if (!id) return 0;
@@ -1539,7 +1558,8 @@ function sizeReady(width, height) {
 }
 const fullAutoReady = computed(() => Boolean(fullAutoAssetId.value && fullAutoFrameId.value)
   && sizeReady(fullAutoAssetWidth.value, fullAutoAssetHeight.value)
-  && sizeReady(fullAutoFrameWidth.value, fullAutoFrameHeight.value));
+  && sizeReady(fullAutoFrameWidth.value, fullAutoFrameHeight.value)
+  && Number.isInteger(fullAutoVideoCount.value) && fullAutoVideoCount.value >= 1 && fullAutoVideoCount.value <= 8);
 function syncFullAutoSize(kind) {
   const id = kind === 'frame' ? fullAutoFrameId.value : fullAutoAssetId.value;
   const row = fullAutoWorkflows.value.find(item => item.id === id);
@@ -1556,6 +1576,7 @@ function syncFullAutoSize(kind) {
 async function runFullAuto(item) {
   if (flowBusy.value) return;
   fullAutoFresh.value = false;
+  fullAutoVideoCount.value = 1;
   fullAutoTarget.value = item;
   fullAutoOpen.value = true;
   if (fullAutoWorkflows.value.length) return;
@@ -1589,6 +1610,7 @@ async function submitFullAuto() {
         frame_width: fullAutoFrameWidth.value,
         frame_height: fullAutoFrameHeight.value,
         fresh: fullAutoFresh.value,
+        video_count: fullAutoVideoCount.value,
       },
     });
     fullAutoOpen.value = false;
@@ -2027,15 +2049,18 @@ function continuingBatch(liveTasks) {
   }
   return null;
 }
-async function startServerVideo(shotIds) {
+async function startServerVideo(shotIds, videoCount = 1) {
+  const count = Math.min(8, Math.max(1, Math.round(Number(videoCount) || 1)));
   try {
     const job = await request(`/projects/${projectKey()}/auto-jobs`, {
       method: 'post',
-      data: { shot_ids: shotIds },
+      data: { shot_ids: shotIds, video_count: count },
     });
     applyAutoJob(job);
     armServerPoll();
-    ElMessage.success(`已提交 ${job?.total || shotIds.length} 条，后台会按顺序生成`);
+    ElMessage.success(count > 1
+      ? `已提交 ${job?.total || shotIds.length} 个镜头，每个镜头 ${count} 条`
+      : `已提交 ${job?.total || shotIds.length} 条，后台会按顺序生成`);
   } catch (err) {
     ElMessage.error(err.message || '没有提交');
   }
@@ -2049,6 +2074,29 @@ function confirmVideoAuto() {
   }
   videoAutoOpen.value = false;
   runAuto('video', chosen.map(row => row.id));
+}
+function openVideoReset() {
+  if (autoRunning.value || flowBusy.value) return;
+  if (!boardShots.value.length) {
+    ElMessage.error('当前快照没有镜头');
+    return;
+  }
+  videoResetCount.value = 1;
+  videoResetOpen.value = true;
+}
+async function confirmVideoReset() {
+  const shots = boardShots.value;
+  const count = Math.round(Number(videoResetCount.value));
+  if (!shots.length) {
+    ElMessage.error('当前快照没有镜头');
+    return;
+  }
+  if (!Number.isInteger(count) || count < 1 || count > 8) {
+    ElMessage.error('生成次数需要是 1 到 8');
+    return;
+  }
+  videoResetOpen.value = false;
+  await startServerVideo(shots.map(row => row.id), count);
 }
 async function resetAuto(mode) {
   if (autoRunning.value || flowBusy.value) return;

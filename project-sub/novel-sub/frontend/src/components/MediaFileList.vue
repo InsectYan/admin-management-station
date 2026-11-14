@@ -30,7 +30,7 @@
       <p v-if="showName && item.name" class="media-file-list__name">{{ item.name }}</p>
     </div>
     <el-dialog v-model="visible" :title="current?.name || '预览'" width="720px" append-to-body destroy-on-close>
-      <video v-if="current?.kind === 'video'" class="media-file-list__preview" :src="current.url" controls autoplay />
+      <VideoWithRate v-if="current?.kind === 'video'" class="media-file-list__preview" :src="current.url" controls autoplay />
       <img v-else class="media-file-list__preview" :src="current?.url" alt="" />
     </el-dialog>
   </div>
@@ -80,4 +80,4 @@ function paintFrame(event) {
   pointer-events: none;
 }
 .media-file-list__preview { display: block; width: 100%; max-height: 70vh; object-fit: contain; }
-</style>
+.media-file-list :deep(video.media-file-list__preview) { display: block; width: 100%; max-height: 70vh; object-fit: contain; }

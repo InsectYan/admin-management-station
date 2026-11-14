@@ -39,7 +39,9 @@
       </div>
       <p v-if="job" class="cartoon-module__hint">导出{{ jobLabel }}<span v-if="job.error_message">：{{ job.error_message }}</span></p>
       <el-progress v-if="job && (job.status === 'queued' || job.status === 'running')" :percentage="job.progress || 0" />
-      <video v-if="latest" :src="fileUrl(latest.id)" controls class="cartoon-edit-result" />
+      <div v-if="latest" class="cartoon-edit-result">
+        <VideoWithRate :src="fileUrl(latest.id)" controls />
+      </div>
     </template>
   </PageShell>
 </template>
@@ -55,6 +57,7 @@ import ClipInspector from '../components/edit/ClipInspector.vue';
 import { useEditTimelineStore } from '../stores/editTimeline.js';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
+import VideoWithRate from '../components/VideoWithRate.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -203,6 +206,7 @@ onUnmounted(stopPoll);
 }
 .cartoon-edit-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
 .cartoon-edit-result { display: block; max-width: 420px; margin-top: 12px; }
+.cartoon-edit-result :deep(video) { display: block; width: 100%; }
 @media (max-width: 960px) {
   .cartoon-edit-layout { grid-template-columns: 1fr; }
 }

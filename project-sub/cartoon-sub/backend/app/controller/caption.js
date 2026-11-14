@@ -40,6 +40,22 @@ class CaptionController extends Controller {
     }
   }
 
+  async clearPrompts() {
+    try {
+      ok(this.ctx, await this.ctx.service.caption.clearPrompts(this.ctx.params.id));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async removeAll() {
+    try {
+      ok(this.ctx, await this.ctx.service.caption.removeAll(this.ctx.params.id));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async file() {
     try {
       await this.ctx.service.caption.sendFile(this.ctx.params.id, this.ctx.params.cardId);

@@ -2,7 +2,9 @@
   <PageShell title="ComfyUI 运行时">
     <div class="precheck-module">
       <h3 class="precheck-module__title">连接</h3>
-      <p v-if="!runtime">还没有运行时。</p>
+      <p v-if="loadError" class="precheck-module__hint">{{ loadError }}</p>
+      <p v-else-if="loadingList">正在读取运行时。</p>
+      <p v-else-if="!runtime">还没有运行时。</p>
       <template v-else>
         <p>{{ runtime.name }} · {{ runtime.base_url }} · 期望版本 {{ runtime.expected_version }}</p>
         <div class="precheck-runtime__actions">
@@ -46,6 +48,8 @@ import PageShell from '../components/PageShell.vue';
 import { request } from '../services/apiConfig.js';
 
 const runtime = ref(null);
+const loadingList = ref(true);
+const loadError = ref('');
 const report = ref(null);
 const error = ref('');
 const loading = ref(false);
@@ -111,9 +115,16 @@ async function startComfy() {
 }
 
 onMounted(async () => {
-  const rows = await request('/runtimes');
-  runtime.value = rows[0] || null;
-  if (runtime.value) await probe();
+  try {
+    const rows = await request('/runtimes');
+    runtime.value = rows?.[0] || null;
+    if (!runtime.value) return;
+    await probe();
+  } catch (err) {
+    loadError.value = err.message || '读取运行时失败';
+  } finally {
+    loadingList.value = false;
+  }
 });
 </script>
 

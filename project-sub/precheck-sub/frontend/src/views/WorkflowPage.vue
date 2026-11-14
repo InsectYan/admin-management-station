@@ -24,7 +24,9 @@
           </template>
         </el-table-column>
       </el-table>
-      <el-empty v-if="!filtered.length" description="这个类型还没有工作流" />
+      <p v-if="loadError" class="precheck-module__hint">{{ loadError }}</p>
+      <p v-else-if="loadingList" class="precheck-module__hint">正在读取工作流。</p>
+      <el-empty v-else-if="!filtered.length" description="这个类型还没有工作流" />
       <el-pagination
         v-if="filtered.length"
         v-model:current-page="page"
@@ -48,6 +50,8 @@ import { WORKFLOW_KINDS, listKindLabel, workflowKind } from '../lib/workflowCate
 const route = useRoute();
 const router = useRouter();
 const rows = ref([]);
+const loadingList = ref(true);
+const loadError = ref('');
 const kind = ref('');
 const page = ref(1);
 const pageSize = ref(10);
@@ -63,6 +67,12 @@ onMounted(async () => {
     router.replace(`/workflows/${route.query.id}`);
     return;
   }
-  rows.value = await request('/workflows') || [];
+  try {
+    rows.value = await request('/workflows') || [];
+  } catch (err) {
+    loadError.value = err.message || '读取工作流失败';
+  } finally {
+    loadingList.value = false;
+  }
 });
 </script>

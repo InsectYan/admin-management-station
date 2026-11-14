@@ -65,9 +65,45 @@ function collectText(outputs) {
   return [ ...new Set(parts) ].join('\n');
 }
 
-function applyCaption(graph, { filename, media, extra }) {
+function controlOf(name) {
+  const text = String(name || '');
+  const video = /视频/.test(text);
+  if (/wd14/i.test(text)) return { outputMin: 0, outputMax: 0, usesFps: false };
+  if (/joycaption/i.test(text)) return { outputMin: 64, outputMax: 2048, usesFps: false };
+  if (/florence/i.test(text)) return { outputMin: 1, outputMax: 4096, usesFps: false };
+  if (/qwen/i.test(text)) return { outputMin: 64, outputMax: 4096, usesFps: video };
+  return { outputMin: 64, outputMax: 2048, usesFps: video };
+}
+
+function readLimit(value, fallback = 2048) {
+  if (value == null || value === '') return fallback;
+  const number = Math.round(Number(value));
+  if (!Number.isInteger(number) || number < 1 || number > 4096) {
+    const error = new Error('输出上限需要是 1 到 4096 的整数');
+    error.status = 400;
+    throw error;
+  }
+  return number;
+}
+
+function readFps(value) {
+  if (value == null || value === '') return null;
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 1 || number > 240) {
+    const error = new Error('真实帧率需要在 1 到 240 之间，留空则用文件帧率');
+    error.status = 400;
+    throw error;
+  }
+  return Math.round(number * 1000) / 1000;
+}
+
+function applyCaption(graph, { filename, media, extra, maxTokens, fps }) {
   const copy = JSON.parse(JSON.stringify(graph || {}));
   let attached = false;
+  let componentsId = '';
+  Object.entries(copy).forEach(([ id, node ]) => {
+    if (node?.class_type === 'GetVideoComponents') componentsId = id;
+  });
   Object.values(copy).forEach(node => {
     const inputs = node?.inputs;
     if (!inputs) return;
@@ -81,6 +117,16 @@ function applyCaption(graph, { filename, media, extra }) {
     }
     if (extra && typeof inputs.custom_prompt === 'string') inputs.custom_prompt = extra;
     if (extra && typeof inputs.text_input === 'string') inputs.text_input = extra;
+    if (/^AILab_QwenVL/.test(node.class_type || '') && maxTokens) {
+      inputs.max_tokens = Math.min(4096, Math.max(64, maxTokens));
+      if (media === 'video') inputs.fps = fps || (componentsId ? [ componentsId, 2 ] : inputs.fps);
+    }
+    if (node.class_type === 'Florence2Run' && maxTokens) {
+      inputs.max_new_tokens = Math.min(4096, Math.max(1, maxTokens));
+    }
+    if (node.class_type === 'JC' && maxTokens) {
+      inputs.max_new_tokens = Math.min(2048, Math.max(64, maxTokens));
+    }
   });
   if (!attached) {
     const error = new Error(media === 'video' ? '这条工作流不接收视频' : '这条工作流不接收图片');
@@ -122,24 +168,30 @@ class CaptionService extends Service {
     };
   }
 
-  jobOf(cards) {
+  jobOf(cards, batchTotal) {
     const queued = cards.filter(item => item.status === 'queued');
     const running = cards.find(item => item.status === 'running') || null;
-    const active = Boolean(running || queued.length);
-    const waiting = Boolean(running && !(Number(running.progress_max) > 0));
+    const activeCount = queued.length + (running ? 1 : 0);
+    const active = activeCount > 0;
+    const total = Math.max(Number(batchTotal) || 0, activeCount);
+    const done = Math.max(0, total - activeCount);
+    const runningPercent = running ? Math.min(100, Math.max(0, Number(running.progress_percent) || 0)) : 0;
+    const percent = total ? Math.round(((done * 100 + runningPercent) / total) * 100) / 100 : 0;
+    const waiting = Boolean(running && !(Number(running.progress_max) > 0) && done === 0);
     let note = '';
     if (running) {
       const name = running.original_name || '这条素材';
       const step = running.progress_max > 0 ? ` ${running.progress_value}/${running.progress_max}` : '';
-      const behind = queued.length ? `，后面还有 ${queued.length} 个` : '';
-      note = `正在反推 ${name}${step}${behind}`;
+      note = `正在反推 ${name}${step}`;
     } else if (queued.length) {
       note = `排队中，还有 ${queued.length} 个`;
     }
     return {
       active,
       waiting,
-      percent: running ? (Number(running.progress_percent) || 0) : 0,
+      percent,
+      done,
+      total,
       note,
       running_id: running?.id || null,
     };
@@ -173,6 +225,7 @@ class CaptionService extends Service {
         id: row.id,
         name: row.name,
         media: mediaOfName(row.name),
+        ...controlOf(row.name),
       }))
       .sort((a, b) => a.id - b.id);
     this.app.captionWorkflowChoices = { at: Date.now(), rows: list };
@@ -190,14 +243,33 @@ class CaptionService extends Service {
       workflowsError = err.message;
     }
     const presented = cards.map(item => this.present(item));
+    const activeCount = presented.filter(item => item.status === 'queued' || item.status === 'running').length;
+    let batchTotal = Number(board.batch_total) || 0;
+    if (activeCount > batchTotal) {
+      batchTotal = activeCount;
+      await board.update({ batch_total: batchTotal });
+    }
     return {
       shared_prompt: board.shared_prompt || '',
       workflow_id: board.workflow_id || null,
+      max_tokens: board.max_tokens || 2048,
+      video_fps: board.video_fps == null ? null : Number(board.video_fps),
       workflows,
       workflows_error: workflowsError,
       cards: presented,
-      job: this.jobOf(presented),
+      job: this.jobOf(presented, batchTotal),
     };
+  }
+
+  async growBatch(projectId, added) {
+    const count = Number(added) || 0;
+    if (count < 1) return;
+    const board = await this.board(projectId);
+    const active = await this.ctx.model.CaptionCard.count({
+      where: { project_id: Number(projectId), status: [ 'queued', 'running' ] },
+    });
+    const total = active === count ? count : Math.max(Number(board.batch_total) || 0, active - count) + count;
+    await board.update({ batch_total: total });
   }
 
   async save(projectId, payload) {
@@ -206,6 +278,8 @@ class CaptionService extends Service {
     await board.update({
       shared_prompt: payload.shared_prompt == null ? board.shared_prompt : String(payload.shared_prompt),
       workflow_id: Number.isInteger(workflowId) && workflowId > 0 ? workflowId : board.workflow_id,
+      max_tokens: readLimit(payload.max_tokens, board.max_tokens || 2048),
+      video_fps: payload.video_fps === undefined ? board.video_fps : readFps(payload.video_fps),
     });
     const rows = Array.isArray(payload.cards) ? payload.cards : [];
     for (const item of rows) {
@@ -248,6 +322,33 @@ class CaptionService extends Service {
     const absolute = resolveInside(outputRoot(this.app), path.join('captions', String(projectId), card.stored_name));
     if (absolute) fs.rmSync(absolute, { force: true });
     await card.destroy();
+    return this.show(projectId);
+  }
+
+  async assertIdle(projectId) {
+    const cards = await this.cardsOf(projectId);
+    if (cards.some(item => [ 'queued', 'running' ].includes(item.status))) {
+      this.ctx.throw(400, '有素材正在反推，先等它结束');
+    }
+    return cards;
+  }
+
+  async clearPrompts(projectId) {
+    await this.assertIdle(projectId);
+    await this.ctx.model.CaptionCard.update(
+      { result_prompt: '', saved: true },
+      { where: { project_id: Number(projectId) } },
+    );
+    return this.show(projectId);
+  }
+
+  async removeAll(projectId) {
+    const cards = await this.assertIdle(projectId);
+    for (const card of cards) {
+      const absolute = resolveInside(outputRoot(this.app), path.join('captions', String(projectId), card.stored_name));
+      if (absolute) fs.rmSync(absolute, { force: true });
+      await card.destroy();
+    }
     return this.show(projectId);
   }
 
@@ -305,9 +406,15 @@ class CaptionService extends Service {
     if (payload.extra_prompt != null) await card.update({ extra_prompt: String(payload.extra_prompt) });
     const shared = payload.shared_prompt == null ? String(board.shared_prompt || '') : String(payload.shared_prompt);
     if (payload.update_shared) {
-      await board.update({ shared_prompt: shared, workflow_id: workflow.id });
+      await board.update({
+        shared_prompt: shared,
+        workflow_id: workflow.id,
+        max_tokens: readLimit(payload.max_tokens, board.max_tokens || 2048),
+        video_fps: payload.video_fps === undefined ? board.video_fps : readFps(payload.video_fps),
+      });
     }
     await this.queueCard(card, workflow, shared.trim());
+    await this.growBatch(projectId, 1);
     this.kick();
     return this.show(projectId);
   }
@@ -316,7 +423,12 @@ class CaptionService extends Service {
     const board = await this.board(projectId);
     const workflow = await this.workflowById(payload.workflow_id);
     const shared = payload.shared_prompt == null ? String(board.shared_prompt || '') : String(payload.shared_prompt);
-    await board.update({ shared_prompt: shared, workflow_id: workflow.id });
+    await board.update({
+      shared_prompt: shared,
+      workflow_id: workflow.id,
+      max_tokens: readLimit(payload.max_tokens, board.max_tokens || 2048),
+      video_fps: payload.video_fps === undefined ? board.video_fps : readFps(payload.video_fps),
+    });
     const cards = await this.cardsOf(projectId);
     const targets = cards.filter(card => {
       if ([ 'queued', 'running' ].includes(card.status)) return false;
@@ -331,6 +443,7 @@ class CaptionService extends Service {
       }
       await this.queueCard(card, workflow, shared.trim());
     }
+    await this.growBatch(projectId, targets.length);
     this.kick();
     return this.show(projectId);
   }
@@ -425,10 +538,13 @@ class CaptionService extends Service {
     const uploaded = await this.uploadComfy(absolute, card.media_kind);
     const own = String(card.extra_prompt || '').trim();
     const shared = String(card.shared_extra || '').trim();
+    const board = await this.board(card.project_id);
     const graph = applyCaption(detail.api_json, {
       filename: uploaded,
       media: card.media_kind,
       extra: own || shared,
+      maxTokens: board.max_tokens || 2048,
+      fps: board.video_fps == null || board.video_fps === '' ? null : Number(board.video_fps),
     });
     const res = await fetch(`${this.comfyBase()}/prompt`, {
       method: 'POST',

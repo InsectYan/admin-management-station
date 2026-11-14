@@ -78,6 +78,16 @@ function imageSize(width, height) {
   return { width: w, height: h };
 }
 
+function videoCount(value) {
+  const count = Math.round(Number(value == null || value === '' ? 1 : value));
+  if (!Number.isInteger(count) || count < 1 || count > 8) {
+    const err = new Error('每个镜头的视频条数需要是 1 到 8');
+    err.status = 400;
+    throw err;
+  }
+  return count;
+}
+
 function assetText(item) {
   if (item.kind === 'scene') return String(item.look || '').trim().slice(0, 4000);
   const look = String(item.look || '').trim();
@@ -258,6 +268,7 @@ class FullAutoService extends Service {
       frame_height: frameSize.height,
       fresh: Boolean(payload.fresh),
       scope: 'all',
+      video_count: videoCount(payload.video_count),
     });
     const runId = run.id;
     setImmediate(() => {
@@ -659,9 +670,10 @@ class FullAutoService extends Service {
     await this.pushLog(run, 'workflow', `每镜使用 ${run.video_workflow_name}`);
   }
 
-  async videoShotIds(projectId, shotIds) {
+  async videoShotCounts(projectId, shotIds) {
     const ids = (shotIds || []).map(id => Number(id)).filter(id => id > 0);
-    if (!ids.length) return new Set();
+    const counts = new Map();
+    if (!ids.length) return counts;
     const tasks = await this.ctx.model.Task.findAll({
       where: {
         project_id: projectId,
@@ -670,16 +682,22 @@ class FullAutoService extends Service {
         kind: VIDEO_KINDS,
       },
     });
-    if (!tasks.length) return new Set();
+    if (!tasks.length) return counts;
     const outputs = await this.ctx.model.Output.findAll({
       where: { task_id: tasks.map(item => item.id), media_kind: 'video' },
     });
     const readyTasks = new Set(outputs.filter(item => item.file_path).map(item => Number(item.task_id)));
-    const shots = new Set();
     tasks.forEach(task => {
-      if (readyTasks.has(Number(task.id))) shots.add(Number(task.shot_id));
+      if (!readyTasks.has(Number(task.id))) return;
+      const id = Number(task.shot_id);
+      counts.set(id, (counts.get(id) || 0) + 1);
     });
-    return shots;
+    return counts;
+  }
+
+  async videoShotIds(projectId, shotIds) {
+    const counts = await this.videoShotCounts(projectId, shotIds);
+    return new Set([ ...counts.keys() ]);
   }
 
   async dropFreshFrames(run, shot) {
@@ -698,7 +716,8 @@ class FullAutoService extends Service {
     const script = chapter?.script_data || {};
     const done = new Set(parseJson(run.done_shot_ids, []).map(id => Number(id)));
     await run.update({ video_total: shots.length, video_done: done.size });
-    const readyVideos = run.fresh ? new Set() : await this.videoShotIds(run.project_id, shots.map(item => item.id));
+    const want = videoCount(run.video_count);
+    const readyCounts = run.fresh ? new Map() : await this.videoShotCounts(run.project_id, shots.map(item => item.id));
     const videoChoice = await this.ctx.service.generate.choiceById(run.video_workflow_id);
     const endSlot = (videoChoice.images || []).find(slot => slot.role === 'end');
     if (!endSlot) throw new Error('满血首尾帧工作流没有尾帧入口');
@@ -711,8 +730,10 @@ class FullAutoService extends Service {
       previousScene = scene || previousScene;
       if (done.has(shot.id)) continue;
       const code = shot.shot_code || shot.id;
-      if (readyVideos.has(Number(shot.id))) {
-        await this.pushLog(run, 'video', `${code} 已有视频`);
+      const have = readyCounts.get(Number(shot.id)) || 0;
+      const missing = Math.max(0, want - have);
+      if (!missing) {
+        await this.pushLog(run, 'video', `${code} 已有 ${have} 条视频`);
         done.add(shot.id);
         const raw = JSON.stringify([ ...done ]);
         await run.update({ done_shot_ids: raw, video_done: done.size });
@@ -720,17 +741,21 @@ class FullAutoService extends Service {
         continue;
       }
       if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
-      await this.mark(run, 'video', 'running', `正在生成镜头 ${code}（${index + 1}/${shots.length}）`);
-      await this.shoot(run, shot, endSlot, same, scene);
+      for (let nth = 0; nth < missing; nth += 1) {
+        if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
+        const made = have + nth + 1;
+        await this.mark(run, 'video', 'running', `正在生成镜头 ${code} 第 ${made}/${want} 条（${index + 1}/${shots.length}）`);
+        await this.shoot(run, shot, endSlot, same, scene, { keepFrames: nth > 0 });
+      }
       done.add(shot.id);
       const raw = JSON.stringify([ ...done ]);
       await run.update({ done_shot_ids: raw, video_done: done.size });
       run.done_shot_ids = raw;
-      await this.pushLog(run, 'video', `${code} 视频已生成`);
+      await this.pushLog(run, 'video', want > 1 ? `${code} 已生成 ${want} 条视频` : `${code} 视频已生成`);
     }
   }
 
-  async shoot(run, shot, endSlot, sameScene, scene) {
+  async shoot(run, shot, endSlot, sameScene, scene, options = {}) {
     const live = await this.ctx.model.Task.findOne({
       where: {
         project_id: run.project_id,
@@ -748,7 +773,7 @@ class FullAutoService extends Service {
       if (!settled || settled.status !== 'success') throw new Error(settled?.error_message || `${code} 视频没有生成`);
       return;
     }
-    if (run.fresh) await this.dropFreshFrames(run, shot);
+    if (run.fresh && !options.keepFrames) await this.dropFreshFrames(run, shot);
     const prompt = await this.fillShotPrompt(run, shot, { quiet: true });
     const videoText = String(prompt?.positive_zh || '').trim();
     const frameStart = String(prompt?.frame_start_zh || '').trim();

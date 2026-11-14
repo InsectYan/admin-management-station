@@ -37,6 +37,9 @@ module.exports = appInfo => {
     },
   };
   config.bodyParser = { jsonLimit: '96mb', formLimit: '96mb' };
+  config.cartoonApi = {
+    baseUrl: process.env.CARTOON_API_ORIGIN || 'http://host.docker.internal:5205',
+  };
   config.comfyui = {
     baseUrl: process.env.COMFYUI_BASE_URL || 'http://127.0.0.1:8188',
     expectedVersion: process.env.COMFYUI_EXPECTED_VERSION || '0.39.0',

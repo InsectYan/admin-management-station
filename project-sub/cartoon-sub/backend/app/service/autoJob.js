@@ -130,11 +130,13 @@ class AutoJobService extends Service {
     };
   }
 
-  async start(projectId, shotIds) {
+  async start(projectId, shotIds, videoCountValue) {
     const project = await this.ctx.model.Project.findByPk(projectId);
     if (!project) this.ctx.throw(404, '项目不存在');
     const ids = [ ...new Set((Array.isArray(shotIds) ? shotIds : []).map(id => Number(id)).filter(id => id > 0)) ];
     if (!ids.length) this.ctx.throw(400, '请选择镜头');
+    const perShot = Math.round(Number(videoCountValue == null || videoCountValue === '' ? 1 : videoCountValue));
+    if (!Number.isInteger(perShot) || perShot < 1 || perShot > 8) this.ctx.throw(400, '每个镜头的视频条数需要是 1 到 8');
     const active = await this.ctx.model.AutoJob.findOne({ where: { project_id: project.id, status: 'running' } });
     if (active) this.ctx.throw(409, '已有自动生成在后台执行');
     const liveVideo = await this.ctx.model.Task.findOne({
@@ -153,6 +155,7 @@ class AutoJobService extends Service {
       project_id: project.id,
       status: 'running',
       total: ordered.length,
+      video_count: perShot,
     });
     await this.ctx.model.AutoJobItem.bulkCreate(ordered.map((shot, index) => ({
       job_id: job.id,
@@ -288,23 +291,34 @@ class AutoJobService extends Service {
           throw new Error('镜头已不在项目里');
         }
         await item.update({ reason: '正在提交' });
-        const payload = await this.videoPayload(job.project_id, shot);
-        let task = await this.ctx.service.generate.start(job.project_id, shot.id, payload.data, payload.kind);
-        if (!task?.id) throw new Error('没有拿到生成任务');
-        await item.update({ task_id: task.id, reason: '正在生成' });
-        if ([ 'queued', 'running', 'saving' ].includes(task.status)) {
-          const waited = await this.waitForTask(job, task);
-          if (waited.stopped) {
-            await this.finishStopped(job, item, waited.task);
+        const perShot = Math.max(1, Math.min(8, Math.round(Number(job.video_count) || 1)));
+        let task = null;
+        for (let nth = 0; nth < perShot; nth += 1) {
+          const idle = await this.waitForIdleVideo(job);
+          if (!idle) {
+            await this.finishStopped(job, item, task);
             return;
           }
-          task = waited.task;
+          await item.update({ reason: perShot > 1 ? `正在提交第 ${nth + 1}/${perShot} 条` : '正在提交' });
+          const payload = await this.videoPayload(job.project_id, shot);
+          task = await this.ctx.service.generate.start(job.project_id, shot.id, payload.data, payload.kind);
+          if (!task?.id) throw new Error('没有拿到生成任务');
+          await item.update({ task_id: task.id, reason: perShot > 1 ? `正在生成第 ${nth + 1}/${perShot} 条` : '正在生成' });
+          if ([ 'queued', 'running', 'saving' ].includes(task.status)) {
+            const waited = await this.waitForTask(job, task);
+            if (waited.stopped) {
+              await this.finishStopped(job, item, waited.task);
+              return;
+            }
+            task = waited.task;
+          }
+          if (!task || task.status === 'cancelled') {
+            await this.finishStopped(job, item, task);
+            return;
+          }
+          if (task.status !== 'success') break;
         }
-        if (!task || task.status === 'cancelled') {
-          await this.finishStopped(job, item, task);
-          return;
-        }
-        if (task.status === 'failed') {
+        if (task?.status === 'failed') {
           const reason = task.error_message || '视频生成失败';
           const missing = reason.includes('没有正向提示词') || reason.includes('没有视频提示词') || reason.includes('需要一句提示词') || reason.includes('需要一句视频提示词');
           await item.update({
@@ -313,7 +327,11 @@ class AutoJobService extends Service {
             task_id: task.id,
           });
         } else if (task.status === 'success') {
-          await item.update({ status: 'success', reason: '视频已生成', task_id: task.id });
+          await item.update({
+            status: 'success',
+            reason: perShot > 1 ? `已生成 ${perShot} 条视频` : '视频已生成',
+            task_id: task.id,
+          });
         } else {
           await item.update({ status: 'failed', reason: '视频没有生成', task_id: task.id });
         }

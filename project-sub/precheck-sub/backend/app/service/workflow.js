@@ -8,7 +8,7 @@ const { ZIMAGE_TEMPLATES } = require('../lib/zImageTemplates');
 const { QWEN21_TEMPLATES } = require('../lib/qwen21Templates');
 const { QWEN_EDIT_TEMPLATES } = require('../lib/qwenEditTemplates');
 const { IMAGE_CATALOG_TEMPLATES } = require('../lib/imageCatalogTemplates');
-const { CAPTION_TEMPLATES, CAPTION_RENAMES } = require('../lib/captionTemplates');
+const { CAPTION_TEMPLATES, CAPTION_RENAMES, patchCaptionGraph } = require('../lib/captionTemplates');
 
 class WorkflowService extends Service {
   async ensureTemplates() {
@@ -37,6 +37,12 @@ class WorkflowService extends Service {
       const sameModels = JSON.stringify(existing.required_models) === JSON.stringify(parsed.required_models);
       const sameMeta = existing.category === item.category && existing.suggested_vram_gb === item.suggested_vram_gb;
       if (!sameNodes || !sameModels || !sameMeta) await existing.update(fields);
+      if (CAPTION_TEMPLATES.some(template => template.name === item.name)) {
+        const patched = patchCaptionGraph(existing.api_json);
+        if (JSON.stringify(patched) !== JSON.stringify(existing.api_json)) {
+          await existing.update({ api_json: patched });
+        }
+      }
     }
   }
 
@@ -52,6 +58,32 @@ class WorkflowService extends Service {
     const row = await this.ctx.model.Workflow.findByPk(id);
     if (!row) this.ctx.throw(404, '工作流不存在');
     return row;
+  }
+
+  async visualStyles() {
+    const cache = this.app.visualStyleCache;
+    if (cache && Date.now() - cache.at < 60000) return cache.rows;
+    const base = String(this.config.cartoonApi?.baseUrl || 'http://host.docker.internal:5205').replace(/\/$/, '');
+    let rows = [];
+    try {
+      const res = await fetch(`${base}/api/meta`, { signal: AbortSignal.timeout(8000) });
+      const body = await res.json();
+      rows = Array.isArray(body?.data?.visual_styles) ? body.data.visual_styles : [];
+    } catch (err) {
+      if (cache?.rows) return cache.rows;
+      this.ctx.throw(502, `读不到画风：${err.message}`);
+    }
+    const mapped = rows
+      .filter(item => item?.value && item.group !== '兼容旧项')
+      .map(item => ({
+        value: item.value,
+        name: item.name || item.label || item.value,
+        note: item.note || '',
+        prompt: item.prompt || '',
+        group: item.group || '其他',
+      }));
+    this.app.visualStyleCache = { at: Date.now(), rows: mapped };
+    return mapped;
   }
 
   async create(payload) {
@@ -98,16 +130,25 @@ class WorkflowService extends Service {
       : await this.ctx.model.Runtime.findOne({ order: [[ 'id', 'ASC' ]] });
     if (!runtime) this.ctx.throw(404, '没有登记运行时');
     const snapshot = await this.ctx.service.probe.inspect(runtime.base_url, runtime.expected_version);
+    let requiredNodes = workflow.required_nodes;
+    let requiredModels = workflow.required_models;
+    try {
+      const parsed = parseApiWorkflow(workflow.api_json);
+      requiredNodes = parsed.required_nodes;
+      requiredModels = parsed.required_models;
+    } catch {
+      /* 库里的旧记录继续用已保存的依赖 */
+    }
     const diff = this.ctx.service.probe.diff(
       snapshot,
-      workflow.required_nodes,
-      workflow.required_models,
+      requiredNodes,
+      requiredModels,
       workflow.suggested_vram_gb,
     );
     const supplies = snapshot.online
       ? buildSupplies({
         missingNodes: diff.missing_nodes,
-        requiredModels: workflow.required_models,
+        requiredModels,
         installedModels: snapshot.models || [],
       })
       : { note: '', plugins: [], families: [], loose: [] };

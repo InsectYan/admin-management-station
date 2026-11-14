@@ -29,6 +29,7 @@ module.exports = app => {
     video_total: { type: INTEGER, allowNull: false, defaultValue: 0 },
     fresh: { type: BOOLEAN, allowNull: false, defaultValue: false },
     scope: { type: STRING(32), allowNull: false, defaultValue: 'all' },
+    video_count: { type: INTEGER, allowNull: false, defaultValue: 1 },
     temp_refmod_id: { type: INTEGER, allowNull: true },
   }, {
     tableName: 'cartoon_full_runs',

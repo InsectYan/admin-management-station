@@ -19,7 +19,7 @@ export function isQiankunEmbedded() {
   return !!qiankunWindow.__POWERED_BY_QIANKUN__;
 }
 
-export const api = axios.create({ timeout: 60000 });
+export const api = axios.create({ timeout: 8000 });
 
 api.interceptors.request.use((config) => {
   const token = getAccessToken();

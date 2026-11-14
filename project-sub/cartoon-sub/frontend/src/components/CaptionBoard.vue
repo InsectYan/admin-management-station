@@ -12,7 +12,7 @@
           <strong>{{ card.original_name || (card.media_kind === 'video' ? '视频' : '图片') }}</strong>
           <el-button size="small" @click="open(card)">编辑</el-button>
         </header>
-        <video v-if="card.media_kind === 'video'" :src="fileUrl(card)" muted controls preload="metadata"></video>
+        <VideoWithRate v-if="card.media_kind === 'video'" :src="fileUrl(card)" muted controls preload="metadata" />
         <img v-else :src="fileUrl(card)" alt="" />
         <p class="caption-card__label">{{ card.extra_prompt?.trim() ? '单独补充提示' : '补充提示' }}</p>
         <p class="caption-card__text">{{ shownExtra(card) || '没有补充提示' }}</p>
@@ -30,6 +30,8 @@
         <el-input v-model="draft.extra_prompt" type="textarea" :rows="3" placeholder="可以不填。填写后执行会用这一段" />
         <p class="caption-card__label">工作流</p>
         <p class="caption-card__text">{{ current.workflow_name || '还没有执行过' }}</p>
+        <p class="caption-card__label">输出上限 / 真实帧率</p>
+        <p class="caption-card__text">{{ controlText }}</p>
         <p class="caption-card__label">提示词</p>
         <el-input v-model="draft.result_prompt" type="textarea" :rows="8" />
         <p v-if="current.status === 'running' || current.status === 'queued'" class="cartoon-module__hint">{{ job.note || '正在反推' }}</p>
@@ -44,7 +46,7 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { request, resolveApiBase } from '../services/apiConfig.js';
@@ -56,6 +58,8 @@ const props = defineProps({
 const router = useRouter();
 const loading = ref(true);
 const cards = ref([]);
+const maxTokens = ref(2048);
+const videoFps = ref(null);
 const job = ref({ active: false, waiting: false, percent: 0, note: '' });
 const drawer = ref(false);
 const current = ref(null);
@@ -67,12 +71,18 @@ const busy = ref(false);
 function fileUrl(card) {
   return `${resolveApiBase()}/projects/${props.projectId}/captions/${card.id}/file`;
 }
+const controlText = computed(() => {
+  const fps = videoFps.value == null || videoFps.value === '' ? '文件真实帧率' : `${videoFps.value} 帧/秒`;
+  return `${maxTokens.value} token；帧率 ${fps}。输出上限只管写多长，帧率只管视频时长 = 总帧数 / 帧率。在获取提示词页修改。`;
+});
 function shownExtra(card) {
   return String(card.extra_prompt || '').trim() || String(card.shared_extra || '').trim();
 }
 function apply(data) {
   const rows = data?.cards || [];
   cards.value = rows.filter(item => item.saved);
+  maxTokens.value = Number(data?.max_tokens) || 2048;
+  videoFps.value = data?.video_fps == null ? null : data.video_fps;
   job.value = data?.job || { active: false, waiting: false, percent: 0, note: '' };
   if (current.value) {
     const next = rows.find(item => item.id === current.value.id);
@@ -192,10 +202,14 @@ onUnmounted(stop);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.caption-card img, .caption-card video, .caption-drawer img, .caption-drawer video {
+.caption-card img,
+.caption-card :deep(.video-with-rate video),
+.caption-drawer img,
+.caption-drawer video {
   display: block;
   width: 100%;
   max-width: 100%;
+  min-width: 0;
   height: 160px;
   object-fit: contain;
   background: #f3f6f4;

@@ -6,6 +6,14 @@ const MODEL_KEYS = [
   'style_model_name', 'gligen_name', 'ipadapter_file',
 ];
 const MODEL_EXT = /\.(safetensors|ckpt|gguf|pt|pth|bin|sft)$/i;
+const CATALOG_NODES = new Set([
+  'AILab_QwenVL',
+  'AILab_QwenVL_Advanced',
+  'AILab_QwenVL_GGUF',
+  'AILab_QwenVL_GGUF_Advanced',
+  'AILab_QwenVL_PromptEnhancer',
+  'AILab_QwenVL_GGUF_PromptEnhancer',
+]);
 
 function walk(value, visit) {
   if (!value || typeof value !== 'object') return;
@@ -31,6 +39,7 @@ function parseApiWorkflow(apiJson) {
     const inputs = node.inputs || {};
     Object.entries(inputs).forEach(([ key, input ]) => {
       if (typeof input !== 'string') return;
+      if (CATALOG_NODES.has(node.class_type) && (key === 'model_name' || key === 'model') && !MODEL_EXT.test(input)) return;
       if (MODEL_KEYS.includes(key) || MODEL_EXT.test(input)) models.add(input);
     });
     if (!node.class_type) void id;

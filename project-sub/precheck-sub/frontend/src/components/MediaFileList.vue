@@ -29,16 +29,20 @@
       </ul>
       <p v-if="showName && item.name" class="media-file-list__name">{{ item.name }}</p>
     </div>
-    <el-dialog v-model="visible" :title="current?.name || '预览'" width="720px" append-to-body destroy-on-close>
-      <video v-if="current?.kind === 'video'" class="media-file-list__preview" :src="current.url" controls autoplay />
-      <img v-else class="media-file-list__preview" :src="current?.url" alt="" />
+    <el-dialog v-model="visible" :title="current?.name || '预览'" width="70%" append-to-body destroy-on-close @opened="bindZoom" @closed="unbindZoom">
+      <div class="media-file-list__stage">
+        <VideoWithRate v-if="current?.kind === 'video'" class="media-file-list__preview" :style="zoomStyle" :src="current.url" controls autoplay />
+        <img v-else class="media-file-list__preview" :style="zoomStyle" :src="current?.url" alt="" />
+      </div>
+      <p class="media-file-list__zoom-hint">Ctrl + + 放大，Ctrl + - 缩小，Ctrl + 0 还原</p>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, onUnmounted, ref } from 'vue';
 import { Delete, ZoomIn } from '@element-plus/icons-vue';
+import VideoWithRate from './VideoWithRate.vue';
 
 defineProps({
   items: { type: Array, default: () => [] },
@@ -48,11 +52,36 @@ defineProps({
 const emit = defineEmits([ 'remove' ]);
 const visible = ref(false);
 const current = ref(null);
+const zoom = ref(1);
+const zoomStyle = computed(() => ({
+  width: `${Math.round(zoom.value * 100)}%`,
+  maxHeight: zoom.value > 1 ? 'none' : '70vh',
+}));
 
 function open(item) {
   current.value = item;
+  zoom.value = 1;
   visible.value = true;
 }
+function onZoomKey(event) {
+  if (!visible.value || !event.ctrlKey) return;
+  const plus = event.key === '+' || event.key === '=' || event.code === 'NumpadAdd';
+  const minus = event.key === '-' || event.key === '_' || event.code === 'NumpadSubtract';
+  const reset = event.key === '0' || event.code === 'Numpad0';
+  if (!plus && !minus && !reset) return;
+  event.preventDefault();
+  if (reset) zoom.value = 1;
+  else if (plus) zoom.value = Math.min(4, Math.round((zoom.value + 0.25) * 100) / 100);
+  else zoom.value = Math.max(0.5, Math.round((zoom.value - 0.25) * 100) / 100);
+}
+function bindZoom() {
+  zoom.value = 1;
+  window.addEventListener('keydown', onZoomKey);
+}
+function unbindZoom() {
+  window.removeEventListener('keydown', onZoomKey);
+}
+onUnmounted(unbindZoom);
 function paintFrame(event) {
   const video = event.target;
   if (!video || video.currentTime > 0) return;
@@ -79,5 +108,7 @@ function paintFrame(event) {
   object-fit: contain;
   pointer-events: none;
 }
-.media-file-list__preview { display: block; width: 100%; max-height: 70vh; object-fit: contain; }
+.media-file-list__stage { max-height: 78vh; overflow: auto; }
+.media-file-list :deep(video.media-file-list__preview) { display: block; width: 100%; max-height: 70vh; object-fit: contain; }
+.media-file-list__zoom-hint { margin: 8px 0 0; color: #5c6b62; font-size: 12px; }
 </style>

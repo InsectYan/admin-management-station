@@ -2,10 +2,15 @@
   <PageShell title="获取提示词" :loading="loading && !ready">
     <template #extra>
       <div v-if="job.active" class="caption-progress">
-        <el-progress :percentage="job.percent || 0" :indeterminate="job.waiting" :stroke-width="8" color="#2f8a5b" />
+        <span>总进度 {{ job.done || 0 }}/{{ job.total || 0 }}</span>
+        <el-progress :percentage="job.percent || 0" :format="formatPercent" :indeterminate="job.waiting" :stroke-width="8" color="#2f8a5b" />
         <span>{{ job.note }}</span>
       </div>
       <el-button :disabled="!canMake() || !workflowId" @click="runEmpty">一键执行</el-button>
+      <el-button-group>
+        <el-button :disabled="!canMake() || job.active || !hasPrompt" :loading="clearing" @click="clearPrompts">一键清除</el-button>
+        <el-button type="danger" :disabled="!canMake() || job.active || !cards.length" :loading="deleting" @click="deleteCards">一键删除</el-button>
+      </el-button-group>
       <el-button link type="primary" @click="back">返回项目</el-button>
     </template>
     <div class="caption-page">
@@ -18,6 +23,27 @@
               </el-select>
               <p v-if="workflowsError" class="cartoon-module__hint">{{ workflowsError }}</p>
               <p class="cartoon-module__hint">图片和视频要各自选对应的工作流。一键执行只跑提示词还空着、且和当前工作流类型一致的卡片。</p>
+            </el-form-item>
+            <div class="caption-relation">
+              <p>输出上限和真实帧率各管一件事，互不影响。</p>
+              <p>输出上限是模型这次最多新写的 token。写满就停，句子可以停在半截。它不改变看了几帧。</p>
+              <p>真实帧率只用于视频。片子整段解码，再均匀抽 16 帧。时间戳用原始帧号除以帧率，模型看到的时长 = 总帧数 / 帧率。留空就把文件里的帧率接上。12 秒、30 帧/秒的片子留空或填 30，时间轴仍约 12 秒。以前把抽到的 16 帧当成 24 帧/秒，最后一个时间戳会变成 0.6 秒。</p>
+            </div>
+            <el-form-item label="输出上限">
+              <el-input-number
+                v-model="maxTokens"
+                :min="limitMin"
+                :max="limitMax"
+                :step="1"
+                :precision="0"
+                :controls="false"
+                :disabled="!limitOn"
+              />
+              <p class="cartoon-module__hint">{{ limitOn ? `写满就停。这条工作流可填 ${limitMin} 到 ${limitMax}。` : '当前工作流没有句子长度，这项不生效。' }}</p>
+            </el-form-item>
+            <el-form-item label="真实帧率">
+              <el-input v-model="videoFps" :disabled="!fpsOn" placeholder="留空使用文件真实帧率" />
+              <p class="cartoon-module__hint">{{ fpsOn ? '留空就把文件帧率接上。填写后改用这个数。时长 = 总帧数 / 帧率。' : '图片反推不使用帧率。换成视频工作流后，留空即用文件帧率。' }}</p>
             </el-form-item>
             <el-form-item label="上传图片、视频">
               <el-upload
@@ -48,11 +74,15 @@
                 <el-button size="small" type="primary" :disabled="!canMake() || busy(card)" @click="runOne(card)">执行</el-button>
               </span>
             </header>
-            <video v-if="card.media_kind === 'video'" :src="fileUrl(card)" muted controls preload="metadata"></video>
+            <VideoWithRate v-if="card.media_kind === 'video'" :src="fileUrl(card)" muted controls preload="metadata" />
             <img v-else :src="fileUrl(card)" alt="" />
             <el-input v-model="card.extra_prompt" type="textarea" :rows="2" placeholder="单独补充提示，可以不填" />
             <el-input v-model="card.result_prompt" type="textarea" :rows="5" placeholder="生成的提示词" />
-            <p v-if="busy(card)" class="cartoon-module__hint">{{ cardNote(card) }}</p>
+            <div v-if="card.status === 'running'" class="caption-card__progress">
+              <el-progress :percentage="cardPercent(card)" :indeterminate="!card.progress_max" :stroke-width="8" color="#2f8a5b" />
+              <span>{{ cardNote(card) }}</span>
+            </div>
+            <p v-else-if="card.status === 'queued'" class="cartoon-module__hint">排队，等上一条拿到提示词</p>
             <p v-else-if="card.error_message" class="caption-card__error">{{ card.error_message }}</p>
           </article>
         </div>
@@ -65,12 +95,13 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
+import VideoWithRate from '../components/VideoWithRate.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -79,11 +110,21 @@ const loading = ref(true);
 const ready = ref(false);
 const uploading = ref(false);
 const saving = ref(false);
+const clearing = ref(false);
+const deleting = ref(false);
 const workflows = ref([]);
 const workflowsError = ref('');
 const workflowId = ref(null);
+const maxTokens = ref(2048);
+const videoFps = ref('');
 const shared = ref('');
+const picked = computed(() => workflows.value.find(item => item.id === workflowId.value) || null);
+const limitOn = computed(() => !picked.value || Number(picked.value.outputMax) > 0);
+const fpsOn = computed(() => !picked.value || Boolean(picked.value.usesFps));
+const limitMin = computed(() => Number(picked.value?.outputMin) || 64);
+const limitMax = computed(() => Number(picked.value?.outputMax) || 4096);
 const cards = ref([]);
+const hasPrompt = computed(() => cards.value.some(item => String(item.result_prompt || '').trim()));
 const job = ref({ active: false, waiting: false, percent: 0, note: '' });
 const queue = [];
 let pumping = false;
@@ -97,6 +138,12 @@ function fileUrl(card) {
 }
 function busy(card) {
   return card.status === 'queued' || card.status === 'running';
+}
+function formatPercent(value) {
+  return `${Number(value || 0).toFixed(2)}%`;
+}
+function cardPercent(card) {
+  return Math.min(100, Math.max(0, Number(card.progress_percent) || 0));
 }
 function cardNote(card) {
   if (card.status === 'queued') return '排队，等上一条拿到提示词';
@@ -113,6 +160,8 @@ function applyBoard(data, resetText) {
   if (!ready.value || resetText) {
     shared.value = data?.shared_prompt || '';
     workflowId.value = data?.workflow_id || null;
+    maxTokens.value = Number(data?.max_tokens) || 2048;
+    videoFps.value = data?.video_fps == null ? '' : String(data.video_fps);
   }
   const local = new Map(cards.value.map(item => [ item.id, item ]));
   cards.value = (data?.cards || []).map(item => {
@@ -186,6 +235,8 @@ function payload() {
   return {
     shared_prompt: shared.value,
     workflow_id: workflowId.value,
+    max_tokens: maxTokens.value,
+    video_fps: videoFps.value,
     cards: cards.value.map(item => ({
       id: item.id,
       extra_prompt: item.extra_prompt,
@@ -205,6 +256,8 @@ async function runOne(card) {
         workflow_id: workflowId.value,
         shared_prompt: shared.value,
         extra_prompt: card.extra_prompt,
+        max_tokens: maxTokens.value,
+        video_fps: videoFps.value,
         update_shared: true,
       },
     });
@@ -224,6 +277,8 @@ async function runEmpty() {
       data: {
         workflow_id: workflowId.value,
         shared_prompt: shared.value,
+        max_tokens: maxTokens.value,
+        video_fps: videoFps.value,
         update_shared: true,
         cards: cards.value.map(item => ({ id: item.id, extra_prompt: item.extra_prompt })),
       },
@@ -243,6 +298,53 @@ async function save() {
     ElMessage.error(err.message);
   } finally {
     saving.value = false;
+  }
+}
+async function clearPrompts() {
+  try {
+    await ElMessageBox.confirm('清空全部卡片里已经生成的提示词？图片和视频会保留。', '一键清除', {
+      type: 'warning',
+      confirmButtonText: '清空提示词',
+      cancelButtonText: '取消',
+    });
+  } catch {
+    return;
+  }
+  clearing.value = true;
+  try {
+    const data = await request(`/projects/${projectId}/captions/clear-prompts`, { method: 'post' });
+    applyBoard(data, false);
+    const server = new Map((data?.cards || []).map(item => [ item.id, item.result_prompt || '' ]));
+    cards.value = cards.value.map(item => {
+      const text = server.has(item.id) ? server.get(item.id) : '';
+      return { ...item, result_prompt: text, _serverResult: text };
+    });
+    ElMessage.success('已清空提示词');
+  } catch (err) {
+    ElMessage.error(err.message);
+  } finally {
+    clearing.value = false;
+  }
+}
+async function deleteCards() {
+  try {
+    await ElMessageBox.confirm('删除全部卡片？图片、视频和提示词都会去掉，不能恢复。', '一键删除', {
+      type: 'warning',
+      confirmButtonText: '删除全部',
+      cancelButtonText: '取消',
+    });
+  } catch {
+    return;
+  }
+  deleting.value = true;
+  try {
+    const data = await request(`/projects/${projectId}/captions`, { method: 'delete' });
+    applyBoard(data, false);
+    ElMessage.success('已删除全部卡片');
+  } catch (err) {
+    ElMessage.error(err.message);
+  } finally {
+    deleting.value = false;
   }
 }
 async function removeCard(card) {
@@ -271,7 +373,20 @@ onUnmounted(stop);
 </script>
 
 <style scoped>
-.caption-progress { display: grid; gap: 4px; min-width: 220px; color: #5c6b62; font-size: 12px; }
+.caption-relation {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f3f7f4;
+  color: #243028;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.caption-relation p { margin: 0; }
+.caption-progress { display: grid; gap: 4px; min-width: 240px; color: #5c6b62; font-size: 12px; }
+.caption-card__progress { display: grid; gap: 4px; min-width: 0; color: #5c6b62; font-size: 12px; }
 .caption-page { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .caption-page__scroll { flex: 1; min-height: 0; overflow: auto; }
 .caption-page__dock {
@@ -310,10 +425,12 @@ onUnmounted(stop);
   white-space: nowrap;
 }
 .caption-card header span { flex: none; display: inline-flex; align-items: center; gap: 4px; }
-.caption-card img, .caption-card video {
+.caption-card img,
+.caption-card :deep(.video-with-rate video) {
   display: block;
   width: 100%;
   max-width: 100%;
+  min-width: 0;
   height: 180px;
   object-fit: contain;
   background: #f3f6f4;
