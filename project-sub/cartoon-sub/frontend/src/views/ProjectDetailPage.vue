@@ -327,7 +327,7 @@
             </el-button-group>
             <el-button-group>
               <el-button type="primary" plain :disabled="autoRunning || flowBusy || runMark.videoLive" @click="runAuto('all')">全自动执行</el-button>
-              <el-button type="primary" plain :disabled="autoRunning || flowBusy || runMark.videoLive" @click="resetAuto('all')">重置</el-button>
+              <el-button type="primary" plain :disabled="autoRunning || flowBusy || runMark.videoLive" @click="openAllReset">重置</el-button>
             </el-button-group>
             <el-button type="danger" plain :disabled="!canStop" @click="stopWork">停止</el-button>
           </div>
@@ -522,7 +522,19 @@
         <el-button type="primary" :disabled="!videoAutoIds.length" @click="confirmVideoAuto">开始生成</el-button>
       </template>
     </el-dialog>
-    <el-dialog v-model="videoResetOpen" title="重新生成视频" width="480px" append-to-body :close-on-click-modal="false">
+    <el-dialog v-model="allResetOpen" class="cartoon-dialog" title="重置全自动" width="480px" append-to-body :close-on-click-modal="false">
+      <p class="cartoon-module__hint">会重写当前快照里每一条镜头的提示词，已经写好的也会覆盖。然后按下面的次数再生成视频，已经有的视频会保留。</p>
+      <el-form label-position="top" @submit.prevent>
+        <el-form-item label="每个镜头的生成次数">
+          <el-input-number v-model="allResetCount" :min="1" :max="8" :step="1" :precision="0" controls-position="right" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="allResetOpen = false">取消</el-button>
+        <el-button type="primary" @click="confirmAllReset">重新生成</el-button>
+      </template>
+    </el-dialog>
+    <el-dialog v-model="videoResetOpen" class="cartoon-dialog" title="重新生成视频" width="480px" append-to-body :close-on-click-modal="false">
       <p class="cartoon-module__hint">会给当前快照里每一条镜头再生成这么多次视频。已经有的视频会保留。</p>
       <el-form label-position="top" @submit.prevent>
         <el-form-item label="每个镜头的生成次数">
@@ -534,7 +546,7 @@
         <el-button type="primary" @click="confirmVideoReset">重新生成</el-button>
       </template>
     </el-dialog>
-    <el-dialog v-model="fullAutoOpen" title="全流程" width="560px" append-to-body :close-on-click-modal="false">
+    <el-dialog v-model="fullAutoOpen" class="cartoon-dialog" title="全流程" width="560px" append-to-body :close-on-click-modal="false">
       <p class="cartoon-module__hint">这次会按顺序做到视频。人物和场景各出一张设定总图，视频固定用满血 H3 首尾帧 RefMod。</p>
       <el-checkbox v-model="fullAutoFresh">全新</el-checkbox>
       <p v-if="fullAutoFresh" class="cartoon-module__hint">勾选后会重新生成剧本、分镜、提示词、首尾帧和视频。已经有设定图的资产会保留，不会重画，也不会改已有说明。</p>
@@ -1546,6 +1558,8 @@ const fullAutoFresh = ref(false);
 const fullAutoVideoCount = ref(1);
 const videoResetOpen = ref(false);
 const videoResetCount = ref(1);
+const allResetOpen = ref(false);
+const allResetCount = ref(1);
 const fullAutoShotCount = computed(() => {
   const id = fullAutoTarget.value?.id;
   if (!id) return 0;
@@ -2084,6 +2098,32 @@ function openVideoReset() {
   videoResetCount.value = 1;
   videoResetOpen.value = true;
 }
+function openAllReset() {
+  if (autoRunning.value || flowBusy.value || runMark.videoLive) return;
+  if (!boardShots.value.length) {
+    ElMessage.error('当前快照没有镜头');
+    return;
+  }
+  allResetCount.value = 1;
+  allResetOpen.value = true;
+}
+async function confirmAllReset() {
+  const shots = boardShots.value.slice();
+  const count = Math.round(Number(allResetCount.value));
+  if (!shots.length) {
+    ElMessage.error('当前快照没有镜头');
+    return;
+  }
+  if (!Number.isInteger(count) || count < 1 || count > 8) {
+    ElMessage.error('生成次数需要是 1 到 8');
+    return;
+  }
+  allResetOpen.value = false;
+  const outcome = await runAuto('prompt', null, true, { quiet: true });
+  if (!outcome || outcome.stopped) return;
+  if (outcome.failed) ElMessage.warning(`有 ${outcome.failed} 条提示词没写成，视频仍会按次数提交`);
+  await startServerVideo(shots.map(row => row.id), count);
+}
 async function confirmVideoReset() {
   const shots = boardShots.value;
   const count = Math.round(Number(videoResetCount.value));
@@ -2121,23 +2161,23 @@ async function resetAuto(mode) {
   }
   runAuto(mode, null, true);
 }
-async function runAuto(mode, selectedIds, fresh = false) {
-  if (autoRunning.value) return;
+async function runAuto(mode, selectedIds, fresh = false, options = {}) {
+  if (autoRunning.value) return { stopped: true, failed: 0, skipped: 0, succeeded: 0 };
   if (!projectKey()) {
     ElMessage.error('项目编号丢了');
-    return;
+    return { stopped: true, failed: 0, skipped: 0, succeeded: 0 };
   }
   let shots = boardShots.value.slice();
   if (!shots.length) {
     ElMessage.error('当前快照没有镜头');
-    return;
+    return { stopped: true, failed: 0, skipped: 0, succeeded: 0 };
   }
   if (mode === 'video' && Array.isArray(selectedIds)) {
     const picked = new Set(selectedIds.map(id => String(id)));
     shots = shots.filter(row => picked.has(String(row.id)));
     if (!shots.length) {
       ElMessage.error('请选择镜头');
-      return;
+      return { stopped: true, failed: 0, skipped: 0, succeeded: 0 };
     }
   }
   if (mode === 'video') {
@@ -2210,7 +2250,7 @@ async function runAuto(mode, selectedIds, fresh = false) {
       }
       if (stopped) break;
     }
-    if (!stopped && !signal.aborted) {
+    if (!options.quiet && !stopped && !signal.aborted) {
       const parts = [ `成功 ${succeeded}` ];
       if (failed) parts.push(`失败 ${failed}`);
       if (skipped) parts.push(`跳过 ${skipped}`);
@@ -2223,6 +2263,7 @@ async function runAuto(mode, selectedIds, fresh = false) {
     if (runMark.controller === controller) runMark.controller = null;
     unlockJob(jobToken);
   }
+  return { stopped: stopped || signal.aborted, failed, skipped, succeeded };
 }
 function resetShotForm() {
   shot.description = '';

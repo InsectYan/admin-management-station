@@ -1,5 +1,5 @@
 <template>
-  <PageShell title="流水线" :loading="loading">
+  <PageShell title="节点配置" :loading="loading">
     <p class="cartoon-module__hint">这里只保存节点和模型参数。运行仍走原来的 Skill、预检和 ComfyUI，不会把生产稿写进故事包。</p>
     <div class="cartoon-module">
       <el-select v-model="contentType" style="width: 180px" @change="load">
@@ -76,8 +76,8 @@
 </template>
 
 <script setup>
-import { onMounted, computed, reactive, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { onMounted, computed, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import { useRegionLoad } from '../lib/useRegionLoad.js';
@@ -87,6 +87,7 @@ import { CONTENT_TYPES } from '../lib/contentTypes.js';
 import { confirmBulkDelete } from '../utils/tableBulkDelete.js';
 
 const route = useRoute();
+const router = useRouter();
 const contentType = ref(route.params.contentType || 'ai_comic');
 const nodes = ref([]);
 const picked = ref([]);
@@ -122,10 +123,17 @@ function apply(data) {
 }
 const { loading, run } = useRegionLoad({ immediate: true });
 async function load() {
+  const next = `/pipelines/config/${contentType.value}`;
+  if (route.path !== next) await router.replace(next);
   await run(async () => {
     apply(await request('/pipelines', { params: { content_type: contentType.value } }));
   });
 }
+watch(() => route.params.contentType, value => {
+  if (!value || value === contentType.value) return;
+  contentType.value = String(value);
+  load().catch(err => ElMessage.error(err.message));
+});
 async function addNode(item) {
   try {
     apply(await request('/pipelines/nodes', { method: 'post', data: { content_type: contentType.value, node_key: item.node_key } }));

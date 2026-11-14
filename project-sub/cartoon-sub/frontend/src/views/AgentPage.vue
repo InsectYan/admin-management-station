@@ -12,7 +12,7 @@
         <template #default="{ row }">{{ row.enabled ? '是' : '否' }}</template>
       </el-table-column>
     </el-table>
-    <router-link :to="`/pipelines/${contentType}`">去流水线调整</router-link>
+    <router-link :to="`/pipelines/config/${contentType}`">去流水线调整</router-link>
   </PageShell>
 </template>
 

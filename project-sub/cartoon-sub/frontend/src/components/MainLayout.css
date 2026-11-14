@@ -62,6 +62,10 @@
   background: rgba(47, 138, 91, 0.12) !important;
   color: #2f8a5b !important;
 }
+.cartoon-sub-nav .el-sub-menu__title { background: transparent !important; }
+.cartoon-sub-nav .el-sub-menu__title:hover { background: rgba(47, 138, 91, 0.08) !important; }
+.cartoon-sub-nav .el-sub-menu.is-active > .el-sub-menu__title { color: #2f8a5b !important; }
+.cartoon-pipeline-popper .el-menu-item.is-active { color: #2f8a5b !important; }
 .cartoon-sub-embedded-bar {
   position: sticky;
   top: 0;

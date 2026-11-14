@@ -1,0 +1,314 @@
+{
+  "reviewed_at": "2026-11-14",
+  "summary": "按当前代码梳理。已完成表示页面或服务已经能执行；未完成表示技能或接口在，但页面没有入口、明确不写入，或没有进全自动。下次梳理替换这份 JSON。",
+  "flows": [
+    {
+      "key": "overview",
+      "name": "模块总览",
+      "description": "工作台从输入走到导出的模块。黄节点是这条链上还没做完的缺口。",
+      "nodes": [
+        {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "工作台入口。", "x": 16, "y": 16},
+        {"id": "input", "name": "输入与绑定", "type": "page", "status": "done", "skill": "", "runner": "local", "description": "钉扎章节或本地文案。流水线里这是锁定节点。", "x": 226, "y": 16},
+        {"id": "script", "name": "剧本", "type": "action", "status": "done", "skill": "cartoon-script-skill", "runner": "skill", "description": "AI 漫剧走技能 draft。科普等本地文案类型改成本地，不调技能。", "x": 436, "y": 16},
+        {"id": "storyboard", "name": "镜头", "type": "action", "status": "done", "skill": "cartoon-storyboard-skill", "runner": "skill", "description": "先拆大纲再单段扩写，和镜头页共用同一批镜头。", "x": 646, "y": 16},
+        {"id": "assets", "name": "资产", "type": "action", "status": "done", "skill": "cartoon-asset-sheet-skill", "runner": "skill", "description": "设定图走设定图技能再交 Comfy。绑定另有同名匹配和 cartoon-asset-skill。", "x": 856, "y": 16},
+        {"id": "prompt", "name": "镜头提示词", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "写出视频、首帧、尾帧。AV 项目再走 cartoon-av-prompt-skill。", "x": 1066, "y": 16},
+        {"id": "generate", "name": "图生视频", "type": "action", "status": "done", "skill": "", "runner": "comfy", "description": "选预检工作流提交 Comfy。没有 Skill 名。", "x": 1276, "y": 16},
+        {"id": "voice", "name": "配音", "type": "page", "status": "done", "skill": "", "runner": "local", "description": "音色库、对白关联和收音已接上。技能时间轴和出音频还没有页面入口。", "x": 1276, "y": 144},
+        {"id": "subtitle", "name": "字幕", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "按台词排时间轴，不调用技能。流水线节点默认关闭。", "x": 1066, "y": 144},
+        {"id": "review", "name": "初审", "type": "action", "status": "done", "skill": "cartoon-review-skill", "runner": "skill", "description": "技能 action 是 review_cut。只列问题，不代替人工通过或驳回。节点默认关闭。", "x": 856, "y": 144},
+        {"id": "compose", "name": "合成", "type": "action", "status": "done", "skill": "", "runner": "ffmpeg", "description": "时间线剪辑。", "x": 646, "y": 144},
+        {"id": "preview", "name": "预览", "type": "page", "status": "done", "skill": "", "runner": "local", "description": "预览成片播放。", "x": 436, "y": 144},
+        {"id": "export", "name": "导出", "type": "action", "status": "done", "skill": "", "runner": "ffmpeg", "description": "导出成片。流水线里是锁定节点。", "x": 226, "y": 144},
+        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "工作台导出之后。", "x": 16, "y": 144},
+        {"id": "caption", "name": "获取提示词", "type": "page", "status": "done", "skill": "", "runner": "comfy", "description": "项目页反推视频。不走 cartoon-prompt-skill，走预检里的视频理解工作流。", "x": 226, "y": 272},
+        {"id": "package", "name": "写回故事包", "type": "action", "status": "todo", "skill": "", "runner": "none", "description": "剧本技能和页面都明确不写故事包。", "x": 436, "y": 272},
+        {"id": "extra", "name": "附加节点", "type": "action", "status": "todo", "skill": "", "runner": "none", "description": "内容类型目录项可以单独检查，但没有进全自动。", "x": 1486, "y": 16},
+        {"id": "voice-audio", "name": "台词成片", "type": "action", "status": "todo", "skill": "cartoon-voice-skill", "runner": "skill", "description": "配音页试听的是音色样本。时间轴技能和出音频的接口在，页面没有按钮。", "x": 1486, "y": 144}
+      ],
+      "edges": [
+        {"id": "o1", "source": "start", "target": "input", "label": "", "type": "next"},
+        {"id": "o2", "source": "input", "target": "script", "label": "", "type": "next"},
+        {"id": "o3", "source": "script", "target": "storyboard", "label": "", "type": "next"},
+        {"id": "o4", "source": "storyboard", "target": "assets", "label": "", "type": "next"},
+        {"id": "o5", "source": "assets", "target": "prompt", "label": "", "type": "next"},
+        {"id": "o6", "source": "prompt", "target": "generate", "label": "", "type": "next"},
+        {"id": "o7", "source": "generate", "target": "voice", "label": "", "type": "next"},
+        {"id": "o8", "source": "voice", "target": "subtitle", "label": "", "type": "next"},
+        {"id": "o9", "source": "subtitle", "target": "review", "label": "", "type": "next"},
+        {"id": "o10", "source": "review", "target": "compose", "label": "", "type": "next"},
+        {"id": "o11", "source": "compose", "target": "preview", "label": "", "type": "next"},
+        {"id": "o12", "source": "preview", "target": "export", "label": "", "type": "next"},
+        {"id": "o13", "source": "export", "target": "end", "label": "", "type": "next"},
+        {"id": "o14", "source": "input", "target": "caption", "label": "项目页", "type": "branch"},
+        {"id": "o15", "source": "script", "target": "package", "label": "不做", "type": "branch"},
+        {"id": "o16", "source": "generate", "target": "extra", "label": "未进全自动", "type": "branch"},
+        {"id": "o17", "source": "voice", "target": "voice-audio", "label": "未接页面", "type": "branch"}
+      ]
+    },
+    {
+      "key": "script",
+      "name": "剧本",
+      "description": "只生成生产稿。不拆镜头，不写提示词，不写故事包。",
+      "nodes": [
+        {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "工作台剧本。", "x": 16, "y": 16},
+        {"id": "read", "name": "读取章节", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "读取已钉扎章节的标题和正文。", "x": 226, "y": 16},
+        {"id": "style", "name": "风格与生产输入", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "带上视觉风格、是否修仙和生产输入。", "x": 436, "y": 16},
+        {"id": "draft", "name": "剧本 draft", "type": "action", "status": "done", "skill": "cartoon-script-skill", "runner": "skill", "description": "action draft。必须返回场次，否则失败。本地文案类型不走这一步。", "x": 646, "y": 16},
+        {"id": "save", "name": "落库生产稿", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "写入章节的 script_data 和人物，不写故事包。", "x": 646, "y": 144},
+        {"id": "confirm", "name": "人工确认", "type": "page", "status": "done", "skill": "", "runner": "local", "description": "编剧角色默认要求人工确认后才算本步结束。", "x": 436, "y": 144},
+        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "生产稿已在章节上。", "x": 226, "y": 144},
+        {"id": "package", "name": "写回故事包", "type": "action", "status": "todo", "skill": "", "runner": "none", "description": "技能和页面都明确不写故事包，这条没有实现。", "x": 436, "y": 272}
+      ],
+      "edges": [
+        {"id": "s1", "source": "start", "target": "read", "label": "", "type": "next"},
+        {"id": "s2", "source": "read", "target": "style", "label": "", "type": "next"},
+        {"id": "s3", "source": "style", "target": "draft", "label": "", "type": "next"},
+        {"id": "s4", "source": "draft", "target": "save", "label": "", "type": "next"},
+        {"id": "s5", "source": "save", "target": "confirm", "label": "", "type": "next"},
+        {"id": "s6", "source": "confirm", "target": "end", "label": "", "type": "next"},
+        {"id": "s7", "source": "confirm", "target": "package", "label": "不做", "type": "branch"}
+      ]
+    },
+    {
+      "key": "storyboard",
+      "name": "分镜",
+      "description": "大纲和单段扩写都走 cartoon-storyboard-skill，一次只扩一条。",
+      "nodes": [
+        {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "已有生产剧本之后。", "x": 16, "y": 16},
+        {"id": "read", "name": "读取生产剧本", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "没有场次时不能拆。", "x": 226, "y": 16},
+        {"id": "outline", "name": "镜头大纲", "type": "action", "status": "done", "skill": "cartoon-storyboard-skill", "runner": "skill", "description": "action draft，outline_only。一场可以拆成多条，不能少场。", "x": 436, "y": 16},
+        {"id": "gap", "name": "少场补记", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "少场或低于下限时写入 shot_omissions。", "x": 646, "y": 16},
+        {"id": "save", "name": "落库镜头", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "写入 Shot。已有分镜时需要确认后才重拆。", "x": 646, "y": 144},
+        {"id": "expand", "name": "单段扩写", "type": "action", "status": "done", "skill": "cartoon-storyboard-skill", "runner": "skill", "description": "action draft，expand_one。一次一条，供后面写提示词。", "x": 436, "y": 144},
+        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "镜头已落库。", "x": 226, "y": 144}
+      ],
+      "edges": [
+        {"id": "b1", "source": "start", "target": "read", "label": "", "type": "next"},
+        {"id": "b2", "source": "read", "target": "outline", "label": "", "type": "next"},
+        {"id": "b3", "source": "outline", "target": "gap", "label": "", "type": "next"},
+        {"id": "b4", "source": "gap", "target": "save", "label": "", "type": "next"},
+        {"id": "b5", "source": "save", "target": "expand", "label": "", "type": "next"},
+        {"id": "b6", "source": "expand", "target": "end", "label": "", "type": "next"}
+      ]
+    },
+    {
+      "key": "prompt",
+      "name": "镜头提示词",
+      "description": "单段扩写之后写提示词。获取提示词页的视频反推不在这条链上。",
+      "nodes": [
+        {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "针对一条已有镜头。", "x": 16, "y": 16},
+        {"id": "expand", "name": "单段扩写", "type": "action", "status": "done", "skill": "cartoon-storyboard-skill", "runner": "skill", "description": "先把这一条扩写成可用的镜头描述。", "x": 226, "y": 16},
+        {"id": "positive", "name": "视频与首尾帧", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "action draft。要有 positive_zh、frame_start_zh、frame_end_zh。", "x": 436, "y": 16},
+        {"id": "negative", "name": "负向补调", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "负向不够时再调一次。失败只记日志，不中断。", "x": 646, "y": 16},
+        {"id": "av", "name": "是否 AV", "type": "decision", "status": "done", "skill": "", "runner": "local", "description": "只有项目开了 AV 才走封闭提示词技能。", "x": 856, "y": 16},
+        {"id": "avskill", "name": "封闭提示词", "type": "action", "status": "done", "skill": "cartoon-av-prompt-skill", "runner": "skill", "description": "action draft。非 AV 项目跳过。", "x": 1066, "y": 16},
+        {"id": "save", "name": "写回镜头", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "提示词写回这条镜头，不改 Comfy 图。", "x": 856, "y": 144},
+        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "这条镜头的提示词已齐。", "x": 646, "y": 144}
+      ],
+      "edges": [
+        {"id": "p1", "source": "start", "target": "expand", "label": "", "type": "next"},
+        {"id": "p2", "source": "expand", "target": "positive", "label": "", "type": "next"},
+        {"id": "p3", "source": "positive", "target": "negative", "label": "", "type": "next"},
+        {"id": "p4", "source": "negative", "target": "av", "label": "", "type": "next"},
+        {"id": "p5", "source": "av", "target": "avskill", "label": "AV", "type": "branch"},
+        {"id": "p6", "source": "av", "target": "save", "label": "非 AV", "type": "next"},
+        {"id": "p7", "source": "avskill", "target": "save", "label": "", "type": "next"},
+        {"id": "p8", "source": "save", "target": "end", "label": "", "type": "next"}
+      ]
+    },
+    {
+      "key": "assets",
+      "name": "资产",
+      "description": "设定图在全自动里出图。绑定在资产页，同名匹配不走技能，建议走 cartoon-asset-skill。",
+      "nodes": [
+        {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "已有剧本之后。", "x": 16, "y": 16},
+        {"id": "extract", "name": "抽取外形", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "从正文抽人物和场景。不借用别人的头发、眼睛或衣服。", "x": 226, "y": 16},
+        {"id": "sheet", "name": "设定图提示词", "type": "action", "status": "done", "skill": "cartoon-asset-sheet-skill", "runner": "skill", "description": "action draft。只出一张设定总图的生图提示词。", "x": 436, "y": 16},
+        {"id": "render", "name": "设定图出图", "type": "action", "status": "done", "skill": "", "runner": "comfy", "description": "全自动用文生图工作流提交 Comfy。已有设定图则跳过。", "x": 646, "y": 16},
+        {"id": "match", "name": "同名匹配", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "名称出现在镜头里就写入绑定。不调用技能。", "x": 646, "y": 144},
+        {"id": "suggest", "name": "绑定建议", "type": "action", "status": "done", "skill": "cartoon-asset-skill", "runner": "skill", "description": "action suggest。只返回建议，点写入绑定后才落库。不生成图片。", "x": 436, "y": 144},
+        {"id": "apply", "name": "写入绑定", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "把勾选的建议写成镜头绑定。", "x": 226, "y": 144},
+        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "设定图和绑定都可以单独做完。", "x": 16, "y": 144}
+      ],
+      "edges": [
+        {"id": "a1", "source": "start", "target": "extract", "label": "", "type": "next"},
+        {"id": "a2", "source": "extract", "target": "sheet", "label": "", "type": "next"},
+        {"id": "a3", "source": "sheet", "target": "render", "label": "", "type": "next"},
+        {"id": "a4", "source": "render", "target": "match", "label": "", "type": "next"},
+        {"id": "a5", "source": "match", "target": "suggest", "label": "", "type": "next"},
+        {"id": "a6", "source": "suggest", "target": "apply", "label": "", "type": "next"},
+        {"id": "a7", "source": "apply", "target": "end", "label": "", "type": "next"}
+      ]
+    },
+    {
+      "key": "caption",
+      "name": "获取提示词",
+      "description": "项目页反推。整条不走卡通技能，走预检工作流里的视频理解模型。",
+      "nodes": [
+        {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "从项目进入获取提示词。", "x": 16, "y": 16},
+        {"id": "pick", "name": "选择反推工作流", "type": "page", "status": "done", "skill": "", "runner": "comfy", "description": "使用预检里已登记的反推工作流。", "x": 226, "y": 16},
+        {"id": "upload", "name": "上传素材", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "卡片保存上传的视频或图片。", "x": 436, "y": 16},
+        {"id": "limit", "name": "输出上限与帧率", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "输出上限 2048。按真实帧率均匀抽 16 帧。", "x": 646, "y": 16},
+        {"id": "submit", "name": "提交理解模型", "type": "action", "status": "done", "skill": "", "runner": "comfy", "description": "LoadVideo、抽帧、QwenVL。这一步没有卡通 Skill。", "x": 856, "y": 16},
+        {"id": "progress", "name": "总进度与单卡进度", "type": "page", "status": "done", "skill": "", "runner": "local", "description": "右上角是本批总进度。只有正在跑的卡片显示自己的进度。", "x": 856, "y": 144},
+        {"id": "control", "name": "停止清除删除", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "停止只打断这条反推。清除只清空提示词。删除才去掉卡片和文件。", "x": 646, "y": 144},
+        {"id": "save", "name": "写回卡片", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "模型结果写进卡片提示词。", "x": 436, "y": 144},
+        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "反推结果留在获取提示词页。", "x": 226, "y": 144}
+      ],
+      "edges": [
+        {"id": "c1", "source": "start", "target": "pick", "label": "", "type": "next"},
+        {"id": "c2", "source": "pick", "target": "upload", "label": "", "type": "next"},
+        {"id": "c3", "source": "upload", "target": "limit", "label": "", "type": "next"},
+        {"id": "c4", "source": "limit", "target": "submit", "label": "", "type": "next"},
+        {"id": "c5", "source": "submit", "target": "progress", "label": "", "type": "next"},
+        {"id": "c6", "source": "progress", "target": "control", "label": "", "type": "next"},
+        {"id": "c7", "source": "control", "target": "save", "label": "", "type": "next"},
+        {"id": "c8", "source": "save", "target": "end", "label": "", "type": "next"}
+      ]
+    },
+    {
+      "key": "generate",
+      "name": "图生视频",
+      "description": "镜头画面只走预检和 Comfy，没有 Skill。",
+      "nodes": [
+        {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "镜头已有提示词之后。", "x": 16, "y": 16},
+        {"id": "pick", "name": "选择预检工作流", "type": "page", "status": "done", "skill": "", "runner": "comfy", "description": "工作流来自预检，不在这里写死编号。", "x": 226, "y": 16},
+        {"id": "check", "name": "依赖检查", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "提交前检查工作流依赖。", "x": 436, "y": 16},
+        {"id": "submit", "name": "提交 Comfy", "type": "action", "status": "done", "skill": "", "runner": "comfy", "description": "没有 Skill 名。视频角色用本地 Comfy 档位。", "x": 646, "y": 16},
+        {"id": "save", "name": "产物入库", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "成功的画面进入产物。", "x": 856, "y": 16},
+        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "镜头画面已生成。", "x": 1066, "y": 16}
+      ],
+      "edges": [
+        {"id": "g1", "source": "start", "target": "pick", "label": "", "type": "next"},
+        {"id": "g2", "source": "pick", "target": "check", "label": "", "type": "next"},
+        {"id": "g3", "source": "check", "target": "submit", "label": "", "type": "next"},
+        {"id": "g4", "source": "submit", "target": "save", "label": "", "type": "next"},
+        {"id": "g5", "source": "save", "target": "end", "label": "", "type": "next"}
+      ]
+    },
+    {
+      "key": "voice",
+      "name": "配音",
+      "description": "页面上能选音色、改对白、从成片收音。时间轴技能和出音频的接口没有接到这个页面。",
+      "nodes": [
+        {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "工作台配音。", "x": 16, "y": 16},
+        {"id": "library", "name": "音色库", "type": "page", "status": "done", "skill": "", "runner": "local", "description": "只读挂载音色，可搜索、分组和试听样本。", "x": 226, "y": 16},
+        {"id": "lines", "name": "对白", "type": "page", "status": "done", "skill": "", "runner": "local", "description": "可改对白、拆分和新增。", "x": 436, "y": 16},
+        {"id": "assign", "name": "关联音色", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "把选定音色记到勾选的对白上。试听仍是样本，不是这句台词的成片。", "x": 646, "y": 16},
+        {"id": "capture", "name": "收音", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "从已生成的视频抽出音轨，不重新生成画面。", "x": 856, "y": 16},
+        {"id": "timeline", "name": "配音时间轴", "type": "action", "status": "todo", "skill": "cartoon-voice-skill", "runner": "skill", "description": "action draft_timeline 的接口已有。配音页没有按钮。流水线节点默认关闭。", "x": 646, "y": 144},
+        {"id": "audio", "name": "台词成片", "type": "action", "status": "todo", "skill": "", "runner": "none", "description": "有音频档位时接口可以写出音频引用。页面没有入口，技能本身也不返回音频。", "x": 436, "y": 144},
+        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "当前页面停在关联音色和收音。", "x": 856, "y": 144}
+      ],
+      "edges": [
+        {"id": "v1", "source": "start", "target": "library", "label": "", "type": "next"},
+        {"id": "v2", "source": "library", "target": "lines", "label": "", "type": "next"},
+        {"id": "v3", "source": "lines", "target": "assign", "label": "", "type": "next"},
+        {"id": "v4", "source": "assign", "target": "capture", "label": "", "type": "next"},
+        {"id": "v5", "source": "capture", "target": "end", "label": "", "type": "next"},
+        {"id": "v6", "source": "assign", "target": "timeline", "label": "未接页面", "type": "branch"},
+        {"id": "v7", "source": "timeline", "target": "audio", "label": "", "type": "branch"}
+      ]
+    },
+    {
+      "key": "subtitle",
+      "name": "字幕",
+      "description": "按台词和字幕样式排时间轴。没有 Skill。节点默认关闭，没打开时不能排。",
+      "nodes": [
+        {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "工作台字幕。", "x": 16, "y": 16},
+        {"id": "build", "name": "按台词排时间轴", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "用镜头台词和已登记的字幕样式写进字幕轨。不调用技能。节点未启用时会拒绝。", "x": 226, "y": 16},
+        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "字幕在剪辑时间轴上。", "x": 436, "y": 16}
+      ],
+      "edges": [
+        {"id": "u1", "source": "start", "target": "build", "label": "", "type": "next"},
+        {"id": "u2", "source": "build", "target": "end", "label": "", "type": "next"}
+      ]
+    },
+    {
+      "key": "review",
+      "name": "初审",
+      "description": "技能只列问题。通过或驳回仍走人工确认。节点默认关闭。",
+      "nodes": [
+        {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "工作台初审。", "x": 16, "y": 16},
+        {"id": "suggest", "name": "技能建议", "type": "action", "status": "done", "skill": "cartoon-review-skill", "runner": "skill", "description": "action review_cut。节点或档位没开时不能调用。建议先不落库。", "x": 226, "y": 16},
+        {"id": "apply", "name": "记下问题", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "确认后把问题写入审核记录。不能代替人工通过或驳回。", "x": 436, "y": 16},
+        {"id": "confirm", "name": "人工确认", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "流水线里的锁定节点，通过或驳回在这里。", "x": 646, "y": 16},
+        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "初审问题已记录。", "x": 856, "y": 16}
+      ],
+      "edges": [
+        {"id": "r1", "source": "start", "target": "suggest", "label": "", "type": "next"},
+        {"id": "r2", "source": "suggest", "target": "apply", "label": "", "type": "next"},
+        {"id": "r3", "source": "apply", "target": "confirm", "label": "", "type": "next"},
+        {"id": "r4", "source": "confirm", "target": "end", "label": "", "type": "next"}
+      ]
+    },
+    {
+      "key": "compose",
+      "name": "合成导出",
+      "description": "剪辑、预览和导出都在本地完成，不走 Skill。",
+      "nodes": [
+        {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "已有镜头画面之后。", "x": 16, "y": 16},
+        {"id": "edit", "name": "时间线剪辑", "type": "action", "status": "done", "skill": "", "runner": "ffmpeg", "description": "本地剪辑轨。", "x": 226, "y": 16},
+        {"id": "preview", "name": "预览播放", "type": "page", "status": "done", "skill": "", "runner": "local", "description": "按时间轴预览。", "x": 436, "y": 16},
+        {"id": "export", "name": "导出成片", "type": "action", "status": "done", "skill": "", "runner": "ffmpeg", "description": "导出节点锁定且默认启用。", "x": 646, "y": 16},
+        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "成片已导出。", "x": 856, "y": 16}
+      ],
+      "edges": [
+        {"id": "e1", "source": "start", "target": "edit", "label": "", "type": "next"},
+        {"id": "e2", "source": "edit", "target": "preview", "label": "", "type": "next"},
+        {"id": "e3", "source": "preview", "target": "export", "label": "", "type": "next"},
+        {"id": "e4", "source": "export", "target": "end", "label": "", "type": "next"}
+      ]
+    },
+    {
+      "key": "auto",
+      "name": "全自动",
+      "description": "全自动只跑六步：剧本、设定图、分镜、提示词、确认工作流、生成镜头。配音、字幕、初审不在里面。",
+      "nodes": [
+        {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "工作台全自动。", "x": 16, "y": 16},
+        {"id": "script", "name": "剧本", "type": "action", "status": "done", "skill": "cartoon-script-skill", "runner": "skill", "description": "没有生产稿时生成剧本。", "x": 226, "y": 16},
+        {"id": "assets", "name": "设定图", "type": "action", "status": "done", "skill": "cartoon-asset-sheet-skill", "runner": "skill", "description": "补齐还没有设定图的人物和场景，再交 Comfy 出图。", "x": 436, "y": 16},
+        {"id": "board", "name": "分镜", "type": "action", "status": "done", "skill": "cartoon-storyboard-skill", "runner": "skill", "description": "没有镜头时拆大纲并落库。", "x": 646, "y": 16},
+        {"id": "prompts", "name": "提示词", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "逐镜扩写并写提示词。AV 项目还会走 cartoon-av-prompt-skill。", "x": 856, "y": 16},
+        {"id": "workflow", "name": "确认工作流", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "把选定的视频工作流写到每条镜头。", "x": 856, "y": 144},
+        {"id": "video", "name": "生成镜头", "type": "action", "status": "done", "skill": "", "runner": "comfy", "description": "按工作流提交 Comfy。", "x": 646, "y": 144},
+        {"id": "later", "name": "配音字幕初审", "type": "action", "status": "todo", "skill": "", "runner": "none", "description": "全自动的节点只有剧本、资产、分镜、提示词、工作流、镜头。这三项不在里面。", "x": 646, "y": 272},
+        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "全自动停在镜头生成。", "x": 226, "y": 144}
+      ],
+      "edges": [
+        {"id": "f1", "source": "start", "target": "script", "label": "", "type": "next"},
+        {"id": "f2", "source": "script", "target": "assets", "label": "", "type": "next"},
+        {"id": "f3", "source": "assets", "target": "board", "label": "", "type": "next"},
+        {"id": "f4", "source": "board", "target": "prompts", "label": "", "type": "next"},
+        {"id": "f5", "source": "prompts", "target": "workflow", "label": "", "type": "next"},
+        {"id": "f6", "source": "workflow", "target": "video", "label": "", "type": "next"},
+        {"id": "f7", "source": "video", "target": "end", "label": "", "type": "next"},
+        {"id": "f8", "source": "video", "target": "later", "label": "未接入", "type": "branch"}
+      ]
+    },
+    {
+      "key": "extra",
+      "name": "附加节点",
+      "description": "各内容类型目录里的节点。加上并启用后只做检查。章节解析的建议才调技能，而且不落库。全自动不会跑它们。",
+      "nodes": [
+        {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "从节点配置里添加的目录项。", "x": 16, "y": 16},
+        {"id": "gate", "name": "加入并启用", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "没加进流水线或没启用时不能跑。", "x": 226, "y": 16},
+        {"id": "chapter", "name": "章节解析建议", "type": "action", "status": "done", "skill": "cartoon-script-skill", "runner": "skill", "description": "只有章节解析并且点了建议时才调 draft。", "x": 436, "y": 16},
+        {"id": "nowrite", "name": "建议不写入", "type": "action", "status": "todo", "skill": "", "runner": "none", "description": "建议返回后明确不落库。", "x": 646, "y": 16},
+        {"id": "fields", "name": "目录字段检查", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "角色、画风、集数资产、批量，以及科普、短剧、带货的字段，只检查缺不缺。", "x": 226, "y": 144},
+        {"id": "chain", "name": "未进全自动", "type": "action", "status": "todo", "skill": "", "runner": "none", "description": "固定节点和全自动都不会自动跑这些附加项。", "x": 436, "y": 144},
+        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "检查结果停在审核记录或建议里。", "x": 646, "y": 144}
+      ],
+      "edges": [
+        {"id": "x1", "source": "start", "target": "gate", "label": "", "type": "next"},
+        {"id": "x2", "source": "gate", "target": "chapter", "label": "章节解析", "type": "branch"},
+        {"id": "x3", "source": "chapter", "target": "nowrite", "label": "", "type": "next"},
+        {"id": "x4", "source": "gate", "target": "fields", "label": "其他目录项", "type": "next"},
+        {"id": "x5", "source": "fields", "target": "chain", "label": "", "type": "next"},
+        {"id": "x6", "source": "chain", "target": "end", "label": "", "type": "branch"},
+        {"id": "x7", "source": "nowrite", "target": "end", "label": "不落库", "type": "branch"}
+      ]
+    }
+  ]
+}

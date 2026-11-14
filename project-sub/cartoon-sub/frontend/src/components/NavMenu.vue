@@ -16,6 +16,7 @@
       background-color="transparent"
       text-color="#2c4336"
       active-text-color="#2f8a5b"
+      :default-openeds="['pipelines']"
       router
     >
       <el-menu-item index="/projects">
@@ -30,10 +31,14 @@
         <el-icon><Collection /></el-icon>
         <span>模板</span>
       </el-menu-item>
-      <el-menu-item index="/pipelines">
-        <el-icon><Operation /></el-icon>
-        <span>流水线</span>
-      </el-menu-item>
+      <el-sub-menu index="pipelines" popper-class="cartoon-pipeline-popper">
+        <template #title>
+          <el-icon><Operation /></el-icon>
+          <span>流水线</span>
+        </template>
+        <el-menu-item index="/pipelines/config">节点配置</el-menu-item>
+        <el-menu-item index="/pipelines/map">流水线图谱</el-menu-item>
+      </el-sub-menu>
       <el-menu-item index="/rules">
         <el-icon><Notebook /></el-icon>
         <span>规则</span>
@@ -86,10 +91,14 @@
       <el-icon><Collection /></el-icon>
       <span>模板</span>
     </el-menu-item>
-    <el-menu-item index="/pipelines">
-      <el-icon><Operation /></el-icon>
-      <span>流水线</span>
-    </el-menu-item>
+    <el-sub-menu index="pipelines" popper-class="cartoon-pipeline-popper">
+      <template #title>
+        <el-icon><Operation /></el-icon>
+        <span>流水线</span>
+      </template>
+      <el-menu-item index="/pipelines/config">节点配置</el-menu-item>
+      <el-menu-item index="/pipelines/map">流水线图谱</el-menu-item>
+    </el-sub-menu>
     <el-menu-item index="/rules">
       <el-icon><Notebook /></el-icon>
       <span>规则</span>
@@ -131,5 +140,11 @@ defineProps({ embedded: { type: Boolean, default: false } });
 const route = useRoute();
 const { collapsed, toggleCollapsed } = useNavCollapse();
 const asideWidth = computed(() => (collapsed.value ? '64px' : '220px'));
-const active = computed(() => (route.path.startsWith('/projects') ? '/projects' : route.path));
+const active = computed(() => {
+  const path = route.path;
+  if (path.startsWith('/projects')) return '/projects';
+  if (path.startsWith('/pipelines/map')) return '/pipelines/map';
+  if (path.startsWith('/pipelines')) return '/pipelines/config';
+  return path;
+});
 </script>

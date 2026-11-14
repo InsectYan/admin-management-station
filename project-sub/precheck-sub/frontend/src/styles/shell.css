@@ -54,7 +54,29 @@
 }
 .precheck-module__title { margin: 0 0 12px; font-size: 15px; font-weight: 600; color: #1f3d2c; }
 .precheck-pager { flex: none; margin-top: 12px; justify-content: flex-end; }
-.precheck-sub-root .el-button--primary {
+.precheck-sub-root .el-button--primary:not(.is-link):not(.is-text),
+.precheck-sub-root .el-button--primary:not(.is-link):not(.is-text):hover,
+.precheck-sub-root .el-button--primary:not(.is-link):not(.is-text):focus,
+.precheck-sub-root .el-button--primary:not(.is-link):not(.is-text):active,
+.precheck-sub-root .el-button--primary.is-plain:not(.is-link):not(.is-text),
+.precheck-sub-root .el-button--primary.is-plain:not(.is-link):not(.is-text):hover,
+.precheck-sub-root .el-button--primary.is-plain:not(.is-link):not(.is-text):focus,
+.precheck-sub-root .el-button--primary.is-plain:not(.is-link):not(.is-text):active {
+  --el-button-text-color: #fff;
   --el-button-bg-color: #2f8a5b;
   --el-button-border-color: #2f8a5b;
+  --el-button-hover-text-color: #fff;
+  --el-button-hover-bg-color: #27764e;
+  --el-button-hover-border-color: #27764e;
+  --el-button-active-text-color: #fff;
+  --el-button-active-bg-color: #1f5c3d;
+  --el-button-active-border-color: #1f5c3d;
+  --el-button-disabled-text-color: rgba(255, 255, 255, 0.92);
+  --el-button-disabled-bg-color: #9dccb4;
+  --el-button-disabled-border-color: #9dccb4;
+  color: var(--el-button-text-color);
+}
+.precheck-sub-root .el-button--primary.is-disabled:not(.is-link):not(.is-text),
+.precheck-sub-root .el-button--primary.is-plain.is-disabled:not(.is-link):not(.is-text) {
+  color: rgba(255, 255, 255, 0.92);
 }
