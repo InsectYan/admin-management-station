@@ -352,6 +352,16 @@
 .cartoon-sub-root .cartoon-asset-mark.is-have { color: #1f7a45; background: #e7f6ee; }
 .cartoon-sub-root .cartoon-asset-mark.is-miss { color: #c45656; background: #fdecec; }
 
+.cartoon-body-dialog.el-dialog {
+  max-height: 50vh;
+  display: flex;
+  flex-direction: column;
+}
+.cartoon-body-dialog.el-dialog .el-dialog__body {
+  overflow: auto;
+  min-height: 0;
+}
+
 .el-popper[role='tooltip']:not(.el-select__popper):not(.el-dropdown__popper):not(.el-picker__popper):not(.el-cascader__dropdown):not(.el-autocomplete__popper) {
   max-width: 300px !important;
   box-sizing: border-box;

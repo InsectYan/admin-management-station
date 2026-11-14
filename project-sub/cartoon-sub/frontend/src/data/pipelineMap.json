@@ -9,7 +9,7 @@
       "nodes": [
         {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "工作台入口。", "x": 16, "y": 16},
         {"id": "input", "name": "输入与绑定", "type": "page", "status": "done", "skill": "", "runner": "local", "description": "钉扎章节或本地文案。流水线里这是锁定节点。", "x": 226, "y": 16},
-        {"id": "script", "name": "剧本", "type": "action", "status": "done", "skill": "cartoon-script-skill", "runner": "skill", "description": "AI 漫剧走技能 draft。科普等本地文案类型改成本地，不调技能。", "x": 436, "y": 16},
+        {"id": "script", "name": "剧本", "type": "action", "status": "done", "skill": "cartoon-script-skill", "runner": "skill", "description": "AI 漫剧走技能 draft。定稿检查不过不保存。科普等本地文案类型改成本地，不调技能。", "x": 436, "y": 16},
         {"id": "storyboard", "name": "镜头", "type": "action", "status": "done", "skill": "cartoon-storyboard-skill", "runner": "skill", "description": "先拆大纲再单段扩写，和镜头页共用同一批镜头。", "x": 646, "y": 16},
         {"id": "assets", "name": "资产", "type": "action", "status": "done", "skill": "cartoon-asset-sheet-skill", "runner": "skill", "description": "设定图走设定图技能再交 Comfy。绑定另有同名匹配和 cartoon-asset-skill。", "x": 856, "y": 16},
         {"id": "prompt", "name": "镜头提示词", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "写出视频、首帧、尾帧。AV 项目再走 cartoon-av-prompt-skill。", "x": 1066, "y": 16},
@@ -54,7 +54,7 @@
         {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "工作台剧本。", "x": 16, "y": 16},
         {"id": "read", "name": "读取章节", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "读取已钉扎章节的标题和正文。", "x": 226, "y": 16},
         {"id": "style", "name": "风格与生产输入", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "带上视觉风格、是否修仙和生产输入。", "x": 436, "y": 16},
-        {"id": "draft", "name": "剧本 draft", "type": "action", "status": "done", "skill": "cartoon-script-skill", "runner": "skill", "description": "action draft。必须返回场次，否则失败。本地文案类型不走这一步。", "x": 646, "y": 16},
+        {"id": "draft", "name": "剧本 draft", "type": "action", "status": "done", "skill": "cartoon-script-skill", "runner": "skill", "description": "action draft。对白、地点标题、外形和场次功能不过检就重写一次，仍不过则失败。本地文案类型不走这一步。", "x": 646, "y": 16},
         {"id": "save", "name": "落库生产稿", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "写入章节的 script_data 和人物，不写故事包。", "x": 646, "y": 144},
         {"id": "confirm", "name": "人工确认", "type": "page", "status": "done", "skill": "", "runner": "local", "description": "编剧角色默认要求人工确认后才算本步结束。", "x": 436, "y": 144},
         {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "生产稿已在章节上。", "x": 226, "y": 144},

@@ -66,31 +66,67 @@
       </div>
       <div class="cartoon-module">
         <h3 class="cartoon-module__title">已有快照</h3>
-        <el-empty v-if="!liveImports.length" description="还没有章节快照" />
-        <el-card v-for="item in liveImports" :key="item.id" shadow="never" class="cartoon-snap">
-          <strong>{{ item.chapter_title || '未命名章节' }}</strong>
-          <el-tag v-if="item.legacy_unpinned" size="small" class="cartoon-status-tag">未钉扎</el-tag>
-          <el-tag v-else-if="item.package_version" size="small" type="success">故事包 v{{ item.package_version }}</el-tag>
-          <div class="cartoon-snap__body" :class="{ 'is-open': snapOpen[item.id] }">
-            <CartoonMarkdown prose :source="item.body" empty-text="还没有正文" />
-            <CartoonMarkdown v-if="item.script_data && item.script_data.summary" :source="item.script_data.summary" />
-          </div>
-          <el-button link type="primary" @click="snapOpen[item.id] = !snapOpen[item.id]">{{ snapOpen[item.id] ? '收起' : '展开' }}</el-button>
-          <div class="cartoon-snap__actions">
-            <el-button type="primary" :disabled="!canMake() || autoModeId === item.id || flowBusy" :loading="draftingId === item.id" @click="generateScript(item)">生成剧本</el-button>
-            <el-button-group>
-              <el-button :disabled="!canMake() || autoModeId === item.id || flowBusy" title="从剧本一直做到视频" @click="runFullAuto(item)">全流程</el-button>
-              <el-button type="primary" :disabled="!canMake() || flowBusy" :loading="autoModeId === item.id" title="先生成剧本，再按剧本拆分分镜" @click="runSemiAuto(item)">到分镜</el-button>
-            </el-button-group>
-            <el-button
-              v-if="hasScript(item)"
-              type="primary"
-              plain
-              @click="openScriptPage(item)"
-            >查看剧本</el-button>
-            <el-button type="danger" plain :disabled="!canMake()" @click="removeSnapshot(item)">删除快照</el-button>
-          </div>
-        </el-card>
+        <el-table :data="liveImports" row-key="id" class="cartoon-snap-table" empty-text="还没有章节快照">
+          <el-table-column label="章节名称" min-width="180">
+            <template #default="{ row }">
+              <div class="cartoon-snap-title">
+                <span>{{ row.chapter_title || '未命名章节' }}</span>
+                <el-tag v-if="row.legacy_unpinned" size="small" class="cartoon-status-tag">未钉扎</el-tag>
+                <el-tag v-else-if="row.package_version" size="small" type="success">故事包 v{{ row.package_version }}</el-tag>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="章节内容" width="240" class-name="cartoon-chapter-cell">
+            <template #default="{ row }">
+              <button type="button" class="cartoon-chapter-clamp" @click="openChapterBody(row)">{{ chapterPreview(row.body) || '还没有正文' }}</button>
+            </template>
+          </el-table-column>
+          <el-table-column label="是否已有剧本" width="120">
+            <template #default="{ row }">{{ hasScript(row) ? '有' : '无' }}</template>
+          </el-table-column>
+          <el-table-column label="场次数" width="88">
+            <template #default="{ row }">{{ sceneCount(row) }}</template>
+          </el-table-column>
+          <el-table-column label="分镜数" width="88">
+            <template #default="{ row }">{{ shotCountOf(row) }}</template>
+          </el-table-column>
+          <el-table-column width="130">
+            <template #header>
+              <span class="cartoon-col-hint">视频产物
+                <el-tooltip content="左边是已有视频的镜头数，右边是该章节的镜头数。一个镜头有多条视频只计 1。" placement="top">
+                  <el-icon><QuestionFilled /></el-icon>
+                </el-tooltip>
+              </span>
+            </template>
+            <template #default="{ row }">{{ productRatio(row, 'video') }}</template>
+          </el-table-column>
+          <el-table-column width="130">
+            <template #header>
+              <span class="cartoon-col-hint">图片产物
+                <el-tooltip content="左边是已有图片的镜头数，右边是该章节的镜头数。一个镜头有多张图片只计 1。" placement="top">
+                  <el-icon><QuestionFilled /></el-icon>
+                </el-tooltip>
+              </span>
+            </template>
+            <template #default="{ row }">{{ productRatio(row, 'image') }}</template>
+          </el-table-column>
+          <el-table-column label="执行中任务" min-width="140">
+            <template #default="{ row }">{{ runningLabel(row) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="460" fixed="right" class-name="cartoon-ops-cell">
+            <template #default="{ row }">
+              <div class="cartoon-snap__actions">
+                <el-button type="primary" :disabled="!canMake() || autoModeId === row.id || flowBusy" :loading="draftingId === row.id" @click="generateScript(row)">生成剧本</el-button>
+                <el-button-group>
+                  <el-button :disabled="!canMake() || autoModeId === row.id || flowBusy" title="从剧本一直做到视频" @click="runFullAuto(row)">全流程</el-button>
+                  <el-button type="primary" :disabled="!canMake() || flowBusy" :loading="autoModeId === row.id" title="先生成剧本，再按剧本拆分分镜" @click="runSemiAuto(row)">到分镜</el-button>
+                </el-button-group>
+                <el-button v-if="hasScript(row)" type="primary" plain @click="openScriptPage(row)">查看剧本</el-button>
+                <el-button type="danger" plain :disabled="!canMake()" @click="removeSnapshot(row)">删除快照</el-button>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
       </div>
     </section>
 
@@ -152,6 +188,7 @@
                   <h4>概要</h4>
                   <el-button :disabled="!canMake()" @click="openScriptEdit">编辑</el-button>
                 </div>
+                <p v-if="activeScriptData.logline" class="cartoon-script__note">{{ activeScriptData.logline }}</p>
                 <CartoonMarkdown :source="activeScriptData.summary || ''" empty-text="还没有概要" />
                 <div class="cartoon-board__head">
                   <el-button :disabled="!canMake()" @click="openRoster('character')">新增人物</el-button>
@@ -186,6 +223,7 @@
                 <el-empty v-if="!(activeScriptData.scenes || []).length" description="还没有场次" />
                 <div v-for="(scene, index) in (activeScriptData.scenes || [])" :key="`${scene.title}-${index}`" class="cartoon-script__scene">
                   <strong>{{ index + 1 }}. {{ scene.title || '未命名场次' }}</strong>
+                  <span v-if="scene.purpose" class="cartoon-script__note">{{ scene.purpose }}</span>
                   <CartoonMarkdown :source="scene.summary || ''" />
                 </div>
               </el-tab-pane>
@@ -607,6 +645,9 @@
         <el-button type="primary" :disabled="!canMake()" @click="submitPromote">提交</el-button>
       </template>
     </el-dialog>
+    <el-dialog v-model="chapterBodyOpen" class="cartoon-dialog cartoon-body-dialog" :title="chapterBodyTitle" width="70%" append-to-body>
+      <CartoonMarkdown prose :source="chapterBodyText" empty-text="还没有正文" />
+    </el-dialog>
     <el-drawer v-model="scriptEditOpen" title="编辑概要" size="640px" append-to-body>
       <el-form label-position="top">
         <p style="margin: 0 0 12px; color: #5c6b62; font-size: 13px">点保存时，镜头里空着的说明和工作流会按这里补上。点重置时，这一快照里的全部镜头改成当前说明；选了工作流就连工作流一起改。这次的类型和工作流选择不会留在概览上。</p>
@@ -653,7 +694,7 @@
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Loading } from '@element-plus/icons-vue';
+import { Loading, QuestionFilled } from '@element-plus/icons-vue';
 import PageShell from '../components/PageShell.vue';
 import FlowSteps from '../components/FlowSteps.vue';
 import NovelBriefPanel from '../components/NovelBriefPanel.vue';
@@ -675,6 +716,7 @@ const props = defineProps({
   navTarget: { type: String, default: '' },
   launchShotId: { type: String, default: '' },
   pipelineRunning: { type: Boolean, default: false },
+  pipelineRun: { type: Object, default: null },
 });
 const route = useRoute();
 const router = useRouter();
@@ -774,7 +816,10 @@ const autoModeId = ref(null);
 const outliningId = ref(null);
 const expandingKey = ref('');
 const selectedImportKey = ref('');
-const snapOpen = reactive({});
+const chapterBodyOpen = ref(false);
+const chapterBodyTitle = ref('');
+const chapterBodyText = ref('');
+const LIVE_TASK = new Set([ 'queued', 'running', 'saving' ]);
 const generateOpen = ref(false);
 const generateShotId = ref('');
 const runMark = autoRunMark(projectKey());
@@ -928,6 +973,59 @@ function openRecord(item) {
 const liveImports = computed(() => (detail.value?.imports || []).filter(item => !item.deleted_at));
 function hasScript(item) {
   return Boolean(item?.script_data?.scenes?.length);
+}
+function chapterPreview(body) {
+  return String(body || '').replace(/\s+/g, ' ').trim();
+}
+function openChapterBody(row) {
+  chapterBodyTitle.value = row?.chapter_title || '未命名章节';
+  chapterBodyText.value = String(row?.body || '');
+  chapterBodyOpen.value = true;
+}
+function sceneCount(row) {
+  const scenes = row?.script_data?.scenes;
+  return Array.isArray(scenes) ? scenes.length : 0;
+}
+function shotsOf(row) {
+  return (detail.value?.shots || []).filter(shot => String(shot.import_id) === String(row?.id));
+}
+function shotCountOf(row) {
+  return shotsOf(row).length;
+}
+function productRatio(row, kind) {
+  const shots = shotsOf(row);
+  const covered = new Set();
+  const shotIds = new Set(shots.map(shot => String(shot.id)));
+  (detail.value?.tasks || []).forEach(task => {
+    const shotId = String(task.shot_id || '');
+    if (!shotIds.has(shotId)) return;
+    const outputs = Array.isArray(task.outputs) ? task.outputs : [];
+    const hit = outputs.some(item => item.media_kind === kind && item.file_path);
+    if (hit) covered.add(shotId);
+  });
+  if (kind === 'image') {
+    shots.forEach(shot => {
+      if (shot.first_frame_path || shot.manual_frame_path) covered.add(String(shot.id));
+    });
+  }
+  return `${covered.size}/${shots.length}`;
+}
+function runningLabel(row) {
+  const parts = [];
+  if (String(draftingId.value || '') === String(row.id)) parts.push('正在生成剧本');
+  if (String(autoModeId.value || '') === String(row.id)) parts.push('正在到分镜');
+  if (String(outliningId.value || '') === String(row.id) && String(autoModeId.value || '') !== String(row.id)) parts.push('正在拆分分镜');
+  const run = props.pipelineRun;
+  if (run?.status === 'running' && String(run.import_id || '') === String(row.id)) parts.push(run.message || '全流程执行中');
+  const shotIds = new Set(shotsOf(row).map(shot => String(shot.id)));
+  const tasks = (detail.value?.tasks || []).filter(task => shotIds.has(String(task.shot_id || '')) && LIVE_TASK.has(task.status));
+  const video = tasks.filter(task => task.kind === 'video' || task.kind === 'i2v').length;
+  const image = tasks.filter(task => task.kind === 'image' || task.kind === 'edit').length;
+  const other = tasks.length - video - image;
+  if (video) parts.push(video > 1 ? `视频执行中 ${video}` : '视频执行中');
+  if (image) parts.push(image > 1 ? `图片执行中 ${image}` : '图片执行中');
+  if (other > 0) parts.push(other > 1 ? `执行中 ${other}` : '执行中');
+  return parts.length ? parts.join('、') : '-';
 }
 const scriptBoardItems = computed(() => {
   const shots = detail.value?.shots || [];
@@ -2490,9 +2588,27 @@ onUnmounted(() => {
   row-gap: 0;
 }
 .cartoon-coverage { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
-.cartoon-snap { margin-bottom: 12px; }
-.cartoon-snap__body { max-height: 100px; overflow: hidden; }
-.cartoon-snap__body.is-open { max-height: none; overflow: visible; }
+.cartoon-snap-table { width: 100%; }
+.cartoon-snap-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cartoon-snap-table :deep(.cartoon-chapter-cell .cell) { overflow: hidden; }
+.cartoon-snap-table :deep(.cartoon-ops-cell .cell) { white-space: normal; line-height: 1.4; }
+.cartoon-chapter-clamp {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1f3d2c;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.cartoon-chapter-clamp:hover { color: #2f8a5b; }
+.cartoon-col-hint { display: inline-flex; align-items: center; gap: 4px; }
+.cartoon-col-hint .el-icon { color: #5c6b62; cursor: help; }
 .cartoon-missing { color: #c45656; margin-left: 8px; font-size: 12px; }
 .cartoon-script-tabs { flex: 1 1 auto; min-height: 280px; display: flex; flex-direction: column; }
 .cartoon-script-tabs :deep(.el-tabs__content) { flex: 1 1 auto; min-height: 240px; overflow: auto; }

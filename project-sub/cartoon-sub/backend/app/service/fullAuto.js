@@ -7,6 +7,8 @@ const { invokeSkill } = require('../lib/agentProxy');
 const { cancelProject } = require('../lib/activeRuns');
 const { outputRoot, resolveInside } = require('../lib/mediaPaths');
 const { ownPassage, sceneIsSparse, polishSheetPrompt } = require('../lib/assetExcerpt');
+const { settleScript } = require('../lib/scriptGate');
+const { minStoryUnits } = require('../lib/storyCoverage');
 
 const NODE_KEYS = [ 'script', 'assets', 'storyboard', 'prompts', 'workflow', 'video' ];
 const NODE_LABEL = {
@@ -455,6 +457,11 @@ class FullAutoService extends Service {
     const current = await this.ctx.model.Import.findByPk(run.import_id);
     const existing = current?.script_data?.scenes;
     if (!run.fresh && Array.isArray(existing) && existing.length) {
+      const source = String(current.body || '');
+      const settled = settleScript(current.script_data, source, minStoryUnits(source.length));
+      if (settled.issues.length) {
+        throw new Error(`已有剧本还不能往下做。${settled.issues.slice(0, 3).join('；')}。请重新生成剧本`);
+      }
       await this.pushLog(run, 'script', `已有剧本，${existing.length} 场`);
       return;
     }

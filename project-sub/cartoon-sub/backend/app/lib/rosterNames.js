@@ -29,11 +29,20 @@ function characterTag(raw) {
   return { name: left, note: right };
 }
 
-function placeTag(raw) {
+function sceneHeading(raw) {
   let text = String(raw || '').trim();
   text = text.replace(/^第\s*\d+\s*场(补充)?[：:]\s*/, '');
+  const slug = text.match(/^((?:内|外)(?:景)?·[^·/／]+·(?:晨|日|昏|夜))/);
+  if (slug) return slug[1];
   const cut = text.split(/\s*[-—–－]\s*/)[0].trim();
   return cut || text;
+}
+
+function placeTag(raw) {
+  const heading = sceneHeading(raw);
+  const slug = heading.match(/^(?:内|外)(?:景)?·([^·/／]+)·(?:晨|日|昏|夜)$/);
+  if (slug) return slug[1].trim();
+  return heading;
 }
 
 function normalizeScript(script) {
@@ -53,7 +62,7 @@ function normalizeScript(script) {
   }).filter(Boolean);
   const scenes = (Array.isArray(data.scenes) ? data.scenes : []).map(scene => ({
     ...scene,
-    title: placeTag(scene?.title || scene?.name),
+    title: sceneHeading(scene?.title || scene?.name),
   }));
   const seen = new Set();
   const places = [];
@@ -68,6 +77,7 @@ function normalizeScript(script) {
 
 module.exports = {
   characterTag,
+  sceneHeading,
   placeTag,
   normalizeScript,
 };

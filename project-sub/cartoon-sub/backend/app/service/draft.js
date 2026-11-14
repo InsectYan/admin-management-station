@@ -15,6 +15,7 @@ const {
   serializeCameraMoves,
 } = require('../lib/cartoonMeta');
 const { minStoryUnits, normalizeOmissions, uncoveredScenes } = require('../lib/storyCoverage');
+const { settleScript } = require('../lib/scriptGate');
 const { normalizeScript, placeTag } = require('../lib/rosterNames');
 const { uniquePrompt } = require('../lib/promptText');
 const { begin, finish } = require('../lib/activeRuns');
@@ -55,6 +56,11 @@ function coveredPlaceNames(script, description) {
 
 function skillTimeout(ctx) {
   return Number(ctx.app.config.agentPlatform?.timeoutMs) || 960000;
+}
+
+function lockIssues(script, body) {
+  const source = String(body || '');
+  return settleScript(script, source, minStoryUnits(source.length));
 }
 
 function clampDurationSec(value, fallback = 10) {
@@ -144,18 +150,18 @@ class DraftService extends Service {
     const scriptData = scriptOutput.script_data;
     if (!scriptData || !Array.isArray(scriptData.scenes) || !scriptData.scenes.length) {
       const reply = String(scriptOutput.reply || scriptOutput.summary || '').replace(/\s+/g, ' ').trim();
-      this.ctx.throw(502, reply ? `剧本没有返回场次。${reply.slice(0, 160)}` : '剧本没有返回场次');
+      this.ctx.throw(502, reply ? `剧本没有定稿。${reply.slice(0, 240)}` : '剧本没有定稿');
     }
-    const omissions = normalizeOmissions(scriptData.omissions);
-    if (scriptData.scenes.length < minScenes && !omissions.length) {
-      omissions.push({
-        target: '场次',
-        reason: `本章约 ${bodyLen} 字，场次下限是 ${minScenes}，本次只写出 ${scriptData.scenes.length} 场，其余情节被合并或删掉。`,
-      });
+    const settled = lockIssues(scriptData, chapter.body);
+    if (settled.issues.length) {
+      this.ctx.throw(502, `剧本没有定稿。${settled.issues.slice(0, 4).join('；')}`);
     }
-    scriptData.omissions = omissions;
-    scriptData.shot_omissions = [];
-    const named = normalizeScript(scriptData);
+    const named = normalizeScript({
+      ...settled.script,
+      accepted: true,
+      reject_reasons: [],
+      shot_omissions: [],
+    });
     await chapter.update({
       script_data: { ...named, shot_omissions: [] },
       characters: named.characters || [],
@@ -170,10 +176,19 @@ class DraftService extends Service {
 
   async applyScript(projectId, importId, payload) {
     const { chapter } = await this.load(projectId, importId);
-    const scriptData = normalizeScript(payload.script_data);
-    if (!scriptData || !Array.isArray(scriptData.scenes) || !scriptData.scenes.length) {
+    const incoming = payload.script_data;
+    if (!incoming || !Array.isArray(incoming.scenes) || !incoming.scenes.length) {
       this.ctx.throw(400, '需要场次');
     }
+    const settled = lockIssues(incoming, chapter.body);
+    if (settled.issues.length) {
+      this.ctx.throw(400, `剧本还不能保存。${settled.issues.slice(0, 4).join('；')}`);
+    }
+    const scriptData = normalizeScript({
+      ...settled.script,
+      accepted: true,
+      reject_reasons: [],
+    });
     await chapter.update({
       script_data: { ...scriptData, shot_omissions: [] },
       characters: scriptData.characters || [],
@@ -210,20 +225,22 @@ class DraftService extends Service {
     if (existing.length && !replace) {
       this.ctx.throw(409, '该快照已有分镜，请确认后重新拆分');
     }
+    const settled = lockIssues(scriptData, chapter.body);
+    if (settled.issues.length) {
+      this.ctx.throw(400, `剧本还不能交给分镜。${settled.issues.slice(0, 4).join('；')}`);
+    }
     const styleCtx = await this.styleContext(project, chapter);
-    const bodyLen = String(chapter.body || '').length;
-    const minShots = Math.max(minStoryUnits(bodyLen), scriptData.scenes.length);
+    const minShots = Math.max(1, settled.script.scenes.length);
     const boardResult = await invokeSkill(this.ctx, {
       skill: 'cartoon-storyboard-skill',
       action: 'draft',
       timeoutMs: skillTimeout(this.ctx),
       signal,
       payload: {
-        script_data: scriptData,
+        script_data: settled.script,
         outline_only: true,
         ...styleCtx,
         ...productionInput(project),
-        body: chapter.body,
         min_shots: minShots,
       },
     });
@@ -240,8 +257,9 @@ class DraftService extends Service {
       dialogue: String(item.dialogue || '').trim(),
     })).filter(item => item.coverage);
     if (!outline.length) this.ctx.throw(502, '没有有效镜头大纲');
+    const locked = settled.script;
     const shotOmissions = normalizeOmissions(boardOutput.omissions);
-    const missingScenes = uncoveredScenes(scriptData.scenes, outline.map(item => ({
+    const missingScenes = uncoveredScenes(locked.scenes, outline.map(item => ({
       description: item.coverage,
       scene_index: item.scene_index,
     })));
@@ -250,19 +268,19 @@ class DraftService extends Service {
         target: missingScenes.map(item => `第${item.index}场`).join('、'),
         reason: `${missingScenes.map(item => `第${item.index}场${item.title ? `「${item.title}」` : ''}`).join('、')}没有单独的镜头，被并进了其他场。一场可以拆成多条镜头，但不能少场。`,
       });
-    } else if (outline.length < scriptData.scenes.length && !shotOmissions.length) {
+    } else if (outline.length < locked.scenes.length && !shotOmissions.length) {
       shotOmissions.push({
         target: '分镜',
-        reason: `剧本有 ${scriptData.scenes.length} 场，本次只拆出 ${outline.length} 条镜头，少掉的场次被合并或跳过。`,
+        reason: `剧本有 ${locked.scenes.length} 场，本次只拆出 ${outline.length} 条镜头，少掉的场次被合并或跳过。`,
       });
     } else if (outline.length < minShots && !shotOmissions.length) {
       shotOmissions.push({
         target: '分镜',
-        reason: `本章约 ${bodyLen} 字，镜头下限是 ${minShots}，本次只拆出 ${outline.length} 条。`,
+        reason: `剧本有 ${locked.scenes.length} 场，镜头下限是 ${minShots}，本次只拆出 ${outline.length} 条。`,
       });
     }
     await chapter.update({
-      script_data: { ...scriptData, shot_omissions: shotOmissions },
+      script_data: { ...locked, shot_omissions: shotOmissions },
     });
 
     if (existing.length) {
@@ -286,7 +304,7 @@ class DraftService extends Service {
         description: item.coverage,
         dialogue: item.dialogue,
         duration_ms: item.duration_sec * 1000,
-        scene_label: sceneTitle(scriptData, item),
+        scene_label: sceneTitle(locked, item),
       };
       let row;
       try {
@@ -317,6 +335,10 @@ class DraftService extends Service {
     const scriptData = chapter.script_data || payload.script_data;
     if (!scriptData || !Array.isArray(scriptData.scenes) || !scriptData.scenes.length) {
       this.ctx.throw(400, '请先生成并保存剧本');
+    }
+    const settledScript = lockIssues(scriptData, chapter.body);
+    if (settledScript.issues.length) {
+      this.ctx.throw(400, `剧本还不能交给分镜。${settledScript.issues.slice(0, 4).join('；')}`);
     }
     const shotId = payload.shot_id;
     if (!shotId) this.ctx.throw(400, '需要镜头 id');
@@ -370,8 +392,7 @@ class DraftService extends Service {
         timeoutMs: skillTimeout(this.ctx),
         signal: stop.signal,
         payload: {
-          script_data: scriptData,
-          body: chapter.body,
+          script_data: settledScript.script,
           expand_one: true,
           seed_shot: seedShot,
           ...styleCtx,
@@ -400,7 +421,6 @@ class DraftService extends Service {
     if (!shot.description) this.ctx.throw(502, '没有返回分镜描述');
     const promptPayload = {
       shots: [ shot ],
-      body: chapter.body,
       repair_note: String(payload.repair_note || '').trim(),
       ...styleCtx,
       ...productionInput(project),

@@ -34,7 +34,7 @@
           <el-button v-for="item in customNodes" :key="item.node_key" @click="runCustom(item)">运行{{ item.title }}</el-button>
         </div>
       </section>
-      <ProjectDetailPage v-if="scriptStep" :key="projectId" :forced-step="scriptStep" :nav-target="navTarget" :launch-shot-id="launchShotId" :pipeline-running="pipelineRunning" />
+      <ProjectDetailPage v-if="scriptStep" :key="projectId" :forced-step="scriptStep" :nav-target="navTarget" :launch-shot-id="launchShotId" :pipeline-running="pipelineRunning" :pipeline-run="pipeline" />
       <FullAutoPage v-else-if="node === 'pipeline'" />
       <section v-else-if="node === 'assets'" class="cartoon-module cartoon-asset-page">
         <div class="cartoon-asset-head">

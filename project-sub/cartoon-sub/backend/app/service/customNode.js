@@ -4,6 +4,8 @@ const Service = require('egg').Service;
 const { customCatalog } = require('../lib/pipelineDefaults');
 const { invokeSkill } = require('../lib/agentProxy');
 const { productionInput } = require('../lib/productionInput');
+const { settleScript } = require('../lib/scriptGate');
+const { minStoryUnits } = require('../lib/storyCoverage');
 
 const PANEL_FIELD = {
   conflict: 'conflict',
@@ -91,7 +93,13 @@ class CustomNodeService extends Service {
         ...productionInput(project),
       },
     });
-    return result.output || {};
+    const output = result.output || {};
+    const source = String(chapter.body || '');
+    const settled = settleScript(output.script_data, source, minStoryUnits(source.length));
+    if (settled.issues.length) {
+      this.ctx.throw(502, `剧本没有定稿。${settled.issues.slice(0, 4).join('；')}`);
+    }
+    return { ...output, script_data: { ...settled.script, accepted: true, reject_reasons: [] } };
   }
 
   async inspect(project, nodeKey) {
