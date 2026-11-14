@@ -132,7 +132,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
 import MediaFileList from '../components/MediaFileList.vue';
@@ -142,6 +142,9 @@ import { request, resolveApiBase } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 import { taskKindLabel } from '../lib/taskKind.js';
 
+const props = defineProps({
+  reloadToken: { type: String, default: '' },
+});
 const route = useRoute();
 const router = useRouter();
 const shot = ref(null);
@@ -329,6 +332,9 @@ async function load() {
   if (first) await run(pull);
   else await pull();
 }
+watch(() => props.reloadToken, (value) => {
+  if (value) load();
+});
 onMounted(load);
 onUnmounted(stopPoll);
 </script>

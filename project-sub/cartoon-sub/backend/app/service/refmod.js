@@ -140,7 +140,7 @@ class RefmodService extends Service {
       this.ctx.model.Asset.findAll({ where: { project_id: projectId } }),
     ]);
     const byId = new Map(assets.map(row => [ row.id, row ]));
-    return rows.map(row => {
+    return rows.filter(row => row.asset_id).map(row => {
       const asset = byId.get(row.asset_id);
       return {
         ...this.present(row),
@@ -311,6 +311,38 @@ class RefmodService extends Service {
     await row.update({ images: JSON.stringify(images), image_notes: JSON.stringify(notes) });
     const asset = row.asset_id ? await this.ctx.model.Asset.findByPk(row.asset_id) : null;
     return { ...this.present(await row.reload()), asset_name: asset?.name || row.name, asset_kind: asset?.kind || row.kind };
+  }
+
+  async stageTemporary(projectId, payload) {
+    const project = await this.ctx.model.Project.findByPk(projectId);
+    if (!project) this.ctx.throw(404, '项目不存在');
+    const files = Array.isArray(payload?.files) ? payload.files : [];
+    if (!files.length) this.ctx.throw(400, '这一镜没有可合并的设定图');
+    if (files.length > MAX_TOTAL) this.ctx.throw(400, `一次最多挂 ${MAX_TOTAL} 张参考图`);
+    const row = await this.ctx.model.Refmod.create({
+      project_id: Number(projectId),
+      asset_id: null,
+      kind: 'character',
+      name: String(payload.name || '临时参考').slice(0, 200),
+      images: '[]',
+      image_notes: '{}',
+      created_at: new Date(),
+    });
+    const dir = path.join(outputRoot(this.app), 'refmods', String(projectId), String(row.id));
+    fs.mkdirSync(dir, { recursive: true });
+    const saved = [];
+    const notes = {};
+    files.forEach((file, index) => {
+      const ext = String(file.ext || '.png').toLowerCase().replace('jpeg', 'jpg');
+      const safeExt = [ '.png', '.jpg', '.webp' ].includes(ext) ? ext : '.png';
+      const filename = `${index}${safeExt}`;
+      fs.writeFileSync(path.join(dir, filename), file.bytes);
+      saved.push(filename);
+      const note = noteText(file.note);
+      if (note) notes[filename] = note;
+    });
+    await row.update({ images: JSON.stringify(saved), image_notes: JSON.stringify(notes) });
+    return this.present(await row.reload());
   }
 
   async remove(projectId, id) {

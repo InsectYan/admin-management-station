@@ -18,7 +18,16 @@ let app = null;
 let router = null;
 let unbind = null;
 
+function limitTooltipWidth() {
+  if (document.getElementById('cartoon-tooltip-limit')) return;
+  const style = document.createElement('style');
+  style.id = 'cartoon-tooltip-limit';
+  style.textContent = '.el-popper[role="tooltip"]{max-width:300px !important;box-sizing:border-box;white-space:normal;word-break:break-word;overflow-wrap:anywhere;line-height:1.5}';
+  document.head.appendChild(style);
+}
+
 function render(props = {}) {
+  limitTooltipWidth();
   consumeHandedToken();
   unbind?.();
   unbind = bindStandaloneScope();

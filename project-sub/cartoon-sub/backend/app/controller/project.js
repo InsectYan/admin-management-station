@@ -413,6 +413,14 @@ class ProjectController extends Controller {
     }
   }
 
+  async clearAssets() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.clearAssets(this.ctx.params.id));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async removeAsset() {
     try {
       ok(this.ctx, await this.ctx.service.project.removeAsset(this.ctx.params.id, this.ctx.params.assetId));
@@ -456,6 +464,30 @@ class ProjectController extends Controller {
   async frameFile() {
     try {
       await this.ctx.service.project.sendFrame(this.ctx.params.id, this.ctx.params.shotId, this.ctx.params.which);
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async audioBoard() {
+    try {
+      ok(this.ctx, await this.ctx.service.capture.board(this.ctx.params.id));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async extractAudio() {
+    try {
+      ok(this.ctx, await this.ctx.service.capture.extract(this.ctx.params.id, this.ctx.params.shotId));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async audioFile() {
+    try {
+      await this.ctx.service.capture.send(this.ctx.params.id, this.ctx.params.shotId);
     } catch (err) {
       fail(this.ctx, err);
     }

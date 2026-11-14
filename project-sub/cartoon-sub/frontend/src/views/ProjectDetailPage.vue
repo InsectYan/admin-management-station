@@ -77,7 +77,11 @@
           </div>
           <el-button link type="primary" @click="snapOpen[item.id] = !snapOpen[item.id]">{{ snapOpen[item.id] ? '收起' : '展开' }}</el-button>
           <div class="cartoon-snap__actions">
-            <el-button type="primary" :disabled="!canMake()" :loading="draftingId === item.id" @click="generateScript(item)">生成剧本</el-button>
+            <el-button type="primary" :disabled="!canMake() || autoModeId === item.id || flowBusy" :loading="draftingId === item.id" @click="generateScript(item)">生成剧本</el-button>
+            <el-button-group>
+              <el-button :disabled="!canMake() || autoModeId === item.id || flowBusy" title="从剧本一直做到视频" @click="runFullAuto(item)">全流程</el-button>
+              <el-button type="primary" :disabled="!canMake() || flowBusy" :loading="autoModeId === item.id" title="先生成剧本，再按剧本拆分分镜" @click="runSemiAuto(item)">到分镜</el-button>
+            </el-button-group>
             <el-button
               v-if="hasScript(item)"
               type="primary"
@@ -125,13 +129,13 @@
               <el-button
                 type="primary"
                 plain
-                :disabled="!canMake()"
+                :disabled="!canMake() || flowBusy"
                 :loading="draftingId === selectedScriptImport.id"
                 @click="generateScript(selectedScriptImport)"
               >重新生成剧本</el-button>
               <el-button
                 type="primary"
-                :disabled="!canMake() || !selectedScriptImport.script_data?.scenes?.length"
+                :disabled="!canMake() || flowBusy || !selectedScriptImport.script_data?.scenes?.length"
                 :loading="outliningId === selectedScriptImport.id"
                 @click="generateShotOutline(selectedScriptImport)"
               >拆分分镜</el-button>
@@ -140,7 +144,7 @@
                 plain
                 :disabled="!canMake() || !scriptShots.length"
                 @click="clearScriptShots(selectedScriptImport)"
-              >一键删除分镜</el-button>
+              >一键清除分镜</el-button>
             </div>
             <el-tabs v-if="activeScriptData" v-model="scriptTab" class="cartoon-script-tabs">
               <el-tab-pane label="概览" name="overview">
@@ -152,7 +156,7 @@
                 <div class="cartoon-board__head">
                   <el-button :disabled="!canMake()" @click="openRoster('character')">新增人物</el-button>
                   <el-button :disabled="!canMake()" @click="openRoster('scene')">新增场景</el-button>
-                  <el-button type="primary" plain :disabled="!canMake() || !missingRoster.length" @click="ensureRosterAssets">补齐缺少的资产</el-button>
+                  <el-button type="primary" plain :disabled="!canMake() || flowBusy || !missingRoster.length" @click="ensureRosterAssets">补齐缺少的资产</el-button>
                 </div>
                 <h4>人物</h4>
                 <el-empty v-if="!(activeScriptData.characters || []).length" description="还没有人物" />
@@ -228,12 +232,18 @@
                   <span v-else>—</span>
                 </template>
               </el-table-column>
+              <el-table-column label="视频提示词" width="420">
+                <template #default="{ row }"><ClampText title="视频提示词" :text="row.prompt?.positive_zh || ''" /></template>
+              </el-table-column>
+              <el-table-column label="首尾帧提示词" width="420">
+                <template #default="{ row }"><ClampText title="首尾帧提示词" :text="framePromptText(row.prompt)" /></template>
+              </el-table-column>
               <el-table-column label="操作" width="200" fixed="right">
                 <template #default="{ row }">
                   <el-button
                     link
                     type="primary"
-                    :disabled="!canMake()"
+                    :disabled="!canMake() || flowBusy"
                     :loading="expandingKey === String(row.id)"
                     @click="expandOutlineRow(row)"
                   >生成分镜提示词</el-button>
@@ -307,9 +317,18 @@
         <div class="cartoon-board__main">
           <p v-if="!selectedBoard" class="cartoon-module__hint">先在左侧选择一条章节快照。</p>
           <div v-if="selectedBoard" class="cartoon-entry-actions">
-            <el-button :disabled="autoRunning" @click="runAuto('prompt')">生成分镜提示词</el-button>
-            <el-button :disabled="autoRunning || runMark.videoLive" @click="openVideoAuto">自动生成视频</el-button>
-            <el-button type="primary" plain :disabled="autoRunning || runMark.videoLive" @click="runAuto('all')">全自动执行</el-button>
+            <el-button-group>
+              <el-button :disabled="autoRunning || flowBusy" @click="runAuto('prompt')">生成分镜提示词</el-button>
+              <el-button :disabled="autoRunning || flowBusy" @click="resetAuto('prompt')">重置</el-button>
+            </el-button-group>
+            <el-button-group>
+              <el-button :disabled="autoRunning || flowBusy || runMark.videoLive" @click="openVideoAuto">自动生成视频</el-button>
+              <el-button :disabled="autoRunning || flowBusy || runMark.videoLive" @click="resetAuto('video')">重置</el-button>
+            </el-button-group>
+            <el-button-group>
+              <el-button type="primary" plain :disabled="autoRunning || flowBusy || runMark.videoLive" @click="runAuto('all')">全自动执行</el-button>
+              <el-button type="primary" plain :disabled="autoRunning || flowBusy || runMark.videoLive" @click="resetAuto('all')">重置</el-button>
+            </el-button-group>
             <el-button type="danger" plain :disabled="!canStop" @click="stopWork">停止</el-button>
           </div>
           <el-table v-if="selectedBoard" class="cartoon-shot-table" :data="boardPageRows" style="margin-top: 12px">
@@ -348,8 +367,11 @@
                 <span v-else>—</span>
               </template>
             </el-table-column>
-            <el-table-column label="正向提示词" width="520">
-              <template #default="{ row }"><ClampText title="正向提示词" :text="row.prompt?.positive_zh || ''" /></template>
+            <el-table-column label="视频提示词" width="520">
+              <template #default="{ row }"><ClampText title="视频提示词" :text="row.prompt?.positive_zh || ''" /></template>
+            </el-table-column>
+            <el-table-column label="首尾帧提示词" width="420">
+              <template #default="{ row }"><ClampText title="首尾帧提示词" :text="framePromptText(row.prompt)" /></template>
             </el-table-column>
             <el-table-column label="负向提示词" width="360">
               <template #default="{ row }"><ClampText title="负向提示词" :text="row.prompt?.negative_zh || ''" /></template>
@@ -428,7 +450,9 @@
           </el-select>
         </el-form-item>
         <el-form-item label="描述"><el-input v-model="shot.description" type="textarea" :rows="3" /></el-form-item>
-        <el-form-item label="提示词"><el-input v-model="shot.positive_zh" type="textarea" :rows="4" /></el-form-item>
+        <el-form-item label="视频提示词"><el-input v-model="shot.positive_zh" type="textarea" :rows="4" /></el-form-item>
+        <el-form-item label="首帧提示词"><el-input v-model="shot.frame_start_zh" type="textarea" :rows="3" /></el-form-item>
+        <el-form-item label="尾帧提示词"><el-input v-model="shot.frame_end_zh" type="textarea" :rows="3" /></el-form-item>
       </el-form>
       <template #footer>
         <div class="cartoon-drawer-footer__actions">
@@ -461,7 +485,7 @@
             <p v-if="shotPanel?.jobLive" class="cartoon-module__hint">{{ shotPanel.jobNote }}</p>
             <div class="cartoon-drawer-footer__actions">
               <el-button v-if="shotPanel?.jobLive || shotPanel?.generating" type="danger" plain @click="stopWork">停止</el-button>
-              <el-button type="primary" :disabled="!canMake()" :loading="shotPanel?.generating" @click="shotPanel?.generate()">生成</el-button>
+              <el-button type="primary" :disabled="!canMake() || flowBusy" :loading="shotPanel?.generating" @click="shotPanel?.generate()">生成</el-button>
               <el-button @click="shotPanel?.openAssets()">查看资产</el-button>
               <el-button @click="openShotOutputs">查看产物</el-button>
             </div>
@@ -496,6 +520,48 @@
       <template #footer>
         <el-button @click="videoAutoOpen = false">取消</el-button>
         <el-button type="primary" :disabled="!videoAutoIds.length" @click="confirmVideoAuto">开始生成</el-button>
+      </template>
+    </el-dialog>
+    <el-dialog v-model="fullAutoOpen" title="全流程" width="560px" append-to-body :close-on-click-modal="false">
+      <p class="cartoon-module__hint">这次会按顺序做到视频。人物和场景各出一张设定总图，视频固定用满血 H3 首尾帧 RefMod。</p>
+      <el-checkbox v-model="fullAutoFresh">全新</el-checkbox>
+      <p v-if="fullAutoFresh" class="cartoon-module__hint">勾选后会重新生成剧本、分镜、提示词、首尾帧和视频。已经有设定图的资产会保留，不会重画，也不会改已有说明。</p>
+      <p v-else class="cartoon-module__hint">不勾选时，已经有的剧本、分镜、提示词、图片和视频会跳过，只补还没有的，直到这一次做完。</p>
+      <p v-if="fullAutoFresh && fullAutoShotCount" class="cartoon-module__hint">当前快照已有 {{ fullAutoShotCount }} 条分镜，开始后会按新剧本替换。</p>
+      <el-form label-position="top">
+        <el-form-item label="人物和场景设定图">
+          <el-select v-model="fullAutoAssetId" filterable placeholder="选择生图工作流" style="width: 100%" :loading="fullAutoLoading" @change="syncFullAutoSize('asset')">
+            <el-option v-for="item in fullAutoTextWorkflows" :key="`asset-${item.id}`" :label="item.name" :value="item.id" />
+          </el-select>
+          <div class="cartoon-full-size">
+            <span>宽</span>
+            <el-input-number v-model="fullAutoAssetWidth" :min="64" :max="2048" :step="32" :precision="0" controls-position="right" />
+            <span>高</span>
+            <el-input-number v-model="fullAutoAssetHeight" :min="64" :max="2048" :step="32" :precision="0" controls-position="right" />
+          </div>
+        </el-form-item>
+        <el-form-item label="首尾帧">
+          <el-select v-model="fullAutoFrameId" filterable placeholder="选择生图工作流" style="width: 100%" :loading="fullAutoLoading" @change="syncFullAutoSize('frame')">
+            <el-option-group label="文生图">
+              <el-option v-for="item in fullAutoTextWorkflows" :key="`frame-text-${item.id}`" :label="item.name" :value="item.id" />
+            </el-option-group>
+            <el-option-group label="图生图">
+              <el-option v-for="item in fullAutoEditWorkflows" :key="`frame-edit-${item.id}`" :label="item.name" :value="item.id" />
+            </el-option-group>
+          </el-select>
+          <p v-if="fullAutoFrameRefCap" class="cartoon-module__hint">这条图生图最多 {{ fullAutoFrameRefCap }} 张参考图。生成首尾帧时，会先补齐这一镜需要的人物和场景设定图，再按这个上限送进去，人物优先，场景占最后一格。</p>
+          <p v-else-if="fullAutoFrameId" class="cartoon-module__hint">这条是文生图，首尾帧只按提示词生成，不使用参考图。</p>
+          <div class="cartoon-full-size">
+            <span>宽</span>
+            <el-input-number v-model="fullAutoFrameWidth" :min="64" :max="2048" :step="32" :precision="0" controls-position="right" />
+            <span>高</span>
+            <el-input-number v-model="fullAutoFrameHeight" :min="64" :max="2048" :step="32" :precision="0" controls-position="right" />
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="fullAutoOpen = false">取消</el-button>
+        <el-button type="primary" :loading="fullAutoStarting" :disabled="!fullAutoReady" @click="submitFullAuto">开始</el-button>
       </template>
     </el-dialog>
     <el-dialog v-model="promoteVisible" title="提升到叙事工作台" width="520px">
@@ -574,11 +640,13 @@ import { request, resolveApiBase } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 import { isLocalType, supportsAv } from '../lib/contentTypes.js';
 import { uncoveredScenes } from '../utils/sceneCoverage.js';
+import { framePromptText, hasPromptSet } from '../lib/framePrompt.js';
 
 const props = defineProps({
   forcedStep: { type: Number, default: 0 },
   navTarget: { type: String, default: '' },
   launchShotId: { type: String, default: '' },
+  pipelineRunning: { type: Boolean, default: false },
 });
 const route = useRoute();
 const router = useRouter();
@@ -607,6 +675,7 @@ const steps = [
   { step: 3, title: '剧本' },
   { step: 4, title: '镜头' },
 ];
+const flowBusy = computed(() => props.pipelineRunning);
 const embedded = computed(() => props.forcedStep > 0);
 const step = ref(props.forcedStep || Number(route.query.step) || 1);
 watch(() => props.forcedStep, (value) => {
@@ -659,13 +728,21 @@ const pullChapters = computed(() => {
 });
 const chapterTitle = ref('');
 const body = ref('');
-const shot = reactive({ shot_sizes: [ '中景' ], camera_moves: [ '固定' ], description: '', positive_zh: '' });
+const shot = reactive({
+  shot_sizes: [ '中景' ],
+  camera_moves: [ '固定' ],
+  description: '',
+  positive_zh: '',
+  frame_start_zh: '',
+  frame_end_zh: '',
+});
 const pageSize = 10;
 const scriptPage = ref(1);
 const boardPage = ref(1);
 const novelBrief = ref(null);
 const novelLoading = ref(false);
 const draftingId = ref(null);
+const autoModeId = ref(null);
 const outliningId = ref(null);
 const expandingKey = ref('');
 const selectedImportKey = ref('');
@@ -713,10 +790,19 @@ function isStop(err) {
 function isMissingPositive(err) {
   const message = String(err?.message || '');
   if (message.includes('工作流不存在')) return false;
-  return message.includes('还没有正向提示词')
+  return message.includes('还没有视频提示词')
+    || message.includes('还没有正向提示词')
+    || message.includes('没有写回视频提示词')
     || message.includes('没有写回正向提示词')
+    || message.includes('没有视频提示词')
     || message.includes('没有正向提示词')
-    || message.includes('需要一句提示词');
+    || message.includes('没有返回视频提示词')
+    || message.includes('没有返回首帧提示词')
+    || message.includes('没有返回尾帧提示词')
+    || message.includes('需要一句提示词')
+    || message.includes('需要一句视频提示词')
+    || message.includes('需要一句首帧提示词')
+    || message.includes('需要一句尾帧提示词');
 }
 function pause(ms, signal) {
   return new Promise((resolve, reject) => {
@@ -1419,6 +1505,161 @@ async function removeShot(row) {
     ElMessage.error(err.message);
   }
 }
+const fullAutoOpen = ref(false);
+const fullAutoTarget = ref(null);
+const fullAutoAssetId = ref(null);
+const fullAutoFrameId = ref(null);
+const fullAutoAssetWidth = ref(1024);
+const fullAutoAssetHeight = ref(1024);
+const fullAutoFrameWidth = ref(1024);
+const fullAutoFrameHeight = ref(1024);
+const fullAutoWorkflows = ref([]);
+const fullAutoTextWorkflows = computed(() => fullAutoWorkflows.value.filter(row => !/图生图/.test(row.name || '')));
+const fullAutoEditWorkflows = computed(() => fullAutoWorkflows.value.filter(row => /图生图/.test(row.name || '')));
+function referenceCap(row) {
+  const slots = (row?.images || []).filter(slot => slot.role === 'reference' || slot.role === 'image');
+  if (!slots.length) return 0;
+  const expanded = slots.find(slot => slot.expand && Number(slot.limit) > 1);
+  if (expanded) return Number(expanded.limit);
+  return slots.reduce((sum, slot) => sum + (Number(slot.limit) > 0 ? Number(slot.limit) : 1), 0);
+}
+const fullAutoFrameRefCap = computed(() => referenceCap(fullAutoWorkflows.value.find(item => item.id === fullAutoFrameId.value)));
+const fullAutoLoading = ref(false);
+const fullAutoStarting = ref(false);
+const fullAutoFresh = ref(false);
+const fullAutoShotCount = computed(() => {
+  const id = fullAutoTarget.value?.id;
+  if (!id) return 0;
+  return (detail.value?.shots || []).filter(row => String(row.import_id) === String(id)).length;
+});
+function sizeReady(width, height) {
+  return Number.isInteger(width) && Number.isInteger(height)
+    && width >= 64 && height >= 64 && width <= 2048 && height <= 2048
+    && width % 32 === 0 && height % 32 === 0;
+}
+const fullAutoReady = computed(() => Boolean(fullAutoAssetId.value && fullAutoFrameId.value)
+  && sizeReady(fullAutoAssetWidth.value, fullAutoAssetHeight.value)
+  && sizeReady(fullAutoFrameWidth.value, fullAutoFrameHeight.value));
+function syncFullAutoSize(kind) {
+  const id = kind === 'frame' ? fullAutoFrameId.value : fullAutoAssetId.value;
+  const row = fullAutoWorkflows.value.find(item => item.id === id);
+  const width = Number(row?.width) > 0 ? Number(row.width) : 1024;
+  const height = Number(row?.height) > 0 ? Number(row.height) : 1024;
+  if (kind === 'frame') {
+    fullAutoFrameWidth.value = width;
+    fullAutoFrameHeight.value = height;
+    return;
+  }
+  fullAutoAssetWidth.value = width;
+  fullAutoAssetHeight.value = height;
+}
+async function runFullAuto(item) {
+  if (flowBusy.value) return;
+  fullAutoFresh.value = false;
+  fullAutoTarget.value = item;
+  fullAutoOpen.value = true;
+  if (fullAutoWorkflows.value.length) return;
+  fullAutoLoading.value = true;
+  try {
+    const data = await request('/generate-inputs');
+    fullAutoWorkflows.value = (data?.workflows || []).filter(row => row.media === 'image' && !/反推|改图/.test(row.name || ''));
+    if (!fullAutoTextWorkflows.value.length && !fullAutoEditWorkflows.value.length) ElMessage.warning('没有可选的生图工作流');
+  } catch (err) {
+    ElMessage.error(err.message || '没有读到生图工作流');
+  } finally {
+    fullAutoLoading.value = false;
+  }
+}
+async function submitFullAuto() {
+  if (!fullAutoReady.value || !fullAutoTarget.value) {
+    ElMessage.warning('请选择两条生图工作流，并填写 32 倍数的宽高');
+    return;
+  }
+  fullAutoStarting.value = true;
+  try {
+    await request(`/projects/${projectKey()}/full-auto`, {
+      method: 'post',
+      timeout: 120000,
+      data: {
+        import_id: fullAutoTarget.value.id,
+        asset_workflow_id: fullAutoAssetId.value,
+        frame_workflow_id: fullAutoFrameId.value,
+        asset_width: fullAutoAssetWidth.value,
+        asset_height: fullAutoAssetHeight.value,
+        frame_width: fullAutoFrameWidth.value,
+        frame_height: fullAutoFrameHeight.value,
+        fresh: fullAutoFresh.value,
+      },
+    });
+    fullAutoOpen.value = false;
+    ElMessage.success('全流程已在后台开始');
+  } catch (err) {
+    ElMessage.error(err.message || '没有开始');
+  } finally {
+    fullAutoStarting.value = false;
+  }
+}
+async function runSemiAuto(item) {
+  const existingCount = (detail.value?.shots || []).filter(shotRow => String(shotRow.import_id) === String(item.id)).length;
+  let replace = false;
+  if (existingCount) {
+    try {
+      await ElMessageBox.confirm(
+        `到分镜会重新生成剧本，并替换已有的 ${existingCount} 条分镜。镜头页会一起更新。`,
+        '到分镜',
+        { type: 'warning', confirmButtonText: '继续', cancelButtonText: '取消' },
+      );
+      replace = true;
+    } catch {
+      return;
+    }
+  }
+  const token = lockJob();
+  if (!projectKey()) {
+    ElMessage.error('项目编号丢了');
+    return;
+  }
+  autoModeId.value = item.id;
+  try {
+    ElMessage.info('正在生成剧本…');
+    const data = await request(`/projects/${projectKey()}/imports/${item.id}/draft/script`, {
+      method: 'post',
+      timeout: 1800000,
+    });
+    await request(`/projects/${projectKey()}/imports/${item.id}/draft/script/apply`, {
+      method: 'post',
+      data: { script_data: data.script_data },
+    });
+    ElMessage.info('剧本已写入，正在拆分分镜…');
+    const outline = await request(`/projects/${projectKey()}/imports/${item.id}/draft/shot-outline`, {
+      method: 'post',
+      timeout: 1800000,
+      data: { replace },
+    });
+    selectedImportKey.value = String(item.id);
+    if (outline?.project && Array.isArray(outline.shots)) {
+      detail.value = outline;
+      fillProject();
+    } else {
+      await load();
+    }
+    selectedImportKey.value = String(item.id);
+    const count = (detail.value?.shots || []).filter(shotRow => String(shotRow.import_id ?? '') === String(item.id)).length;
+    if (!count) {
+      ElMessage.error('剧本已写入，但分镜没有落库');
+      return;
+    }
+    ElMessage.success(`剧本已生成，并落库 ${count} 段分镜`);
+    step.value = 3;
+    await nextTick();
+    document.getElementById('script-shot-table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    ElMessage.error(err.message);
+  } finally {
+    autoModeId.value = null;
+    unlockJob(token);
+  }
+}
 async function generateScript(item) {
   const token = lockJob();
   if (!projectKey()) {
@@ -1505,8 +1746,8 @@ async function generateShotOutline(item) {
 async function clearScriptShots(item) {
   try {
     await ElMessageBox.confirm(
-      '一键删除将清空该剧本下全部分镜（镜头页同步清空），提示词与产物一并删除。',
-      '一键删除分镜',
+      '一键清除将清空该剧本下全部分镜（镜头页同步清空），提示词与产物一并删除。',
+      '一键清除分镜',
       { type: 'warning', confirmButtonText: '删除全部', cancelButtonText: '取消' },
     );
   } catch {
@@ -1594,12 +1835,11 @@ async function waitTask(taskId, item, signal) {
   }
 }
 function hasBothPrompts(row) {
-  const prompt = row?.prompt || {};
-  return Boolean(String(prompt.positive_zh || '').trim() && String(prompt.negative_zh || '').trim());
+  return hasPromptSet(row?.prompt);
 }
-async function runPromptShot(row, item, signal) {
-  if (hasBothPrompts(row)) {
-    const err = new Error(`${row.shot_code || row.id} 已有正向和负向提示词`);
+async function runPromptShot(row, item, signal, fresh = false) {
+  if (!fresh && hasBothPrompts(row)) {
+    const err = new Error(`${row.shot_code || row.id} 已有视频提示词、首尾帧提示词和负向提示词`);
     err.skip = true;
     throw err;
   }
@@ -1631,8 +1871,8 @@ async function runPromptShot(row, item, signal) {
       });
       await load();
       const saved = (detail.value?.shots || []).find(shotRow => String(shotRow.id) === String(row.id));
-      if (!saved?.prompt?.positive_zh) {
-        throw new Error(`${row.shot_code || row.id} 没有写回正向提示词`);
+      if (!saved?.prompt?.positive_zh || !saved?.prompt?.frame_start_zh || !saved?.prompt?.frame_end_zh) {
+        throw new Error(`${row.shot_code || row.id} 没有写回视频提示词或首尾帧提示词`);
       }
       item.status = '完成';
       writeNote(item, attempt === 1
@@ -1651,7 +1891,7 @@ async function runVideoShot(row, item, signal) {
   await load();
   const saved = (detail.value?.shots || []).find(shotRow => String(shotRow.id) === String(row.id));
   if (!String(saved?.prompt?.positive_zh || '').trim()) {
-    const err = new Error(`${row.shot_code || row.id} 没有正向提示词`);
+    const err = new Error(`${row.shot_code || row.id} 没有视频提示词`);
     err.skip = true;
     throw err;
   }
@@ -1810,7 +2050,30 @@ function confirmVideoAuto() {
   videoAutoOpen.value = false;
   runAuto('video', chosen.map(row => row.id));
 }
-async function runAuto(mode, selectedIds) {
+async function resetAuto(mode) {
+  if (autoRunning.value || flowBusy.value) return;
+  const shots = boardShots.value;
+  if (!shots.length) {
+    ElMessage.error('当前快照没有镜头');
+    return;
+  }
+  const text = mode === 'prompt'
+    ? '重置会重写当前快照里每一条镜头的提示词，已经写好的也会覆盖。'
+    : (mode === 'video'
+      ? '重置会重新生成当前快照里每一条镜头的视频。'
+      : '重置会重写当前快照的全部提示词，并重新生成全部视频。');
+  try {
+    await ElMessageBox.confirm(text, '重置', { type: 'warning', confirmButtonText: '重新生成', cancelButtonText: '取消' });
+  } catch {
+    return;
+  }
+  if (mode === 'video') {
+    runAuto('video', shots.map(row => row.id), true);
+    return;
+  }
+  runAuto(mode, null, true);
+}
+async function runAuto(mode, selectedIds, fresh = false) {
   if (autoRunning.value) return;
   if (!projectKey()) {
     ElMessage.error('项目编号丢了');
@@ -1874,7 +2137,7 @@ async function runAuto(mode, selectedIds) {
       try {
         const row = (detail.value?.shots || []).find(shotRow => String(shotRow.id) === String(item.shotId));
         if (!row) throw new Error('镜头已不在表格里');
-        if (item.kind === 'prompt') await runPromptShot(row, item, signal);
+        if (item.kind === 'prompt') await runPromptShot(row, item, signal, fresh);
         else await runVideoShot(row, item, signal);
         record.result = '成功';
         if (!record.reason) record.reason = item.kind === 'prompt' ? '已写回提示词' : '视频已生成';
@@ -1886,7 +2149,7 @@ async function runAuto(mode, selectedIds) {
           stopped = true;
         } else if (err?.skip || (item.kind === 'video' && isMissingPositive(err))) {
           record.result = '跳过';
-          record.reason = err?.message || (item.kind === 'prompt' ? '已有正向和负向提示词' : '没有正向提示词');
+          record.reason = err?.message || (item.kind === 'prompt' ? '已有视频提示词、首尾帧提示词和负向提示词' : '没有视频提示词');
           skipped += 1;
         } else {
           record.result = '失败';
@@ -1916,6 +2179,8 @@ async function runAuto(mode, selectedIds) {
 function resetShotForm() {
   shot.description = '';
   shot.positive_zh = '';
+  shot.frame_start_zh = '';
+  shot.frame_end_zh = '';
   shot.shot_sizes = [ '中景' ];
   shot.camera_moves = [ '固定' ];
 }
@@ -2066,6 +2331,13 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 12px;
 }
+.cartoon-full-size {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.cartoon-full-size span { color: #5c6b62; font-size: 13px; }
 .cartoon-shot-head .cartoon-module__title { margin: 0; }
 .cartoon-shot-head__side { display: flex; align-items: center; gap: 12px; }
 .cartoon-auto-progress {
@@ -2144,6 +2416,7 @@ onUnmounted(() => {
   gap: 8px;
 }
 .cartoon-snap__actions :deep(.el-button + .el-button) { margin-left: 0; }
+.cartoon-snap__actions :deep(.el-button-group .el-button + .el-button) { margin-left: -1px; }
 .cartoon-board { display: flex; gap: 16px; align-items: stretch; width: 100%; min-width: 0; min-height: 0; flex: 1; overflow: hidden; }
 .cartoon-board__snaps { flex: 0 0 240px; display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: auto; }
 .cartoon-board__label { margin: 0; color: #5c6b62; font-size: 13px; }

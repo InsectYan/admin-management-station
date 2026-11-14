@@ -22,6 +22,11 @@
       </button>
     </aside>
     <RegionLoad class="cartoon-workbench__main" :loading="entryLoading || voiceLoading">
+      <div v-if="pipeline?.status === 'running'" class="cartoon-pipeline-bar">
+        <span class="cartoon-pipeline-bar__text">{{ pipeline.message || '全流程正在执行' }}<i class="cartoon-pipeline-bar__dots"></i></span>
+        <span v-if="pipelineElapsed" class="cartoon-pipeline-bar__time">已进行 {{ pipelineElapsed }}</span>
+        <el-button size="small" type="danger" plain @click="stopPipeline">停止</el-button>
+      </div>
       <section v-if="customNodes.length || episode?.warning" class="cartoon-module cartoon-workbench__note">
         <h3 class="cartoon-module__title">专项检查</h3>
         <p v-if="episode?.warning" class="cartoon-module__hint">{{ episode.warning }}</p>
@@ -29,11 +34,16 @@
           <el-button v-for="item in customNodes" :key="item.node_key" @click="runCustom(item)">运行{{ item.title }}</el-button>
         </div>
       </section>
-      <ProjectDetailPage v-if="scriptStep" :key="projectId" :forced-step="scriptStep" :nav-target="navTarget" :launch-shot-id="launchShotId" />
+      <ProjectDetailPage v-if="scriptStep" :key="projectId" :forced-step="scriptStep" :nav-target="navTarget" :launch-shot-id="launchShotId" :pipeline-running="pipelineRunning" />
+      <FullAutoPage v-else-if="node === 'pipeline'" />
       <section v-else-if="node === 'assets'" class="cartoon-module cartoon-asset-page">
         <div class="cartoon-asset-head">
           <h3 class="cartoon-module__title">资产</h3>
-          <el-button type="primary" @click="openAssetCreate">新增</el-button>
+          <div class="cartoon-asset-head__actions">
+            <el-button type="primary" plain :disabled="!scriptImport || pipelineRunning" @click="openAssetGenerate">自动生成</el-button>
+            <el-button type="primary" @click="openAssetCreate">新增</el-button>
+            <el-button type="danger" plain :disabled="!assets.length" @click="clearAssets">一键清除</el-button>
+          </div>
         </div>
         <p class="cartoon-module__hint">点一行打开编辑。新增会清空表单。角色、场景和道具的 RefMod 就在这个抽屉里，每张图写一句说明。</p>
         <el-tabs v-model="assetTab" class="cartoon-asset-tabs">
@@ -44,7 +54,8 @@
             <template #default="{ row }">{{ assetKind(row.kind) }}</template>
           </el-table-column>
           <el-table-column prop="name" label="名称" width="140" />
-          <el-table-column prop="description" label="描述" />
+          <el-table-column prop="description" label="描述" min-width="220" show-overflow-tooltip />
+          <el-table-column prop="consistency_note" label="设定说明" min-width="220" show-overflow-tooltip />
           <el-table-column prop="character_id" label="人物编号" width="120" />
           <el-table-column prop="scene_type" label="场景类型" width="100" />
           <el-table-column prop="angle_paths" label="多角度" min-width="140" />
@@ -125,6 +136,9 @@
             </template>
             <template v-else-if="assetForm.kind === 'scene'">
               <p class="cartoon-entry-label">场景</p>
+              <el-form-item class="is-wide" label="设定说明">
+                <el-input v-model="assetForm.consistency_note" type="textarea" :rows="3" />
+              </el-form-item>
               <el-form-item label="场景类型">
                 <el-select v-model="assetForm.scene_type" placeholder="选择类型" style="width: 100%">
                   <el-option v-for="item in sceneTypes" :key="item" :label="item" :value="item" />
@@ -174,10 +188,17 @@
       </section>
       <section v-else-if="node === 'voice'" class="cartoon-module cartoon-voice-page">
         <div class="cartoon-asset-head">
-          <h3 class="cartoon-module__title">配音</h3>
-          <el-button type="primary" :disabled="!selectedVoice || !voicePicks.length" @click="assignLibraryVoice">用这个音色配音</el-button>
-          <el-button :disabled="!shots.length" @click="openAddLine">新增对白</el-button>
+          <h3 class="cartoon-module__title cartoon-voice-switch">
+            <button type="button" :class="{ 'is-on': voiceMode === 'dub' }" @click="voiceMode = 'dub'">配音</button>
+            <span>|</span>
+            <button type="button" :class="{ 'is-on': voiceMode === 'capture' }" @click="openCapture">收音</button>
+          </h3>
+          <div v-if="voiceMode === 'dub'" class="cartoon-asset-head__actions">
+            <el-button type="primary" :disabled="!selectedVoice || !voicePicks.length" @click="assignLibraryVoice">用这个音色配音</el-button>
+            <el-button :disabled="!shots.length" @click="openAddLine">新增对白</el-button>
+          </div>
         </div>
+        <template v-if="voiceMode === 'dub'">
         <p class="cartoon-module__hint">先在音色库里试听并选定一条，再勾选对白。点「用这个音色配音」后，勾选的对白就把这条音色记成关联音色，同一镜头里没勾选的对白保持原样。试听播放的是样本，不是这句台词的成片。AI 把多句写进一条时，用「拆分」或「新增对白」拆开。</p>
         <p v-if="voiceSkipped.length" class="cartoon-module__hint">这些分组的文件名过长，读不到：{{ voiceSkipped.join('、') }}</p>
         <div class="cartoon-voice">
@@ -250,6 +271,25 @@
             </el-dialog>
           </div>
         </div>
+        </template>
+        <template v-else>
+          <p class="cartoon-module__hint">从这条镜头已经生成的视频里抽出音轨，不重新生成画面。没有成片的镜头不会出现在这里。</p>
+          <el-table v-loading="audioLoading" :data="audioRows" size="small">
+            <el-table-column prop="shot_code" label="镜头" width="120" />
+            <el-table-column label="音轨" min-width="280">
+              <template #default="{ row }">
+                <audio v-if="row.audio_ready" :src="audioSrc(row)" controls></audio>
+                <span v-else>还没有抽出</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="" width="120">
+              <template #default="{ row }">
+                <el-button link type="primary" :loading="audioBusy === row.shot_id" @click="extractAudio(row)">{{ row.audio_ready ? '重新提取' : '提取音轨' }}</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <p v-if="!audioLoading && !audioRows.length" class="cartoon-module__hint">还没有成片，生成视频后才能收音。</p>
+        </template>
       </section>
       <section v-else-if="node === 'subtitle'" class="cartoon-module cartoon-workbench__note">
         <h3 class="cartoon-module__title">字幕</h3>
@@ -305,7 +345,7 @@
             layout="total, prev, pager, next"
           />
         </section>
-        <ShotOutputsPage v-if="shotQuery" :key="`preview-${shotQuery}`" />
+        <ShotOutputsPage v-if="shotQuery" :key="`preview-${shotQuery}`" :reload-token="navTarget" />
       </template>
       <template v-else-if="node === 'compose'">
         <ProjectEditPage />
@@ -322,6 +362,26 @@
       <p>钉扎 · {{ pinLabel || '未选择故事包' }}</p>
       <p>节点 · {{ nodeTitle }}</p>
     </aside>
+    <el-dialog v-model="assetGenerateOpen" title="自动生成资产" width="560px" append-to-body :close-on-click-modal="false">
+      <p class="cartoon-module__hint">按剧本里的人物和场景各出一张设定总图。已经有设定图的会跳过，不会重画，也不会改已有说明。</p>
+      <el-form label-position="top">
+        <el-form-item label="人物和场景设定图">
+          <el-select v-model="assetGenerateWorkflowId" filterable placeholder="选择文生图工作流" style="width: 100%" :loading="assetGenerateLoading" @change="syncAssetGenerateSize">
+            <el-option v-for="item in assetGenerateWorkflows" :key="item.id" :label="item.name" :value="item.id" />
+          </el-select>
+          <div class="cartoon-full-size">
+            <span>宽</span>
+            <el-input-number v-model="assetGenerateWidth" :min="64" :max="2048" :step="32" :precision="0" controls-position="right" />
+            <span>高</span>
+            <el-input-number v-model="assetGenerateHeight" :min="64" :max="2048" :step="32" :precision="0" controls-position="right" />
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="assetGenerateOpen = false">取消</el-button>
+        <el-button type="primary" :disabled="!assetGenerateReady" :loading="assetGenerateStarting" @click="submitAssetGenerate">开始生成</el-button>
+      </template>
+    </el-dialog>
     <el-dialog v-model="workflowOpen" :title="workflowTitle" width="760px" append-to-body destroy-on-close>
       <div v-if="workflowChoices.length > 1" class="cartoon-workflow-pick">
         <span>记录</span>
@@ -338,7 +398,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import ProjectDetailPage from './ProjectDetailPage.vue';
@@ -350,6 +410,7 @@ import RefModPacks from '../components/RefModPacks.vue';
 import AssetImageField from '../components/AssetImageField.vue';
 import RegionLoad from '../components/RegionLoad.vue';
 import LoadMask from '../components/LoadMask.vue';
+import FullAutoPage from './FullAutoPage.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { isLocalType, typeLabel } from '../lib/contentTypes.js';
 import { styleDisplayLabel } from '../utils/visualStyles.js';
@@ -358,8 +419,9 @@ const nodes = [
   { id: 'input', title: '输入与绑定' },
   { id: 'script', title: '剧本' },
   { id: 'storyboard', title: '镜头' },
+  { id: 'pipeline', title: '全自动' },
   { id: 'assets', title: '资产' },
-  { id: 'voice', title: '配音' },
+  { id: 'voice', title: '配音 | 收音' },
   { id: 'subtitle', title: '字幕' },
   { id: 'review', title: '初审' },
   { id: 'compose', title: '合成' },
@@ -386,6 +448,10 @@ const assetDrawerOpen = ref(false);
 const assetTab = ref('list');
 const voiceRows = ref([]);
 const voiceSkipped = ref([]);
+const voiceMode = ref('dub');
+const audioRows = ref([]);
+const audioLoading = ref(false);
+const audioBusy = ref(0);
 const voiceFolders = ref([]);
 const voiceQuery = ref('');
 const voiceFolder = ref('');
@@ -408,6 +474,17 @@ const assetForm = reactive({
   angle_paths: '', prop_category: '', voice_lang: '', speaker_name: '',
 });
 const assets = computed(() => bundle.value?.assets || []);
+function importHasScript(item) {
+  const script = item?.script_data || {};
+  return (Array.isArray(script.scenes) && script.scenes.length > 0)
+    || (Array.isArray(script.characters) && script.characters.length > 0);
+}
+const scriptImport = computed(() => {
+  const imports = (bundle.value?.imports || []).filter(item => !item.deleted_at && importHasScript(item));
+  if (!imports.length) return null;
+  const used = new Set(shots.value.map(item => String(item.import_id || '')));
+  return imports.find(item => used.has(String(item.id))) || imports[imports.length - 1];
+});
 const bindings = computed(() => bundle.value?.bindings || []);
 const bindingRows = computed(() => bindings.value.map(item => {
   const asset = assets.value.find(row => String(row.id) === String(item.asset_id));
@@ -553,6 +630,47 @@ const node = computed(() => {
   return nodes.some(item => item.id === value) ? value : 'input';
 });
 const scriptStep = computed(() => stepByNode[node.value] || 0);
+const pipeline = ref(null);
+const pipelineRunning = computed(() => pipeline.value?.status === 'running');
+const nowTick = ref(Date.now());
+let pipelineTimer = 0;
+let pipelineClock = 0;
+function formatSpan(ms) {
+  if (!Number.isFinite(ms) || ms < 0) return '';
+  const sec = Math.max(0, Math.floor(ms / 1000));
+  const hour = Math.floor(sec / 3600);
+  const minute = Math.floor((sec % 3600) / 60);
+  const second = sec % 60;
+  if (hour) return `${hour}小时${minute}分${second}秒`;
+  if (minute) return `${minute}分${second}秒`;
+  return `${second}秒`;
+}
+const pipelineElapsed = computed(() => {
+  if (pipeline.value?.status !== 'running') return '';
+  const node = pipeline.value?.nodes?.[pipeline.value?.current_node];
+  const start = Date.parse(node?.started_at || pipeline.value?.updated_at || '');
+  if (!Number.isFinite(start)) return '';
+  return formatSpan(nowTick.value - start);
+});
+async function loadPipeline() {
+  const id = projectKey();
+  if (!id) return;
+  try {
+    pipeline.value = await request(`/projects/${id}/full-auto/active`);
+  } catch {
+    pipeline.value = null;
+  }
+}
+async function stopPipeline() {
+  if (!pipeline.value?.id) return;
+  try {
+    await request(`/projects/${projectKey()}/full-auto/${pipeline.value.id}/stop`, { method: 'post' });
+    await loadPipeline();
+    ElMessage.info('已停止全流程');
+  } catch (err) {
+    ElMessage.error(err.message || '没有停止');
+  }
+}
 const shotQuery = computed(() => String(route.query.shot || ''));
 const previewShots = computed(() => {
   const imports = bundle.value?.imports || [];
@@ -623,6 +741,7 @@ function nodeMark(id) {
     return imports.length ? 'ok' : 'idle';
   }
   if (id === 'storyboard') return shots.value.length ? 'ok' : 'idle';
+  if (id === 'pipeline') return pipeline.value?.status === 'running' ? 'warn' : 'idle';
   if (id === 'assets') return assets.value.length ? 'ok' : 'idle';
   if (id === 'generate' || id === 'preview') {
     const latest = tasks[0];
@@ -790,6 +909,39 @@ async function loadVoiceLibrary() {
     voiceLoading.value = false;
   }
 }
+async function loadAudioBoard() {
+  audioLoading.value = true;
+  try {
+    const data = await request(`/projects/${projectKey()}/audio`);
+    audioRows.value = data?.rows || [];
+  } catch (err) {
+    audioRows.value = [];
+    ElMessage.error(err.message || '收音列表没有打开');
+  } finally {
+    audioLoading.value = false;
+  }
+}
+function openCapture() {
+  voiceMode.value = 'capture';
+  loadAudioBoard();
+}
+function audioSrc(row) {
+  if (!row?.audio_ready) return '';
+  return `${resolveApiBase()}/projects/${projectKey()}/shots/${row.shot_id}/audio?v=${row.audio_mtime || 1}`;
+}
+async function extractAudio(row) {
+  audioBusy.value = row.shot_id;
+  try {
+    const saved = await request(`/projects/${projectKey()}/shots/${row.shot_id}/audio`, { method: 'post' });
+    row.audio_ready = true;
+    row.audio_mtime = saved?.audio_mtime || Date.now();
+    ElMessage.success(`${row.shot_code || '这条镜头'} 已抽出音轨`);
+  } catch (err) {
+    ElMessage.error(err.message || '没有抽出音轨');
+  } finally {
+    audioBusy.value = 0;
+  }
+}
 function selectLibraryVoice(row) {
   selectedVoice.value = row;
 }
@@ -858,6 +1010,83 @@ async function disableAsset(row) {
     ElMessage.success('已停用');
   } catch (err) {
     ElMessage.error(err.message || '没有停用');
+  }
+}
+const assetGenerateOpen = ref(false);
+const assetGenerateLoading = ref(false);
+const assetGenerateStarting = ref(false);
+const assetGenerateWorkflows = ref([]);
+const assetGenerateWorkflowId = ref(null);
+const assetGenerateWidth = ref(1024);
+const assetGenerateHeight = ref(1024);
+function assetSizeReady(width, height) {
+  return Number.isInteger(width) && Number.isInteger(height)
+    && width >= 64 && height >= 64 && width <= 2048 && height <= 2048
+    && width % 32 === 0 && height % 32 === 0;
+}
+const assetGenerateReady = computed(() => Boolean(scriptImport.value && assetGenerateWorkflowId.value)
+  && assetSizeReady(assetGenerateWidth.value, assetGenerateHeight.value)
+  && !pipelineRunning.value);
+function syncAssetGenerateSize() {
+  const row = assetGenerateWorkflows.value.find(item => item.id === assetGenerateWorkflowId.value);
+  assetGenerateWidth.value = Number(row?.width) > 0 ? Number(row.width) : 1024;
+  assetGenerateHeight.value = Number(row?.height) > 0 ? Number(row.height) : 1024;
+}
+async function openAssetGenerate() {
+  if (!scriptImport.value || pipelineRunning.value) return;
+  assetGenerateOpen.value = true;
+  if (assetGenerateWorkflows.value.length) return;
+  assetGenerateLoading.value = true;
+  try {
+    const data = await request('/generate-inputs');
+    assetGenerateWorkflows.value = (data?.workflows || []).filter(row => row.media === 'image' && !/反推|改图|图生图/.test(row.name || ''));
+    if (!assetGenerateWorkflows.value.length) ElMessage.warning('没有可选的文生图工作流');
+  } catch (err) {
+    ElMessage.error(err.message || '没有读到生图工作流');
+  } finally {
+    assetGenerateLoading.value = false;
+  }
+}
+async function submitAssetGenerate() {
+  if (!assetGenerateReady.value || !scriptImport.value) return;
+  assetGenerateStarting.value = true;
+  try {
+    await request(`/projects/${projectKey()}/assets/generate`, {
+      method: 'post',
+      timeout: 120000,
+      data: {
+        import_id: scriptImport.value.id,
+        asset_workflow_id: assetGenerateWorkflowId.value,
+        asset_width: assetGenerateWidth.value,
+        asset_height: assetGenerateHeight.value,
+      },
+    });
+    assetGenerateOpen.value = false;
+    await loadPipeline();
+    ElMessage.success('正在按剧本生成资产');
+  } catch (err) {
+    ElMessage.error(err.message || '没有开始');
+  } finally {
+    assetGenerateStarting.value = false;
+  }
+}
+async function clearAssets() {
+  if (!assets.value.length) return;
+  try {
+    await ElMessageBox.confirm(
+      `清除这个项目的 ${assets.value.length} 条资产？设定图、RefMod 和镜头绑定会一起去掉。已经生成的画面会留着。`,
+      '一键清除',
+      { type: 'warning', confirmButtonText: '清除', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  try {
+    await request(`/projects/${projectKey()}/assets`, { method: 'delete' });
+    await load();
+    ElMessage.success('资产已清除');
+  } catch (err) {
+    ElMessage.error(err.message || '没有清除');
   }
 }
 async function removeAsset(row) {
@@ -937,8 +1166,10 @@ async function persistNode(value) {
     // 地址栏仍是当前节点，记不住时下次打开回到上次成功写入的节点
   }
 }
+let loadSeq = 0;
 async function load(mask = false) {
   const id = projectKey();
+  const seq = ++loadSeq;
   const token = mask ? ++entryToken : 0;
   if (mask) entryLoading.value = true;
   error.value = '';
@@ -948,6 +1179,7 @@ async function load(mask = false) {
     return;
   }
   const detail = await request(`/projects/${id}`);
+  if (seq !== loadSeq) return;
   if (String(route.params.id || '') !== id) return;
   const episodes = detail.episodes || [];
   if (!episodes.length) {
@@ -992,9 +1224,24 @@ watch(() => route.query.node, (value) => {
     router.replace({ query: { node: 'assets' } });
   }
 }, { immediate: true });
+let refreshFlight = null;
+function refreshWorkbench() {
+  if (!project.value) return Promise.resolve();
+  if (refreshFlight) return refreshFlight;
+  refreshFlight = load(false).finally(() => { refreshFlight = null; });
+  return refreshFlight;
+}
 watch(node, (value) => {
   persistNode(value);
   if (value === 'voice' && !voiceRows.value.length) loadVoiceLibrary();
+  refreshWorkbench();
+});
+watch(navTarget, (value) => {
+  if (value) refreshWorkbench();
+});
+watch(() => pipeline.value?.updated_at, () => {
+  if (pipeline.value?.status !== 'running') return;
+  if ([ 'assets', 'preview', 'voice' ].includes(node.value)) refreshWorkbench();
 });
 watch([ voiceQuery, voiceFolder ], () => {
   voicePage.value = 1;
@@ -1006,10 +1253,18 @@ watch(() => route.params.taskId, () => {
   });
 });
 onMounted(() => {
+  if (node.value === 'voice') loadVoiceLibrary();
   load(true).catch((err) => {
     error.value = err.message || '打不开工作台';
     ElMessage.error(error.value);
   });
+  loadPipeline();
+  pipelineTimer = setInterval(loadPipeline, 3000);
+  pipelineClock = setInterval(() => { nowTick.value = Date.now(); }, 1000);
+});
+onUnmounted(() => {
+  clearInterval(pipelineTimer);
+  clearInterval(pipelineClock);
 });
 </script>
 
@@ -1027,6 +1282,49 @@ onMounted(() => {
   font-size: 12px;
   line-height: 1.5;
 }
+.cartoon-pipeline-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #f4f8f5;
+  border: 1px solid #d5e6db;
+  border-radius: 8px;
+}
+.cartoon-pipeline-bar__text { color: #1f3d2c; }
+.cartoon-pipeline-bar__dots::after {
+  content: '';
+  display: inline-block;
+  width: 1.2em;
+  text-align: left;
+  animation: cartoon-pipeline-dots 1.2s steps(4, end) infinite;
+}
+.cartoon-pipeline-bar__time { color: #5c6b62; font-size: 13px; }
+@keyframes cartoon-pipeline-dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75% { content: '...'; }
+}
+.cartoon-voice-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.cartoon-voice-switch button {
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.4;
+}
+.cartoon-voice-switch button.is-on { opacity: 1; }
+.cartoon-voice-switch button:hover { opacity: 0.85; }
+.cartoon-voice-switch span { opacity: 0.45; }
 .cartoon-workbench--boot {
   display: block;
   position: relative;
@@ -1176,6 +1474,9 @@ onMounted(() => {
   gap: 12px;
 }
 .cartoon-asset-head .cartoon-module__title { margin: 0; }
+.cartoon-asset-head__actions { display: flex; align-items: center; gap: 8px; }
+.cartoon-full-size { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.cartoon-full-size span { color: #5c6b62; font-size: 13px; }
 .cartoon-asset-page :deep(.el-tabs) {
   flex: 1;
   min-height: 0;

@@ -23,7 +23,7 @@
     </el-table>
     <div class="novel-bulk-bar">
       <el-button type="primary" plain size="small" @click="openCreate">添加</el-button>
-      <el-button type="danger" plain size="small" :disabled="!lines.length" @click="removeChecked">一键删除</el-button>
+      <el-button type="danger" plain size="small" :disabled="!lines.length" @click="removeChecked">一键清除</el-button>
     </div>
     <el-table :data="lines" row-key="id" size="small" empty-text="还没有剧情线" @selection-change="picked = $event">
       <el-table-column type="selection" width="48" />

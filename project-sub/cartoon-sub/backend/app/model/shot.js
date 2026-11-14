@@ -25,5 +25,6 @@ module.exports = app => {
     manual_frame_path: { type: STRING(500), allowNull: true },
     stage_notes: { type: JSONB, allowNull: true },
     dialogue_lines: { type: JSONB, allowNull: true },
+    scene_label: { type: STRING(200), allowNull: true },
   }, { tableName: 'cartoon_shots' });
 };

@@ -24,7 +24,7 @@
           :disabled="!total"
           @click="handleDeleteAllFiltered"
         >
-          一键删除 ({{ total }})
+          一键清除 ({{ total }})
         </el-button>
       </template>
     </ItemFilterBar>
@@ -475,7 +475,7 @@ async function handleDeleteAllFiltered() {
   try {
     await ElMessageBox.confirm(
       `确定删除当前筛选条件下的全部 ${total.value} 条用例吗？此操作不可恢复。`,
-      '一键删除',
+      '一键清除',
       { type: 'warning', confirmButtonText: '全部删除', cancelButtonText: '取消' },
     );
     deletingAll.value = true;

@@ -159,13 +159,19 @@ function describeCallInputs(apiJson) {
     const many = roleCount[slot.role] > 1;
     const suffix = many ? String(seenRole[slot.role]) : '';
     if (slot.role === 'start') slot.label = hasEnd ? '首帧' : '起始图';
-    else if (slot.role === 'end') slot.label = '尾帧';
+    else if (slot.role === 'end') {
+      slot.label = '尾帧（可选）';
+      slot.optional = true;
+      slot.spec = slot.width && slot.height
+        ? `可以不传。不传时只按首帧生成，目标 ${slot.width}×${slot.height}`
+        : '可以不传。不传时只按首帧继续生成。';
+    }
     else if (slot.role === 'reference') slot.label = `参考图${suffix}`;
     else if (slot.role === 'mask') slot.label = `蒙版${suffix}`;
     else if (slot.role === 'video') slot.label = `视频${suffix}`;
     else slot.label = `图片${suffix}`;
     if (slot.role === 'video') slot.spec = '上传 mp4、webm 或 mov。模型从视频里抽 16 帧反推。';
-    else slot.spec = slot.limit > 1
+    else if (slot.role !== 'end') slot.spec = slot.limit > 1
       ? `最多 ${slot.limit} 张，按选择顺序作为参考图`
       : specOf(slot);
   });
@@ -316,6 +322,7 @@ function withCallFields(fields, apiJson) {
     label: slot.label,
     value: '',
     spec: slot.spec,
+    optional: Boolean(slot.optional),
     width: slot.width,
     height: slot.height,
     limit: slot.limit || 1,

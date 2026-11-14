@@ -116,13 +116,92 @@ function applyDuration(graph, seconds) {
   });
 }
 
+const CAPTION_CLASS = /AILab_QwenVL|^JC$|Florence2|WD14Tagger/i;
+const IMAGE_BATCH_MAX = 8;
+
+function isImageWorkflow(graph) {
+  if (isVideoWorkflow(graph)) return false;
+  const nodes = Object.values(graph || {});
+  if (nodes.some(node => CAPTION_CLASS.test(String(node?.class_type || '')))) return false;
+  return nodes.some(node => node?.class_type === 'SaveImage' || node?.class_type === 'PreviewImage');
+}
+
+function randomImageSeed() {
+  const digits = 8 + Math.floor(Math.random() * 3);
+  const min = 10 ** (digits - 1);
+  const span = (10 ** digits) - min;
+  return min + Math.floor(Math.random() * span);
+}
+
+function uniqueImageSeeds(count) {
+  const used = new Set();
+  const list = [];
+  while (list.length < count) {
+    const value = randomImageSeed();
+    if (used.has(value)) continue;
+    used.add(value);
+    list.push(value);
+  }
+  return list;
+}
+
+function manualSeed(values) {
+  const field = (values || []).find(item => item?.key === 'seed' || item?.key === 'noise_seed');
+  if (!field || field.value == null || field.value === '') return null;
+  const number = Number(field.value);
+  if (!Number.isSafeInteger(number) || number < 0) {
+    const error = new Error('种子需要是非负整数');
+    error.status = 400;
+    throw error;
+  }
+  return number;
+}
+
+function acceptAutoSeeds(seeds, count) {
+  if (!Array.isArray(seeds) || seeds.length !== count) return null;
+  const numbers = seeds.map(item => Number(item));
+  const valid = numbers.every(item => Number.isSafeInteger(item) && item >= 10000000 && item <= 9999999999);
+  return valid ? numbers : null;
+}
+
+function resolveImageSeeds(graph, values, batch, seeds) {
+  if (!isImageWorkflow(graph)) return [ null ];
+  const manual = manualSeed(values);
+  const requested = Math.round(Number(batch) || (Array.isArray(seeds) ? seeds.length : 0) || 1);
+  if (manual != null) {
+    if (requested > 1 || (Array.isArray(seeds) && seeds.length > 1)) {
+      const error = new Error('填写了种子时批次只能为 1');
+      error.status = 400;
+      throw error;
+    }
+    return [ manual ];
+  }
+  if (!Number.isInteger(requested) || requested < 1 || requested > IMAGE_BATCH_MAX) {
+    const error = new Error(`批次需要是 1 到 ${IMAGE_BATCH_MAX} 的整数`);
+    error.status = 400;
+    throw error;
+  }
+  return acceptAutoSeeds(seeds, requested) || uniqueImageSeeds(requested);
+}
+
+function pinBatchSize(graph) {
+  Object.values(graph || {}).forEach(node => {
+    const inputs = node?.inputs;
+    if (!inputs || Array.isArray(inputs.batch_size) || typeof inputs.batch_size !== 'number') return;
+    inputs.batch_size = 1;
+  });
+  return graph;
+}
+
 function listPreviewFields(apiJson) {
   const roles = promptRoles(apiJson);
+  const image = isImageWorkflow(apiJson);
   const fields = [];
   Object.entries(apiJson || {}).forEach(([ nodeId, node ]) => {
     if (!node || typeof node !== 'object' || !node.class_type) return;
     const inputs = node.inputs || {};
     Object.entries(inputs).forEach(([ key, value ]) => {
+      if (image && key === 'batch_size') return;
       if (Array.isArray(value) || value == null || typeof value === 'object') return;
       const type = fieldType(key, value);
       if (!type) return;
@@ -218,4 +297,8 @@ module.exports = {
   collectText,
   framesForDuration,
   readFps,
+  isImageWorkflow,
+  resolveImageSeeds,
+  pinBatchSize,
+  IMAGE_BATCH_MAX,
 };

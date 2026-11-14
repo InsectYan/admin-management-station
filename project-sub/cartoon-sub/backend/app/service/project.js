@@ -33,6 +33,8 @@ function presentPrompt(row) {
   if (!row) return null;
   const json = row.toJSON ? row.toJSON() : { ...row };
   json.positive_zh = uniquePrompt(json.positive_zh);
+  json.frame_start_zh = uniquePrompt(json.frame_start_zh);
+  json.frame_end_zh = uniquePrompt(json.frame_end_zh);
   return json;
 }
 
@@ -259,9 +261,10 @@ class ProjectService extends Service {
       const json = shot.toJSON();
       const sizes = normalizeShotSizes(json.shot_size);
       const moves = normalizeCameraMoves(json.camera_move);
-      const [ autoFrame, manualFrame ] = await Promise.all([
+      const [ autoFrame, manualFrame, endFrame ] = await Promise.all([
         frameFileMeta(this.app, json.first_frame_path),
         frameFileMeta(this.app, json.manual_frame_path),
+        frameFileMeta(this.app, `frames/${id}/${shot.id}/end.png`),
       ]);
       return {
         ...json,
@@ -275,6 +278,9 @@ class ProjectService extends Service {
         manual_frame_mtime: manualFrame?.mtime || 0,
         manual_frame_width: manualFrame?.width || 0,
         manual_frame_height: manualFrame?.height || 0,
+        end_frame_mtime: endFrame?.mtime || 0,
+        end_frame_width: endFrame?.width || 0,
+        end_frame_height: endFrame?.height || 0,
         prompt: presentPrompt(promptByShot.get(shot.id)),
         asset_marks: this.assetMarksFor(shot, assets, importById, promptByShot, bindings),
       };
@@ -316,7 +322,7 @@ class ProjectService extends Service {
   }
 
   async touchNode(projectId, taskId, currentNode) {
-    const allowed = [ 'input', 'script', 'storyboard', 'assets', 'generate', 'voice', 'subtitle', 'compose', 'preview', 'review', 'export' ];
+    const allowed = [ 'input', 'script', 'storyboard', 'pipeline', 'assets', 'generate', 'voice', 'subtitle', 'compose', 'preview', 'review', 'export' ];
     if (!allowed.includes(currentNode)) {
       const err = new Error('节点不存在');
       err.status = 400;
@@ -928,10 +934,12 @@ class ProjectService extends Service {
       dialogue: payload.dialogue || '',
       duration_ms: durationMs,
     });
-    if (payload.positive_zh || payload.negative_zh) {
+    if (payload.positive_zh || payload.negative_zh || payload.frame_start_zh || payload.frame_end_zh) {
       await this.ctx.model.Prompt.create({
         shot_id: shot.id,
         positive_zh: payload.positive_zh || '',
+        frame_start_zh: payload.frame_start_zh || '',
+        frame_end_zh: payload.frame_end_zh || '',
         negative_zh: payload.negative_zh || '',
       });
     }
@@ -957,7 +965,7 @@ class ProjectService extends Service {
       speech_rate: String(payload.speech_rate || '').trim(),
       emotion: String(payload.emotion || '').trim(),
       character_id: character ? characterId : '',
-      consistency_note: character ? String(payload.consistency_note || '').trim() : '',
+      consistency_note: character || kind === 'scene' ? String(payload.consistency_note || '').trim() : '',
       scene_type: kind === 'scene' ? sceneType : '',
       front_path: character ? String(payload.front_path || '').trim() : '',
       side_path: character ? String(payload.side_path || '').trim() : '',
@@ -1053,6 +1061,12 @@ class ProjectService extends Service {
     if (!row) this.ctx.throw(404, '资产不存在');
     await row.update({ disabled: true });
     return row;
+  }
+
+  async clearAssets(projectId) {
+    const rows = await this.ctx.model.Asset.findAll({ where: { project_id: projectId } });
+    for (const row of rows) await this.removeAsset(projectId, row.id);
+    return { removed: rows.length };
   }
 
   async removeAsset(projectId, assetId) {
@@ -1246,6 +1260,8 @@ class ProjectService extends Service {
         description: shot.description,
         dialogue: shot.dialogue,
         positive_zh: prompt?.positive_zh,
+        frame_start_zh: prompt?.frame_start_zh,
+        frame_end_zh: prompt?.frame_end_zh,
         negative_zh: prompt?.negative_zh,
       }),
       assets,
@@ -1271,6 +1287,8 @@ class ProjectService extends Service {
         description: shot.description,
         dialogue: shot.dialogue,
         positive_zh: prompt?.positive_zh,
+        frame_start_zh: prompt?.frame_start_zh,
+        frame_end_zh: prompt?.frame_end_zh,
         negative_zh: prompt?.negative_zh,
       });
       const have = new Set(boundByShot.get(Number(shot.id)) || []);
@@ -1318,9 +1336,11 @@ class ProjectService extends Service {
         };
       }));
     }
-    if (payload.positive_zh != null || payload.negative_zh != null) {
+    if (payload.positive_zh != null || payload.negative_zh != null || payload.frame_start_zh != null || payload.frame_end_zh != null) {
       await this.updateShot(shot.id, {
         positive_zh: payload.positive_zh,
+        frame_start_zh: payload.frame_start_zh,
+        frame_end_zh: payload.frame_end_zh,
         negative_zh: payload.negative_zh,
       });
     }
@@ -1335,6 +1355,8 @@ class ProjectService extends Service {
         description: payload.description != null ? payload.description : fresh.description,
         dialogue: payload.dialogue != null ? payload.dialogue : fresh.dialogue,
         positive_zh: payload.positive_zh != null ? payload.positive_zh : prompt?.positive_zh,
+        frame_start_zh: payload.frame_start_zh != null ? payload.frame_start_zh : prompt?.frame_start_zh,
+        frame_end_zh: payload.frame_end_zh != null ? payload.frame_end_zh : prompt?.frame_end_zh,
         negative_zh: payload.negative_zh != null ? payload.negative_zh : prompt?.negative_zh,
       }),
       assets,
@@ -1461,8 +1483,10 @@ class ProjectService extends Service {
     const shot = await this.ctx.model.Shot.findByPk(shotId);
     if (!shot || String(shot.project_id) !== String(projectId)) this.ctx.throw(404, '分镜不存在');
     const column = which === 'manual' ? 'manual_frame_path' : 'first_frame_path';
-    if (which !== 'manual' && which !== 'auto') this.ctx.throw(404, '帧不存在');
-    const relative = shot[column];
+    let relative = '';
+    if (which === 'end') relative = `frames/${projectId}/${shot.id}/end.png`;
+    else if (which === 'manual' || which === 'auto') relative = shot[column];
+    else this.ctx.throw(404, '帧不存在');
     if (!relative) this.ctx.throw(404, '帧不存在');
     const root = outputRoot(this.app);
     const absolute = resolveInside(root, relative);
@@ -1526,20 +1550,16 @@ class ProjectService extends Service {
     if (dialogueLines) next.dialogue_lines = dialogueLines;
     await shot.update(next);
     if (dialogueLines) await this.syncLineCues(shot, dialogueLines);
-    if (payload.positive_zh != null || payload.negative_zh != null) {
+    if (payload.positive_zh != null || payload.negative_zh != null || payload.frame_start_zh != null || payload.frame_end_zh != null) {
       const existing = await this.ctx.model.Prompt.findOne({ where: { shot_id: shot.id } });
-      if (existing) {
-        await existing.update({
-          positive_zh: payload.positive_zh ?? existing.positive_zh,
-          negative_zh: payload.negative_zh ?? existing.negative_zh,
-        });
-      } else {
-        await this.ctx.model.Prompt.create({
-          shot_id: shot.id,
-          positive_zh: payload.positive_zh || '',
-          negative_zh: payload.negative_zh || '',
-        });
-      }
+      const fields = {
+        positive_zh: payload.positive_zh ?? existing?.positive_zh ?? '',
+        frame_start_zh: payload.frame_start_zh ?? existing?.frame_start_zh ?? '',
+        frame_end_zh: payload.frame_end_zh ?? existing?.frame_end_zh ?? '',
+        negative_zh: payload.negative_zh ?? existing?.negative_zh ?? '',
+      };
+      if (existing) await existing.update(fields);
+      else await this.ctx.model.Prompt.create({ shot_id: shot.id, ...fields });
     }
     const changed = [ 'description', 'shot_size', 'camera_move', 'dialogue' ].some(key => {
       if (key === 'shot_size') {
@@ -1547,7 +1567,7 @@ class ProjectService extends Service {
       }
       return payload[key] != null && String(payload[key]) !== String(before[key] ?? '');
     });
-    if (changed || payload.positive_zh != null || payload.negative_zh != null) await this.markRevised(shot.id);
+    if (changed || payload.positive_zh != null || payload.negative_zh != null || payload.frame_start_zh != null || payload.frame_end_zh != null) await this.markRevised(shot.id);
     return shot;
   }
 

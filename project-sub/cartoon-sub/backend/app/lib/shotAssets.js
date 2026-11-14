@@ -65,7 +65,7 @@ function findMentions(text, catalog) {
 }
 
 function shotText(parts) {
-  return [ parts.description, parts.dialogue, parts.positive_zh, parts.negative_zh ]
+  return [ parts.description, parts.dialogue, parts.positive_zh, parts.frame_start_zh, parts.frame_end_zh, parts.negative_zh ]
     .map(item => String(item || '').trim())
     .filter(Boolean)
     .join('\n');

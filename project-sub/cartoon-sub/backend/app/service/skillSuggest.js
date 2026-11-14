@@ -337,7 +337,7 @@ class SkillSuggestService extends Service {
             prompt: cue.text,
             media_profile: audio.id,
           }),
-          signal: AbortSignal.timeout(900000),
+          signal: AbortSignal.timeout(21600000),
           dispatcher,
         });
         const data = await res.json().catch(() => ({}));

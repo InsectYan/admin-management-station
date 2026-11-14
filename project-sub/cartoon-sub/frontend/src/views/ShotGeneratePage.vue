@@ -29,7 +29,19 @@
             <el-option v-for="item in moveOptions" :key="item" :label="item" :value="item" />
           </el-select>
         </el-form-item>
-        <el-form-item label="镜头提示词">
+        <template v-if="media === 'image'">
+        <el-form-item label="这次生成">
+          <el-button :type="imageFrame === 'start' ? 'primary' : 'default'" :disabled="readOnly" @click="imageFrame = 'start'">首帧</el-button>
+          <el-button :type="imageFrame === 'end' ? 'primary' : 'default'" :disabled="readOnly" @click="imageFrame = 'end'">尾帧</el-button>
+        </el-form-item>
+        <el-form-item label="首帧提示词">
+          <el-input v-model="frameStartText" type="textarea" :rows="8" :readonly="readOnly" />
+        </el-form-item>
+        <el-form-item label="尾帧提示词">
+          <el-input v-model="frameEndText" type="textarea" :rows="8" :readonly="readOnly" />
+        </el-form-item>
+        </template>
+        <el-form-item v-else label="视频提示词">
           <el-input v-model="promptText" type="textarea" :rows="12" :readonly="readOnly" />
         </el-form-item>
         <el-form-item label="负向提示词">
@@ -72,7 +84,20 @@
             >{{ item.name }}</span>
           </div>
           <p class="cartoon-module__hint">绿色是已经关联的资产。红色是当前剧情或提示词里还没有关联上的，没有资产记录的名字也不能选。</p>
-          <p v-if="!readOnly" class="cartoon-module__hint">生图按选择顺序带上人物、场景、道具的描述，镜头提示词附在最后。生视频只要选中角色（含剧情里自动关联上的），就把该角色的 RefMod 锁定写在提示词开头。保存时按当前提示词和剧情再校验一次。</p>
+          <div v-if="linkedSheets.length" class="cartoon-linked-sheets">
+            <figure v-for="(item, index) in linkedSheets" :key="item.key">
+              <el-image
+                :src="item.url"
+                fit="cover"
+                :preview-src-list="linkedPreview"
+                :initial-index="index"
+                preview-teleported
+                hide-on-click-modal
+              />
+              <figcaption>{{ kindLabel(item.kind) }} · {{ item.name }}</figcaption>
+            </figure>
+          </div>
+          <p v-if="!readOnly" class="cartoon-module__hint">生图按选择顺序带上人物、场景、道具的描述，这次选中的首帧或尾帧提示词附在最后。生视频只要选中角色（含剧情里自动关联上的），就把该角色的 RefMod 锁定写在提示词开头。保存时按当前提示词和剧情再校验一次。</p>
           <div v-if="refmodChoices.length" class="cartoon-refmod-pick">
             <p class="cartoon-module__hint">勾选这镜要用的参考图。说明写在资产的 RefMod 里，生成时按编号分开写。</p>
             <div v-for="item in refmodChoices" :key="item.id" class="cartoon-refmod-pick__asset">
@@ -106,16 +131,20 @@
             <p class="cartoon-module__hint">点图片组查看全部参考图。生成时按这个顺序把角色锁定写在提示词开头，并挂上对应参考图。</p>
           </div>
         </el-form-item>
-        <el-form-item v-if="usesFrames" label="采用的首帧">
-          <p class="cartoon-module__hint">{{ frameChoiceText }}</p>
-          <div style="display: flex; gap: 8px">
-            <figure v-if="frameSrc('auto')" style="margin: 0">
-              <img :src="frameSrc('auto')" alt="" :style="frameBox('auto')" />
-              <figcaption style="font-size: 12px; color: #5c6b62">上镜尾帧</figcaption>
+        <el-form-item v-if="usesFrames || hasStoredFrames" label="首尾帧">
+          <p v-if="usesFrames" class="cartoon-module__hint">{{ frameChoiceText }}</p>
+          <div class="cartoon-frame-row">
+            <figure v-if="frameSrc('manual')">
+              <el-image :src="frameSrc('manual')" fit="contain" :preview-src-list="[frameSrc('manual')]" preview-teleported hide-on-click-modal :style="frameBox('manual')" />
+              <figcaption>生成的首帧</figcaption>
             </figure>
-            <figure v-if="frameSrc('manual')" style="margin: 0">
-              <img :src="frameSrc('manual')" alt="" :style="frameBox('manual')" />
-              <figcaption style="font-size: 12px; color: #5c6b62">指定首帧</figcaption>
+            <figure v-if="frameSrc('end')">
+              <el-image :src="frameSrc('end')" fit="contain" :preview-src-list="[frameSrc('end')]" preview-teleported hide-on-click-modal :style="frameBox('end')" />
+              <figcaption>生成的尾帧</figcaption>
+            </figure>
+            <figure v-if="frameSrc('auto')">
+              <el-image :src="frameSrc('auto')" fit="contain" :preview-src-list="[frameSrc('auto')]" preview-teleported hide-on-click-modal :style="frameBox('auto')" />
+              <figcaption>上镜尾帧</figcaption>
             </figure>
           </div>
         </el-form-item>
@@ -176,6 +205,9 @@ const router = useRouter();
 const shot = ref(null);
 const chapterTitle = ref('');
 const promptText = ref('');
+const frameStartText = ref('');
+const frameEndText = ref('');
+const imageFrame = ref('start');
 const negativeText = ref('');
 const shotSizes = ref([ '中景' ]);
 const cameraMoves = ref([ '固定' ]);
@@ -222,6 +254,26 @@ const assetGroups = computed(() => [
 const selectedAssets = computed(() => assetIds.value
   .map(id => visualAssets.value.find(item => item.id === id))
   .filter(Boolean));
+function storedAssetUrls(asset) {
+  return [ asset?.reference_path, ...String(asset?.angle_paths || '').split('\n') ]
+    .map(item => String(item || '').trim())
+    .filter(item => item.startsWith('/projects/'));
+}
+const linkedSheets = computed(() => {
+  const rows = [];
+  selectedAssets.value.forEach(asset => {
+    storedAssetUrls(asset).forEach(item => {
+      rows.push({
+        key: `${asset.id}-${item}`,
+        name: asset.name,
+        kind: asset.kind,
+        url: `${resolveApiBase()}${item}`,
+      });
+    });
+  });
+  return rows;
+});
+const linkedPreview = computed(() => linkedSheets.value.map(item => item.url));
 const assetsLocked = computed(() => {
   const fields = shot.value?.overridden_fields;
   return Array.isArray(fields) && fields.includes('assets');
@@ -258,7 +310,7 @@ const lockVisuals = computed(() => {
     if ((asset?.kind === 'character' || asset?.kind === 'scene') && !ids.includes(id)) ids.push(id);
   });
   if (!assetsLocked.value) {
-    const text = [ shot.value?.description, shot.value?.dialogue, promptText.value, negativeText.value ]
+    const text = [ shot.value?.description, shot.value?.dialogue, promptText.value, frameStartText.value, frameEndText.value, negativeText.value ]
       .filter(Boolean)
       .join('\n');
     mentionedVisualIds(text, visualAssets.value).forEach(id => {
@@ -369,10 +421,15 @@ const stageLineText = computed(() => {
   });
   return lines.join('\n');
 });
+const activePrompt = computed(() => (
+  media.value === 'image'
+    ? (imageFrame.value === 'end' ? frameEndText.value : frameStartText.value)
+    : promptText.value
+));
 const conditionPreview = computed(() => {
   const base = composeCondition(
     conditionAssets.value,
-    promptText.value,
+    activePrompt.value,
     media.value === 'video' && needsRefmod.value,
     packs.value,
     media.value === 'video',
@@ -380,6 +437,7 @@ const conditionPreview = computed(() => {
   return [ base, stageLineText.value ].filter(Boolean).join('\n');
 });
 const usesFrames = computed(() => slots.value.some(slot => slot.role === 'start' || slot.role === 'end'));
+const hasStoredFrames = computed(() => Boolean(frameSrc('manual') || frameSrc('end') || frameSrc('auto')));
 const frameChoiceText = computed(() => {
   if (files[startSlotId()]?.data_base64 || shot.value?.manual_frame_path) return '这次用指定首帧。尾帧可以不传。';
   if (shot.value?.first_frame_path) return '这次用上镜尾帧，也就是上一个镜头最新视频的尾帧。尾帧可以不传。';
@@ -389,14 +447,19 @@ function startSlotId() {
   return slots.value.find(slot => slot.role === 'start')?.id || '';
 }
 function frameSrc(which) {
+  if (!shotId.value) return '';
+  if (which === 'end') {
+    if (!shot.value?.end_frame_mtime) return '';
+    return `${resolveApiBase()}/projects/${projectId.value}/shots/${shotId.value}/frame/end?v=${shot.value.end_frame_mtime}`;
+  }
   const stored = which === 'manual' ? shot.value?.manual_frame_path : shot.value?.first_frame_path;
-  if (!stored || !shotId.value) return '';
+  if (!stored) return '';
   const version = which === 'manual' ? shot.value?.manual_frame_mtime : shot.value?.first_frame_mtime;
   return `${resolveApiBase()}/projects/${projectId.value}/shots/${shotId.value}/frame/${which}?v=${version || encodeURIComponent(stored)}`;
 }
 function frameBox(which) {
-  const width = Number(which === 'manual' ? shot.value?.manual_frame_width : shot.value?.first_frame_width) || 0;
-  const height = Number(which === 'manual' ? shot.value?.manual_frame_height : shot.value?.first_frame_height) || 0;
+  const width = Number(which === 'end' ? shot.value?.end_frame_width : (which === 'manual' ? shot.value?.manual_frame_width : shot.value?.first_frame_width)) || 0;
+  const height = Number(which === 'end' ? shot.value?.end_frame_height : (which === 'manual' ? shot.value?.manual_frame_height : shot.value?.first_frame_height)) || 0;
   const base = { objectFit: 'contain', borderRadius: '6px', background: '#e7f3eb', display: 'block' };
   const long = 96;
   if (!width || !height) return { ...base, height: `${long}px`, width: 'auto' };
@@ -701,6 +764,8 @@ async function load() {
   });
   refmodPicks.value = picks;
   promptText.value = found.prompt?.positive_zh || '';
+  frameStartText.value = found.prompt?.frame_start_zh || '';
+  frameEndText.value = found.prompt?.frame_end_zh || '';
   negativeText.value = found.prompt?.negative_zh || '';
   shotSizes.value = Array.isArray(found.shot_sizes) && found.shot_sizes.length ? found.shot_sizes.slice() : [ '中景' ];
   cameraMoves.value = Array.isArray(found.camera_moves) && found.camera_moves.length
@@ -834,6 +899,8 @@ async function saveAssets() {
         workflow_id: workflowId.value,
         stage_notes: stagePayload(),
         positive_zh: promptText.value,
+        frame_start_zh: frameStartText.value,
+        frame_end_zh: frameEndText.value,
         negative_zh: negativeText.value,
       },
     });
@@ -842,6 +909,8 @@ async function saveAssets() {
       data: {
         asset_ids: assetIds.value,
         positive_zh: promptText.value,
+        frame_start_zh: frameStartText.value,
+        frame_end_zh: frameEndText.value,
         negative_zh: negativeText.value,
         description: shot.value?.description || '',
         dialogue: shot.value?.dialogue || '',
@@ -875,6 +944,14 @@ async function generate() {
   });
   if (missing.length) {
     ElMessage.error(`请上传${missing.map(slot => slot.label).join('、')}`);
+    return;
+  }
+  if (media.value === 'video' && !String(promptText.value || '').trim()) {
+    ElMessage.warning('请填写视频提示词');
+    return;
+  }
+  if (media.value === 'image' && !String(activePrompt.value || '').trim()) {
+    ElMessage.warning(imageFrame.value === 'end' ? '请填写尾帧提示词' : '请填写首帧提示词');
     return;
   }
   if (media.value === 'video' && !(Number(durationSec.value) >= 1)) {
@@ -912,6 +989,9 @@ async function generate() {
       signal: generateAbort.signal,
       data: {
         positive_zh: promptText.value,
+        frame_start_zh: frameStartText.value,
+        frame_end_zh: frameEndText.value,
+        frame_target: imageFrame.value,
         negative_zh: negativeText.value,
         shot_sizes: shotSizes.value,
         camera_moves: cameraMoves.value,
@@ -989,6 +1069,20 @@ defineExpose({
 .cartoon-asset-mark { padding: 0 8px; border-radius: 6px; line-height: 22px; font-size: 12px; }
 .cartoon-asset-mark.is-have { color: #1f7a45; background: #e7f6ee; }
 .cartoon-asset-mark.is-miss { color: #c45656; background: #fdecec; }
+.cartoon-linked-sheets,
+.cartoon-frame-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.cartoon-linked-sheets figure,
+.cartoon-frame-row figure { margin: 0; width: 96px; }
+.cartoon-linked-sheets :deep(.el-image),
+.cartoon-frame-row :deep(.el-image) {
+  width: 96px;
+  height: 96px;
+  border-radius: 8px;
+  background: #eef3ef;
+  cursor: zoom-in;
+}
+.cartoon-linked-sheets figcaption,
+.cartoon-frame-row figcaption { margin-top: 4px; font-size: 12px; color: #5c6b62; line-height: 1.4; }
 .cartoon-job-progress { max-width: 420px; margin-top: 12px; }
 .cartoon-refmod-pick,
 .cartoon-refmod-plan {

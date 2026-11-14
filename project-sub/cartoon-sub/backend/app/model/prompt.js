@@ -6,6 +6,8 @@ module.exports = app => {
     id: { type: INTEGER, primaryKey: true, autoIncrement: true },
     shot_id: { type: INTEGER, allowNull: false, unique: true },
     positive_zh: { type: TEXT, allowNull: true },
+    frame_start_zh: { type: TEXT, allowNull: true },
+    frame_end_zh: { type: TEXT, allowNull: true },
     negative_zh: { type: TEXT, allowNull: true },
   }, { tableName: 'cartoon_prompts' });
 };

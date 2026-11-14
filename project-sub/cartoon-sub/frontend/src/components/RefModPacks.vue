@@ -3,8 +3,15 @@
     <div v-if="variant === 'editor'" class="cartoon-refmod-editor">
       <p class="cartoon-module__hint">一个资产一份图集，每张图写一句说明，例如「正面脸」「这套服装」。镜头绑上这个资产后，可以再勾掉这镜不用的图。</p>
       <p v-if="!assetId && !draft.length" class="cartoon-module__hint">可以先选图并写说明，创建资产时一起保存。</p>
-      <div v-for="item in draft" :key="item.key" class="cartoon-refmod-row">
-        <img :src="item.url" alt="" />
+      <div v-for="(item, index) in draft" :key="item.key" class="cartoon-refmod-row">
+        <el-image
+          :src="item.url"
+          fit="cover"
+          :preview-src-list="draft.map(row => row.url)"
+          :initial-index="index"
+          preview-teleported
+          hide-on-click-modal
+        />
         <el-input v-model="item.note" maxlength="80" placeholder="这张图的说明，例如正面脸、侧面、这套服装" />
         <el-button link type="danger" @click="dropItem(item)">移除</el-button>
       </div>
@@ -266,6 +273,7 @@ defineExpose({ flush });
 .cartoon-refmod-card { display: flex; gap: 12px; align-items: center; margin-top: 12px; }
 .cartoon-refmod-card p { margin: 4px 0 0; color: #5c6b62; }
 .cartoon-refmod-row { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
-.cartoon-refmod-row img { width: 72px; height: 72px; object-fit: cover; border-radius: 6px; background: #eef3ef; }
+.cartoon-refmod-row .el-image,
+.cartoon-refmod-row img { width: 72px; height: 72px; border-radius: 6px; background: #eef3ef; cursor: zoom-in; }
 .cartoon-refmod-row .el-input { flex: 1; }
 </style>

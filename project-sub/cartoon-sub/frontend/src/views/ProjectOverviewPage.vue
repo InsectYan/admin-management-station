@@ -13,6 +13,7 @@
           <el-button :disabled="!canMake()" @click="openEdit">编辑</el-button>
           <el-button type="danger" plain :disabled="!canMake()" @click="removeProject">删除</el-button>
           <el-button @click="openWorkbench('compose')">剪辑成片</el-button>
+          <el-button @click="router.push(`/projects/${projectId}/captions`)">获取提示词</el-button>
           <el-button type="primary" @click="openWorkbench('input')">进入制作</el-button>
         </div>
       </div>
@@ -125,8 +126,11 @@
                 <el-table-column label="对白" width="240">
                   <template #default="{ row }"><ClampText title="对白" :text="row.dialogue || ''" /></template>
                 </el-table-column>
-                <el-table-column label="正向提示词" width="480">
-                  <template #default="{ row }"><ClampText title="正向提示词" :text="row.prompt?.positive_zh || ''" /></template>
+                <el-table-column label="视频提示词" width="480">
+                  <template #default="{ row }"><ClampText title="视频提示词" :text="row.prompt?.positive_zh || ''" /></template>
+                </el-table-column>
+                <el-table-column label="首尾帧提示词" width="420">
+                  <template #default="{ row }"><ClampText title="首尾帧提示词" :text="framePromptText(row.prompt)" /></template>
                 </el-table-column>
                 <el-table-column label="操作" width="180" fixed="right">
                   <template #default="{ row }">
@@ -151,6 +155,8 @@
           <h3 class="cartoon-module__title">批量选题</h3>
           <BatchPanel :project-id="projectId" :science="isLocal" />
         </section>
+
+        <CaptionBoard v-if="tab === 5" :project-id="projectId" />
       </div>
     </div>
     <el-dialog v-model="editOpen" title="编辑基础信息" width="720px">
@@ -213,6 +219,7 @@ import NovelBriefPanel from '../components/NovelBriefPanel.vue';
 import CartoonMarkdown from '../components/CartoonMarkdown.vue';
 import CopyBlocks from '../components/CopyBlocks.vue';
 import BatchPanel from '../components/BatchPanel.vue';
+import CaptionBoard from '../components/CaptionBoard.vue';
 import TypePanel from '../components/TypePanel.vue';
 import ExportSpecs from '../components/ExportSpecs.vue';
 import ReviewBox from '../components/ReviewBox.vue';
@@ -221,6 +228,7 @@ import ClampText from '../components/ClampText.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 import { hasPanel, isLocalType, supportsAv } from '../lib/contentTypes.js';
+import { framePromptText } from '../lib/framePrompt.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -232,6 +240,7 @@ const tabs = computed(() => [
   { step: 2, title: isLocal.value ? '本地文案' : '章节快照' },
   { step: 3, title: '镜头' },
   { step: 4, title: '批量' },
+  { step: 5, title: '提示词' },
 ]);
 const tab = ref(Number(route.query.tab) || 1);
 const detail = ref(null);

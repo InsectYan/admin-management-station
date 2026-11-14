@@ -54,10 +54,12 @@ services:
         condition: service_healthy
     volumes:
       - ../backend/app:/app/app
+      - ../backend/app.js:/app/app.js:ro
       - ../backend/config:/app/config
       - ../backend/fixtures:/app/fixtures:ro
       - ../database:/app/database:ro
       - cartoon_outputs:/data/outputs
+      - F:/热门漫剧音色:/voices:ro
 
   cartoon-frontend:
     build:

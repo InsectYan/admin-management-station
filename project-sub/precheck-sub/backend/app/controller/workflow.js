@@ -120,6 +120,8 @@ class WorkflowController extends Controller {
         values: body.values || [],
         refmodIds: body.refmod_ids || [],
         refImages: body.ref_images || [],
+        batch: body.batch,
+        seeds: body.seeds || [],
       }));
     } catch (err) {
       this.ctx.status = err.status || 500;
@@ -139,7 +141,27 @@ class WorkflowController extends Controller {
         values: body.values || [],
         refmodIds: body.refmod_ids || [],
         refImages: body.ref_images || [],
+        batch: body.batch,
+        seeds: body.seeds || [],
       }));
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
+  async stopPreview() {
+    try {
+      ok(this.ctx, await this.ctx.service.workflowPreview.stop(this.ctx.params.id, null));
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
+  async stopDraftPreview() {
+    try {
+      ok(this.ctx, await this.ctx.service.workflowPreview.stop(null, this.ctx.params.key));
     } catch (err) {
       this.ctx.status = err.status || 500;
       this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
@@ -194,6 +216,24 @@ class WorkflowController extends Controller {
   async draftFile() {
     try {
       await this.ctx.service.workflowPreview.sendFile(null, this.ctx.params.key, this.ctx.query.run);
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
+  async clearPreview() {
+    try {
+      ok(this.ctx, await this.ctx.service.workflowPreview.clearRuns(this.ctx.params.id, null));
+    } catch (err) {
+      this.ctx.status = err.status || 500;
+      this.ctx.body = { code: this.ctx.status, message: err.message, data: null };
+    }
+  }
+
+  async clearDraftPreview() {
+    try {
+      ok(this.ctx, await this.ctx.service.workflowPreview.clearRuns(null, this.ctx.params.key));
     } catch (err) {
       this.ctx.status = err.status || 500;
       this.ctx.body = { code: this.ctx.status, message: err.message, data: null };

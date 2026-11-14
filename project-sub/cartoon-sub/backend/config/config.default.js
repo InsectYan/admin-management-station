@@ -46,7 +46,7 @@ module.exports = appInfo => {
       hostname: '0.0.0.0',
     },
   };
-  config.bodyParser = { jsonLimit: '32mb', formLimit: '32mb' };
+  config.bodyParser = { jsonLimit: '96mb', formLimit: '96mb' };
   config.main = {
     baseUrl: process.env.MAIN_API_ORIGIN || 'http://127.0.0.1:5200',
   };
@@ -65,8 +65,8 @@ module.exports = appInfo => {
   };
   config.agentPlatform = {
     baseUrl: process.env.AGENT_PLATFORM_URL || 'http://127.0.0.1:4001',
-    // 本地模型单次 15 分钟，外层多留 1 分钟把结果或超时原因送回来
-    timeoutMs: Number(process.env.AGENT_PLATFORM_TIMEOUT_MS || 960000),
+    // 本地模型单次最长 6 小时，外层多留 10 分钟把结果或超时原因送回来
+    timeoutMs: Number(process.env.AGENT_PLATFORM_TIMEOUT_MS || 22200000),
   };
   config.ops = {
     baseUrl: process.env.OPS_API_ORIGIN || 'http://127.0.0.1:5203',

@@ -41,6 +41,18 @@ function alignGraph(graph) {
   return graph;
 }
 
+function applySize(graph, width, height) {
+  const nextWidth = snap32(width);
+  const nextHeight = snap32(height);
+  if (!nextWidth || !nextHeight) return graph;
+  Object.values(graph || {}).forEach(node => {
+    if (!(Number(node?.inputs?.width) > 0) || !(Number(node?.inputs?.height) > 0)) return;
+    node.inputs.width = nextWidth;
+    node.inputs.height = nextHeight;
+  });
+  return graph;
+}
+
 function unwrap(json) {
   if (json && Object.prototype.hasOwnProperty.call(json, 'data')) return json.data;
   return json;
@@ -263,12 +275,19 @@ class GenerateService extends Service {
     try {
     const missingPanel = await this.ctx.service.project.missingPanelLabels(projectId);
     if (missingPanel.length) this.ctx.throw(400, `面板还没填完：${missingPanel.join('、')}`);
-    const text = String(payload.positive_zh || '').trim();
-    if (!text) this.ctx.throw(400, '需要一句提示词');
     const requestedIds = (Array.isArray(payload.asset_ids) ? payload.asset_ids : [])
       .map(id => Number(id))
       .filter(id => id > 0);
     const videoKind = [ 'video', 'i2v', 't2v', 'refmod' ].includes(kind);
+    const frameTarget = payload.frame_target === 'end' ? 'end' : 'start';
+    const text = videoKind
+      ? String(payload.positive_zh || '').trim()
+      : String((frameTarget === 'end' ? payload.frame_end_zh : payload.frame_start_zh) || '').trim();
+    if (!text) {
+      this.ctx.throw(400, videoKind
+        ? '需要一句视频提示词'
+        : (frameTarget === 'end' ? '需要一句尾帧提示词' : '需要一句首帧提示词'));
+    }
     let storedNegative = '';
     if (videoKind && payload.negative_zh == null) {
       const stored = await this.ctx.model.Prompt.findOne({ where: { shot_id: shot.id } });
@@ -305,7 +324,18 @@ class GenerateService extends Service {
     if (videoKind && composed.refmodIds.length && !useRefs) {
       this.ctx.throw(400, `工作流「${workflowName || '未选择'}」不能引用 RefMod 图片。这条镜头已经绑了参考图，用这条工作流提交时 ComfyUI 收不到图，成片不会像参考人物。请改用带 [RefMod] 的工作流。`);
     }
-    if (useRefs && !composed.refmodIds.length) {
+    const ephemeralId = Number(payload.ephemeral_refmod_id) || 0;
+    let pictureNote = '';
+    if (ephemeralId) {
+      const pack = await this.ctx.model.Refmod.findByPk(ephemeralId);
+      if (!pack || String(pack.project_id) !== String(projectId)) this.ctx.throw(400, '临时参考包不存在');
+      const presented = this.ctx.service.refmod.present(pack);
+      pictureNote = (presented.images || []).map((name, index) => {
+        const note = presented.notes?.[name] || '设定总图';
+        return `<Picture ${index + 1}>：${note}`;
+      }).join('\n');
+    }
+    if (useRefs && !composed.refmodIds.length && !ephemeralId) {
       this.ctx.throw(400, '请勾选已经绑了 RefMod 的角色或场景，并至少留一张参考图');
     }
     if (payload.stage_notes) {
@@ -313,7 +343,7 @@ class GenerateService extends Service {
     }
     const freshShot = await this.ctx.model.Shot.findByPk(shot.id);
     const stageText = await this.ctx.service.project.stageSuffix(freshShot);
-    let positive = composed.positive;
+    let positive = pictureNote ? `${pictureNote}\n${composed.positive}` : composed.positive;
     if (stageText) positive = `${positive}\n${stageText}`;
     const compliance = await complianceCheck(this.ctx, positive);
     const hit = compliance?.hits?.[0];
@@ -332,13 +362,21 @@ class GenerateService extends Service {
       const usage = await usageSummary(this.ctx, projectId);
       if (usage && Number(usage.call_count) >= cap) this.ctx.throw(400, '超过成本上限');
     }
-    const shotPatch = { positive_zh: text };
+    const shotPatch = {};
+    if (videoKind) shotPatch.positive_zh = text;
+    else if (payload.positive_zh != null) shotPatch.positive_zh = String(payload.positive_zh);
     if (payload.negative_zh != null) shotPatch.negative_zh = String(payload.negative_zh);
+    if (!videoKind || payload.frame_start_zh != null) {
+      shotPatch.frame_start_zh = !videoKind && frameTarget === 'start' ? text : String(payload.frame_start_zh ?? '');
+    }
+    if (!videoKind || payload.frame_end_zh != null) {
+      shotPatch.frame_end_zh = !videoKind && frameTarget === 'end' ? text : String(payload.frame_end_zh ?? '');
+    }
     if (payload.shot_sizes != null) shotPatch.shot_sizes = payload.shot_sizes;
     if (payload.camera_moves != null) shotPatch.camera_moves = payload.camera_moves;
     else if (payload.camera_move != null) shotPatch.camera_move = payload.camera_move;
     await this.ctx.service.project.updateShot(shot.id, shotPatch);
-    const refmodIds = useRefs ? composed.refmodIds : [];
+    const refmodIds = useRefs ? (ephemeralId ? [ ephemeralId ] : composed.refmodIds) : [];
     const taskKind = useRefs ? 'refmod' : kind;
     let durationSec;
     if (videoKind) {
@@ -382,6 +420,8 @@ class GenerateService extends Service {
       assetIds,
       seed: Number.isSafeInteger(seed) && seed >= 0 ? seed : undefined,
       durationSec,
+      width: videoKind ? undefined : payload.width,
+      height: videoKind ? undefined : payload.height,
       negative: payload.negative_zh != null ? String(payload.negative_zh) : '',
       signal: stop.signal,
       refmodPicks: picks,
@@ -818,6 +858,7 @@ class GenerateService extends Service {
     try {
       graph = await this.bindWorkflow(workflowId, text, images, refImages, options.seed, options.durationSec, options.negative);
       alignGraph(graph);
+      applySize(graph, options.width, options.height);
       if (refImages.length) assertReferenceGraph(graph, refImages.length);
     } catch (err) {
       if (await this.stopped(task, options.signal)) return task.reload();

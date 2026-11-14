@@ -49,7 +49,7 @@
     </div>
     <el-empty v-if="!shots.length" description="还没有叙事分镜" />
     <div v-if="shots.length" class="novel-bulk-bar">
-      <el-button type="danger" plain size="small" @click="removeChecked">一键删除</el-button>
+      <el-button type="danger" plain size="small" @click="removeChecked">一键清除</el-button>
     </div>
     <el-table v-if="shots.length" :data="shots" row-key="id" size="small" @selection-change="picked = $event">
       <el-table-column type="selection" width="48" />

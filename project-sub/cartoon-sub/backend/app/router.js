@@ -29,6 +29,7 @@ module.exports = app => {
   router.get('/api/library/exports', controller.library.exports);
   router.get('/api/library/outputs', controller.library.outputs);
   router.get('/api/library/outputs/:id', controller.library.output);
+  router.get('/api/library/captions', controller.caption.library);
   router.post('/api/library/shared', controller.library.createShared);
   router.put('/api/library/shared/:id', controller.library.updateShared);
   router.get('/api/rules', controller.rule.index);
@@ -42,6 +43,13 @@ module.exports = app => {
   router.get('/api/projects', controller.project.index);
   router.post('/api/projects/from-template', controller.project.createFromTemplate);
   router.post('/api/projects', controller.project.create);
+  router.get('/api/projects/:id/captions', controller.caption.show);
+  router.put('/api/projects/:id/captions', controller.caption.save);
+  router.post('/api/projects/:id/captions/files', controller.caption.upload);
+  router.post('/api/projects/:id/captions/run-empty', controller.caption.runEmpty);
+  router.delete('/api/projects/:id/captions/:cardId', controller.caption.remove);
+  router.get('/api/projects/:id/captions/:cardId/file', controller.caption.file);
+  router.post('/api/projects/:id/captions/:cardId/run', controller.caption.run);
   router.get('/api/projects/:id', controller.project.show);
   router.put('/api/projects/:id/tasks/:taskId', controller.project.touchNode);
   router.put('/api/projects/:id', controller.project.update);
@@ -83,6 +91,7 @@ module.exports = app => {
   router.post('/api/outputs/:id/face-check', controller.delivery.face);
   router.get('/api/outputs/:id/lineage', controller.delivery.lineage);
   router.get('/api/projects/:id/shell-members', controller.project.shellMembers);
+  router.delete('/api/projects/:id/assets', controller.project.clearAssets);
   router.post('/api/projects/:id/assets/:assetId/disable', controller.project.disableAsset);
   router.delete('/api/projects/:id/assets/:assetId', controller.project.removeAsset);
   router.put('/api/projects/:id/assets/:assetId', controller.project.updateAsset);
@@ -92,6 +101,7 @@ module.exports = app => {
   router.post('/api/projects/:id/assets/match', controller.skillSuggest.matchAssets);
   router.post('/api/projects/:id/assets/suggest', controller.skillSuggest.suggestAssets);
   router.post('/api/projects/:id/assets/apply', controller.skillSuggest.applyAssets);
+  router.post('/api/projects/:id/assets/generate', controller.fullAuto.generateAssets);
   router.get('/api/voice-library', controller.voiceLibrary.index);
   router.get('/api/voice-library/file', controller.voiceLibrary.file);
   router.post('/api/projects/:id/voice/suggest', controller.skillSuggest.suggestVoice);
@@ -115,11 +125,19 @@ module.exports = app => {
   router.put('/api/shots/:id', controller.project.updateShot);
   router.post('/api/projects/:id/shots/:shotId/frame', controller.project.saveFrame);
   router.get('/api/projects/:id/shots/:shotId/frame/:which', controller.project.frameFile);
+  router.get('/api/projects/:id/audio', controller.project.audioBoard);
+  router.post('/api/projects/:id/shots/:shotId/audio', controller.project.extractAudio);
+  router.get('/api/projects/:id/shots/:shotId/audio', controller.project.audioFile);
   router.delete('/api/shots/:id', controller.project.removeShot);
   router.post('/api/shots/:id/promote', controller.project.promoteShot);
   router.get('/api/generate-inputs', controller.project.generateInputs);
   router.get('/api/projects/:id/runs', controller.project.runs);
   router.post('/api/projects/:id/generate/stop', controller.project.stopGenerate);
+  router.get('/api/projects/:id/full-auto/active', controller.fullAuto.active);
+  router.get('/api/projects/:id/full-auto', controller.fullAuto.index);
+  router.post('/api/projects/:id/full-auto', controller.fullAuto.start);
+  router.get('/api/projects/:id/full-auto/:runId', controller.fullAuto.show);
+  router.post('/api/projects/:id/full-auto/:runId/stop', controller.fullAuto.stop);
   router.post('/api/projects/:id/auto-jobs', controller.project.startAutoJob);
   router.get('/api/projects/:id/auto-jobs/current', controller.project.currentAutoJob);
   router.post('/api/projects/:id/shots/:shotId/generate', controller.project.generate);

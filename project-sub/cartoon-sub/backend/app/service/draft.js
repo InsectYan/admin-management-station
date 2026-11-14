@@ -15,12 +15,19 @@ const {
   serializeCameraMoves,
 } = require('../lib/cartoonMeta');
 const { minStoryUnits, normalizeOmissions, uncoveredScenes } = require('../lib/storyCoverage');
-const { normalizeScript } = require('../lib/rosterNames');
+const { normalizeScript, placeTag } = require('../lib/rosterNames');
 const { uniquePrompt } = require('../lib/promptText');
 const { begin, finish } = require('../lib/activeRuns');
 
 function outputOf(result) {
   return result?.output || {};
+}
+
+function sceneTitle(scriptData, item) {
+  const scenes = Array.isArray(scriptData?.scenes) ? scriptData.scenes : [];
+  const index = Number(item?.scene_index);
+  if (!Number.isInteger(index) || index < 1 || index > scenes.length) return '';
+  return placeTag(scenes[index - 1]?.title || scenes[index - 1]?.name || '').slice(0, 200);
 }
 
 function picturePrompt(text) {
@@ -279,6 +286,7 @@ class DraftService extends Service {
         description: item.coverage,
         dialogue: item.dialogue,
         duration_ms: item.duration_sec * 1000,
+        scene_label: sceneTitle(scriptData, item),
       };
       let row;
       try {
@@ -393,6 +401,7 @@ class DraftService extends Service {
     const promptPayload = {
       shots: [ shot ],
       body: chapter.body,
+      repair_note: String(payload.repair_note || '').trim(),
       ...styleCtx,
       ...productionInput(project),
     };
@@ -407,10 +416,14 @@ class DraftService extends Service {
     const promptOutput = outputOf(promptResult);
     let prompt = (promptOutput.prompts || [])[0] || {};
     const positive = String(prompt.positive_zh || '').trim();
+    const frameStart = String(prompt.frame_start_zh || '').trim();
+    const frameEnd = String(prompt.frame_end_zh || '').trim();
     if (!positive) {
       const reply = String(promptOutput.reply || promptOutput.summary || '').replace(/\s+/g, ' ').trim();
-      this.ctx.throw(502, reply ? `没有返回正向提示词。${reply.slice(0, 160)}` : '没有返回正向提示词');
+      this.ctx.throw(502, reply ? `没有返回视频提示词。${reply.slice(0, 160)}` : '没有返回视频提示词');
     }
+    if (!frameStart) this.ctx.throw(502, '没有返回首帧提示词');
+    if (!frameEnd) this.ctx.throw(502, '没有返回尾帧提示词');
     if (negativeNeedsRetry(prompt)) {
       try {
         ensureRunning();
@@ -432,31 +445,39 @@ class DraftService extends Service {
       }
     }
     if (project.av_mode) {
-      ensureRunning();
-      const closed = await invokeSkill(this.ctx, {
-        skill: 'cartoon-av-prompt-skill',
-        action: 'draft',
-        timeoutMs: skillTimeout(this.ctx),
-        signal: stop.signal,
-        payload: {
-          ...promptPayload,
-          shots: [{
-            ...shot,
-            draft_positive_zh: picturePrompt(prompt.positive_zh),
-            draft_negative_zh: String(prompt.negative_zh || '').trim(),
-            draft_production_note: String(prompt.production_note || '').trim(),
-          }],
-        },
-      });
-      const again = (outputOf(closed).prompts || [])[0] || {};
-      const closedPositive = picturePrompt(again.positive_zh);
-      if (!closedPositive) this.ctx.throw(502, 'AV 收口没有返回画面提示词');
-      prompt = {
-        ...prompt,
-        positive_zh: closedPositive,
-        negative_zh: String(again.negative_zh || prompt.negative_zh || '').trim(),
-        production_note: String(again.production_note || prompt.production_note || '').trim(),
-      };
+      try {
+        ensureRunning();
+        const closed = await invokeSkill(this.ctx, {
+          skill: 'cartoon-av-prompt-skill',
+          action: 'draft',
+          timeoutMs: skillTimeout(this.ctx),
+          signal: stop.signal,
+          payload: {
+            ...promptPayload,
+            shots: [{
+              ...shot,
+              draft_positive_zh: picturePrompt(prompt.positive_zh),
+              draft_negative_zh: String(prompt.negative_zh || '').trim(),
+              draft_production_note: String(prompt.production_note || '').trim(),
+            }],
+          },
+        });
+        const again = (outputOf(closed).prompts || [])[0] || {};
+        const closedPositive = picturePrompt(again.positive_zh) || String(again.positive_zh || '').trim();
+        if (closedPositive) {
+          prompt = {
+            ...prompt,
+            positive_zh: closedPositive,
+            negative_zh: String(again.negative_zh || prompt.negative_zh || '').trim(),
+            production_note: String(again.production_note || prompt.production_note || '').trim(),
+          };
+        } else {
+          this.ctx.logger.warn('[cartoon] AV 收口没有画面提示词，沿用已写好的提示词');
+        }
+      } catch (err) {
+        if (err?.status === 499 || err?.message === '已停止') throw err;
+        this.ctx.logger.warn('[cartoon] AV 收口失败，沿用已写好的提示词 %s', err.message);
+      }
     }
     ensureRunning();
     const overrides = (Array.isArray(existing.overridden_fields) ? existing.overridden_fields : [])
@@ -469,24 +490,22 @@ class DraftService extends Service {
       overridden_fields: overrides,
     });
     const promptRow = await this.ctx.model.Prompt.findOne({ where: { shot_id: existing.id } });
-    if (promptRow) {
-      await promptRow.update({
-        positive_zh: picturePrompt(prompt.positive_zh) || shot.description,
-        negative_zh: prompt.negative_zh || '',
-      });
-    } else {
-      await this.ctx.model.Prompt.create({
-        shot_id: existing.id,
-        positive_zh: picturePrompt(prompt.positive_zh) || shot.description,
-        negative_zh: prompt.negative_zh || '',
-      });
-    }
+    const promptFields = {
+      positive_zh: picturePrompt(prompt.positive_zh) || shot.description,
+      frame_start_zh: picturePrompt(prompt.frame_start_zh),
+      frame_end_zh: picturePrompt(prompt.frame_end_zh),
+      negative_zh: prompt.negative_zh || '',
+    };
+    if (promptRow) await promptRow.update(promptFields);
+    else await this.ctx.model.Prompt.create({ shot_id: existing.id, ...promptFields });
     await this.ctx.service.project.bindMatchedAssets(project.id, existing.id, [
-      picturePrompt(prompt.positive_zh) || shot.description,
-      prompt.negative_zh || '',
+      promptFields.positive_zh,
+      promptFields.frame_start_zh,
+      promptFields.frame_end_zh,
+      promptFields.negative_zh,
       shot.description,
       shot.dialogue,
-      ...coveredPlaceNames(scriptData, `${shot.description}\n${picturePrompt(prompt.positive_zh)}`),
+      ...coveredPlaceNames(scriptData, `${shot.description}\n${promptFields.positive_zh}\n${promptFields.frame_start_zh}\n${promptFields.frame_end_zh}`),
     ].join('\n'));
       const result = await this.ctx.service.project.show(project.id);
       finish(this.app, claim.row, null, result);

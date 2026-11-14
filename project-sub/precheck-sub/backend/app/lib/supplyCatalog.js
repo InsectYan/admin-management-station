@@ -233,8 +233,9 @@ const FAMILIES = [
         id: 'clip',
         label: '文本编码器',
         folder: 'text_encoders',
-        match: /qwen3vl_8b_int8_convrot/i,
+        match: /qwen3vl_8b_(?:bf16|int8_convrot)/i,
         options: [
+          qwen21File('qwen3vl_8b_bf16.safetensors', 'text_encoders', 'text_encoders'),
           qwen21File('qwen3vl_8b_int8_convrot.safetensors', 'text_encoders', 'text_encoders'),
         ],
       },

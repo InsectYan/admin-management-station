@@ -10,7 +10,7 @@ const { writeStoredZip } = require('../lib/frameZip');
 const execFileAsync = promisify(execFile);
 const { parseApiWorkflow } = require('../lib/workflowParse');
 const { buildSupplies } = require('../lib/supplyCatalog');
-const { listPreviewFields, applyPreviewValues, collectMedia, collectText } = require('../lib/workflowPreview');
+const { listPreviewFields, applyPreviewValues, collectMedia, collectText, resolveImageSeeds, pinBatchSize } = require('../lib/workflowPreview');
 const { describeCallInputs, applyCallInputs, applySeed, withCallFields, expandReferenceImages } = require('../lib/workflowInputs');
 const { applyRefmod } = require('../lib/refmodApply');
 
@@ -244,29 +244,7 @@ class WorkflowPreviewService extends Service {
     return { prompt: graph, call_inputs: describeCallInputs(row.api_json) };
   }
 
-  async start({ workflowId, draftKey, apiJson, values, refmodIds, refImages }) {
-    let source = apiJson;
-    const referenceFiles = [];
-    if (Array.isArray(refmodIds) && refmodIds.length) {
-      const files = await this.ctx.service.refmod.imageFiles(refmodIds);
-      for (const file of files) referenceFiles.push(await this.uploadImage(file, 'refmod'));
-    }
-    for (const file of Array.isArray(refImages) ? refImages : []) {
-      if (file?.data || file?.data_base64) referenceFiles.push(await this.uploadImage(file, 'ref'));
-    }
-    const needsReference = Object.values(apiJson || {}).some(node => node?.class_type === 'MiniMaxH3ReferenceToVideo');
-    if (referenceFiles.length) {
-      source = applyRefmod(apiJson, referenceFiles.slice(0, 9));
-    } else if (needsReference && describeCallInputs(apiJson).images.length === 0) {
-      this.ctx.throw(400, '请选择检测包或上传参考图');
-    }
-    const resolved = await this.imageNames(source, (values || []).filter(item => item?.type === 'image' || item?.type === 'video'));
-    const graph = expandReferenceImages(
-      applyCallInputs(applyPreviewValues(source, values), { imageNames: resolved.names }),
-      describeCallInputs(source).images,
-      resolved.extras,
-    );
-    parseApiWorkflow(graph);
+  async postPrompt(graph) {
     let submitted;
     try {
       const res = await fetch(`${this.comfyBase()}/prompt`, {
@@ -285,32 +263,98 @@ class WorkflowPreviewService extends Service {
       if (err.status) throw err;
       this.ctx.throw(502, `连不上 ComfyUI：${err.message}`);
     }
-    const now = new Date().toISOString();
-    const run = {
-      id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
-      status: 'running',
-      phase: 'queued',
-      prompt_id: submitted.prompt_id,
-      error: '',
-      media_kind: '',
-      file_name: '',
-      progress_percent: 0,
-      progress_value: 0,
-      progress_max: 0,
-      queue_ahead: 0,
-      node: '',
-      submitted: this.summarizeValues(values),
-      created_at: now,
-      updated_at: now,
-    };
-    const board = await this.withBoard(workflowId, draftKey, async () => {
-      const current = await this.loadBoard(workflowId, draftKey);
-      current.runs.unshift(run);
-      await this.saveBoard(workflowId, draftKey, current);
-      return current;
-    });
-    this.ensureWatcher();
-    return { runs: board.runs };
+    return submitted;
+  }
+
+  async start({ workflowId, draftKey, apiJson, values, refmodIds, refImages, batch, seeds }) {
+    const imageSeeds = resolveImageSeeds(apiJson, values, batch, seeds);
+    let source = apiJson;
+    const referenceFiles = [];
+    if (Array.isArray(refmodIds) && refmodIds.length) {
+      const files = await this.ctx.service.refmod.imageFiles(refmodIds);
+      for (const file of files) referenceFiles.push(await this.uploadImage(file, 'refmod'));
+    }
+    for (const file of Array.isArray(refImages) ? refImages : []) {
+      if (file?.data || file?.data_base64) referenceFiles.push(await this.uploadImage(file, 'ref'));
+    }
+    const needsReference = Object.values(apiJson || {}).some(node => node?.class_type === 'MiniMaxH3ReferenceToVideo');
+    if (referenceFiles.length) {
+      source = applyRefmod(apiJson, referenceFiles.slice(0, 9));
+    } else if (needsReference && describeCallInputs(apiJson).images.length === 0) {
+      this.ctx.throw(400, '请选择检测包或上传参考图');
+    }
+    const resolved = await this.imageNames(source, (values || []).filter(item => item?.type === 'image' || item?.type === 'video'));
+    const created = [];
+    const stopKey = this.boardKey(workflowId, draftKey);
+    const begun = Date.now();
+    let failure = null;
+    for (let index = 0; index < imageSeeds.length; index += 1) {
+      if ((this.stopFlags().get(stopKey) || 0) > begun) break;
+      const seed = imageSeeds[index];
+      const nextValues = seed == null ? values : (values || []).map(item => {
+        if (item?.key === 'seed' || item?.key === 'noise_seed') return { ...item, value: seed };
+        if (item?.key === 'batch_size') return { ...item, value: 1 };
+        return item;
+      });
+      let graph = expandReferenceImages(
+        applyCallInputs(applyPreviewValues(source, nextValues), { imageNames: resolved.names }),
+        describeCallInputs(source).images,
+        resolved.extras,
+      );
+      if (seed != null) {
+        applySeed(graph, seed);
+        pinBatchSize(graph);
+      }
+      parseApiWorkflow(graph);
+      try {
+        const submitted = await this.postPrompt(graph);
+        const now = new Date().toISOString();
+        created.push({
+          id: `${Date.now().toString(36)}${index}${Math.random().toString(36).slice(2, 6)}`,
+          status: 'running',
+          phase: 'queued',
+          prompt_id: submitted.prompt_id,
+          error: '',
+          media_kind: '',
+          file_name: '',
+          progress_percent: 0,
+          progress_value: 0,
+          progress_max: 0,
+          queue_ahead: 0,
+          node: '',
+          seed: seed == null ? undefined : seed,
+          submitted: this.summarizeValues(nextValues),
+          created_at: now,
+          updated_at: now,
+        });
+      } catch (err) {
+        failure = err;
+        break;
+      }
+    }
+    let halted = false;
+    const board = created.length
+      ? await this.withBoard(workflowId, draftKey, async () => {
+        halted = (this.stopFlags().get(stopKey) || 0) > begun;
+        if (halted) {
+          const now = new Date().toISOString();
+          created.forEach(item => {
+            item.status = 'cancelled';
+            item.phase = 'stopped';
+            item.error = '';
+            item.updated_at = now;
+          });
+        }
+        const current = await this.loadBoard(workflowId, draftKey);
+        current.runs.unshift(...created.slice().reverse());
+        await this.saveBoard(workflowId, draftKey, current);
+        return current;
+      })
+      : await this.loadBoard(workflowId, draftKey);
+    if (halted && created.length) await this.dropComfyPrompts(created.map(item => item.prompt_id));
+    if (created.length && !halted) this.ensureWatcher();
+    if (failure && !halted) throw failure;
+    return { runs: board.runs, seeds: imageSeeds.filter(item => item != null) };
   }
 
   summarizeValues(values) {
@@ -600,7 +644,7 @@ class WorkflowPreviewService extends Service {
         next = await this.finishFrames(workflowId, draftKey, next);
       } else if (next.status === 'running' && next.prompt_id) {
         next = await this.settle(workflowId, draftKey, next);
-        if (next?.status === 'running') next = await this.decorate(workflowId, draftKey, next);
+        if (next?.status === 'running') next = await this.decorate(next, workflowId, draftKey);
       }
       if (next) runs.push(next);
     }
@@ -627,7 +671,7 @@ class WorkflowPreviewService extends Service {
     }
     if (!item) return state;
     const latest = (await this.loadBoard(workflowId, draftKey)).runs.find(run => run.id === state.id);
-    if (!latest || latest.prompt_id !== state.prompt_id) return latest || state;
+    if (!latest || latest.prompt_id !== state.prompt_id || latest.status !== 'running') return latest || state;
     if (item.status?.status_str === 'error') {
       return this.patchRun(workflowId, draftKey, latest.id, {
         status: 'failed',
@@ -711,29 +755,115 @@ class WorkflowPreviewService extends Service {
     return stored;
   }
 
+  boardKey(workflowId, draftKey) {
+    return workflowId ? `workflow:${workflowId}` : `draft:${safeKey(draftKey)}`;
+  }
+
+  stopFlags() {
+    if (!this.app.previewStopFlags) this.app.previewStopFlags = new Map();
+    return this.app.previewStopFlags;
+  }
+
+  async dropComfyPrompts(promptIds) {
+    const ids = [ ...new Set((promptIds || []).filter(Boolean)) ];
+    if (!ids.length) return;
+    const base = this.comfyBase();
+    try {
+      await fetch(`${base}/queue`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ delete: ids }),
+        signal: AbortSignal.timeout(8000),
+      });
+    } catch (err) {
+      this.ctx.logger.warn('[precheck] queue delete %s', err.message);
+    }
+    const queue = await this.queueBody();
+    const running = queue?.queue_running || [];
+    const hit = ids.some(id => running.some(row => row?.[1] === id));
+    if (!hit) return;
+    try {
+      await fetch(`${base}/interrupt`, { method: 'POST', signal: AbortSignal.timeout(8000) });
+    } catch (err) {
+      this.ctx.logger.warn('[precheck] interrupt %s', err.message);
+    }
+  }
+
+  async stop(workflowId, draftKey) {
+    const key = this.boardKey(workflowId, draftKey);
+    this.stopFlags().set(key, Date.now());
+    const board = await this.loadBoard(workflowId, draftKey);
+    const active = board.runs.filter(item => item.status === 'running');
+    active.forEach(run => {
+      const job = this.frameJobs().get(this.frameJobKey(workflowId, draftKey, run.id));
+      if (!job) return;
+      job.cancelled = true;
+      job.controller?.abort();
+    });
+    await this.dropComfyPrompts(active.map(item => item.prompt_id));
+    const now = new Date().toISOString();
+    await this.withBoard(workflowId, draftKey, async () => {
+      const current = await this.loadBoard(workflowId, draftKey);
+      current.runs.forEach(run => {
+        if (run.status !== 'running') return;
+        if (!active.some(item => item.id === run.id)) return;
+        run.status = 'cancelled';
+        run.phase = 'stopped';
+        run.error = '';
+        run.updated_at = now;
+      });
+      await this.saveBoard(workflowId, draftKey, current);
+    });
+    return this.read(workflowId, draftKey);
+  }
+
+  async deleteRunFiles(workflowId, draftKey, run) {
+    if (!run?.file_name && !run?.zip_name) {
+      const dir = this.dirFor(workflowId ? 'workflows' : 'drafts', workflowId ? String(workflowId) : safeKey(draftKey));
+      await fs.promises.rm(path.join(dir, `${run.id}-frames`), { recursive: true, force: true });
+      return;
+    }
+    const dir = this.dirFor(workflowId ? 'workflows' : 'drafts', workflowId ? String(workflowId) : safeKey(draftKey));
+    if (run.file_name) {
+      const absolute = path.resolve(dir, path.basename(run.file_name));
+      if (path.dirname(absolute) === dir && fs.existsSync(absolute)) {
+        await fs.promises.unlink(absolute);
+      }
+    }
+    if (run.zip_name) {
+      const zip = path.resolve(dir, path.basename(run.zip_name));
+      if (path.dirname(zip) === dir && fs.existsSync(zip)) await fs.promises.unlink(zip);
+    }
+    await fs.promises.rm(path.join(dir, `${run.id}-frames`), { recursive: true, force: true });
+  }
+
   async removeRun(workflowId, draftKey, runId) {
     const board = await this.loadBoard(workflowId, draftKey);
     const run = board.runs.find(item => item.id === String(runId || ''));
     if (!run) this.ctx.throw(404, '产物不存在');
     if (run.status === 'running') this.ctx.throw(400, '正在生成的产物不能删除');
-    if (run.file_name) {
-      const dir = this.dirFor(workflowId ? 'workflows' : 'drafts', workflowId ? String(workflowId) : safeKey(draftKey));
-      const absolute = path.resolve(dir, path.basename(run.file_name));
-      if (path.dirname(absolute) === dir && fs.existsSync(absolute)) {
-        await fs.promises.unlink(absolute);
-      }
-      if (run.zip_name) {
-        const zip = path.resolve(dir, path.basename(run.zip_name));
-        if (path.dirname(zip) === dir && fs.existsSync(zip)) await fs.promises.unlink(zip);
-      }
-      await fs.promises.rm(path.join(dir, `${run.id}-frames`), { recursive: true, force: true });
-    }
+    await this.deleteRunFiles(workflowId, draftKey, run);
     await this.withBoard(workflowId, draftKey, async () => {
       const current = await this.loadBoard(workflowId, draftKey);
       current.runs = current.runs.filter(item => item.id !== run.id);
       await this.saveBoard(workflowId, draftKey, current);
     });
     return { id: run.id };
+  }
+
+  async clearRuns(workflowId, draftKey) {
+    const board = await this.loadBoard(workflowId, draftKey);
+    const removable = board.runs.filter(item => item.status !== 'running');
+    const ids = new Set(removable.map(item => item.id));
+    for (const run of removable) {
+      await this.deleteRunFiles(workflowId, draftKey, run);
+    }
+    await this.withBoard(workflowId, draftKey, async () => {
+      const current = await this.loadBoard(workflowId, draftKey);
+      current.runs = current.runs.filter(item => !ids.has(item.id) || item.status === 'running');
+      await this.saveBoard(workflowId, draftKey, current);
+    });
+    return this.read(workflowId, draftKey);
   }
 
   async sendFile(workflowId, draftKey, runId) {
@@ -764,9 +894,9 @@ class WorkflowPreviewService extends Service {
     const jobs = this.frameJobs();
     let job = jobs.get(key);
     if (!job) {
-      job = {};
+      job = { controller: new AbortController() };
       jobs.set(key, job);
-      this.packFrames(workflowId, draftKey, run).then(result => {
+      this.packFrames(workflowId, draftKey, run, job.controller.signal).then(result => {
         job.done = true;
         job.result = result;
       }).catch(err => {
@@ -776,6 +906,9 @@ class WorkflowPreviewService extends Service {
     }
     if (!job.done) return run;
     jobs.delete(key);
+    if (job.cancelled) return run;
+    const current = (await this.loadBoard(workflowId, draftKey)).runs.find(item => item.id === run.id);
+    if (!current || current.status !== 'running') return current || run;
     if (job.error) {
       return this.patchRun(workflowId, draftKey, run.id, {
         status: 'failed',
@@ -794,7 +927,7 @@ class WorkflowPreviewService extends Service {
     });
   }
 
-  async packFrames(workflowId, draftKey, run) {
+  async packFrames(workflowId, draftKey, run, signal) {
     const dir = this.dirFor(workflowId ? 'workflows' : 'drafts', workflowId ? String(workflowId) : safeKey(draftKey));
     const videoPath = path.resolve(dir, path.basename(run.file_name || ''));
     if (path.dirname(videoPath) !== dir || !fs.existsSync(videoPath)) throw new Error('视频文件不在磁盘上');
@@ -804,7 +937,8 @@ class WorkflowPreviewService extends Service {
     await fs.promises.rm(frameDir, { recursive: true, force: true });
     await fs.promises.mkdir(frameDir, { recursive: true });
     try {
-      await this.exportFrames(videoPath, frameDir);
+      await this.exportFrames(videoPath, frameDir, signal);
+      if (signal?.aborted) throw new Error('已停止');
       const frames = (await fs.promises.readdir(frameDir))
         .filter(name => name.toLowerCase().endsWith('.png'))
         .sort();
@@ -816,7 +950,7 @@ class WorkflowPreviewService extends Service {
     }
   }
 
-  async exportFrames(videoPath, frameDir) {
+  async exportFrames(videoPath, frameDir, signal) {
     const output = path.join(frameDir, 'frame_%06d.png');
     const attempts = [
       [ '-hide_banner', '-loglevel', 'error', '-y', '-i', videoPath, '-fps_mode', 'passthrough', output ],
@@ -825,7 +959,7 @@ class WorkflowPreviewService extends Service {
     let last = null;
     for (const args of attempts) {
       try {
-        await execFileAsync('ffmpeg', args, { timeout: 10 * 60 * 1000 });
+        await execFileAsync('ffmpeg', args, { timeout: 10 * 60 * 1000, signal });
         return;
       } catch (err) {
         last = err;

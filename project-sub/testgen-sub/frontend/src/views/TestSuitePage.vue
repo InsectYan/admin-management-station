@@ -78,7 +78,7 @@
         :loading="deletingAll"
         @click="handleDeleteAll"
       >
-        一键删除
+        一键清除
       </el-button>
       <span v-if="selectedRows.length" class="testgen-action-bar__hint">
         已选 {{ selectedRows.length }} 条
@@ -322,7 +322,7 @@ async function handleDeleteAll() {
   try {
     await ElMessageBox.confirm(
       '确认清空 test_cases 表中的全部测试用例？此操作不可恢复。',
-      '一键删除',
+      '一键清除',
       { type: 'error', confirmButtonText: '全部删除', cancelButtonText: '取消' },
     );
   } catch {
@@ -337,7 +337,7 @@ async function handleDeleteAll() {
     clearSelection();
     await loadData();
   } catch (err) {
-    ElMessage.error(err.message || '一键删除失败');
+    ElMessage.error(err.message || '一键清除失败');
   } finally {
     deletingAll.value = false;
   }

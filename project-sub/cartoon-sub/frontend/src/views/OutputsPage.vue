@@ -1,7 +1,13 @@
 <template>
   <PageShell title="产物" :loading="loading" :data-filter="`${filterTick}|${filtered.length}`">
     <div class="cartoon-module">
+      <el-tabs v-model="section">
+        <el-tab-pane label="媒体" name="media">
       <div class="cartoon-output-bar">
+        <el-select v-model="mediaKind" clearable placeholder="图片或视频" style="width: 140px" @change="refreshFilter">
+          <el-option label="图片" value="image" />
+          <el-option label="视频" value="video" />
+        </el-select>
         <el-select v-model="taskType" clearable placeholder="任务类型" style="width: 180px" @change="refreshFilter">
           <el-option v-for="item in taskTypes" :key="item" :label="item" :value="item" />
         </el-select>
@@ -68,6 +74,36 @@
           background
         />
       </div>
+        </el-tab-pane>
+        <el-tab-pane label="提示词" name="prompt">
+          <el-table :data="promptRows">
+            <el-table-column label="项目" min-width="160">
+              <template #default="{ row }">
+                {{ row.project_name || '项目已不在' }}
+                <el-tag v-if="row.project_deleted" size="small" type="danger">已删除</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="素材" min-width="180">
+              <template #default="{ row }">{{ row.original_name || (row.media_kind === 'video' ? '视频' : '图片') }}</template>
+            </el-table-column>
+            <el-table-column label="类型" width="90">
+              <template #default="{ row }">{{ row.media_kind === 'video' ? '视频' : '图片' }}</template>
+            </el-table-column>
+            <el-table-column label="提示词" min-width="280">
+              <template #default="{ row }">{{ row.result_prompt || '还没有提示词' }}</template>
+            </el-table-column>
+            <el-table-column label="工作流" min-width="180">
+              <template #default="{ row }">{{ row.workflow_name || '—' }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="120" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="primary" :disabled="row.project_deleted" @click="openPrompt(row)">打开项目</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-if="!promptRows.length" description="还没有保存的提示词" />
+        </el-tab-pane>
+      </el-tabs>
     </div>
 
     <el-drawer v-model="drawerOpen" :title="drawerTitle" size="640px" append-to-body destroy-on-close>
@@ -130,6 +166,7 @@
 
 <script setup>
 import { computed, nextTick, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { WarningFilled } from '@element-plus/icons-vue';
 import MediaFileList from '../components/MediaFileList.vue';
@@ -139,12 +176,15 @@ import { canMake } from '../lib/appAccess.js';
 import { taskKindLabel } from '../lib/taskKind.js';
 
 const rows = ref([]);
+const promptRows = ref([]);
 const tableRef = ref(null);
 const selected = ref([]);
 const loading = ref(true);
 const loadError = ref('');
 const page = ref(1);
 const pageSize = 20;
+const section = ref('media');
+const mediaKind = ref('');
 const taskType = ref('');
 const shotQuery = ref('');
 const filterTick = ref(0);
@@ -164,9 +204,11 @@ const promptStyle = {
   lineHeight: 1.5,
 };
 
+const router = useRouter();
 const filtered = computed(() => {
   const shot = shotQuery.value.trim().toLowerCase();
   return rows.value.filter(row => {
+    if (mediaKind.value && row.media_kind !== mediaKind.value) return false;
     if (taskType.value && taskKindLabel(row.task) !== taskType.value) return false;
     if (!shot) return true;
     const code = String(row.shot_code || '').toLowerCase();
@@ -228,6 +270,7 @@ async function load() {
   loadError.value = '';
   try {
     rows.value = await request('/library/outputs') || [];
+    promptRows.value = await request('/library/captions') || [];
     const maxPage = Math.max(1, Math.ceil(filtered.value.length / pageSize));
     if (page.value > maxPage) page.value = maxPage;
   } catch (err) {
@@ -298,6 +341,9 @@ async function removeRow(row) {
   } catch (err) {
     ElMessage.error(err.message || '删除失败');
   }
+}
+function openPrompt(row) {
+  router.push({ path: `/projects/${row.project_id}`, query: { tab: '5' } });
 }
 function refreshFilter() {
   filterTick.value += 1;

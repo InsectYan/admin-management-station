@@ -7,7 +7,7 @@
  */
 const cartoonBase = process.env.CARTOON_API_ORIGIN || 'http://127.0.0.1:5205';
 const agentBase = (process.env.AGENT_PLATFORM_URL || 'http://127.0.0.1:4001').replace(/\/$/, '');
-const names = [ 'cartoon-script-skill', 'cartoon-storyboard-skill', 'cartoon-prompt-skill' ];
+const names = [ 'cartoon-script-skill', 'cartoon-storyboard-skill', 'cartoon-prompt-skill', 'cartoon-asset-sheet-skill' ];
 
 async function main() {
   const health = await fetch(`${cartoonBase}/api/health`);

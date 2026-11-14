@@ -51,6 +51,7 @@ const AGENT_SPECS = [
   { role: 'writer', label: '编剧', skill_name: 'cartoon-script-skill', local: false, needs_model: true },
   { role: 'storyboard', label: '分镜', skill_name: 'cartoon-storyboard-skill', local: false, needs_model: true },
   { role: 'asset', label: '资产', skill_name: 'cartoon-asset-skill', local: false, needs_model: true },
+  { role: 'sheet', label: '设定图', skill_name: 'cartoon-asset-sheet-skill', local: false, needs_model: true },
   { role: 'video', label: '视频生成', skill_name: '', local: true, needs_model: true },
   { role: 'voice', label: '配音', skill_name: 'cartoon-voice-skill', local: false, needs_model: true },
   { role: 'edit', label: '剪辑', skill_name: '', local: true, needs_model: false },
@@ -91,9 +92,16 @@ function defaultAgents(id) {
   return AGENT_SPECS.map(spec => {
     const writer = spec.role === 'writer';
     const storyboard = spec.role === 'storyboard';
+    const sheet = spec.role === 'sheet';
     const video = spec.role === 'video';
     const edit = spec.role === 'edit';
-    const ready = !science && (writer || storyboard);
+    const ready = !science && (writer || storyboard || sheet);
+    const io = {
+      asset: [ '镜头和未停用资产', '绑定建议' ],
+      voice: [ '台词和已登记音色', '配音时间轴' ],
+      review: [ '镜头和合规规则', '初审问题' ],
+      sheet: [ '人物或场景的外形', '一张设定总图的生图提示词' ],
+    }[spec.role] || [ '', '' ];
     return {
       role: spec.role,
       label: spec.label,
@@ -101,8 +109,8 @@ function defaultAgents(id) {
       local: spec.local,
       needs_model: spec.needs_model,
       writes_package: false,
-      input_text: writer ? (science ? '本地文案' : '已钉扎的故事包章节') : (storyboard ? '生产剧本' : (spec.role === 'asset' ? '镜头和未停用资产' : (spec.role === 'voice' ? '台词和已登记音色' : (spec.role === 'review' ? '镜头和合规规则' : '')))),
-      output_text: writer || storyboard ? '生产稿，不写故事包' : (video ? '镜头画面' : (edit ? '成片' : (spec.role === 'asset' ? '绑定建议' : (spec.role === 'voice' ? '配音时间轴' : (spec.role === 'review' ? '初审问题' : ''))))),
+      input_text: writer ? (science ? '本地文案' : '已钉扎的故事包章节') : (storyboard ? '生产剧本' : io[0]),
+      output_text: writer || storyboard ? '生产稿，不写故事包' : (video ? '镜头画面' : (edit ? '成片' : io[1])),
       model_profile: ready ? 'ollama-qwen' : (video ? 'comfy-local' : ''),
       rule_text: '',
       retry_count: 1,

@@ -16,7 +16,7 @@
         </div>
         <div class="novel-entry-actions">
           <el-button type="primary" @click="addTerm">添加</el-button>
-          <el-button type="danger" plain :disabled="!desk.terms.length" @click="removeCheckedTerms">一键删除</el-button>
+          <el-button type="danger" plain :disabled="!desk.terms.length" @click="removeCheckedTerms">一键清除</el-button>
         </div>
       </el-form>
       <el-table :data="desk.terms" row-key="id" empty-text="还没有术语" size="small" @selection-change="pickedTerms = $event">

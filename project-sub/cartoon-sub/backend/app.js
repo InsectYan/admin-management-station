@@ -4,7 +4,7 @@ const { syncSchemaOnStartup } = require('./app/lib/schemaSync');
 
 module.exports = app => {
   app.once('server', server => {
-    server.requestTimeout = 17 * 60 * 1000;
+    server.requestTimeout = 6 * 60 * 60 * 1000 + 15 * 60 * 1000;
     server.timeout = 0;
   });
 
@@ -21,6 +21,18 @@ module.exports = app => {
       await ctx.service.autoJob.failInterrupted();
     } catch (err) {
       app.logger.warn('[cartoon] 清理自动生成队列失败：%s', err.message);
+    }
+    try {
+      const ctx = app.createAnonymousContext();
+      await ctx.service.fullAuto.resume();
+    } catch (err) {
+      app.logger.warn('[cartoon] 恢复全流程失败：%s', err.message);
+    }
+    try {
+      const ctx = app.createAnonymousContext();
+      ctx.service.caption.kick();
+    } catch (err) {
+      app.logger.warn('[cartoon] 恢复反推队列失败：%s', err.message);
     }
     try {
       const ctx = app.createAnonymousContext();

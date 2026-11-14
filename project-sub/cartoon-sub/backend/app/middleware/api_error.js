@@ -8,8 +8,9 @@ function isApiBody(body) {
 
 function relaxServerTimeout(ctx) {
   const server = ctx.req?.socket?.server;
-  if (!server || server.requestTimeout >= 17 * 60 * 1000) return;
-  server.requestTimeout = 17 * 60 * 1000;
+  const longWait = 6 * 60 * 60 * 1000 + 15 * 60 * 1000;
+  if (!server || server.requestTimeout >= longWait) return;
+  server.requestTimeout = longWait;
   server.timeout = 0;
 }
 

@@ -17,7 +17,7 @@
       </div>
       <div class="novel-entry-actions">
         <el-button type="primary" :loading="saving" @click="save">添加成员</el-button>
-        <el-button type="danger" plain :disabled="!members.length" @click="removeChecked">一键删除</el-button>
+        <el-button type="danger" plain :disabled="!members.length" @click="removeChecked">一键清除</el-button>
       </div>
     </el-form>
     <el-empty v-if="!members.length" description="还没有成员" />

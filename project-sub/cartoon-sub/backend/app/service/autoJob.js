@@ -95,7 +95,7 @@ class AutoJobService extends Service {
   async videoPayload(projectId, shot) {
     const prompt = await this.ctx.model.Prompt.findOne({ where: { shot_id: shot.id } });
     const positive = String(prompt?.positive_zh || '').trim();
-    if (!positive) throw skipped(`${shot.shot_code || shot.id} 没有正向提示词`);
+    if (!positive) throw skipped(`${shot.shot_code || shot.id} 没有视频提示词`);
     const workflows = await this.ctx.service.generate.choices();
     const savedWorkflow = workflows.find(entry => entry.id === Number(shot.workflow_id) && entry.media === 'video');
     const bindings = await this.ctx.model.ShotBinding.findAll({ where: { shot_id: shot.id } });
@@ -306,7 +306,7 @@ class AutoJobService extends Service {
         }
         if (task.status === 'failed') {
           const reason = task.error_message || '视频生成失败';
-          const missing = reason.includes('没有正向提示词') || reason.includes('需要一句提示词');
+          const missing = reason.includes('没有正向提示词') || reason.includes('没有视频提示词') || reason.includes('需要一句提示词') || reason.includes('需要一句视频提示词');
           await item.update({
             status: missing ? 'skipped' : 'failed',
             reason,

@@ -106,6 +106,8 @@ class OpsInternalService extends Service {
       } : null,
       prompt: prompt ? {
         positive_zh: prompt.positive_zh || '',
+        frame_start_zh: prompt.frame_start_zh || '',
+        frame_end_zh: prompt.frame_end_zh || '',
         negative_zh: prompt.negative_zh || '',
       } : null,
       outputs: outputs.map(item => ({

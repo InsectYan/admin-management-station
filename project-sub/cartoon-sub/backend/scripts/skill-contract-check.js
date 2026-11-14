@@ -3,6 +3,7 @@
 const assert = require('assert');
 const { readProductionSource } = require('../../../../../agent-management-master/plugins/_shared/productionSource');
 const { parseAssetStep } = require('../../../../../agent-management-master/plugins/cartoon-asset-skill/lib/parseStep');
+const { parseSheetStep } = require('../../../../../agent-management-master/plugins/cartoon-asset-sheet-skill/lib/parseStep');
 const { parseVoiceStep } = require('../../../../../agent-management-master/plugins/cartoon-voice-skill/lib/parseStep');
 const { parseReviewStep } = require('../../../../../agent-management-master/plugins/cartoon-review-skill/lib/parseStep');
 const script = require('../../../../../agent-management-master/plugins/cartoon-script-skill');
@@ -19,6 +20,10 @@ const asset = parseAssetStep(JSON.stringify({
   ],
 }), { input: { shots: [{ id: 1 }], assets: [{ id: 8 }] } });
 assert.deepStrictEqual(asset.suggestions.map(item => item.asset_id), [ '8' ]);
+
+const sheet = parseSheetStep('前文 {"prompt":"白底，大头和正侧背在同一张图"} 后文');
+assert.strictEqual(sheet.done, true);
+assert.strictEqual(sheet.prompt.includes('大头'), true);
 
 const voice = parseVoiceStep(JSON.stringify({
   cues: [{ shot_id: '3', text: '改掉的情节', start_ms: 0, end_ms: 9000, voice_key: 'other' }],

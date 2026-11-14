@@ -193,7 +193,7 @@
     <template v-else>
       <div class="novel-action-bar">
         <span v-if="selectedRows.length" class="novel-action-bar__hint">已选 {{ selectedRows.length }} 项</span>
-        <el-button type="danger" plain :loading="batchDeleting" :disabled="!total" @click="handleBatchDelete">一键删除</el-button>
+        <el-button type="danger" plain :loading="batchDeleting" :disabled="!total" @click="handleBatchDelete">一键清除</el-button>
         <el-dropdown trigger="click" @command="toggleColumn">
           <el-button>自定义列</el-button>
           <template #dropdown>

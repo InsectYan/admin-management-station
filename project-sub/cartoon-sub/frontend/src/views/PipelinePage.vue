@@ -11,7 +11,7 @@
       <h3 class="cartoon-module__title">默认节点</h3>
       <div class="cartoon-pipeline-add">
         <el-button v-for="item in catalog" :key="item.node_key" :disabled="!canMake()" @click="addNode(item)">添加{{ item.title }}</el-button>
-        <el-button type="danger" plain :disabled="!canMake() || !removableNodes.length" @click="removeChecked">一键删除</el-button>
+        <el-button type="danger" plain :disabled="!canMake() || !removableNodes.length" @click="removeChecked">一键清除</el-button>
       </div>
       <el-table :data="nodes" row-key="node_key" @selection-change="picked = $event">
         <el-table-column type="selection" width="48" fixed="left" :selectable="row => row.removable && canMake()" />

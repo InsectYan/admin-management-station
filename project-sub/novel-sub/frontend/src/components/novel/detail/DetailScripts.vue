@@ -55,7 +55,7 @@
     </div>
     <el-empty v-if="!scripts.length" description="还没有剧本" />
     <div v-if="scripts.length" class="novel-bulk-bar">
-      <el-button type="danger" plain size="small" @click="removeChecked">一键删除</el-button>
+      <el-button type="danger" plain size="small" @click="removeChecked">一键清除</el-button>
     </div>
     <el-table v-if="scripts.length" :data="scripts" row-key="id" size="small" @selection-change="picked = $event">
       <el-table-column type="selection" width="48" />
