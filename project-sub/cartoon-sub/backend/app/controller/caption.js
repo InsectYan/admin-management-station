@@ -80,6 +80,14 @@ class CaptionController extends Controller {
     }
   }
 
+  async stop() {
+    try {
+      ok(this.ctx, await this.ctx.service.caption.stop(this.ctx.params.id));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async library() {
     try {
       ok(this.ctx, await this.ctx.service.caption.library());

@@ -12,7 +12,7 @@
         playsinline
         @timeupdate="onTime"
         @ended="onEnded"
-      />
+      ></video>
       <p v-if="!clip" class="cartoon-edit-empty">时间线上还没有片段</p>
       <p v-else-if="clip.missing" class="cartoon-edit-empty">素材缺失</p>
       <p v-if="cue" class="cartoon-edit-cue">{{ cue }}</p>
@@ -30,10 +30,12 @@ import { computed, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useEditTimelineStore } from '../../stores/editTimeline.js';
 import { resolveApiBase } from '../../services/apiConfig.js';
+import PlaybackRate from '../PlaybackRate.vue';
 
 const store = useEditTimelineStore();
 const { playheadMs, playing, seekSerial } = storeToRefs(store);
 const videoRef = ref(null);
+const speed = ref(1);
 let lock = false;
 
 const width = computed(() => store.edit?.width || 720);
@@ -55,11 +57,9 @@ function clock(ms) {
 function fileUrl(id) {
   return `${resolveApiBase()}/outputs/${id}/file`;
 }
-async function syncTo(target, offsetMs) {
+function applyRate() {
   const video = videoRef.value;
-  if (!video) return;
-function fileUrl(id) {
-  return `${resolveApiBase()}/outputs/${id}/file`;
+  if (video) video.playbackRate = speed.value;
 }
 async function syncTo(target, offsetMs) {
   const video = videoRef.value;
@@ -85,9 +85,8 @@ async function syncTo(target, offsetMs) {
         video.addEventListener('error', bad);
       });
     }
+    if (Math.abs(video.currentTime - at) > 0.05) video.currentTime = at;
     applyRate();
-      });
-    }
     if (playing.value) await video.play();
     else video.pause();
   } catch {
@@ -95,13 +94,7 @@ async function syncTo(target, offsetMs) {
   } finally {
     lock = false;
   }
-    applyRate();
 }
-watch(seekSerial, () => {
-  if (!clip.value) return;
-  syncTo(clip.value, playheadMs.value - clip.value.start_ms);
-});
-watch(playing, value => {
 watch(speed, applyRate);
 watch(seekSerial, () => {
   if (!clip.value) return;
@@ -119,6 +112,7 @@ watch(playing, value => {
       syncTo(clip.value, playheadMs.value - clip.value.start_ms);
       return;
     }
+    applyRate();
     video.play().catch(() => { store.playing = false; });
   } else video.pause();
 });
@@ -179,3 +173,4 @@ function toggle() {
 }
 .cartoon-edit-transport { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
 .cartoon-edit-transport :deep(.playback-rate) { margin-top: 0; }
+</style>

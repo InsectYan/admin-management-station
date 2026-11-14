@@ -7,6 +7,7 @@
         <span>{{ job.note }}</span>
       </div>
       <el-button :disabled="!canMake() || !workflowId" @click="runEmpty">一键执行</el-button>
+      <el-button type="danger" plain :disabled="!canMake() || !job.active" :loading="stopping" @click="stopJob">停止</el-button>
       <el-button-group>
         <el-button :disabled="!canMake() || job.active || !hasPrompt" :loading="clearing" @click="clearPrompts">一键清除</el-button>
         <el-button type="danger" :disabled="!canMake() || job.active || !cards.length" :loading="deleting" @click="deleteCards">一键删除</el-button>
@@ -81,6 +82,7 @@
             <div v-if="card.status === 'running'" class="caption-card__progress">
               <el-progress :percentage="cardPercent(card)" :indeterminate="!card.progress_max" :stroke-width="8" color="#2f8a5b" />
               <span>{{ cardNote(card) }}</span>
+              <span v-if="card.progress_max > 0 && card.progress_value + 1 >= card.progress_max">模型正在写提示词，这一步结束前进度会停在这里。</span>
             </div>
             <p v-else-if="card.status === 'queued'" class="cartoon-module__hint">排队，等上一条拿到提示词</p>
             <p v-else-if="card.error_message" class="caption-card__error">{{ card.error_message }}</p>
@@ -112,6 +114,7 @@ const uploading = ref(false);
 const saving = ref(false);
 const clearing = ref(false);
 const deleting = ref(false);
+const stopping = ref(false);
 const workflows = ref([]);
 const workflowsError = ref('');
 const workflowId = ref(null);
@@ -286,6 +289,27 @@ async function runEmpty() {
     applyBoard(data, false);
   } catch (err) {
     ElMessage.error(err.message);
+  }
+}
+async function stopJob() {
+  try {
+    await ElMessageBox.confirm('停止当前反推？正在跑的会中断，排队的也会取消。', '停止', {
+      type: 'warning',
+      confirmButtonText: '停止',
+      cancelButtonText: '取消',
+    });
+  } catch {
+    return;
+  }
+  stopping.value = true;
+  try {
+    const data = await request(`/projects/${projectId}/captions/stop`, { method: 'post' });
+    applyBoard(data, false);
+    ElMessage.success('已停止');
+  } catch (err) {
+    ElMessage.error(err.message);
+  } finally {
+    stopping.value = false;
   }
 }
 async function save() {

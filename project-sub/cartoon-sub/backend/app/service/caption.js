@@ -477,6 +477,7 @@ class CaptionService extends Service {
         order: [[ 'id', 'ASC' ]],
       });
       if (!card) return;
+      if (this.stoppedProjects().has(Number(card.project_id))) return;
       try {
         await this.finish(card);
       } catch (err) {
@@ -488,6 +489,79 @@ class CaptionService extends Service {
         }).catch(() => {});
         await this.stopBatch(card.project_id);
       }
+    }
+  }
+
+  stoppedProjects() {
+    if (!this.app.captionStopped) this.app.captionStopped = new Set();
+    return this.app.captionStopped;
+  }
+
+  async stop(projectId) {
+    const id = Number(projectId);
+    this.stoppedProjects().add(id);
+    try {
+      const cards = await this.cardsOf(projectId);
+      const promptIds = cards
+        .filter(item => (item.status === 'running' || item.status === 'queued') && item.prompt_id)
+        .map(item => item.prompt_id);
+      await this.ctx.model.CaptionCard.update(
+        {
+          status: 'idle',
+          phase: '',
+          prompt_id: null,
+          progress_value: 0,
+          progress_max: 0,
+          progress_percent: 0,
+          node: '',
+          error_message: '已停止',
+        },
+        { where: { project_id: id, status: 'running' } },
+      );
+      await this.ctx.model.CaptionCard.update(
+        {
+          status: 'idle',
+          phase: '',
+          prompt_id: null,
+          progress_value: 0,
+          progress_max: 0,
+          progress_percent: 0,
+          node: '',
+          error_message: '',
+        },
+        { where: { project_id: id, status: 'queued' } },
+      );
+      await this.interruptPrompts(promptIds);
+      return this.show(projectId);
+    } finally {
+      this.stoppedProjects().delete(id);
+    }
+  }
+
+  async interruptPrompts(promptIds) {
+    const ids = [ ...new Set((promptIds || []).filter(Boolean)) ];
+    if (!ids.length) return;
+    const base = this.comfyBase();
+    try {
+      await fetch(`${base}/queue`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ delete: ids }),
+        signal: AbortSignal.timeout(8000),
+      });
+    } catch (err) {
+      this.ctx.logger.warn('[cartoon] caption queue delete %s', err.message);
+    }
+    try {
+      const res = await fetch(`${base}/queue`, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) return;
+      const queue = await res.json();
+      const running = queue?.queue_running || [];
+      const hit = ids.some(promptId => running.some(row => row?.[1] === promptId));
+      if (!hit) return;
+      await fetch(`${base}/interrupt`, { method: 'POST', signal: AbortSignal.timeout(8000) });
+    } catch (err) {
+      this.ctx.logger.warn('[cartoon] caption interrupt %s', err.message);
     }
   }
 
@@ -505,6 +579,7 @@ class CaptionService extends Service {
     const started = Date.now();
     while (Date.now() - started < 20 * 60 * 1000) {
       current = await current.reload();
+      if (this.stoppedProjects().has(Number(current.project_id))) return;
       if (![ 'queued', 'running' ].includes(current.status)) return;
       const done = await this.settle(current);
       if (done) return;
@@ -516,6 +591,7 @@ class CaptionService extends Service {
   }
 
   async submit(card) {
+    if (this.stoppedProjects().has(Number(card.project_id))) return card;
     const workflow = await this.workflowById(card.workflow_id);
     if (workflow.media !== card.media_kind) {
       const error = new Error(workflow.media === 'video' ? '这条工作流只接受视频' : '这条工作流只接受图片');
@@ -564,6 +640,15 @@ class CaptionService extends Service {
       phase: 'running',
       error_message: '',
     });
+    if (this.stoppedProjects().has(Number(card.project_id))) {
+      await this.interruptPrompts([ body.prompt_id ]);
+      await card.update({
+        status: 'idle',
+        phase: '',
+        prompt_id: null,
+        error_message: '已停止',
+      });
+    }
     return card.reload();
   }
 
@@ -589,7 +674,10 @@ class CaptionService extends Service {
   }
 
   async settle(card) {
+    if (this.stoppedProjects().has(Number(card.project_id))) return true;
     if (!card.prompt_id) return false;
+    const fresh = await card.reload();
+    if (![ 'queued', 'running' ].includes(fresh.status)) return true;
     let item;
     try {
       const res = await fetch(`${this.comfyBase()}/history/${card.prompt_id}`, { signal: AbortSignal.timeout(15000) });
@@ -601,11 +689,13 @@ class CaptionService extends Service {
       this.ctx.logger.warn('[cartoon] caption history %s', err.message);
     }
     if (item?.status?.status_str === 'error') {
+      if (!await this.stillRunning(card)) return true;
       await card.update({ status: 'failed', phase: 'error', error_message: 'ComfyUI 执行失败' });
       await this.stopBatch(card.project_id);
       return true;
     }
     if (item && (item.status?.completed || item.status?.status_str === 'success')) {
+      if (!await this.stillRunning(card)) return true;
       const text = collectText(item.outputs);
       if (!text) {
         await card.update({ status: 'failed', phase: 'error', error_message: '没有返回提示词' });
@@ -622,6 +712,7 @@ class CaptionService extends Service {
       return true;
     }
     const view = await this.liveProgress(card.prompt_id);
+    if (!await this.stillRunning(card)) return true;
     await card.update({
       phase: view.phase === 'queued' ? 'queued' : 'running',
       progress_value: Number(view.progress_value) || 0,
@@ -630,6 +721,12 @@ class CaptionService extends Service {
       node: view.node || '',
     });
     return false;
+  }
+
+  async stillRunning(card) {
+    if (this.stoppedProjects().has(Number(card.project_id))) return false;
+    const fresh = await card.reload();
+    return [ 'queued', 'running' ].includes(fresh.status);
   }
 
   async liveProgress(promptId) {

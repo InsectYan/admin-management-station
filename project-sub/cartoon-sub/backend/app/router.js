@@ -47,6 +47,7 @@ module.exports = app => {
   router.put('/api/projects/:id/captions', controller.caption.save);
   router.post('/api/projects/:id/captions/files', controller.caption.upload);
   router.post('/api/projects/:id/captions/run-empty', controller.caption.runEmpty);
+  router.post('/api/projects/:id/captions/stop', controller.caption.stop);
   router.post('/api/projects/:id/captions/clear-prompts', controller.caption.clearPrompts);
   router.delete('/api/projects/:id/captions', controller.caption.removeAll);
   router.delete('/api/projects/:id/captions/:cardId', controller.caption.remove);
