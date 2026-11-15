@@ -141,6 +141,88 @@ function splitBody(body, size = 8000) {
   return parts;
 }
 
+const FACT_SLOTS = [ '性别', '年龄' ];
+
+function identityBits(description) {
+  const parsed = parseDescription(description, 'character');
+  const bits = [];
+  if (parsed) {
+    FACT_SLOTS.forEach(label => {
+      const text = String(parsed.slots?.[label]?.text || '').trim();
+      if (text) bits.push(`${label}：${text}`);
+    });
+    if (parsed.tone && parsed.tone !== '中性') {
+      bits.push(`定性：${parsed.tone}${parsed.tone_words ? `（${parsed.tone_words}）` : ''}`);
+    }
+    return bits.join('，');
+  }
+  String(description || '').split('\n').forEach(line => {
+    const matched = line.trim().match(/^(性别|年龄)[：:]\s*([^｜]+)/);
+    if (matched && matched[2].trim()) bits.push(`${matched[1]}：${matched[2].trim()}`);
+  });
+  return bits.join('，');
+}
+
+function cardLine(asset, picture) {
+  if (!asset || asset.kind !== 'character' || asset.disabled) return '';
+  const name = String(asset.name || '').trim();
+  const bits = identityBits(asset.description);
+  if (!name || !bits) return '';
+  if (picture) {
+    const visual = bits.split('，').filter(item => item.startsWith('性别：') || item.startsWith('年龄：')).join('，');
+    return visual ? `角色「${name}」人物卡：${visual}` : '';
+  }
+  return `人物「${name}」${bits}`;
+}
+
+function assetFactText(assets) {
+  const lines = [];
+  const seen = new Set();
+  (Array.isArray(assets) ? assets : []).forEach(item => {
+    const name = String(item?.name || '').trim();
+    if (!name || seen.has(name)) return;
+    const line = cardLine(item, false);
+    if (!line) return;
+    seen.add(name);
+    lines.push(line);
+  });
+  if (!lines.length) return '';
+  return [
+    '人物卡。年龄、性别、定性以卡片为准。只使用本段实际出场的人。写画面提示词时，有参考图就不要再写脸型、发型、眉眼、鼻唇、体态、肤色、服装。',
+    ...lines,
+  ].join('\n');
+}
+
+function namedAssets(assets, text) {
+  const source = String(text || '');
+  const cards = (Array.isArray(assets) ? assets : []).filter(item => String(item?.name || '').trim());
+  const names = cards.map(item => String(item.name).trim()).sort((a, b) => b.length - a.length);
+  const hits = new Set();
+  let rest = source;
+  names.forEach(name => {
+    if (!rest.includes(name)) return;
+    hits.add(name);
+    rest = rest.split(name).join('\u0000'.repeat(name.length));
+  });
+  return cards.filter(item => hits.has(String(item.name).trim()));
+}
+
+function pictureFactText(assets, names) {
+  const wanted = new Set((names || []).map(name => String(name || '').trim()).filter(Boolean));
+  const lines = [];
+  const seen = new Set();
+  (Array.isArray(assets) ? assets : []).forEach(item => {
+    const name = String(item?.name || '').trim();
+    if (!name || seen.has(name)) return;
+    if (wanted.size && !wanted.has(name)) return;
+    const line = cardLine(item, true);
+    if (!line) return;
+    seen.add(name);
+    lines.push(line);
+  });
+  return lines.join('\n');
+}
+
 function rosterText(assets) {
   return (Array.isArray(assets) ? assets : [])
     .filter(item => !item.disabled && (item.kind === 'character' || item.kind === 'scene'))
@@ -165,4 +247,8 @@ module.exports = {
   sceneTypeOf,
   splitBody,
   rosterText,
+  assetFactText,
+  namedAssets,
+  pictureFactText,
+  cardLine,
 };

@@ -91,6 +91,7 @@ class CustomNodeService extends Service {
         body: chapter.body,
         ...styleCtx,
         ...productionInput(project),
+        asset_facts: await this.ctx.service.draft.projectFactText(project.id),
       },
     });
     const output = result.output || {};

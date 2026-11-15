@@ -63,8 +63,8 @@
           <el-input :model-value="conditionPreview" type="textarea" :rows="6" readonly />
         </el-form-item>
         <el-form-item v-if="media === 'video'" label="时长（秒）">
-          <el-input-number v-model="durationSec" :min="1" :max="60" :step="1" :precision="0" />
-          <p class="cartoon-module__hint">按这条工作流的帧率写成帧数，并对齐到模型要求的倍数。生图不用填。</p>
+          <el-input-number v-model="durationSec" :min="0.5" :max="60" :step="0.5" :precision="1" />
+          <p class="cartoon-module__hint">有视频提示词时，时长取时间轴结尾。提交时再按工作流帧率对齐。生图不用填。</p>
         </el-form-item>
         <p v-if="contractError" class="cartoon-module__hint">{{ contractError }}</p>
         </el-tab-pane>
@@ -239,6 +239,7 @@ import RandomSeedField from '../components/RandomSeedField.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { canMake } from '../lib/appAccess.js';
+import { promptCoveredMs } from '../lib/promptDuration.js';
 
 const props = defineProps({
   plain: { type: Boolean, default: false },
@@ -613,6 +614,16 @@ function openRefmodDetail(item) {
 function kindLabel(kind) {
   return { character: '人物', scene: '场景', prop: '道具' }[kind] || '资产';
 }
+function cardFact(asset) {
+  if (!asset || asset.kind !== 'character' || asset.disabled) return '';
+  const bits = [];
+  String(asset.description || '').split('\n').forEach(line => {
+    const matched = line.trim().match(/^(性别|年龄)[：:]\s*([^｜]+)/);
+    if (matched && matched[2].trim()) bits.push(`${matched[1]}：${matched[2].trim()}`);
+  });
+  const ordered = [ '性别', '年龄' ].map(label => bits.find(item => item.startsWith(`${label}：`))).filter(Boolean);
+  return ordered.length ? `角色「${asset.name}」人物卡：${ordered.join('，')}` : '';
+}
 function pictureLock(entries) {
   const lines = [];
   let cursor = 0;
@@ -641,6 +652,8 @@ function pictureLock(entries) {
       lines.push(`<Picture ${cursor}> 是${who}的参考图`);
     });
     lines.push(`这些图都是${who}，按每张图自己的说明使用，不要互相替代`);
+    const fact = batch.map(item => String(item.fact || '').trim()).find(Boolean);
+    if (fact) lines.push(fact);
   }
   return lines.join('\n');
 }
@@ -658,10 +671,12 @@ function composeCondition(assets, shotPrompt, pictures, packRows, lock) {
     if (names.length) {
       names.forEach(name => {
         const note = String(pack?.notes?.[name] || '').trim();
+        const fact = scene ? '' : cardFact(asset);
         entries.push({
           name: asset.name,
           scene,
           note: note || `${scene ? '场景' : '人物'}「${asset.name}」设定总图`,
+          fact,
         });
       });
       return;
@@ -670,6 +685,8 @@ function composeCondition(assets, shotPrompt, pictures, packRows, lock) {
       lines.push(scene
         ? `${who}。锁定这个场景的空间、陈设和结构，本段画面保持一致`
         : `${who}。锁定这张脸、体态和服装，本段画面保持一致`);
+      const fact = scene ? '' : cardFact(asset);
+      if (fact) lines.push(fact);
       return;
     }
     lines.push(who);
@@ -864,11 +881,11 @@ async function load() {
   cameraMoves.value = Array.isArray(found.camera_moves) && found.camera_moves.length
     ? found.camera_moves.slice()
     : String(found.camera_move || '固定').split(/[,，、|/]+/).map(item => item.trim()).filter(Boolean);
-  if (Number(found.duration_ms) > 0) {
-    durationSec.value = Math.min(60, Math.max(1, Math.round(found.duration_ms / 1000)));
-  } else {
-    durationSec.value = 10;
-  }
+  const covered = promptCoveredMs(found.prompt?.positive_zh);
+  const sec = covered
+    ? covered / 1000
+    : (Number(found.duration_ms) > 0 ? Number(found.duration_ms) / 1000 : 10);
+  durationSec.value = Math.min(60, Math.max(0.5, Math.round(sec * 10) / 10));
   const chapter = (detail.imports || []).find(item => String(item.id) === String(found.import_id));
   chapterTitle.value = chapter?.chapter_title || '未关联快照';
   fillStage(chapter?.script_data || {}, found.stage_notes);
@@ -1066,10 +1083,12 @@ const frameSubmitPreview = computed(() => {
   const lock = pictureLock(frameRefAssets.value.map(item => {
     const matched = String(item.label || '').match(/^(人物|角色|场景)「([^」]+)」/);
     if (!matched) return null;
+    const asset = projectAssets.value.find(item => item.name === matched[2] && (matched[1] === '场景' ? item.kind === 'scene' : item.kind === 'character'));
     return {
       name: matched[2],
       scene: matched[1] === '场景',
       note: `${matched[1]}「${matched[2]}」设定总图`,
+      fact: matched[1] === '场景' ? '' : cardFact(asset),
     };
   }).filter(Boolean));
   return [ frameLead(text), lock, text, stageLineText.value ].filter(Boolean).join('\n');
@@ -1197,7 +1216,7 @@ async function generate() {
     ElMessage.warning(imageFrame.value === 'end' ? '请填写尾帧提示词' : '请填写首帧提示词');
     return;
   }
-  if (media.value === 'video' && !(Number(durationSec.value) >= 1)) {
+  if (media.value === 'video' && !(Number(durationSec.value) >= 0.5)) {
     ElMessage.warning('请填写视频时长');
     return;
   }

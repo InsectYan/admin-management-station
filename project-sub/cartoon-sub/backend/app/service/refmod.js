@@ -5,6 +5,7 @@ const path = require('path');
 const Service = require('egg').Service;
 const { outputRoot, resolveInside } = require('../lib/mediaPaths');
 const { mentionedAssetIds, shotText } = require('../lib/shotAssets');
+const { cardLine } = require('../lib/assetProfile');
 
 const MAX_PER_PACK = 8;
 const MAX_TOTAL = 9;
@@ -116,6 +117,8 @@ class RefmodService extends Service {
         lines.push(`<Picture ${cursor}> 是${who}的参考图`);
       });
       lines.push(`这些图都是${who}，按每张图自己的说明使用，不要互相替代`);
+      const fact = batch.map(item => String(item.fact || '').trim()).find(Boolean);
+      if (fact) lines.push(fact);
     }
     return lines.join('\n');
   }
@@ -215,12 +218,14 @@ class RefmodService extends Service {
         ? `${scene ? '场景' : '角色'}「${asset.name}」`
         : `${label}「${asset.name}」`;
       if (pictures && names.length) {
+        const fact = scene ? '' : cardLine(asset, true);
         names.forEach(name => {
           const note = noteText(notes[name]);
           entries.push({
             name: asset.name,
             scene,
             note: note || `${scene ? '场景' : '人物'}「${asset.name}」设定总图`,
+            fact,
           });
         });
         refmodIds.push(pack.id);
@@ -230,6 +235,8 @@ class RefmodService extends Service {
         lines.push(scene
           ? `${who}。锁定这个场景的空间、陈设和结构，本段画面保持一致`
           : `${who}。锁定这张脸、体态和服装，本段画面保持一致`);
+        const fact = scene ? '' : cardLine(asset, true);
+        if (fact) lines.push(fact);
         return;
       }
       lines.push(who);

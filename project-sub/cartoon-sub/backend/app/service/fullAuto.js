@@ -17,6 +17,7 @@ const {
 } = require('../lib/assetProfile');
 const { settleScript } = require('../lib/scriptGate');
 const { minStoryUnits } = require('../lib/storyCoverage');
+const { promptCoveredMs } = require('../lib/promptDuration');
 
 const NODE_KEYS = [ 'script', 'assets', 'storyboard', 'prompts', 'workflow', 'video' ];
 const NODE_LABEL = {
@@ -1000,7 +1001,11 @@ class FullAutoService extends Service {
         negative_zh: negative,
         workflow_id: run.video_workflow_id,
         asset_ids: assetIds,
-        duration_sec: shot.duration_ms ? Math.max(1, Math.round(shot.duration_ms / 1000)) : 10,
+        duration_sec: (() => {
+          const covered = promptCoveredMs(videoText);
+          if (covered) return covered / 1000;
+          return shot.duration_ms ? Math.max(0.5, shot.duration_ms / 1000) : 10;
+        })(),
         seed: this.takeSeed(run),
         ephemeral_refmod_id: packId,
         frame_tasks: {

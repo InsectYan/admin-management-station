@@ -18,6 +18,8 @@ const { minStoryUnits, normalizeOmissions, uncoveredScenes } = require('../lib/s
 const { settleScript } = require('../lib/scriptGate');
 const { normalizeScript, placeTag } = require('../lib/rosterNames');
 const { uniquePrompt } = require('../lib/promptText');
+const { promptCoveredMs } = require('../lib/promptDuration');
+const { assetFactText, namedAssets } = require('../lib/assetProfile');
 const { begin, finish } = require('../lib/activeRuns');
 
 function outputOf(result) {
@@ -138,6 +140,21 @@ class DraftService extends Service {
     }
   }
 
+  async characterCards(projectId) {
+    return this.ctx.model.Asset.findAll({
+      where: { project_id: projectId, kind: 'character', disabled: false },
+      order: [[ 'id', 'ASC' ]],
+    });
+  }
+
+  async projectFactText(projectId) {
+    return assetFactText(await this.characterCards(projectId));
+  }
+
+  async shotFactText(projectId, text) {
+    return assetFactText(namedAssets(await this.characterCards(projectId), text));
+  }
+
   async composeScript(projectId, importId, signal) {
     const { project, chapter } = await this.load(projectId, importId);
     const styleCtx = await this.styleContext(project, chapter);
@@ -154,6 +171,7 @@ class DraftService extends Service {
         ...productionInput(project),
         body: chapter.body,
         min_scenes: minScenes,
+        asset_facts: await this.projectFactText(project.id),
       },
     });
     const scriptOutput = outputOf(scriptResult);
@@ -252,6 +270,7 @@ class DraftService extends Service {
         ...styleCtx,
         ...productionInput(project),
         min_shots: minShots,
+        asset_facts: await this.projectFactText(project.id),
       },
     });
     const boardOutput = outputOf(boardResult);
@@ -390,6 +409,8 @@ class DraftService extends Service {
       camera_moves: seedMoves,
       dialogue: String(payload.dialogue != null ? payload.dialogue : (existing.dialogue || '')).trim(),
     };
+    const seedFacts = await this.shotFactText(project.id, [ seedShot.description, seedShot.dialogue ].join('\n'));
+    seedShot.asset_facts = seedFacts;
     const ensureRunning = () => {
       if (stop.stopped()) throw stopError();
     };
@@ -405,6 +426,7 @@ class DraftService extends Service {
           script_data: settledScript.script,
           expand_one: true,
           seed_shot: seedShot,
+          asset_facts: seedFacts,
           ...styleCtx,
           ...productionInput(project),
         },
@@ -429,9 +451,12 @@ class DraftService extends Service {
       dialogue: String(expanded?.dialogue || seedShot.dialogue).trim(),
     };
     if (!shot.description) this.ctx.throw(502, '没有返回分镜描述');
+    const shotFacts = await this.shotFactText(project.id, [ shot.description, shot.dialogue ].join('\n'));
+    shot.asset_facts = shotFacts;
     const promptPayload = {
       shots: [ shot ],
       repair_note: String(payload.repair_note || '').trim(),
+      asset_facts: shotFacts,
       ...styleCtx,
       ...productionInput(project),
     };
@@ -517,20 +542,22 @@ class DraftService extends Service {
     ensureRunning();
     const overrides = (Array.isArray(existing.overridden_fields) ? existing.overridden_fields : [])
       .filter(field => field !== 'assets');
-    await existing.update({
-      shot_size: shot.shot_size,
-      camera_move: shot.camera_move,
-      dialogue: shot.dialogue,
-      duration_ms: shot.duration_sec * 1000,
-      overridden_fields: overrides,
-    });
-    const promptRow = await this.ctx.model.Prompt.findOne({ where: { shot_id: existing.id } });
+    const videoText = picturePrompt(prompt.positive_zh) || String(prompt.positive_zh || '').trim();
     const promptFields = {
-      positive_zh: picturePrompt(prompt.positive_zh) || shot.description,
+      positive_zh: videoText || shot.description,
       frame_start_zh: picturePrompt(prompt.frame_start_zh),
       frame_end_zh: picturePrompt(prompt.frame_end_zh),
       negative_zh: prompt.negative_zh || '',
     };
+    const coveredMs = promptCoveredMs(videoText);
+    await existing.update({
+      shot_size: shot.shot_size,
+      camera_move: shot.camera_move,
+      dialogue: shot.dialogue,
+      duration_ms: coveredMs || shot.duration_sec * 1000,
+      overridden_fields: overrides,
+    });
+    const promptRow = await this.ctx.model.Prompt.findOne({ where: { shot_id: existing.id } });
     if (promptRow) await promptRow.update(promptFields);
     else await this.ctx.model.Prompt.create({ shot_id: existing.id, ...promptFields });
     await this.ctx.service.project.bindMatchedAssets(project.id, existing.id, [

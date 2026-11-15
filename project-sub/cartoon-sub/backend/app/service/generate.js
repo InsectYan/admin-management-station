@@ -11,6 +11,8 @@ const { reportAudit } = require('../lib/reportAudit');
 const { complianceCheck } = require('../lib/complianceCheck');
 const { begin, finish, cancelProject } = require('../lib/activeRuns');
 const { usageSummary } = require('../lib/usageSummary');
+const { cardLine } = require('../lib/assetProfile');
+const { promptCoveredMs } = require('../lib/promptDuration');
 
 function snap32(value) {
   const n = Number(value);
@@ -353,7 +355,7 @@ class GenerateService extends Service {
           ? { name: matched[2], scene: matched[1] === '场景', note }
           : { name: '', note };
       });
-      pictureNote = this.ctx.service.refmod.lockLines(entries);
+      pictureNote = this.ctx.service.refmod.lockLines(await this.withPictureFacts(projectId, entries));
     }
     if (useRefs && !composed.refmodIds.length && !ephemeralId) {
       this.ctx.throw(400, '请勾选已经绑了 RefMod 的角色或场景，并至少留一张参考图');
@@ -377,7 +379,8 @@ class GenerateService extends Service {
       if (refs.length) rawImages = rawImages.concat(refs);
     }
     if (!videoKind) {
-      const lock = this.ctx.service.refmod.lockLines(this.referenceEntries(rawImages));
+      const entries = await this.withPictureFacts(projectId, this.referenceEntries(rawImages));
+      const lock = this.ctx.service.refmod.lockLines(entries);
       if (lock) {
         if (lead && positive.startsWith(`${lead}\n`)) positive = `${lead}\n${lock}\n${positive.slice(lead.length + 1)}`;
         else positive = `${lock}\n${positive}`;
@@ -418,7 +421,8 @@ class GenerateService extends Service {
     const taskKind = useRefs ? 'refmod' : kind;
     let durationSec;
     if (videoKind) {
-      const seconds = Number(payload.duration_sec);
+      const covered = promptCoveredMs(text);
+      const seconds = covered ? covered / 1000 : Number(payload.duration_sec);
       if (!Number.isFinite(seconds) || seconds <= 0) this.ctx.throw(400, '请填写视频时长');
       if (seconds > 60) this.ctx.throw(400, '时长不能超过 60 秒');
       durationSec = seconds;
@@ -1097,6 +1101,21 @@ class GenerateService extends Service {
     const absolute = resolveInside(outputRoot(this.app), relative);
     if (!absolute || !fs.existsSync(absolute)) return null;
     return absolute;
+  }
+
+  async withPictureFacts(projectId, entries) {
+    const list = Array.isArray(entries) ? entries : [];
+    const names = list.filter(item => item && !item.scene && item.name).map(item => String(item.name).trim());
+    if (!names.length) return list;
+    const cards = await this.ctx.model.Asset.findAll({
+      where: { project_id: projectId, kind: 'character', disabled: false },
+    });
+    const byName = new Map(cards.map(card => [ String(card.name || '').trim(), card ]));
+    return list.map(entry => {
+      if (!entry || entry.scene || !entry.name) return entry;
+      const fact = cardLine(byName.get(String(entry.name).trim()), true);
+      return fact ? { ...entry, fact } : entry;
+    });
   }
 
   referenceEntries(images) {

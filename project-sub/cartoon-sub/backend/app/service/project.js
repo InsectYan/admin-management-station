@@ -14,6 +14,7 @@ const { videoTemplateDraft, templateGaps } = require('../lib/videoTemplates');
 const { auditShot, mentionedAssetIds, shotText } = require('../lib/shotAssets');
 const { characterTag, placeTag, normalizeScript } = require('../lib/rosterNames');
 const { uniquePrompt } = require('../lib/promptText');
+const { promptCoveredMs } = require('../lib/promptDuration');
 const {
   contentType,
   isLocal,
@@ -202,6 +203,7 @@ class ProjectService extends Service {
       ? await this.ctx.model.Prompt.findAll({ where: { shot_id: shotIds } })
       : [];
     const promptByShot = new Map(prompts.map(item => [ item.shot_id, item ]));
+    await this.alignPromptDurations(shots, promptByShot);
     const importById = new Map(imports.map(item => [ item.id, item ]));
     let bindings = await this.ctx.model.ShotBinding.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] });
     bindings = await this.fillMentionedAssets(id, shots, assets, importById, promptByShot, bindings);
@@ -362,6 +364,7 @@ class ProjectService extends Service {
       ? await this.ctx.model.Prompt.findAll({ where: { shot_id: shotIds } })
       : [];
     const promptByShot = new Map(prompts.map(item => [ item.shot_id, item ]));
+    await this.alignPromptDurations(shots, promptByShot);
     const leads = total
       ? await this.ctx.model.Shot.findAll({
         where,
@@ -1753,6 +1756,18 @@ class ProjectService extends Service {
     this.ctx.body = fs.createReadStream(absolute);
   }
 
+  async alignPromptDurations(shots, promptByShot) {
+    const pending = [];
+    (shots || []).forEach(shot => {
+      const covered = promptCoveredMs(promptByShot.get(shot.id)?.positive_zh);
+      if (!covered || Number(shot.duration_ms) === covered) return;
+      pending.push(shot.update({ duration_ms: covered }).then(() => {
+        shot.duration_ms = covered;
+      }));
+    });
+    if (pending.length) await Promise.all(pending);
+  }
+
   async updateShot(id, payload) {
     const shot = await this.ctx.model.Shot.findByPk(id);
     if (!shot) this.ctx.throw(404, '分镜不存在');
@@ -1764,6 +1779,10 @@ class ProjectService extends Service {
     } else if (payload.duration_ms != null) {
       const ms = Number(payload.duration_ms);
       if (Number.isFinite(ms) && ms > 0) durationMs = Math.round(ms);
+    }
+    if (payload.positive_zh != null) {
+      const covered = promptCoveredMs(payload.positive_zh);
+      if (covered) durationMs = covered;
     }
     const nextShotSize = payload.shot_sizes != null || payload.shot_size != null
       ? assertShotSizes(payload.shot_sizes != null ? payload.shot_sizes : payload.shot_size)

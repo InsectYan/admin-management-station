@@ -1,6 +1,7 @@
 'use strict';
 
 const Service = require('egg').Service;
+const { promptCoveredMs } = require('../lib/promptDuration');
 
 const OPEN = [ 'pending', 'running' ];
 const VIDEO_KINDS = [ 'video', 'i2v', 't2v', 'refmod' ];
@@ -138,7 +139,11 @@ class AutoJobService extends Service {
         negative_zh: prompt?.negative_zh || '',
         workflow_id: workflow.id,
         asset_ids: bound,
-        duration_sec: shot.duration_ms ? Math.round(shot.duration_ms / 1000) : 10,
+        duration_sec: (() => {
+          const covered = promptCoveredMs(positive);
+          if (covered) return covered / 1000;
+          return shot.duration_ms ? Math.max(0.5, shot.duration_ms / 1000) : 10;
+        })(),
         seed: this.takeSeed(job),
       },
     };

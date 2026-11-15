@@ -249,7 +249,7 @@
                 <el-table v-else v-loading="scriptShotLoading" class="cartoon-shot-table" :data="scriptShotRows" style="margin-top: 8px" row-key="id">
               <el-table-column label="镜头ID" width="120" prop="shot_code" fixed="left" />
               <el-table-column label="时长(秒)" width="110">
-                <template #default="{ row }">{{ shotDurationSec(row) }}</template>
+                <template #default="{ row }">{{ shotDurationLabel(row) }}</template>
               </el-table-column>
               <el-table-column label="主景别" width="180">
                 <template #default="{ row }">{{ shotSizeText(row) }}</template>
@@ -380,7 +380,7 @@
           <el-table v-if="selectedBoard" class="cartoon-shot-table" :data="boardPageRows" style="margin-top: 12px">
             <el-table-column label="镜头ID" width="120" prop="shot_code" fixed="left" />
             <el-table-column label="时长" width="90">
-              <template #default="{ row }">{{ row.duration_ms ? `${Math.round(row.duration_ms / 1000)}s` : '—' }}</template>
+              <template #default="{ row }">{{ shotDurationLabel(row, true) }}</template>
             </el-table-column>
             <el-table-column label="主景别" width="180">
               <template #default="{ row }">{{ shotSizeText(row) }}</template>
@@ -723,6 +723,7 @@ import { isLocalType, supportsAv } from '../lib/contentTypes.js';
 import { uncoveredScenes } from '../utils/sceneCoverage.js';
 import { framePromptText, hasPromptSet } from '../lib/framePrompt.js';
 import { PAGE_SIZES, PAGER_LAYOUT } from '../lib/pager.js';
+import { formatCoveredSeconds, promptCoveredMs } from '../lib/promptDuration.js';
 
 const props = defineProps({
   forcedStep: { type: Number, default: 0 },
@@ -1595,9 +1596,16 @@ async function removeSnapshot(item) {
     ElMessage.error(err.message);
   }
 }
-function shotDurationSec(row) {
-  const sec = Number(row.duration_ms) > 0 ? Math.round(row.duration_ms / 1000) : 10;
-  return Math.min(15, Math.max(8, sec));
+function shotDurationLabel(row, withUnit) {
+  const text = formatCoveredSeconds(promptCoveredMs(row?.prompt?.positive_zh));
+  if (!text) return '—';
+  return withUnit ? `${text}s` : text;
+}
+function shotDurationSeed(row) {
+  const covered = promptCoveredMs(row?.prompt?.positive_zh);
+  if (covered) return covered / 1000;
+  const sec = Number(row?.duration_ms) > 0 ? Number(row.duration_ms) / 1000 : 0;
+  return sec > 0 ? sec : undefined;
 }
 function shotSizeText(row) {
   const sizes = Array.isArray(row.shot_sizes) && row.shot_sizes.length
@@ -2087,7 +2095,7 @@ async function expandOutlineRow(row) {
     return;
   }
   expandingKey.value = String(row.id);
-  ElMessage.info(`正在生成 ${row.shot_code || row.id} 的分镜提示词（约 ${shotDurationSec(row)} 秒）…`);
+  ElMessage.info(`正在生成 ${row.shot_code || row.id} 的分镜提示词…`);
   const signal = ensureController().signal;
   try {
     await request(`/projects/${projectKey()}/imports/${item.id}/draft/shot-expand`, {
@@ -2097,7 +2105,7 @@ async function expandOutlineRow(row) {
       data: {
         shot_id: row.id,
         coverage: row.description,
-        duration_sec: shotDurationSec(row),
+        duration_sec: shotDurationSeed(row),
         shot_sizes: ensureShotSizes(row),
         shot_size: ensureShotSizes(row).join(','),
         camera_moves: cameraMovesOf(row),
@@ -2176,7 +2184,7 @@ async function runPromptShot(row, item, signal, fresh = false) {
           coverage: row.description,
           description: row.description,
           dialogue: row.dialogue,
-          duration_sec: row.duration_ms ? row.duration_ms / 1000 : 10,
+          duration_sec: shotDurationSeed(row),
           shot_sizes: sizes,
           shot_size: sizes.join(','),
           camera_moves: moves,
@@ -2250,7 +2258,7 @@ async function runVideoShot(row, item, signal) {
       negative_zh: saved.prompt.negative_zh || '',
       workflow_id: workflow.id,
       asset_ids: bound,
-      duration_sec: saved.duration_ms ? Math.round(saved.duration_ms / 1000) : 10,
+      duration_sec: shotDurationSeed(saved) || 10,
       seed,
     },
   });
