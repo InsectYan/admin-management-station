@@ -142,7 +142,10 @@
     </div>
     <div class="precheck-preview-side">
     <aside class="precheck-preview-used">
-      <p class="precheck-preview-used__title">本次实际选项</p>
+      <div class="precheck-preview-used__head">
+        <p class="precheck-preview-used__title">本次实际选项</p>
+        <el-button size="small" :disabled="!focusRun || fillingBack" :loading="fillingBack" @click="fillBack">一键回填</el-button>
+      </div>
       <p v-if="!focusRun" class="precheck-preview-hint">生成之后，这里显示这次提交的参数和引用图片。</p>
       <p v-else-if="!usedOptions.length" class="precheck-preview-hint">这次生成没有提示词以外的选项。</p>
       <ul v-else class="precheck-preview-options">
@@ -166,7 +169,10 @@
       </ul>
     </aside>
     <aside class="precheck-preview-used">
-      <p class="precheck-preview-used__title">本次实际提示词</p>
+      <div class="precheck-preview-used__head">
+        <p class="precheck-preview-used__title">本次实际提示词</p>
+        <el-button size="small" :disabled="!focusRun || fillingBack" :loading="fillingBack" @click="fillBack">一键回填</el-button>
+      </div>
       <p v-if="usedTitle" class="precheck-preview-hint">产物 {{ usedTitle }}</p>
       <p v-if="!focusRun" class="precheck-preview-hint">生成之后，这里显示实际交给 ComfyUI 的提示词，包括自动拼上的风格描述。</p>
       <p v-else-if="!usedPrompts.length" class="precheck-preview-hint">这次生成没有文本提示词。</p>
@@ -226,7 +232,7 @@
 </template>
 
 <script setup>
-import { computed, onUnmounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onUnmounted, reactive, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import MediaFileList from './MediaFileList.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
@@ -256,6 +262,7 @@ const submitting = ref(false);
 const stopping = ref(false);
 const clearing = ref(false);
 const notice = ref('');
+const fillingBack = ref(false);
 const preview = ref(null);
 const runs = ref([]);
 const styles = ref([]);
@@ -740,6 +747,119 @@ async function clearRuns() {
     clearing.value = false;
   }
 }
+function shownRows(run) {
+  if (!run) return { options: [], prompts: [] };
+  const source = Array.isArray(run.options) && run.options.length
+    ? run.options
+    : [
+      ...(run.output_name ? [{ label: '产物名称', text: run.output_name }] : []),
+      ...(run.submitted || []).filter(item => item && item.type !== 'text').map(item => ({
+        label: item.label || '参数',
+        text: item.text || '',
+      })),
+    ];
+  return {
+    options: source.filter(item => !hiddenOption(item)),
+    prompts: (run.submitted || []).filter(item => item.type === 'text'),
+  };
+}
+function takeField(pool, label) {
+  const index = pool.findIndex(field => (field.label || field.key || '参数') === label);
+  if (index < 0) return null;
+  return pool.splice(index, 1)[0];
+}
+async function fileFromOption(image) {
+  const res = await fetch(optionSrc(image));
+  if (!res.ok) throw new Error('读取参考文件失败');
+  const blob = await res.blob();
+  const name = image.name || image.file || 'file';
+  return new File([ blob ], name, { type: blob.type || 'application/octet-stream' });
+}
+function uploadItem(file, index) {
+  return {
+    name: file.name,
+    url: URL.createObjectURL(file),
+    status: 'ready',
+    uid: Date.now() + index,
+    raw: file,
+  };
+}
+async function fillBack() {
+  const run = focusRun.value;
+  if (!run || fillingBack.value) return;
+  fillingBack.value = true;
+  try {
+    const { options, prompts } = shownRows(run);
+    const styleNames = String(options.find(item => item.label === '画风')?.text || '').split('、').map(item => item.trim()).filter(Boolean);
+    styleIds.value = styleNames.map(name => styles.value.find(item => item.name === name)?.value).filter(item => item != null);
+    await nextTick();
+    const styleText = String(stylePrompt.value || '').trim();
+    const nameRow = options.find(item => item.label === '产物名称');
+    if (nameRow) outputName.value = nameRow.text === '产物' ? '' : String(nameRow.text || '');
+    const batchRow = options.find(item => item.label === '批次');
+    if (batchRow) {
+      const count = Number(String(batchRow.text || '').match(/\d+/)?.[0]);
+      if (count) batchCount.value = Math.min(BATCH_MAX, Math.max(1, count));
+    }
+    const textFields = fields.value.filter(field => field.type === 'text');
+    prompts.forEach(item => {
+      const field = takeField(textFields, item.label || '参数');
+      if (!field) return;
+      let text = String(item.text || '');
+      if (styleText && text.startsWith(styleText)) text = text.slice(styleText.length).replace(/^\n+/, '');
+      field.value = text;
+    });
+    const valueFields = fields.value.filter(field => field.type !== 'text' && field.type !== 'image' && field.type !== 'video' && field.type !== 'note');
+    options.forEach(item => {
+      if ([ '画风', '产物名称', '批次', '参考图' ].includes(item.label) || item.images?.length) return;
+      const field = takeField(valueFields, item.label || '参数');
+      if (!field) return;
+      if (field.type === 'number' || field.type === 'duration') {
+        const num = Number(item.text);
+        if (Number.isFinite(num)) field.value = num;
+        return;
+      }
+      field.value = item.text || '';
+    });
+    const refRow = options.find(item => item.label === '参考图');
+    if (refRow) {
+      const packIds = String(refRow.text || '').split('、').map(item => item.trim()).filter(Boolean)
+        .map(name => packs.value.find(pack => pack.name === name)?.id)
+        .filter(item => item != null);
+      if (packIds.length) refmodIds.value = packIds;
+      if (!packIds.length && refRow.images?.length) {
+        const files = [];
+        for (const image of refRow.images) {
+          try { files.push(await fileFromOption(image)); } catch { /* 单张失败时继续其余文件 */ }
+        }
+        if (files.length) {
+          refFileList.value = files.map(uploadItem);
+          const holder = { files: [], filename: '', data: '' };
+          await rememberImages(holder, files);
+          refImages.value = holder.files;
+        }
+      }
+    }
+    const mediaFields = fields.value.filter(field => field.type === 'image' || field.type === 'video');
+    for (const item of options) {
+      if (!item.images?.length || item.label === '参考图') continue;
+      const field = takeField(mediaFields, item.label || '参数');
+      if (!field) continue;
+      const files = [];
+      for (const image of item.images.slice(0, field.limit || item.images.length)) {
+        try { files.push(await fileFromOption(image)); } catch { /* 单张失败时继续其余文件 */ }
+      }
+      if (!files.length) continue;
+      imageLists[field.id] = files.map(uploadItem);
+      await rememberImages(field, files);
+    }
+    ElMessage.success('已回填到左侧');
+  } catch (err) {
+    ElMessage.error(err.message || '没有回填');
+  } finally {
+    fillingBack.value = false;
+  }
+}
 async function generate() {
   if (!props.apiJson) return;
   if (props.refmod && !refmodIds.value.length && !refImages.value.length) {
@@ -830,7 +950,8 @@ onUnmounted(stop);
 .precheck-style-group p { margin: 0 0 4px; color: #5c6b62; font-size: 12px; }
 .precheck-style-group :deep(.el-checkbox) { margin-right: 12px; }
 .precheck-preview-used { min-width: 0; padding: 12px; border: 1px solid rgba(47, 138, 91, 0.16); border-radius: 12px; background: #f7fbf8; }
-.precheck-preview-used__title { margin: 0 0 8px; font-weight: 600; }
+.precheck-preview-used__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; }
+.precheck-preview-used__title { margin: 0; font-weight: 600; }
 .precheck-preview-used ul { margin: 8px 0 0; padding: 0; list-style: none; }
 .precheck-preview-used li + li { margin-top: 12px; }
 .precheck-preview-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }

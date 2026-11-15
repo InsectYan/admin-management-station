@@ -29,12 +29,102 @@ function extractQuotes(text) {
   return found;
 }
 
-function lookReady(look) {
-  const text = textOf(look);
-  const age = /岁|少年|青年|中年|老年|幼|婴儿|孩|少女|少妇|老者|年纪/;
-  const hair = /发|头发|发型|光头|秃|胎发/;
-  const clothes = /衣|袍|衫|裙|甲|裤|靴|装|襟|袖|冠|襁褓|巾/;
-  return age.test(text) && hair.test(text) && clothes.test(text);
+const AGE_RE = /岁|少年|青年|中年|老年|幼|婴儿|小孩|孩童|少女|少妇|老者/;
+const HAIR_RE = /头发|发型|发丝|短发|长发|光头|秀发|胎发/;
+const CLOTH_RE = /白衣|青衣|黑衣|红衣|紫衣|黄衣|蓝衣|绿衣|灰衣|素衣|锦衣|布衣|道衣|法衣|战衣|(?<!另)外衣|内衣|衣裳|衣衫|衣袍|袍|衫|裙|裤|靴|襟|袖|冠|襁褓|铠甲|甲胄|盔甲|战甲|披甲/;
+const LOOK_SLOTS = [
+  [ '年纪', AGE_RE, /正文未写(?:年纪|年龄|外形)/ ],
+  [ '发型', HAIR_RE, /正文未写(?:发型|外形)/ ],
+  [ '服装', CLOTH_RE, /正文未写(?:服装|外形)/ ],
+];
+
+function stripMissingMarks(text) {
+  return text.replace(/正文未写(?:外形|年纪|年龄|发型|服装)/g, '');
+}
+
+const ACTION_RE = /脱|解|扯|撩|摸|抚|吻|抱|舔|吸|伸|哼|喘|软|阻止|兴奋|站|走|跑|坐|躺|说|道|问|笑|进|出|拉|推|打|杀|飞|落/;
+const PLOT_RE = /望|瞅|盯|瞧|看向|注视|打量|身下|胴体|诱人/;
+const MOTION_RE = /吹动|飘扬|飘起|飘动|迎面|而来|降生|就要|即将|走来|跑来/;
+const POSTURE_RE = /身材|体态|修长|高挑|魁梧|瘦削|白皙|肤色|冰肌|雪肤/;
+
+function lookClauses(text) {
+  return String(text || '')
+    .split(/[。！？\n，,、；;]/)
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function isPortrait(clause) {
+  const text = String(clause || '').trim();
+  if (!text || text.length > 40) return false;
+  if (/正文未写/.test(text)) return false;
+  if (/^(以及|还有|并且|同时|另外)/.test(text)) return false;
+  if (ACTION_RE.test(text) || PLOT_RE.test(text) || MOTION_RE.test(text)) return false;
+  return AGE_RE.test(text) || HAIR_RE.test(text) || CLOTH_RE.test(text) || POSTURE_RE.test(text);
+}
+
+function statedClause(body, name, evidence) {
+  if (!name) return '';
+  const sentences = String(body || '').split(/[。！？\n]/);
+  for (const sentence of sentences) {
+    if (!sentence.includes(name)) continue;
+    if (PLOT_RE.test(sentence)) continue;
+    const hit = lookClauses(sentence).find(clause => isPortrait(clause) && evidence.test(clause));
+    if (hit) return hit;
+  }
+  return '';
+}
+
+function bodyHasNear(body, name, pattern) {
+  return Boolean(statedClause(body, name, pattern));
+}
+
+function tidyLook(look) {
+  const normalized = String(look || '')
+    .replace(/年纪正文未写/g, '正文未写年纪')
+    .replace(/发型正文未写/g, '正文未写发型')
+    .replace(/服装正文未写/g, '正文未写服装')
+    .replace(/外形正文未写/g, '正文未写外形');
+  const parts = normalized.split(/([，,、；;。！？\n])/);
+  const kept = [];
+  for (let index = 0; index < parts.length; index += 2) {
+    const clause = String(parts[index] || '').trim();
+    if (!clause) continue;
+    if (/正文未写/.test(clause)) {
+      kept.push(clause);
+      continue;
+    }
+    const appearance = AGE_RE.test(clause) || HAIR_RE.test(clause) || CLOTH_RE.test(clause) || POSTURE_RE.test(clause);
+    if (!appearance || ACTION_RE.test(clause) || clause.length > 40) continue;
+    kept.push(clause);
+  }
+  return kept.join('，').replace(/^[，\s]+|[，\s]+$/g, '').trim();
+}
+
+function portraitClauses(text) {
+  return lookClauses(stripMissingMarks(text)).filter(isPortrait);
+}
+
+function lookIssues(name, look, body) {
+  const raw = textOf(look).trim();
+  const issues = [];
+  const found = [];
+  LOOK_SLOTS.forEach(([ label, evidence ]) => {
+    const clause = statedClause(body, name, evidence);
+    if (!clause) return;
+    found.push(clause);
+    if (!raw.includes(clause)) issues.push(`${name}的${label}正文里写了，要按原文写下，不要另编`);
+  });
+  const posture = statedClause(body, name, POSTURE_RE);
+  if (posture && !raw.includes(posture)) issues.push(`${name}的体态正文里写了，要按原文写下，不要另编`);
+  portraitClauses(raw).forEach(clause => {
+    if (found.includes(clause) || clause === posture) return;
+    issues.push(`${name}的外形里有正文没写的内容，不要编`);
+  });
+  if (!found.length && !posture && raw !== '正文未写') {
+    issues.push(`${name}正文没有人物描写，look 只写「正文未写」`);
+  }
+  return issues;
 }
 
 /** 一场正文里标了多个「场景N」时拆开，避免十个节点只落成一条记录。与剧本技能里的同名检查保持一致。 */
@@ -89,13 +179,11 @@ function collectIssues(script, body, minScenes) {
     }
   });
   if (!characters.length) {
-    issues.push('要列出本章实际出场的人物，并写明年纪、发型和服装');
+    issues.push('要列出本章实际出场的人物');
   }
   characters.forEach(item => {
     const name = textOf(item?.name) || '未命名人物';
-    if (!lookReady(item?.look)) {
-      issues.push(`${name}的外形要同时写明年纪、发型和服装`);
-    }
+    lookIssues(name, item?.look, body).forEach(issue => issues.push(issue));
   });
   const quotes = extractQuotes(body);
   if (quotes.length) {
@@ -116,10 +204,86 @@ function collectIssues(script, body, minScenes) {
   return issues;
 }
 
+function sourceSentence(body, name, evidence) {
+  return statedClause(body, name, evidence);
+}
+
+function dropClauses(look, evidence) {
+  const parts = String(look || '').split(/([，,、；;。！？\n])/);
+  const kept = [];
+  for (let index = 0; index < parts.length; index += 2) {
+    const clause = parts[index];
+    const sep = parts[index + 1] || '';
+    if (!clause) continue;
+    if (evidence.test(clause)) continue;
+    kept.push(clause + sep);
+  }
+  return kept.join('').replace(/^[，,、；;\s]+|[，,、；;\s]+$/g, '').trim();
+}
+
+function fillStatedLooks(name, look, body) {
+  let next = textOf(look);
+  LOOK_SLOTS.forEach(([ label, evidence ]) => {
+    if (!bodyHasNear(body, name, evidence)) return;
+    if (evidence.test(stripMissingMarks(next))) return;
+    next = next.replace(new RegExp(`正文未写(?:${label}|外形)`, 'g'), '');
+    const sentence = sourceSentence(body, name, evidence);
+    if (sentence && !next.includes(sentence)) next = [ next.trim(), sentence ].filter(Boolean).join('。');
+  });
+  return next;
+}
+
+function lockLook(name, look, body) {
+  const found = [];
+  const push = clause => {
+    const text = String(clause || '').trim();
+    if (text && !found.includes(text)) found.push(text);
+  };
+  LOOK_SLOTS.forEach(([ , evidence ]) => push(statedClause(body, name, evidence)));
+  push(statedClause(body, name, POSTURE_RE));
+  if (!found.length) return '正文未写';
+  return found.join('。');
+}
+
+function placeQuotes(scenes, body) {
+  const source = String(body || '');
+  const quotes = extractQuotes(source);
+  const next = (Array.isArray(scenes) ? scenes : []).map(scene => ({ ...scene, summary: textOf(scene?.summary) }));
+  if (!quotes.length || !next.length) return next;
+  const places = next.map(scene => {
+    const parts = textOf(scene?.title).split('·');
+    return parts.length >= 2 ? parts[1] : '';
+  });
+  quotes.forEach(line => {
+    if (next.some(scene => scene.summary.includes(line))) return;
+    const at = source.indexOf(line);
+    let best = next.length - 1;
+    if (at >= 0) {
+      let bestAt = -1;
+      places.forEach((place, index) => {
+        if (!place) return;
+        const pos = source.lastIndexOf(place, at);
+        if (pos > bestAt) {
+          bestAt = pos;
+          best = index;
+        }
+      });
+      if (bestAt < 0) best = Math.min(next.length - 1, Math.floor((at / Math.max(source.length, 1)) * next.length));
+    }
+    next[best].summary = `${next[best].summary}\n「${line}」`.trim();
+  });
+  return next;
+}
+
 function settleScript(script, body, minScenes) {
   const data = script && typeof script === 'object' ? script : {};
-  const scenes = splitEmbeddedScenes(data.scenes);
-  const next = { ...data, scenes };
+  const scenes = placeQuotes(splitEmbeddedScenes(data.scenes), body);
+  const characters = (Array.isArray(data.characters) ? data.characters : []).map(item => {
+    const name = textOf(item?.name);
+    if (!name) return item;
+    return { ...item, look: lockLook(name, item?.look, body) };
+  });
+  const next = { ...data, scenes, characters };
   return {
     script: next,
     issues: collectIssues(next, body, minScenes),
@@ -128,7 +292,7 @@ function settleScript(script, body, minScenes) {
 
 module.exports = {
   extractQuotes,
-  lookReady,
+  lookIssues,
   splitEmbeddedScenes,
   settleScript,
 };

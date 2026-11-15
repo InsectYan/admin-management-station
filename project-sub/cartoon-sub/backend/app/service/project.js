@@ -321,6 +321,23 @@ class ProjectService extends Service {
     return episode;
   }
 
+  async showImport(projectId, importId) {
+    const row = await this.ctx.model.Import.findOne({
+      where: { id: importId, project_id: projectId },
+    });
+    if (!row || row.deleted_at) this.ctx.throw(404, '章节快照不存在');
+    const data = row.toJSON();
+    if (data.script_data && data.body) {
+      const { settleScript } = require('../lib/scriptGate');
+      const settled = settleScript(data.script_data, data.body, 1);
+      data.script_data = {
+        ...data.script_data,
+        characters: settled.script.characters,
+      };
+    }
+    return data;
+  }
+
   async touchNode(projectId, taskId, currentNode) {
     const allowed = [ 'input', 'script', 'storyboard', 'pipeline', 'assets', 'generate', 'voice', 'subtitle', 'compose', 'preview', 'review', 'export' ];
     if (!allowed.includes(currentNode)) {
@@ -656,6 +673,112 @@ class ProjectService extends Service {
     });
     if (!payload.keep_unlinked) await project.update({ source_novel_id: String(payload.novel_id) });
     return row;
+  }
+
+  async pullAllChapters(projectId, payload) {
+    const project = await this.ctx.model.Project.findByPk(projectId);
+    if (!project) this.ctx.throw(404, '项目不存在');
+    const novelId = payload.novel_id || project.source_novel_id;
+    if (payload.package_id && payload.version) return this.pullAllFromPackage(project, payload);
+    if (!novelId) this.ctx.throw(400, '先选择来源小说');
+    if ((project.pin_mode || 'required') !== 'legacy') {
+      const desk = await this.listNovelPackages(novelId).catch(() => null);
+      if ((desk?.versions || []).length) this.ctx.throw(400, '已有故事包，请按版本拉取');
+    }
+    const listed = await this.listChapters(novelId);
+    if (!listed.length) this.ctx.throw(400, '这本小说没有章节');
+    let novel;
+    try {
+      novel = await this.fetchNovel(`/api/novels/${novelId}`);
+    } catch (err) {
+      if (err.status) throw err;
+      this.ctx.throw(502, `无法连接叙事工作台：${err.message}`);
+    }
+    const setting = novel?.setting_json || {};
+    const { Op } = this.app.Sequelize;
+    const existing = await this.ctx.model.Import.findAll({
+      where: { project_id: project.id, deleted_at: { [Op.is]: null } },
+    });
+    const have = new Set(existing.map(row => String(row.chapter_id || '')).filter(Boolean));
+    let added = 0;
+    let skipped = 0;
+    let empty = 0;
+    for (const item of listed) {
+      if (have.has(String(item.id))) {
+        skipped += 1;
+        continue;
+      }
+      let chapter;
+      try {
+        chapter = await this.fetchNovel(`/api/novels/${novelId}/chapters/${item.id}`);
+      } catch {
+        empty += 1;
+        continue;
+      }
+      const body = chapter?.body || chapter?.content || chapter?.text || '';
+      if (!body) {
+        empty += 1;
+        continue;
+      }
+      await this.addImport(project.id, {
+        source_novel_id: String(novelId),
+        chapter_title: item.label || item.title,
+        body,
+        characters: setting.characters || [],
+        chapter_id: String(item.id),
+        legacy_unpinned: true,
+      });
+      added += 1;
+    }
+    await this.ensureCharacterDrafts(project.id, setting.characters || []);
+    await project.update({ source_novel_id: String(novelId) });
+    return { added, skipped, empty };
+  }
+
+  async pullAllFromPackage(project, payload) {
+    const pack = await this.fetchNovel(
+      `/api/packages/${encodeURIComponent(payload.package_id)}?version=${encodeURIComponent(payload.version)}`,
+    );
+    const chapters = (pack?.chapters || []).filter(item => item?.chapter_id);
+    if (!chapters.length) this.ctx.throw(400, '故事包里没有章节');
+    const { Op } = this.app.Sequelize;
+    const existing = await this.ctx.model.Import.findAll({
+      where: { project_id: project.id, deleted_at: { [Op.is]: null } },
+    });
+    const have = new Set(existing.map(row => String(row.chapter_id || '')).filter(Boolean));
+    let added = 0;
+    let skipped = 0;
+    let empty = 0;
+    for (const chapter of chapters) {
+      if (have.has(String(chapter.chapter_id))) {
+        skipped += 1;
+        continue;
+      }
+      if (!chapter.body) {
+        empty += 1;
+        continue;
+      }
+      await this.addImport(project.id, {
+        source_novel_id: String(pack.narrative_project_id || payload.novel_id || project.source_novel_id || ''),
+        chapter_title: chapter.title || '未命名章节',
+        body: chapter.body,
+        characters: pack.characters || [],
+        package_id: pack.package_id,
+        package_version: pack.version,
+        chapter_id: String(chapter.chapter_id),
+        body_hash: chapter.body_hash || null,
+        legacy_unpinned: false,
+      });
+      added += 1;
+    }
+    await this.ensureCharacterDrafts(project.id, pack.characters || []);
+    await project.update({
+      source_novel_id: String(pack.narrative_project_id || payload.novel_id || project.source_novel_id || ''),
+      package_id: pack.package_id,
+      package_version: pack.version,
+      content_type: project.content_type || 'ai_comic',
+    });
+    return { added, skipped, empty };
   }
 
   async pullPackage(project, payload) {
@@ -1445,6 +1568,13 @@ class ProjectService extends Service {
     const saved = shot.stage_notes && typeof shot.stage_notes === 'object' ? shot.stage_notes : {};
     const characters = saved.characters || {};
     const places = saved.places || {};
+    const assets = await this.ctx.model.Asset.findAll({
+      where: { project_id: shot.project_id, disabled: false },
+    });
+    const baseOf = (kind, name) => {
+      const hit = assets.find(item => item.kind === kind && item.name === name);
+      return String(hit?.description || '').trim();
+    };
     const lines = [];
     (Array.isArray(data.characters) ? data.characters : []).forEach(person => {
       const name = String(person?.name || '').trim();
@@ -1452,7 +1582,12 @@ class ProjectService extends Service {
       const note = Object.prototype.hasOwnProperty.call(characters, name)
         ? String(characters[name] || '').trim()
         : String(person?.stage_note || '').trim();
-      if (note) lines.push(`本章说明：角色「${name}」在这一章的差别：${note}`);
+      if (note) {
+        lines.push(`本章说明：角色「${name}」在这一章的差别：${note}`);
+        return;
+      }
+      const base = baseOf('character', name);
+      if (base) lines.push(`角色「${name}」：${base}`);
     });
     (Array.isArray(data.places) ? data.places : []).forEach(place => {
       const name = String(place?.name || '').trim();
@@ -1460,7 +1595,12 @@ class ProjectService extends Service {
       const note = Object.prototype.hasOwnProperty.call(places, name)
         ? String(places[name] || '').trim()
         : String(place?.stage_note || '').trim();
-      if (note) lines.push(`本章说明：场景「${name}」在这一章的差别：${note}`);
+      if (note) {
+        lines.push(`本章说明：场景「${name}」在这一章的差别：${note}`);
+        return;
+      }
+      const base = baseOf('scene', name);
+      if (base) lines.push(`场景「${name}」：${base}`);
     });
     return lines.join('\n');
   }

@@ -97,7 +97,7 @@ class CustomNodeService extends Service {
     const source = String(chapter.body || '');
     const settled = settleScript(output.script_data, source, minStoryUnits(source.length));
     if (settled.issues.length) {
-      this.ctx.throw(502, `剧本没有定稿。${settled.issues.slice(0, 4).join('；')}`);
+      this.ctx.throw(502, `剧本没有定稿。${settled.issues.slice(0, 4).join('；')}。这一稿没有保存，请再生成一次`);
     }
     return { ...output, script_data: { ...settled.script, accepted: true, reject_reasons: [] } };
   }

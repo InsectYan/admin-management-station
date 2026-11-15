@@ -48,14 +48,14 @@
           <el-input v-model="negativeText" type="textarea" :rows="4" :readonly="readOnly" />
         </el-form-item>
         <el-form-item v-for="row in stageRows" :key="row.key" :label="row.label">
-          <p v-if="readOnly" style="margin: 0; white-space: pre-wrap; color: #5c6b62; line-height: 1.6">{{ stageNotes[row.bucket][row.name] || '未填写本章说明' }}</p>
+          <p v-if="readOnly" style="margin: 0; white-space: pre-wrap; color: #5c6b62; line-height: 1.6">{{ shownStage(row) }}</p>
           <el-input
             v-else
             v-model="stageNotes[row.bucket][row.name]"
             type="textarea"
             :rows="2"
             maxlength="500"
-            placeholder="本章说明，可以不填。只写这一章和资产不一样的地方"
+            placeholder="留空则使用资产说明。这里只写这一章不一样的地方"
             @change="persistStage"
           />
         </el-form-item>
@@ -411,13 +411,28 @@ const stageRows = computed(() => {
   });
   return rows;
 });
+function assetText(kind, name) {
+  const hit = projectAssets.value.find(item => !item.disabled && item.kind === kind && item.name === name);
+  return String(hit?.description || '').trim();
+}
+function shownStage(row) {
+  const note = String(stageNotes[row.bucket]?.[row.name] || '').trim();
+  if (note) return note;
+  const kind = row.bucket === 'places' ? 'scene' : 'character';
+  return assetText(kind, row.name) || '未填写本章说明';
+}
 const stageLineText = computed(() => {
   const lines = [];
   stageRows.value.forEach(row => {
     const note = String(stageNotes[row.bucket]?.[row.name] || '').trim();
-    if (!note) return;
     const kind = row.bucket === 'places' ? '场景' : '角色';
-    lines.push(`本章说明：${kind}「${row.name}」在这一章的差别：${note}`);
+    const assetKind = row.bucket === 'places' ? 'scene' : 'character';
+    if (note) {
+      lines.push(`本章说明：${kind}「${row.name}」在这一章的差别：${note}`);
+      return;
+    }
+    const base = assetText(assetKind, row.name);
+    if (base) lines.push(`${kind}「${row.name}」：${base}`);
   });
   return lines.join('\n');
 });

@@ -7,6 +7,14 @@ const { invokeSkill } = require('../lib/agentProxy');
 const { cancelProject } = require('../lib/activeRuns');
 const { outputRoot, resolveInside } = require('../lib/mediaPaths');
 const { ownPassage, sceneIsSparse, polishSheetPrompt } = require('../lib/assetExcerpt');
+const {
+  mergeCharacter,
+  mergeScene,
+  appendCostume,
+  sceneTypeOf,
+  splitBody,
+  rosterText,
+} = require('../lib/assetProfile');
 const { settleScript } = require('../lib/scriptGate');
 const { minStoryUnits } = require('../lib/storyCoverage');
 
@@ -304,7 +312,7 @@ class FullAutoService extends Service {
       chapter_title: chapter.chapter_title || '未命名章节',
       status: 'running',
       current_node: 'assets',
-      message: NODE_LABEL.assets,
+      message: payload.reset ? '正在重绘设定图' : NODE_LABEL.assets,
       nodes: JSON.stringify(blankNodes()),
       log: '[]',
       asset_workflow_id: assetWorkflow.id,
@@ -318,7 +326,7 @@ class FullAutoService extends Service {
       frame_width: 0,
       frame_height: 0,
       fresh: false,
-      scope: 'assets',
+      scope: payload.reset ? 'assets-reset' : 'assets',
     });
     const runId = run.id;
     setImmediate(() => {
@@ -326,6 +334,149 @@ class FullAutoService extends Service {
         .catch(err => this.app.logger.error('[cartoon] 资产生成中断 %s', err));
     });
     return this.summary(run);
+  }
+
+  async startProfiles(projectId) {
+    const project = await this.ctx.model.Project.findByPk(projectId);
+    if (!project) this.ctx.throw(404, '项目不存在');
+    const chapters = await this.ctx.model.Import.findAll({
+      where: { project_id: project.id, deleted_at: null },
+      order: [[ 'id', 'ASC' ]],
+    });
+    const first = chapters.find(row => String(row.body || '').trim());
+    if (!first) this.ctx.throw(400, '没有可读取的章节正文');
+    const running = await this.ctx.model.FullRun.findOne({
+      where: { project_id: project.id, status: 'running' },
+    });
+    if (running) this.ctx.throw(409, '已有全流程在执行');
+    const run = await this.ctx.model.FullRun.create({
+      project_id: project.id,
+      import_id: first.id,
+      chapter_title: first.chapter_title || '未命名章节',
+      status: 'running',
+      current_node: 'assets',
+      message: '正在生成资产描述',
+      nodes: JSON.stringify(blankNodes()),
+      log: '[]',
+      asset_workflow_id: 0,
+      frame_workflow_id: 0,
+      video_workflow_id: 0,
+      asset_workflow_name: '',
+      frame_workflow_name: '',
+      video_workflow_name: '',
+      asset_width: 0,
+      asset_height: 0,
+      frame_width: 0,
+      frame_height: 0,
+      fresh: false,
+      scope: 'profiles',
+    });
+    const runId = run.id;
+    setImmediate(() => {
+      this.app.createAnonymousContext().service.fullAuto.walk(runId)
+        .catch(err => this.app.logger.error('[cartoon] 资产描述中断 %s', err));
+    });
+    return this.summary(run);
+  }
+
+  async stepProfiles(run) {
+    const chapters = await this.ctx.model.Import.findAll({
+      where: { project_id: run.project_id, deleted_at: null },
+      order: [[ 'id', 'ASC' ]],
+    });
+    const list = chapters.filter(row => String(row.body || '').trim());
+    if (!list.length) throw new Error('没有可读取的章节正文');
+    const project = await this.ctx.model.Project.findByPk(run.project_id);
+    let index = 0;
+    for (const chapter of list) {
+      index += 1;
+      if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
+      const title = chapter.chapter_title || `第 ${index} 章`;
+      const message = `正在生成资产描述（${index}/${list.length}）${title}`;
+      await run.update({ import_id: chapter.id, chapter_title: title, current_node: 'assets', message });
+      run.import_id = chapter.id;
+      run.chapter_title = title;
+      run.message = message;
+      const parts = splitBody(chapter.body);
+      const style = await this.ctx.service.draft.styleContext(project, chapter);
+      for (const part of parts) {
+        if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
+        const assets = await this.ctx.model.Asset.findAll({ where: { project_id: run.project_id } });
+        const result = await invokeSkill(this.ctx, {
+          skill: 'cartoon-asset-profile-skill',
+          action: 'draft',
+          signal: this.signal(run.id),
+          payload: {
+            chapter_title: title,
+            body: part,
+            known_assets: rosterText(assets),
+            visual_style_label: style?.visual_style_label || '',
+          },
+        });
+        const output = result?.output || {};
+        const characters = output.characters || output.state?.characters;
+        const scenes = output.scenes || output.state?.scenes;
+        if (output.done === false || !Array.isArray(characters) || !Array.isArray(scenes)) {
+          throw new Error(`「${title}」没有返回资产描述`);
+        }
+        await this.applyProfiles(run, title, characters, scenes);
+      }
+      await this.pushLog(run, 'assets', `${title} 已读取`);
+    }
+  }
+
+  async applyProfiles(run, title, characters, scenes) {
+    const assets = await this.ctx.model.Asset.findAll({ where: { project_id: run.project_id } });
+    for (const item of characters) {
+      const name = String(item?.name || '').trim();
+      if (!name) continue;
+      const found = assets.find(row => row.kind === 'character' && String(row.name || '').trim() === name);
+      const costume = appendCostume(found?.costume_note, title, item.chapter_costume);
+      if (found?.disabled) continue;
+      if (found && this.assetFile(run.project_id, found.reference_path)) {
+        if (costume !== String(found.costume_note || '')) await found.update({ costume_note: costume });
+        continue;
+      }
+      const merged = mergeCharacter(found?.description, item);
+      if (!found) {
+        const created = await this.ctx.service.project.addAsset(run.project_id, {
+          kind: 'character',
+          name,
+          description: merged.description,
+          costume_note: costume,
+        });
+        assets.push(created);
+        continue;
+      }
+      const patch = {};
+      if (merged.changed) patch.description = merged.description;
+      if (costume !== String(found.costume_note || '')) patch.costume_note = costume;
+      if (Object.keys(patch).length) await found.update(patch);
+    }
+    for (const item of scenes) {
+      const name = String(item?.name || '').trim();
+      if (!name) continue;
+      const found = assets.find(row => row.kind === 'scene' && String(row.name || '').trim() === name);
+      if (found?.disabled) continue;
+      if (found && this.assetFile(run.project_id, found.reference_path)) continue;
+      const merged = mergeScene(found?.description, item);
+      const sceneType = sceneTypeOf(item?.slots);
+      if (!found) {
+        if (!merged.description) continue;
+        const created = await this.ctx.service.project.addAsset(run.project_id, {
+          kind: 'scene',
+          name,
+          description: merged.description,
+          scene_type: sceneType,
+        });
+        assets.push(created);
+        continue;
+      }
+      const patch = {};
+      if (merged.changed) patch.description = merged.description;
+      if (sceneType && !String(found.scene_type || '').trim()) patch.scene_type = sceneType;
+      if (Object.keys(patch).length) await found.update(patch);
+    }
   }
 
   async stop(projectId, runId) {
@@ -427,7 +578,26 @@ class FullAutoService extends Service {
       return;
     }
     try {
-      const steps = run.scope === 'assets'
+      if (run.scope === 'profiles') {
+        try {
+          await this.stepProfiles(run);
+          if (await this.alive(run)) {
+            await run.update({ status: 'success', current_node: 'done', message: '资产描述已写入', error_message: '' });
+            await this.pushLog(run, 'assets', '资产描述已写入');
+          }
+        } catch (err) {
+          if (isStop(err) || !await this.alive(run)) {
+            if (run.status === 'running') await run.update({ status: 'stopped', message: '已停止' });
+          } else {
+            const message = err?.message || '失败';
+            await run.update({ status: 'failed', message, error_message: message, current_node: 'assets' });
+            await this.pushLog(run, 'assets', message);
+            this.ctx.logger.warn('[cartoon] asset-profile %s %s', run.id, message);
+          }
+        }
+        return;
+      }
+      const steps = run.scope === 'assets' || run.scope === 'assets-reset'
         ? [ [ 'assets', () => this.stepAssets(run) ] ]
         : [
           [ 'script', () => this.stepScript(run) ],
@@ -442,9 +612,10 @@ class FullAutoService extends Service {
         if (!ok) return;
       }
       if (await this.alive(run)) {
-        const done = run.scope === 'assets' ? '资产已生成' : '全流程已完成';
+        const assetRun = run.scope === 'assets' || run.scope === 'assets-reset';
+        const done = assetRun ? (run.scope === 'assets-reset' ? '设定图已重绘' : '资产已生成') : '全流程已完成';
         await run.update({ status: 'success', current_node: 'done', message: done, error_message: '' });
-        await this.pushLog(run, run.scope === 'assets' ? 'assets' : 'video', done);
+        await this.pushLog(run, assetRun ? 'assets' : 'video', done);
       }
     } finally {
       await this.dropTemp(run);
@@ -526,10 +697,21 @@ class FullAutoService extends Service {
     const chapter = await this.ctx.model.Import.findByPk(run.import_id);
     const project = await this.ctx.model.Project.findByPk(run.project_id);
     const style = await this.ctx.service.draft.styleContext(project, chapter);
+    const reset = run.scope === 'assets-reset';
     for (const item of this.sheetPlan(chapter)) {
       if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
-      await this.ensureSheet(run, chapter, style, item);
+      await this.ensureSheet(run, chapter, style, item, { reset });
     }
+  }
+
+  async copySheetToRefmod(run, asset, bytes, reset) {
+    let data = bytes;
+    if (!data) {
+      const absolute = this.assetFile(run.project_id, asset.reference_path);
+      if (!absolute) return;
+      data = fs.readFileSync(absolute);
+    }
+    await this.ctx.service.refmod.storeSheet(run.project_id, asset, data, { reset });
   }
 
   async ensureSheet(run, chapter, style, item, options = {}) {
@@ -539,8 +721,9 @@ class FullAutoService extends Service {
     let asset = assets.find(row => String(row.name || '').trim() === item.name);
     const description = assetText(item);
     const hasSheet = asset && this.assetFile(run.project_id, asset.reference_path);
-    if (hasSheet) {
+    if (hasSheet && !options.reset) {
       if (description && !String(asset.description || '').trim()) await asset.update({ description });
+      await this.copySheetToRefmod(run, asset, null, false);
       await this.pushLog(run, options.quiet ? 'video' : 'assets', `${item.kind === 'scene' ? '场景' : '人物'}「${item.name}」已有设定图`);
       return;
     }
@@ -577,8 +760,9 @@ class FullAutoService extends Service {
     });
     const patch = { reference_path: saved.path };
     if (description && !String(asset.description || '').trim()) patch.description = description;
-    if (prompt && !String(asset.consistency_note || '').trim()) patch.consistency_note = prompt;
+    if (options.reset || (prompt && !String(asset.consistency_note || '').trim())) patch.consistency_note = prompt;
     await asset.update(patch);
+    await this.copySheetToRefmod(run, asset, file, Boolean(options.reset));
     await this.pushLog(run, options.quiet ? 'video' : 'assets', `${item.kind === 'scene' ? '场景' : '人物'}「${item.name}」已生成一张设定总图`);
   }
 
@@ -944,11 +1128,7 @@ class FullAutoService extends Service {
       .filter((item, index, list) => !list.slice(0, index).some(kept => kept.name.includes(item.name)));
     for (const item of matched) {
       if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
-      const existing = await this.ctx.model.Asset.findOne({
-        where: { project_id: run.project_id, kind: item.kind, name: item.name, disabled: false },
-      });
-      if (existing && this.assetFile(run.project_id, existing.reference_path)) continue;
-      await this.ensureSheet(run, chapter, style, item, { keepExisting: true, quiet: true });
+      await this.ensureSheet(run, chapter, style, item, { quiet: true });
     }
     await this.ctx.service.project.bindMatchedAssets(run.project_id, shot.id, blob);
     const bindings = await this.ctx.model.ShotBinding.findAll({ where: { shot_id: shot.id } });

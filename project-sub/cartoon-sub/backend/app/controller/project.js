@@ -24,6 +24,14 @@ class ProjectController extends Controller {
     }
   }
 
+  async showImport() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.showImport(this.ctx.params.id, this.ctx.params.importId));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async templates() {
     ok(this.ctx, listVideoTemplates(this.ctx.query || {}));
   }
@@ -232,6 +240,16 @@ class ProjectController extends Controller {
       const body = this.ctx.request.body || {};
       if (!body.novel_id && !(body.package_id && body.version)) this.ctx.throw(400, '需要 novel_id');
       ok(this.ctx, await this.ctx.service.project.pullNovel(this.ctx.params.id, body));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async pullAllChapters() {
+    try {
+      const body = this.ctx.request.body || {};
+      if (!body.novel_id && !(body.package_id && body.version)) this.ctx.throw(400, '需要 novel_id');
+      ok(this.ctx, await this.ctx.service.project.pullAllChapters(this.ctx.params.id, body));
     } catch (err) {
       fail(this.ctx, err);
     }

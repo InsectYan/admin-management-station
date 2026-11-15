@@ -84,13 +84,62 @@
 
         <section v-show="tab === 2 && !isLocal" class="cartoon-module">
           <h3 class="cartoon-module__title">章节快照</h3>
-          <el-empty v-if="!liveImports.length" description="还没有章节快照" />
-          <article v-for="item in liveImports" :key="item.id" class="cartoon-overview__snap">
-            <strong>{{ item.chapter_title || '未命名章节' }}</strong>
-            <div class="cartoon-overview__snap-body">
-              <CartoonMarkdown prose :source="item.body" empty-text="还没有正文" />
-            </div>
-          </article>
+          <el-table :data="liveImports" row-key="id" class="cartoon-snap-table" empty-text="还没有章节快照">
+            <el-table-column label="章节名称" min-width="180">
+              <template #default="{ row }">
+                <div class="cartoon-snap-title">
+                  <span>{{ row.chapter_title || '未命名章节' }}</span>
+                  <el-tag v-if="row.legacy_unpinned" size="small" class="cartoon-status-tag">未钉扎</el-tag>
+                  <el-tag v-else-if="row.package_version" size="small" type="success">故事包 v{{ row.package_version }}</el-tag>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="章节内容" width="240" class-name="cartoon-chapter-cell">
+              <template #default="{ row }">
+                <button type="button" class="cartoon-chapter-clamp" @click="openChapterBody(row)">{{ chapterPreview(row.body) || '还没有正文' }}</button>
+              </template>
+            </el-table-column>
+            <el-table-column label="是否已有剧本" width="120">
+              <template #default="{ row }">{{ hasScript(row) ? '有' : '无' }}</template>
+            </el-table-column>
+            <el-table-column label="场次数" width="88">
+              <template #default="{ row }">{{ sceneCount(row) }}</template>
+            </el-table-column>
+            <el-table-column label="分镜数" width="88">
+              <template #default="{ row }">{{ shotCountOf(row) }}</template>
+            </el-table-column>
+            <el-table-column width="130">
+              <template #header>
+                <span class="cartoon-col-hint">视频产物
+                  <el-tooltip content="左边是已有视频的镜头数，右边是该章节的镜头数。一个镜头有多条视频只计 1。" placement="top">
+                    <el-icon><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                </span>
+              </template>
+              <template #default="{ row }">{{ productRatio(row, 'video') }}</template>
+            </el-table-column>
+            <el-table-column width="130">
+              <template #header>
+                <span class="cartoon-col-hint">图片产物
+                  <el-tooltip content="左边是已有图片的镜头数，右边是该章节的镜头数。一个镜头有多张图片只计 1。" placement="top">
+                    <el-icon><QuestionFilled /></el-icon>
+                  </el-tooltip>
+                </span>
+              </template>
+              <template #default="{ row }">{{ productRatio(row, 'image') }}</template>
+            </el-table-column>
+            <el-table-column label="执行中任务" min-width="140">
+              <template #default="{ row }">{{ runningLabel(row) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="180" fixed="right" class-name="cartoon-ops-cell">
+              <template #default="{ row }">
+                <div class="cartoon-snap__actions">
+                  <el-button type="primary" plain @click="openChapterOutputs(row)">查看产物</el-button>
+                  <el-button type="primary" plain @click="openChapterAssets(row)">资产</el-button>
+                </div>
+              </template>
+            </el-table-column>
+          </el-table>
         </section>
 
         <section v-show="tab === 3" class="cartoon-module">
@@ -209,6 +258,9 @@
         <el-button type="primary" :disabled="!canMake()" :loading="saving" @click="saveEdit">保存</el-button>
       </template>
     </el-dialog>
+    <el-dialog v-model="chapterBodyOpen" class="cartoon-dialog cartoon-body-dialog" :title="chapterBodyTitle" width="70%" append-to-body>
+      <CartoonMarkdown prose :source="chapterBodyText" empty-text="还没有正文" />
+    </el-dialog>
   </div>
   </RegionLoad>
 </template>
@@ -217,6 +269,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { QuestionFilled } from '@element-plus/icons-vue';
 import NovelBriefPanel from '../components/NovelBriefPanel.vue';
 import CartoonMarkdown from '../components/CartoonMarkdown.vue';
 import CopyBlocks from '../components/CopyBlocks.vue';
@@ -279,6 +332,61 @@ const styleLabel = computed(() => {
   return hit?.label || hit?.name || '';
 });
 const liveImports = computed(() => (detail.value?.imports || []).filter(item => !item.deleted_at));
+const chapterBodyOpen = ref(false);
+const chapterBodyTitle = ref('');
+const chapterBodyText = ref('');
+const LIVE_TASK = new Set([ 'queued', 'running', 'saving' ]);
+function hasScript(item) {
+  return Boolean(item?.script_data?.scenes?.length);
+}
+function chapterPreview(body) {
+  return String(body || '').replace(/\s+/g, ' ').trim();
+}
+function openChapterBody(row) {
+  chapterBodyTitle.value = row?.chapter_title || '未命名章节';
+  chapterBodyText.value = String(row?.body || '');
+  chapterBodyOpen.value = true;
+}
+function sceneCount(row) {
+  const scenes = row?.script_data?.scenes;
+  return Array.isArray(scenes) ? scenes.length : 0;
+}
+function shotsOf(row) {
+  return (detail.value?.shots || []).filter(shot => String(shot.import_id) === String(row?.id));
+}
+function shotCountOf(row) {
+  return shotsOf(row).length;
+}
+function productRatio(row, kind) {
+  const shots = shotsOf(row);
+  const covered = new Set();
+  const shotIds = new Set(shots.map(shot => String(shot.id)));
+  (detail.value?.tasks || []).forEach(task => {
+    const shotId = String(task.shot_id || '');
+    if (!shotIds.has(shotId)) return;
+    const outputs = Array.isArray(task.outputs) ? task.outputs : [];
+    const hit = outputs.some(item => item.media_kind === kind && item.file_path);
+    if (hit) covered.add(shotId);
+  });
+  if (kind === 'image') {
+    shots.forEach(shot => {
+      if (shot.first_frame_path || shot.manual_frame_path) covered.add(String(shot.id));
+    });
+  }
+  return `${covered.size}/${shots.length}`;
+}
+function runningLabel(row) {
+  const shotIds = new Set(shotsOf(row).map(shot => String(shot.id)));
+  const tasks = (detail.value?.tasks || []).filter(task => shotIds.has(String(task.shot_id || '')) && LIVE_TASK.has(task.status));
+  const parts = [];
+  const video = tasks.filter(task => task.kind === 'video' || task.kind === 'i2v').length;
+  const image = tasks.filter(task => task.kind === 'image' || task.kind === 'edit').length;
+  const other = tasks.length - video - image;
+  if (video) parts.push(video > 1 ? `视频执行中 ${video}` : '视频执行中');
+  if (image) parts.push(image > 1 ? `图片执行中 ${image}` : '图片执行中');
+  if (other > 0) parts.push(other > 1 ? `执行中 ${other}` : '执行中');
+  return parts.length ? parts.join('、') : '-';
+}
 const gaps = computed(() => detail.value?.gaps || []);
 const boardItems = computed(() => {
   const imports = detail.value?.imports || [];
@@ -412,15 +520,22 @@ async function saveEdit() {
     saving.value = false;
   }
 }
-function openWorkbench(node, shot) {
+function openWorkbench(node, shot, importId) {
   const taskId = detail.value?.episodes?.[0]?.id;
   const query = { node };
   if (shot) query.shot = String(shot);
+  if (importId) query.import = String(importId);
   if (!taskId) {
     router.push({ path: `/projects/${projectId.value}/work`, query });
     return;
   }
   router.push({ path: `/projects/${projectId.value}/tasks/${taskId}`, query });
+}
+function openChapterOutputs(row) {
+  openWorkbench('preview', null, row?.id);
+}
+function openChapterAssets(row) {
+  openWorkbench('assets', null, row?.id);
 }
 function openGenerate(row) {
   openWorkbench('generate', row.id);
@@ -577,6 +692,28 @@ onMounted(async () => {
 .cartoon-board__main { flex: 1; min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .cartoon-shot-table { width: 100%; }
 .cartoon-pager { margin-top: 12px; justify-content: flex-end; }
+.cartoon-snap-table { width: 100%; }
+.cartoon-snap-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cartoon-snap__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.cartoon-snap-table :deep(.cartoon-chapter-cell .cell) { overflow: hidden; }
+.cartoon-snap-table :deep(.cartoon-ops-cell .cell) { white-space: normal; line-height: 1.4; }
+.cartoon-chapter-clamp {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1f3d2c;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.cartoon-chapter-clamp:hover { color: #2f8a5b; }
+.cartoon-col-hint { display: inline-flex; align-items: center; gap: 4px; }
+.cartoon-col-hint .el-icon { color: #5c6b62; cursor: help; }
 @media (max-width: 900px) {
   .cartoon-overview__body, .cartoon-board { flex-direction: column; }
   .cartoon-overview__nav, .cartoon-board__snaps { flex-basis: auto; width: 100%; }

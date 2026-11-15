@@ -154,7 +154,7 @@ class DraftService extends Service {
     }
     const settled = lockIssues(scriptData, chapter.body);
     if (settled.issues.length) {
-      this.ctx.throw(502, `剧本没有定稿。${settled.issues.slice(0, 4).join('；')}`);
+      this.ctx.throw(502, `剧本没有定稿。${settled.issues.slice(0, 4).join('；')}。这一稿没有保存，请再生成一次`);
     }
     const named = normalizeScript({
       ...settled.script,

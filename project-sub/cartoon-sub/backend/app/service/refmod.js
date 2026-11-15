@@ -265,6 +265,23 @@ class RefmodService extends Service {
     return { ...this.present(await row.reload()), asset_name: asset.name, asset_kind: asset.kind };
   }
 
+  async storeSheet(projectId, asset, bytes, options = {}) {
+    const reset = Boolean(options.reset);
+    const file = {
+      filename: 'sheet.png',
+      data_base64: Buffer.from(bytes).toString('base64'),
+      note: '设定图',
+    };
+    const existing = await this.ctx.model.Refmod.findOne({
+      where: { project_id: projectId, asset_id: asset.id },
+    });
+    if (!existing) return this.create(projectId, { asset_id: asset.id, images: [ file ] });
+    const images = fileNames(existing.images);
+    if (images.length && !reset) return this.present(existing);
+    if (!images.length) return this.update(projectId, existing.id, { images: [ file ] });
+    return this.update(projectId, existing.id, { remove: images, images: [ file ] });
+  }
+
   async update(projectId, id, payload) {
     const row = await this.owned(projectId, id);
     let images = fileNames(row.images);

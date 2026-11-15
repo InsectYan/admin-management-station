@@ -63,8 +63,10 @@ module.exports = app => {
   router.get('/api/projects/:id/refmods/:packId/files/:name', controller.refmod.file);
   router.delete('/api/projects/:id/refmods/:packId', controller.refmod.destroy);
   router.post('/api/projects/:id/imports', controller.project.addImport);
+  router.get('/api/projects/:id/imports/:importId', controller.project.showImport);
   router.delete('/api/projects/:id/imports/:importId', controller.project.removeImport);
   router.post('/api/projects/:id/imports/from-novel', controller.project.pullNovel);
+  router.post('/api/projects/:id/imports/from-novel-all', controller.project.pullAllChapters);
   router.post('/api/projects/:id/rebase', controller.project.rebase);
   router.post('/api/projects/:id/imports/:importId/draft/suggest', controller.project.draftSuggest);
   router.post('/api/projects/:id/imports/:importId/draft/apply', controller.project.draftApply);
@@ -105,6 +107,7 @@ module.exports = app => {
   router.post('/api/projects/:id/assets/suggest', controller.skillSuggest.suggestAssets);
   router.post('/api/projects/:id/assets/apply', controller.skillSuggest.applyAssets);
   router.post('/api/projects/:id/assets/generate', controller.fullAuto.generateAssets);
+  router.post('/api/projects/:id/assets/profiles', controller.fullAuto.profileAssets);
   router.get('/api/voice-library', controller.voiceLibrary.index);
   router.get('/api/voice-library/file', controller.voiceLibrary.file);
   router.post('/api/projects/:id/voice/suggest', controller.skillSuggest.suggestVoice);

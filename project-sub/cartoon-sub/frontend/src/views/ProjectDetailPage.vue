@@ -54,6 +54,7 @@
             </el-select>
           </el-form-item>
           <el-button type="primary" :disabled="!chapterId || !canMake() || (pinRequired && packageVersions.length && !packageVersion)" @click="pull">{{ pullLabel }}</el-button>
+          <el-button :disabled="!projectForm.source_novel_id || !canMake() || pullingAll || (pinRequired && packageVersions.length && !packageVersion)" :loading="pullingAll" @click="pullAll">一键添加快照</el-button>
         </el-form>
       </div>
       <div class="cartoon-module">
@@ -150,36 +151,37 @@
             :class="{ 'is-active': item.key === selectedImportKey }"
             role="button"
             tabindex="0"
-            @click="selectedImportKey = item.key"
-            @keydown.enter="selectedImportKey = item.key"
+            @click="openScriptCard(item.key)"
+            @keydown.enter="openScriptCard(item.key)"
           >
             <span class="cartoon-board__snap-title">{{ item.title }}</span>
             <el-tag v-if="item.hasScript" type="success" size="small">有剧本</el-tag>
             <span class="cartoon-board__snap-count">{{ item.count }} 镜</span>
           </div>
         </aside>
-        <div class="cartoon-board__main">
-          <p v-if="!selectedScriptImport" class="cartoon-module__hint">先在左侧选择一条章节快照。</p>
+        <div v-loading="scriptSnapshotLoading" class="cartoon-board__main">
+          <p v-if="!selectedImportKey" class="cartoon-module__hint">先在左侧选择一条章节快照。</p>
+          <p v-else-if="!scriptSnapshot" class="cartoon-module__hint">{{ scriptSnapshotLoading ? '正在读取这一章…' : '这一章没有读到。' }}</p>
           <template v-else>
             <div class="cartoon-board__head">
               <el-button
                 type="primary"
                 plain
                 :disabled="!canMake() || flowBusy"
-                :loading="draftingId === selectedScriptImport.id"
-                @click="generateScript(selectedScriptImport)"
+                :loading="String(draftingId || '') === String(scriptSnapshot.id)"
+                @click="generateScript(scriptSnapshot)"
               >重新生成剧本</el-button>
               <el-button
                 type="primary"
-                :disabled="!canMake() || flowBusy || !selectedScriptImport.script_data?.scenes?.length"
-                :loading="outliningId === selectedScriptImport.id"
-                @click="generateShotOutline(selectedScriptImport)"
+                :disabled="!canMake() || flowBusy || !(scriptSnapshot.script_data?.scenes || []).length"
+                :loading="String(outliningId || '') === String(scriptSnapshot.id)"
+                @click="generateShotOutline(scriptSnapshot)"
               >拆分分镜</el-button>
               <el-button
                 type="danger"
                 plain
                 :disabled="!canMake() || !scriptShots.length"
-                @click="clearScriptShots(selectedScriptImport)"
+                @click="clearScriptShots(scriptSnapshot)"
               >一键清除分镜</el-button>
             </div>
             <el-tabs v-if="activeScriptData" v-model="scriptTab" class="cartoon-script-tabs">
@@ -203,7 +205,7 @@
                       <strong>{{ person.name }}</strong> — {{ person.look }}
                       <span v-if="!namedAsset('character', person.name)" class="cartoon-missing">缺少角色资产</span>
                     </div>
-                    <p class="cartoon-script__note">{{ person.stage_note || '未填写本章说明' }}</p>
+                    <p class="cartoon-script__note">{{ chapterNote('character', person) }}</p>
                   </li>
                 </ul>
                 <h4>所在场景</h4>
@@ -215,9 +217,12 @@
                       <span v-if="place.note"> — {{ place.note }}</span>
                       <span v-if="!namedAsset('scene', place.name)" class="cartoon-missing">缺少场景资产</span>
                     </div>
-                    <p class="cartoon-script__note">{{ place.stage_note || '未填写本章说明' }}</p>
+                    <p class="cartoon-script__note">{{ chapterNote('scene', place) }}</p>
                   </li>
                 </ul>
+              </el-tab-pane>
+              <el-tab-pane label="原文" name="source">
+                <CartoonMarkdown prose :source="scriptSnapshot.body || ''" empty-text="还没有正文" />
               </el-tab-pane>
               <el-tab-pane :label="`场次（${(activeScriptData.scenes || []).length}）`" name="scenes">
                 <el-empty v-if="!(activeScriptData.scenes || []).length" description="还没有场次" />
@@ -652,10 +657,10 @@
       <el-form label-position="top">
         <p style="margin: 0 0 12px; color: #5c6b62; font-size: 13px">点保存时，镜头里空着的说明和工作流会按这里补上。点重置时，这一快照里的全部镜头改成当前说明；选了工作流就连工作流一起改。这次的类型和工作流选择不会留在概览上。</p>
         <el-form-item v-for="(person, index) in scriptDraft.characters" :key="`person-${person.name}-${index}`" :label="`角色说明·${person.name}`">
-          <el-input v-model="person.stage_note" type="textarea" :rows="2" maxlength="500" placeholder="本章说明，可以不填。例如这章的衣服、饰品" />
+          <el-input v-model="person.stage_note" type="textarea" :rows="2" maxlength="500" placeholder="留空则使用该角色的资产说明。有需要再写这一章不一样的地方" />
         </el-form-item>
         <el-form-item v-for="(place, index) in scriptDraft.places" :key="`place-${place.name}-${index}`" :label="`场景说明·${place.name}`">
-          <el-input v-model="place.stage_note" type="textarea" :rows="2" maxlength="500" placeholder="本章说明，可以不填。例如这章多了件陈设" />
+          <el-input v-model="place.stage_note" type="textarea" :rows="2" maxlength="500" placeholder="留空则使用该场景的资产说明。有需要再写这一章不一样的地方" />
         </el-form-item>
         <el-form-item label="生成类型">
           <el-button :type="bulkMedia === 'image' ? 'primary' : 'default'" @click="bulkMedia = 'image'">图片</el-button>
@@ -759,12 +764,16 @@ watch(() => props.navTarget, (value) => {
   else if (id === 'script') step.value = 2;
   else if (id === 'input') step.value = 1;
 });
+watch(step, (value, prev) => {
+  if (value === 3 && prev !== 3) ensureScriptSnapshot();
+});
 const detail = ref(null);
 const novels = ref([]);
 const chapters = ref([]);
 const meta = reactive({ visual_styles: [], shot_sizes: [ '中景' ], camera_moves: [ '固定' ] });
 const projectForm = reactive({ name: '', source_novel_id: '', visual_style: '', av_mode: false });
 const chapterId = ref('');
+const pullingAll = ref(false);
 const packageDesk = ref(null);
 const packageVersion = ref(null);
 const promoteVisible = ref(false);
@@ -1036,8 +1045,16 @@ const scriptBoardItems = computed(() => {
     count: shots.filter(shotRow => String(shotRow.import_id) === String(item.id)).length,
   }));
 });
-const selectedScriptImport = computed(() => liveImports.value.find(item => String(item.id) === selectedImportKey.value) || null);
-const activeScriptData = computed(() => selectedScriptImport.value?.script_data || null);
+const scriptSnapshot = ref(null);
+const scriptSnapshotLoading = ref(false);
+let scriptFetchSerial = 0;
+const selectedScriptImport = computed(() => scriptSnapshot.value);
+const activeScriptData = computed(() => {
+  const raw = scriptSnapshot.value?.script_data;
+  if (raw && typeof raw === 'object') return raw;
+  if (!scriptSnapshot.value) return null;
+  return { logline: '', summary: '', characters: [], scenes: [], places: [] };
+});
 const scriptTab = ref('overview');
 const rosterOpen = ref(false);
 const scriptEditOpen = ref(false);
@@ -1069,8 +1086,17 @@ const scriptPlaces = computed(() => {
   if (Array.isArray(data.places)) return data.places;
   return derivePlaces(data.scenes);
 });
+function assetRecord(kind, name) {
+  return (detail.value?.assets || []).find(asset => !asset.disabled && asset.kind === kind && asset.name === name);
+}
 function namedAsset(kind, name) {
-  return (detail.value?.assets || []).some(asset => !asset.disabled && asset.kind === kind && asset.name === name);
+  return Boolean(assetRecord(kind, name));
+}
+function chapterNote(kind, item) {
+  const note = String(item?.stage_note || '').trim();
+  if (note) return note;
+  const base = String(assetRecord(kind, item?.name)?.description || '').trim();
+  return base || '未填写本章说明';
 }
 const missingRoster = computed(() => {
   const people = (activeScriptData.value?.characters || [])
@@ -1082,9 +1108,9 @@ const missingRoster = computed(() => {
   return people.concat(places);
 });
 const scriptShots = computed(() => {
-  const current = selectedScriptImport.value;
-  if (!current) return [];
-  return (detail.value?.shots || []).filter(shotRow => String(shotRow.import_id) === String(current.id));
+  const currentId = scriptSnapshot.value?.id;
+  if (currentId == null) return [];
+  return (detail.value?.shots || []).filter(shotRow => String(shotRow.import_id) === String(currentId));
 });
 const scriptPageRows = computed(() => scriptShots.value.slice((scriptPage.value - 1) * pageSize, scriptPage.value * pageSize));
 function minStoryUnits(charCount) {
@@ -1097,7 +1123,7 @@ function minStoryUnits(charCount) {
   return 8 + Math.ceil((n - 12000) / 2000);
 }
 const coverageNotices = computed(() => {
-  const item = selectedScriptImport.value;
+  const item = scriptSnapshot.value;
   const script = activeScriptData.value;
   if (!item || !script) return [];
   const notes = [];
@@ -1326,6 +1352,44 @@ async function load() {
   fillProject();
   ensureBoard();
   await loadPackages(projectForm.source_novel_id);
+  if (step.value === 3) await ensureScriptSnapshot();
+}
+function openScriptCard(key) {
+  loadScriptSnapshot(key);
+}
+function ensureScriptSnapshot() {
+  const items = scriptBoardItems.value;
+  if (!items.length) {
+    scriptFetchSerial += 1;
+    scriptSnapshot.value = null;
+    scriptSnapshotLoading.value = false;
+    return;
+  }
+  const key = items.some(item => item.key === selectedImportKey.value) ? selectedImportKey.value : items[0].key;
+  return loadScriptSnapshot(key);
+}
+async function loadScriptSnapshot(key) {
+  const id = String(key || '');
+  const serial = ++scriptFetchSerial;
+  if (!id || !projectKey()) {
+    scriptSnapshot.value = null;
+    scriptSnapshotLoading.value = false;
+    return;
+  }
+  if (String(scriptSnapshot.value?.id || '') !== id) scriptSnapshot.value = null;
+  selectedImportKey.value = id;
+  scriptSnapshotLoading.value = true;
+  try {
+    const row = await request(`/projects/${projectKey()}/imports/${id}`);
+    if (serial !== scriptFetchSerial) return;
+    scriptSnapshot.value = row && typeof row === 'object' ? row : null;
+  } catch (err) {
+    if (serial !== scriptFetchSerial) return;
+    scriptSnapshot.value = null;
+    ElMessage.error(err.message);
+  } finally {
+    if (serial === scriptFetchSerial) scriptSnapshotLoading.value = false;
+  }
 }
 async function saveProject() {
   try {
@@ -1342,6 +1406,43 @@ async function saveProject() {
     ElMessage.success('已保存');
   } catch (err) {
     ElMessage.error(err.message);
+  }
+}
+async function pullAll() {
+  if (!projectForm.source_novel_id || pullingAll.value) return;
+  try {
+    await ElMessageBox.confirm(
+      '把这本小说已有的章节全部加为快照。已经在列表里的章节会跳过，不会覆盖。',
+      '一键添加快照',
+      { confirmButtonText: '添加', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  pullingAll.value = true;
+  try {
+    const data = { novel_id: projectForm.source_novel_id };
+    if (packageVersion.value && packageDesk.value?.package_id) {
+      data.package_id = packageDesk.value.package_id;
+      data.version = packageVersion.value;
+    }
+    const result = await request(`/projects/${projectKey()}/imports/from-novel-all`, {
+      method: 'post',
+      timeout: 600000,
+      data,
+    });
+    await load();
+    const added = Number(result?.added) || 0;
+    const skipped = Number(result?.skipped) || 0;
+    const empty = Number(result?.empty) || 0;
+    const parts = [ `添加 ${added} 章` ];
+    if (skipped) parts.push(`已有 ${skipped} 章跳过`);
+    if (empty) parts.push(`${empty} 章没有正文`);
+    ElMessage.success(parts.join('，'));
+  } catch (err) {
+    ElMessage.error(err.message || '没有添加');
+  } finally {
+    pullingAll.value = false;
   }
 }
 async function pull() {
@@ -1564,6 +1665,8 @@ async function writeRoster(characters, places, ensure) {
     method: 'put',
     data: { characters, places, ensure_assets: ensure },
   });
+  fillProject();
+  await loadScriptSnapshot(chapter.id);
 }
 async function submitRoster() {
   const name = rosterForm.name.trim();
@@ -1594,8 +1697,11 @@ async function ensureRosterAssets() {
   }
 }
 function openScriptPage(item) {
-  selectedImportKey.value = String(item.id);
+  const id = String(item?.id || '');
+  const entering = step.value !== 3;
+  if (id) selectedImportKey.value = id;
   step.value = 3;
+  if (!entering) loadScriptSnapshot(id || scriptBoardItems.value[0]?.key);
   if (embedded.value && String(route.query.node || '') !== 'script') {
     router.replace({ query: { ...route.query, node: 'script' } });
   }

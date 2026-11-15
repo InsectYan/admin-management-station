@@ -40,12 +40,16 @@
         <div class="cartoon-asset-head">
           <h3 class="cartoon-module__title">资产</h3>
           <div class="cartoon-asset-head__actions">
-            <el-button type="primary" plain :disabled="!scriptImport || pipelineRunning" @click="openAssetGenerate">自动生成</el-button>
+            <el-button type="primary" plain :disabled="pipelineRunning" @click="startAssetProfiles">生成资产描述</el-button>
+            <el-button-group>
+              <el-button type="primary" plain :disabled="!scriptImport || pipelineRunning" @click="openAssetGenerate(false)">自动生成</el-button>
+              <el-button type="primary" plain :disabled="!scriptImport || pipelineRunning" @click="openAssetGenerate(true)">重置</el-button>
+            </el-button-group>
             <el-button type="primary" @click="openAssetCreate">新增</el-button>
             <el-button type="danger" plain :disabled="!assets.length" @click="clearAssets">一键清除</el-button>
           </div>
         </div>
-        <p class="cartoon-module__hint">点一行打开编辑。新增会清空表单。角色、场景和道具的 RefMod 就在这个抽屉里，每张图写一句说明。</p>
+        <p class="cartoon-module__hint">自动生成只补还没有设定图的人物和场景。重置会重画这一章剧本里的全部设定图。全流程不会重画已有设定图。新图写入参考图，并在 RefMod 没有图时复制一份；只有这里的重置会覆盖已有 RefMod。点一行打开编辑。</p>
         <el-tabs v-model="assetTab" class="cartoon-asset-tabs">
           <el-tab-pane label="资产清单" name="list">
         <el-empty v-if="!assets.length" description="还没有资产" />
@@ -144,8 +148,8 @@
                   <el-option v-for="item in sceneTypes" :key="item" :label="item" :value="item" />
                 </el-select>
               </el-form-item>
-              <el-form-item class="is-wide" label="多角度图片">
-                <AssetImageField v-model="assetForm.angle_paths" :project-id="projectId" multiple />
+              <el-form-item class="is-wide" label="参考图">
+                <AssetImageField v-model="assetForm.reference_path" :project-id="projectId" />
               </el-form-item>
             </template>
             <template v-else-if="assetForm.kind === 'prop'">
@@ -362,8 +366,9 @@
       <p>钉扎 · {{ pinLabel || '未选择故事包' }}</p>
       <p>节点 · {{ nodeTitle }}</p>
     </aside>
-    <el-dialog v-model="assetGenerateOpen" title="自动生成资产" width="560px" append-to-body :close-on-click-modal="false">
-      <p class="cartoon-module__hint">按剧本里的人物和场景各出一张设定总图。已经有设定图的会跳过，不会重画，也不会改已有说明。</p>
+    <el-dialog v-model="assetGenerateOpen" :title="assetGenerateReset ? '重置设定图' : '自动生成资产'" width="560px" append-to-body :close-on-click-modal="false">
+      <p v-if="assetGenerateReset" class="cartoon-module__hint">会重画这一章剧本里的全部人物和场景设定图。新图写入参考图，并覆盖 RefMod 里已有的图。</p>
+      <p v-else class="cartoon-module__hint">只补还没有设定图的人物和场景。新图写入参考图。RefMod 没有图时复制一份过去，已有的不覆盖。</p>
       <el-form label-position="top">
         <el-form-item label="人物和场景设定图">
           <el-select v-model="assetGenerateWorkflowId" filterable placeholder="选择文生图工作流" style="width: 100%" :loading="assetGenerateLoading" @change="syncAssetGenerateSize">
@@ -379,7 +384,7 @@
       </el-form>
       <template #footer>
         <el-button @click="assetGenerateOpen = false">取消</el-button>
-        <el-button type="primary" :disabled="!assetGenerateReady" :loading="assetGenerateStarting" @click="submitAssetGenerate">开始生成</el-button>
+        <el-button type="primary" :disabled="!assetGenerateReady" :loading="assetGenerateStarting" @click="submitAssetGenerate">{{ assetGenerateReset ? '开始重绘' : '开始生成' }}</el-button>
       </template>
     </el-dialog>
     <el-dialog v-model="workflowOpen" :title="workflowTitle" width="760px" append-to-body destroy-on-close>
@@ -482,6 +487,11 @@ function importHasScript(item) {
 const scriptImport = computed(() => {
   const imports = (bundle.value?.imports || []).filter(item => !item.deleted_at && importHasScript(item));
   if (!imports.length) return null;
+  const wanted = String(route.query.import || '');
+  if (wanted) {
+    const picked = imports.find(item => String(item.id) === wanted);
+    if (picked) return picked;
+  }
   const used = new Set(shots.value.map(item => String(item.import_id || '')));
   return imports.find(item => used.has(String(item.id))) || imports[imports.length - 1];
 });
@@ -674,7 +684,8 @@ async function stopPipeline() {
 const shotQuery = computed(() => String(route.query.shot || ''));
 const previewShots = computed(() => {
   const imports = bundle.value?.imports || [];
-  return shots.value.map(item => {
+  const importId = String(route.query.import || '');
+  return shots.value.filter(item => !importId || String(item.import_id) === importId).map(item => {
     const chapter = imports.find(row => String(row.id) === String(item.import_id));
     return {
       ...item,
@@ -1013,6 +1024,7 @@ async function disableAsset(row) {
   }
 }
 const assetGenerateOpen = ref(false);
+const assetGenerateReset = ref(false);
 const assetGenerateLoading = ref(false);
 const assetGenerateStarting = ref(false);
 const assetGenerateWorkflows = ref([]);
@@ -1032,8 +1044,28 @@ function syncAssetGenerateSize() {
   assetGenerateWidth.value = Number(row?.width) > 0 ? Number(row.width) : 1024;
   assetGenerateHeight.value = Number(row?.height) > 0 ? Number(row.height) : 1024;
 }
-async function openAssetGenerate() {
+async function startAssetProfiles() {
+  if (pipelineRunning.value) return;
+  try {
+    await ElMessageBox.confirm(
+      '从第一章读到最后一章，写出人物和场景的基础描述。不生图。已经有设定图的描述保持不动。',
+      '生成资产描述',
+      { confirmButtonText: '开始', cancelButtonText: '取消' },
+    );
+  } catch {
+    return;
+  }
+  try {
+    await request(`/projects/${projectKey()}/assets/profiles`, { method: 'post', timeout: 120000 });
+    await loadPipeline();
+    ElMessage.success('正在按章节生成资产描述');
+  } catch (err) {
+    ElMessage.error(err.message || '没有开始');
+  }
+}
+async function openAssetGenerate(reset = false) {
   if (!scriptImport.value || pipelineRunning.value) return;
+  assetGenerateReset.value = Boolean(reset);
   assetGenerateOpen.value = true;
   if (assetGenerateWorkflows.value.length) return;
   assetGenerateLoading.value = true;
@@ -1059,11 +1091,12 @@ async function submitAssetGenerate() {
         asset_workflow_id: assetGenerateWorkflowId.value,
         asset_width: assetGenerateWidth.value,
         asset_height: assetGenerateHeight.value,
+        reset: assetGenerateReset.value,
       },
     });
     assetGenerateOpen.value = false;
     await loadPipeline();
-    ElMessage.success('正在按剧本生成资产');
+    ElMessage.success(assetGenerateReset.value ? '正在重绘设定图' : '正在按剧本生成资产');
   } catch (err) {
     ElMessage.error(err.message || '没有开始');
   } finally {
@@ -1242,6 +1275,9 @@ watch(navTarget, (value) => {
 watch(() => pipeline.value?.updated_at, () => {
   if (pipeline.value?.status !== 'running') return;
   if ([ 'assets', 'preview', 'voice' ].includes(node.value)) refreshWorkbench();
+});
+watch(() => pipeline.value?.status, (status, prev) => {
+  if (prev === 'running' && status && status !== 'running' && node.value === 'assets') refreshWorkbench();
 });
 watch([ voiceQuery, voiceFolder ], () => {
   voicePage.value = 1;
