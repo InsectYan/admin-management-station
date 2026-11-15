@@ -21,8 +21,10 @@
         <el-table-column label="来源小说" min-width="160">
           <template #default="{ row }">{{ novelTitle(row.source_novel_id) }}</template>
         </el-table-column>
-        <el-table-column label="画面风格" min-width="120">
-          <template #default="{ row }">{{ styleLabel(row.visual_style) }}</template>
+        <el-table-column label="画面风格" width="600" class-name="cartoon-style-col" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="cartoon-style-text">{{ styleLabel(row.visual_style) }}</span>
+          </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100" />
         <el-table-column label="操作" width="88" fixed="right">
@@ -204,5 +206,14 @@ onMounted(load);
 }
 .cartoon-project-table :deep(.el-table__body tr) {
   cursor: pointer;
+}
+.cartoon-project-table :deep(.cartoon-style-col .cell) {
+  white-space: nowrap;
+}
+.cartoon-style-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>
