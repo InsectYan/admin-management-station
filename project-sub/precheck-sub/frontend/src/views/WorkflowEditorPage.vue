@@ -28,6 +28,10 @@
               <el-input-number v-model="steps" :min="1" :max="50" :step="1" :controls="false" @change="writeSteps" />
               <p class="precheck-module__hint">写入采样器的 steps。Z-Image Turbo 和 Qwen-Image 2.1 Turbo 用 8 步，Qwen-Image 2.1 用 25 步。预览里还可以临时改这一次的步数。</p>
             </el-form-item>
+            <el-form-item v-if="fpsTargets.length" class="precheck-workflow-steps" label="每秒帧数">
+              <el-input-number v-model="fps" :min="1" :max="120" :step="1" :precision="0" :controls="false" @change="writeFps" />
+              <p class="precheck-module__hint">写入成片节点的每秒帧数。预览里填写生成时间时，按这个数把秒数换成帧数。MiniMax H3 常用 24，Wan 常用 8。</p>
+            </el-form-item>
             <div v-if="slots.length" class="precheck-workflow-models">
               <p class="precheck-module__hint">模型来自当前 ComfyUI 已加载的列表。有子目录时逐级选到文件。改完后点保存，工作流才换成新模型。</p>
               <el-form-item v-for="slot in slots" :key="`${slot.id}:${slot.key}`" :label="slotLabel(slot)">
@@ -78,6 +82,7 @@ const raw = ref('');
 const saving = ref(false);
 const previewJson = ref(null);
 const steps = ref(8);
+const fps = ref(24);
 const width = ref(1024);
 const height = ref(1024);
 const SIZE_CATEGORIES = new Set([ 'text_to_image', 'image_edit', 'text_to_video', 'image_to_video' ]);
@@ -128,6 +133,24 @@ function stepNodeIdsOf(apiJson) {
     .map(([id]) => id);
 }
 const stepNodeIds = computed(() => stepNodeIdsOf(parseRawQuiet()));
+function fpsTargetsOf(apiJson) {
+  const found = [];
+  if (!apiJson || typeof apiJson !== 'object' || Array.isArray(apiJson)) return found;
+  Object.entries(apiJson).forEach(([id, node]) => {
+    const inputs = node?.inputs;
+    if (!inputs) return;
+    [ 'fps', 'frame_rate' ].forEach(key => {
+      if (typeof inputs[key] === 'number') found.push({ id, key, classType: node.class_type });
+    });
+  });
+  const preferred = found.findIndex(item => item.classType === 'CreateVideo' || item.classType === 'SaveVideo');
+  if (preferred > 0) {
+    const [item] = found.splice(preferred, 1);
+    found.unshift(item);
+  }
+  return found;
+}
+const fpsTargets = computed(() => fpsTargetsOf(parseRawQuiet()));
 const slots = computed(() => modelSlots(parseRawQuiet()));
 function slotLabel(slot) {
   const title = FOLDER_LABEL[slot.folder] || slot.folder;
@@ -190,6 +213,24 @@ function writeSteps(value) {
   });
   raw.value = JSON.stringify(apiJson, null, 2);
 }
+function syncFps() {
+  const apiJson = parseRawQuiet();
+  const target = fpsTargetsOf(apiJson)[0];
+  if (!apiJson || !target) return;
+  const value = apiJson[target.id].inputs[target.key];
+  if (value !== fps.value) fps.value = value;
+}
+function writeFps(value) {
+  const count = Number(value);
+  const apiJson = parseRawQuiet();
+  if (!apiJson || !Number.isFinite(count)) return;
+  const targets = fpsTargetsOf(apiJson);
+  if (!targets.length) return;
+  targets.forEach(target => {
+    apiJson[target.id].inputs[target.key] = count;
+  });
+  raw.value = JSON.stringify(apiJson, null, 2);
+}
 function parseRaw() {
   try {
     return JSON.parse(raw.value);
@@ -244,7 +285,9 @@ async function load() {
   raw.value = JSON.stringify(row.api_json, null, 2);
   syncSteps();
   syncSize();
+  syncFps();
 }
+watch(raw, syncFps);
 watch(tab, value => {
   if (value !== 'preview') return;
   previewJson.value = parseRaw();

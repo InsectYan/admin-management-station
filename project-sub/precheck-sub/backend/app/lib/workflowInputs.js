@@ -328,8 +328,15 @@ function withCallFields(fields, apiJson) {
     limit: slot.limit || 1,
     expand: slot.expand || '',
   }));
+  const rates = [];
+  for (let index = next.length - 1; index >= 0; index -= 1) {
+    const field = next[index];
+    if (field.type === 'number' && (field.key === 'fps' || field.key === 'frame_rate')) {
+      rates.unshift(next.splice(index, 1)[0]);
+    }
+  }
   const durationAt = next.findIndex(field => field.type === 'duration');
-  next.splice(durationAt >= 0 ? durationAt + 1 : 0, 0, ...imageFields);
+  next.splice(durationAt >= 0 ? durationAt + 1 : 0, 0, ...rates, ...imageFields);
   return next;
 }
 

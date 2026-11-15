@@ -344,7 +344,11 @@ class GenerateService extends Service {
     const freshShot = await this.ctx.model.Shot.findByPk(shot.id);
     const stageText = await this.ctx.service.project.stageSuffix(freshShot);
     let positive = pictureNote ? `${pictureNote}\n${composed.positive}` : composed.positive;
+    const lead = String(payload.lead_zh || '').trim();
+    const tail = String(payload.tail_zh || '').trim();
+    if (lead) positive = `${lead}\n${positive}`;
     if (stageText) positive = `${positive}\n${stageText}`;
+    if (tail) positive = `${positive}\n${tail}`;
     const compliance = await complianceCheck(this.ctx, positive);
     const hit = compliance?.hits?.[0];
     if (hit) this.ctx.throw(400, `命中规则 ${hit.id}`);

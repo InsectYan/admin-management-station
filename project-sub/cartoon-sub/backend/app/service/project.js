@@ -338,6 +338,74 @@ class ProjectService extends Service {
     return data;
   }
 
+  async listImportShots(projectId, importId, query = {}) {
+    const row = await this.ctx.model.Import.findOne({
+      where: { id: importId, project_id: projectId },
+    });
+    if (!row || row.deleted_at) this.ctx.throw(404, '章节快照不存在');
+    const pageSize = Math.min(50, Math.max(1, Math.round(Number(query.pageSize) || 10)));
+    const where = { project_id: projectId, import_id: row.id };
+    const total = await this.ctx.model.Shot.count({ where });
+    const pages = Math.max(1, Math.ceil(total / pageSize));
+    const page = Math.min(pages, Math.max(1, Math.round(Number(query.page) || 1)));
+    const shots = total
+      ? await this.ctx.model.Shot.findAll({
+        where,
+        order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+      })
+      : [];
+    const shotIds = shots.map(item => item.id);
+    const prompts = shotIds.length
+      ? await this.ctx.model.Prompt.findAll({ where: { shot_id: shotIds } })
+      : [];
+    const promptByShot = new Map(prompts.map(item => [ item.shot_id, item ]));
+    const leads = total
+      ? await this.ctx.model.Shot.findAll({
+        where,
+        attributes: [ 'description' ],
+        order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
+      })
+      : [];
+    const list = await Promise.all(shots.map(async shot => {
+      const json = shot.toJSON();
+      const sizes = normalizeShotSizes(json.shot_size);
+      const moves = normalizeCameraMoves(json.camera_move);
+      const [ autoFrame, manualFrame, endFrame ] = await Promise.all([
+        frameFileMeta(this.app, json.first_frame_path),
+        frameFileMeta(this.app, json.manual_frame_path),
+        frameFileMeta(this.app, `frames/${projectId}/${shot.id}/end.png`),
+      ]);
+      return {
+        ...json,
+        shot_size: serializeShotSizes(sizes),
+        shot_sizes: sizes,
+        camera_move: serializeCameraMoves(moves),
+        camera_moves: moves,
+        first_frame_mtime: autoFrame?.mtime || 0,
+        first_frame_width: autoFrame?.width || 0,
+        first_frame_height: autoFrame?.height || 0,
+        manual_frame_mtime: manualFrame?.mtime || 0,
+        manual_frame_width: manualFrame?.width || 0,
+        manual_frame_height: manualFrame?.height || 0,
+        end_frame_mtime: endFrame?.mtime || 0,
+        end_frame_width: endFrame?.width || 0,
+        end_frame_height: endFrame?.height || 0,
+        prompt: presentPrompt(promptByShot.get(shot.id)),
+      };
+    }));
+    return {
+      list,
+      total,
+      page,
+      pageSize,
+      coverage: leads.map(item => ({
+        description: String(item.description || '').slice(0, 180),
+      })),
+    };
+  }
+
   async touchNode(projectId, taskId, currentNode) {
     const allowed = [ 'input', 'script', 'storyboard', 'pipeline', 'assets', 'generate', 'voice', 'subtitle', 'compose', 'preview', 'review', 'export' ];
     if (!allowed.includes(currentNode)) {

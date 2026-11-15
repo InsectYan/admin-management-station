@@ -64,6 +64,7 @@ module.exports = app => {
   router.delete('/api/projects/:id/refmods/:packId', controller.refmod.destroy);
   router.post('/api/projects/:id/imports', controller.project.addImport);
   router.get('/api/projects/:id/imports/:importId', controller.project.showImport);
+  router.get('/api/projects/:id/imports/:importId/shots', controller.project.listImportShots);
   router.delete('/api/projects/:id/imports/:importId', controller.project.removeImport);
   router.post('/api/projects/:id/imports/from-novel', controller.project.pullNovel);
   router.post('/api/projects/:id/imports/from-novel-all', controller.project.pullAllChapters);

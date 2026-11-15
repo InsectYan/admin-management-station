@@ -12,6 +12,7 @@
             <div><dt>分类</dt><dd>{{ categoryLabel(row.category) }}</dd></div>
             <div><dt>建议显存</dt><dd>{{ row.suggested_vram_gb == null ? '不限制' : `${row.suggested_vram_gb} GB` }}</dd></div>
             <div v-if="defaultSteps != null"><dt>默认步数</dt><dd>{{ defaultSteps }}</dd></div>
+            <div v-if="defaultFps != null"><dt>每秒帧数</dt><dd>{{ defaultFps }}</dd></div>
           </dl>
           <p v-if="refmod" class="precheck-module__hint">这条工作流可以导入本页检测用的人物包和场景包。在预览里按顺序选择，提示词用 &lt;Picture 1&gt; 起指代。正式包按项目放在 AI 视频里。</p>
           <p>节点：{{ (row.required_nodes || []).join('、') || '无' }}</p>
@@ -48,6 +49,20 @@ const defaultSteps = computed(() => {
   if (!graph || typeof graph !== 'object') return null;
   const node = Object.values(graph).find(item => item?.inputs && typeof item.inputs.steps === 'number');
   return node ? node.inputs.steps : null;
+});
+const defaultFps = computed(() => {
+  const graph = row.value?.api_json;
+  if (!graph || typeof graph !== 'object') return null;
+  const found = [];
+  Object.values(graph).forEach(node => {
+    const inputs = node?.inputs;
+    if (!inputs) return;
+    [ 'fps', 'frame_rate' ].forEach(key => {
+      if (typeof inputs[key] === 'number') found.push({ classType: node.class_type, value: inputs[key] });
+    });
+  });
+  const preferred = found.find(item => item.classType === 'CreateVideo' || item.classType === 'SaveVideo');
+  return (preferred || found[0])?.value ?? null;
 });
 
 async function inspect() {

@@ -10,7 +10,7 @@
             muted
             preload="metadata"
             @loadeddata="paintFrame"
-          />
+          ></video>
           <img v-else class="el-upload-list__item-thumbnail" :src="item.url" alt="" />
           <span class="el-upload-list__item-actions">
             <span class="el-upload-list__item-preview" title="预览" @click="open(item)">

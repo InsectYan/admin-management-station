@@ -32,6 +32,18 @@ class ProjectController extends Controller {
     }
   }
 
+  async listImportShots() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.listImportShots(
+        this.ctx.params.id,
+        this.ctx.params.importId,
+        this.ctx.query,
+      ));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async templates() {
     ok(this.ctx, listVideoTemplates(this.ctx.query || {}));
   }

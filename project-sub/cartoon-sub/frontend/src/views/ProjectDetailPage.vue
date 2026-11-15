@@ -19,7 +19,7 @@
           </el-form-item>
           <el-form-item v-if="supportsAv(detail.project.content_type)" label="AV">
             <el-checkbox v-model="projectForm.av_mode">开启</el-checkbox>
-            <p class="cartoon-module__hint">开启后仍先走常规提示词，再由 AV 技能收口成时间片画面。对白单独存放。人体和道具用实际外形，不用美化说法。</p>
+            <p class="cartoon-module__hint">开启后仍先走常规提示词，再按场记结构收口成视频和首尾帧。这一镜写明双方都已满二十一岁，才会套亲密子模版。</p>
           </el-form-item>
           <el-form-item label="画面风格">
             <el-select v-model="projectForm.visual_style" filterable placeholder="选择风格" style="width: 100%">
@@ -180,7 +180,7 @@
               <el-button
                 type="danger"
                 plain
-                :disabled="!canMake() || !scriptShots.length"
+                :disabled="!canMake() || !scriptShotTotal"
                 @click="clearScriptShots(scriptSnapshot)"
               >一键清除分镜</el-button>
             </div>
@@ -232,7 +232,7 @@
                   <CartoonMarkdown :source="scene.summary || ''" />
                 </div>
               </el-tab-pane>
-              <el-tab-pane :label="`分镜表（${scriptShots.length}）`" name="shots">
+              <el-tab-pane :label="`分镜表（${scriptShotTotal}）`" name="shots">
                 <div v-if="coverageNotices.length" class="cartoon-coverage">
                   <el-alert
                     v-for="(note, index) in coverageNotices"
@@ -245,8 +245,8 @@
                   />
                 </div>
                 <p class="cartoon-module__hint">与「镜头」页同一批数据。场次和镜头只按下文字数设下限，不设上限。镜头描述和提示词不限字数，对白多时一条可以写到数千字。拆分后会落库；逐行生成提示词。删除任一侧会同步。</p>
-                <el-empty v-if="!scriptShots.length" description="还没有分镜，请先点「拆分分镜」" />
-                <el-table v-else class="cartoon-shot-table" :data="scriptPageRows" style="margin-top: 8px" row-key="id">
+                <el-empty v-if="!scriptShotLoading && !scriptShotTotal" description="还没有分镜，请先点「拆分分镜」" />
+                <el-table v-else v-loading="scriptShotLoading" class="cartoon-shot-table" :data="scriptShotRows" style="margin-top: 8px" row-key="id">
               <el-table-column label="镜头ID" width="120" prop="shot_code" fixed="left" />
               <el-table-column label="时长(秒)" width="110">
                 <template #default="{ row }">{{ shotDurationSec(row) }}</template>
@@ -295,12 +295,13 @@
               </el-table-column>
                 </el-table>
                 <el-pagination
-                  v-if="scriptShots.length"
-                  v-model:current-page="scriptPage"
+                  v-if="scriptShotTotal"
                   class="cartoon-pager"
+                  :current-page="scriptPage"
                   :page-size="pageSize"
-                  :total="scriptShots.length"
+                  :total="scriptShotTotal"
                   layout="total, prev, pager, next"
+                  @current-change="changeScriptShotPage"
                 />
               </el-tab-pane>
             </el-tabs>
@@ -321,7 +322,7 @@
           <el-button type="primary" :disabled="!canMake() || !selectedBoard || autoRunning" @click="openShotCreate">新增</el-button>
         </div>
       </div>
-      <p class="cartoon-module__hint">先在左侧选一条快照，再点右上角新增。表单在抽屉里，打开时会清空。汇总各快照已写入的剧情段（通常 8—15 秒/段），不从剧本页自动跳转过来。</p>
+      <p class="cartoon-module__hint">先在左侧选一条快照，再点右上角新增。表单在抽屉里，打开时会清空。汇总各快照已写入的剧情段（每段 5—12 秒，按剧情需要取），不从剧本页自动跳转过来。</p>
       <el-tabs v-model="shotTab" class="cartoon-shot-tabs">
       <el-tab-pane label="镜头表" name="table">
       <div class="cartoon-board">
@@ -335,8 +336,8 @@
             :class="{ 'is-active': item.key === selectedImportKey }"
             role="button"
             tabindex="0"
-            @click="selectedImportKey = item.key"
-            @keydown.enter="selectedImportKey = item.key"
+            @click="openBoardCard(item.key)"
+            @keydown.enter="openBoardCard(item.key)"
           >
             <span class="cartoon-board__snap-title">{{ item.title }}</span>
             <el-tag v-if="item.deleted" type="danger" size="small">已删除</el-tag>
@@ -1042,12 +1043,21 @@ const scriptBoardItems = computed(() => {
     key: String(item.id),
     title: item.chapter_title || '未命名章节',
     hasScript: hasScript(item),
-    count: shots.filter(shotRow => String(shotRow.import_id) === String(item.id)).length,
+    count: Object.prototype.hasOwnProperty.call(shotTotals, String(item.id))
+      ? shotTotals[String(item.id)]
+      : shots.filter(shotRow => String(shotRow.import_id) === String(item.id)).length,
   }));
 });
 const scriptSnapshot = ref(null);
 const scriptSnapshotLoading = ref(false);
+const scriptShotRows = ref([]);
+const scriptShotTotal = ref(0);
+const scriptShotCoverage = ref([]);
+const scriptShotLoading = ref(false);
+const shotTotals = reactive({});
 let scriptFetchSerial = 0;
+let scriptShotSerial = 0;
+let scriptShotPaging = false;
 const selectedScriptImport = computed(() => scriptSnapshot.value);
 const activeScriptData = computed(() => {
   const raw = scriptSnapshot.value?.script_data;
@@ -1107,12 +1117,7 @@ const missingRoster = computed(() => {
     .map(item => ({ kind: 'scene', name: item.name, note: item.note || '' }));
   return people.concat(places);
 });
-const scriptShots = computed(() => {
-  const currentId = scriptSnapshot.value?.id;
-  if (currentId == null) return [];
-  return (detail.value?.shots || []).filter(shotRow => String(shotRow.import_id) === String(currentId));
-});
-const scriptPageRows = computed(() => scriptShots.value.slice((scriptPage.value - 1) * pageSize, scriptPage.value * pageSize));
+const scriptShots = computed(() => scriptShotCoverage.value);
 function minStoryUnits(charCount) {
   const n = Math.max(0, Number(charCount) || 0);
   if (n < 800) return 1;
@@ -1144,7 +1149,7 @@ const coverageNotices = computed(() => {
       reason: `本章约 ${bodyLen} 字，场次下限是 ${floor}，当前 ${scenes.length} 场，少掉的情节被合并或删掉了。`,
     });
   }
-  const shotCount = scriptShots.value.length;
+  const shotCount = scriptShotTotal.value;
   const shotFloor = Math.max(floor, scenes.length);
   const shotReasons = (script.shot_omissions || []).filter(row => row && row.reason);
   const missingScenes = shotCount > 0 ? uncoveredScenes(scenes, scriptShots.value) : [];
@@ -1223,16 +1228,54 @@ watch(videoAutoIds, (ids) => {
 watch(selectedImportKey, () => {
   scriptPage.value = 1;
   boardPage.value = 1;
-  scriptTab.value = 'overview';
-});
-watch(scriptShots, (rows) => {
-  const max = Math.max(1, Math.ceil(rows.length / pageSize));
-  if (scriptPage.value > max) scriptPage.value = max;
 });
 watch(boardShots, (rows) => {
   const max = Math.max(1, Math.ceil(rows.length / pageSize));
   if (boardPage.value > max) boardPage.value = max;
 });
+function openBoardCard(key) {
+  selectedImportKey.value = String(key || '');
+  load().catch(err => ElMessage.error(err.message || '没有刷新这一章'));
+}
+async function loadScriptShots(page) {
+  const importId = scriptSnapshot.value?.id;
+  const serial = ++scriptShotSerial;
+  if (!importId || !projectKey()) {
+    scriptShotRows.value = [];
+    scriptShotTotal.value = 0;
+    scriptShotCoverage.value = [];
+    scriptShotLoading.value = false;
+    return;
+  }
+  scriptShotLoading.value = true;
+  try {
+    const data = await request(`/projects/${projectKey()}/imports/${importId}/shots`, {
+      params: { page: page || 1, pageSize },
+    });
+    if (serial !== scriptShotSerial) return;
+    scriptShotRows.value = Array.isArray(data?.list) ? data.list : [];
+    scriptShotTotal.value = Number(data?.total) || 0;
+    scriptShotCoverage.value = Array.isArray(data?.coverage) ? data.coverage : [];
+    shotTotals[String(importId)] = scriptShotTotal.value;
+    if (data?.page && Number(data.page) !== scriptPage.value) {
+      scriptShotPaging = true;
+      scriptPage.value = Number(data.page) || 1;
+      scriptShotPaging = false;
+    }
+  } catch (err) {
+    if (serial !== scriptShotSerial) return;
+    ElMessage.error(err.message || '分镜表没有刷新');
+  } finally {
+    if (serial === scriptShotSerial) scriptShotLoading.value = false;
+  }
+}
+function changeScriptShotPage(page) {
+  if (scriptShotPaging) return;
+  const next = Number(page) || 1;
+  if (next === scriptPage.value) return;
+  scriptPage.value = next;
+  loadScriptShots(next);
+}
 function ensureBoard() {
   const items = boardItems.value;
   if (!items.length) {
@@ -1349,6 +1392,7 @@ async function load() {
   const id = projectKey();
   if (!id) return;
   detail.value = await request(`/projects/${id}`);
+  Object.keys(shotTotals).forEach(key => delete shotTotals[key]);
   fillProject();
   ensureBoard();
   await loadPackages(projectForm.source_novel_id);
@@ -1361,8 +1405,13 @@ function ensureScriptSnapshot() {
   const items = scriptBoardItems.value;
   if (!items.length) {
     scriptFetchSerial += 1;
+    scriptShotSerial += 1;
     scriptSnapshot.value = null;
+    scriptShotRows.value = [];
+    scriptShotTotal.value = 0;
+    scriptShotCoverage.value = [];
     scriptSnapshotLoading.value = false;
+    scriptShotLoading.value = false;
     return;
   }
   const key = items.some(item => item.key === selectedImportKey.value) ? selectedImportKey.value : items[0].key;
@@ -1383,9 +1432,13 @@ async function loadScriptSnapshot(key) {
     const row = await request(`/projects/${projectKey()}/imports/${id}`);
     if (serial !== scriptFetchSerial) return;
     scriptSnapshot.value = row && typeof row === 'object' ? row : null;
+    await loadScriptShots(scriptPage.value);
   } catch (err) {
     if (serial !== scriptFetchSerial) return;
     scriptSnapshot.value = null;
+    scriptShotRows.value = [];
+    scriptShotTotal.value = 0;
+    scriptShotCoverage.value = [];
     ElMessage.error(err.message);
   } finally {
     if (serial === scriptFetchSerial) scriptSnapshotLoading.value = false;
@@ -1948,7 +2001,7 @@ async function generateShotOutline(item) {
     return;
   }
   outliningId.value = item.id;
-  ElMessage.info('正在按剧本拆分分镜并落库（8—15 秒/段）…');
+  ElMessage.info('正在按剧本拆分分镜并落库（5—12 秒/段）…');
   try {
     const data = await request(`/projects/${projectKey()}/imports/${item.id}/draft/shot-outline`, {
       method: 'post',

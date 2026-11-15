@@ -10,7 +10,7 @@
             muted
             preload="metadata"
             @loadeddata="paintFrame"
-          />
+          ></video>
           <img v-else class="el-upload-list__item-thumbnail" :src="item.url" alt="" />
           <span class="el-upload-list__item-actions">
             <span class="el-upload-list__item-preview" title="预览" @click="open(item)">
@@ -81,3 +81,4 @@ function paintFrame(event) {
 }
 .media-file-list__preview { display: block; width: 100%; max-height: 70vh; object-fit: contain; }
 .media-file-list :deep(video.media-file-list__preview) { display: block; width: 100%; max-height: 70vh; object-fit: contain; }
+</style>

@@ -1055,9 +1055,36 @@ class FullAutoService extends Service {
     return file;
   }
 
+  frameStyleLead(style, frameText) {
+    const text = String(frameText || '');
+    const label = String(style?.visual_style_label || '').trim();
+    const prompt = String(style?.visual_style_prompt || '').trim();
+    const lines = [];
+    if (label && !text.includes(label)) lines.push(`画面风格：${label}`);
+    if (prompt && !text.includes(prompt)) lines.push(prompt);
+    return lines.join('\n');
+  }
+
+  frameReferenceTail() {
+    return [
+      '参考图约束：这些图是设定总图，不是这一帧的成片。',
+      '人物图是一张白底排版，里面有大头特写和正面、侧面、背面全身，只用来锁定这个人的脸、体态和服装。',
+      '场景图是一张多视角排版，里面有正面、侧面、背面和俯视，只用来锁定空间、陈设和结构。',
+      '成片只画这一帧提示词里的一个机位、一个瞬间。不要画出分格、白底、三视图、多视角拼图，也不要画出这一帧提示词里没有点名的人。',
+    ].join('\n');
+  }
+
   async renderFrame(run, shot, target, videoText, frameStart, frameEnd, negative) {
     const choice = await this.ctx.service.generate.choiceById(run.frame_workflow_id);
-    const images = await this.frameReferenceImages(run, shot, choice, target);
+    const frameText = target === 'end' ? frameEnd : frameStart;
+    const images = await this.frameReferenceImages(run, shot, choice, target, frameText);
+    const project = await this.ctx.model.Project.findByPk(run.project_id);
+    const chapter = await this.ctx.model.Import.findByPk(run.import_id);
+    const style = await this.ctx.service.draft.styleContext(project, chapter);
+    const lead = this.frameStyleLead(style, frameText);
+    const code = shot.shot_code || shot.id;
+    const label = target === 'end' ? '尾帧' : '首帧';
+    if (lead) await this.pushLog(run, 'video', `${code} ${label}带上项目风格「${style?.visual_style_label || '未命名'}」`);
     let task = await this.ctx.service.generate.start(run.project_id, shot.id, {
       positive_zh: videoText,
       frame_start_zh: frameStart,
@@ -1068,6 +1095,8 @@ class FullAutoService extends Service {
       seed: rollSeed(),
       asset_ids: [],
       images,
+      lead_zh: lead,
+      tail_zh: images.length ? this.frameReferenceTail() : '',
       width: run.frame_width,
       height: run.frame_height,
     }, 'image');
@@ -1091,11 +1120,11 @@ class FullAutoService extends Service {
     return slots.reduce((sum, slot) => sum + (Number(slot.limit) > 0 ? Number(slot.limit) : 1), 0);
   }
 
-  async frameReferenceImages(run, shot, choice, target) {
+  async frameReferenceImages(run, shot, choice, target, frameText) {
     const slots = this.referenceSlots(choice);
     const cap = this.referenceCap(choice);
     if (!cap || !/图生图/.test(choice?.name || '')) return [];
-    const files = await this.shotSheetFiles(run, shot, cap);
+    const files = await this.shotSheetFiles(run, shot, cap, frameText);
     const code = shot.shot_code || shot.id;
     if (!files.length) throw new Error(`${code} 图生图首尾帧需要这一镜的人物或场景设定图`);
     const label = target === 'end' ? '尾帧' : '首帧';
@@ -1116,9 +1145,10 @@ class FullAutoService extends Service {
     }));
   }
 
-  async shotSheetFiles(run, shot, cap) {
+  async shotSheetFiles(run, shot, cap, focusText) {
     const prompt = await this.ctx.model.Prompt.findOne({ where: { shot_id: shot.id } });
     const blob = [ shot.description, shot.dialogue, prompt?.positive_zh, prompt?.frame_start_zh, prompt?.frame_end_zh ].filter(Boolean).join('\n');
+    const focus = String(focusText || '').trim();
     const chapter = await this.ctx.model.Import.findByPk(run.import_id);
     const project = await this.ctx.model.Project.findByPk(run.project_id);
     const style = await this.ctx.service.draft.styleContext(project, chapter);
@@ -1154,12 +1184,24 @@ class FullAutoService extends Service {
       else characterFiles.push(file);
     }
     const sceneLabel = String(shot.scene_label || '').trim();
-    const sceneFile = sceneFiles.find(file => sceneLabel && file.name === sceneLabel) || sceneFiles[0] || null;
+    const namedCharacters = (focus
+      ? characterFiles.filter(file => file.name && focus.includes(file.name))
+      : characterFiles)
+      .filter((file, _index, list) => !list.some(other => other !== file && other.name.length > file.name.length && other.name.includes(file.name)));
+    const skipped = characterFiles.filter(file => !namedCharacters.includes(file));
+    if (skipped.length) {
+      await this.pushLog(run, 'video', `${shot.shot_code || shot.id} 这一帧没有点名 ${skipped.map(file => file.label).join('、')}，不送这些人物参考`);
+    }
+    const namedScenes = focus ? sceneFiles.filter(file => file.name && focus.includes(file.name)) : sceneFiles;
+    const sceneFile = namedScenes.find(file => sceneLabel && file.name === sceneLabel)
+      || namedScenes[0]
+      || sceneFiles.find(file => sceneLabel && file.name === sceneLabel)
+      || null;
     const characterCap = sceneFile && cap > 1 ? cap - 1 : cap;
-    const files = characterFiles.slice(0, characterCap);
+    const files = namedCharacters.slice(0, characterCap);
     if (sceneFile && files.length < cap) files.push(sceneFile);
-    if (characterFiles.length > characterCap) {
-      await this.pushLog(run, 'video', `${shot.shot_code || shot.id} 人物设定图超过 ${characterCap} 张，场景参考另占最后一格`);
+    if (namedCharacters.length > characterCap) {
+      await this.pushLog(run, 'video', `${shot.shot_code || shot.id} 这一帧的人物设定图超过 ${characterCap} 张，场景参考另占最后一格`);
     }
     return files;
   }

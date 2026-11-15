@@ -28,8 +28,8 @@ const LABEL = {
   resolution: '分辨率',
   length: '帧数',
   frames: '帧数',
-  frame_rate: '帧率',
-  fps: '帧率',
+  frame_rate: '每秒帧数',
+  fps: '每秒帧数',
   sampler_name: '采样器',
   scheduler: '调度器',
 };
@@ -227,7 +227,7 @@ function listPreviewFields(apiJson) {
   if (isVideoWorkflow(apiJson)) {
     const frameField = fields.find(field => FRAME_KEYS.has(field.key));
     const align = frameField ? frameAlign(frameField.class_type) : 'round';
-    fields.unshift({
+    const duration = {
       id: 'duration_sec',
       node_id: '',
       class_type: '',
@@ -237,7 +237,23 @@ function listPreviewFields(apiJson) {
       value: null,
       fps: readFps(apiJson),
       align,
+    };
+    const rates = [];
+    const rest = [];
+    fields.forEach(field => {
+      if (!FPS_KEYS.has(field.key)) {
+        rest.push(field);
+        return;
+      }
+      field.label = '每秒帧数';
+      field.min = 1;
+      field.max = 120;
+      field.step = 1;
+      field.precision = 0;
+      field.hint = `${field.class_type} 的每秒帧数。生成时间按这个数换成帧数。`;
+      rates.push(field);
     });
+    return decorateCaptionFields(apiJson, [ duration, ...rates, ...rest ]);
   }
   return decorateCaptionFields(apiJson, fields);
 }

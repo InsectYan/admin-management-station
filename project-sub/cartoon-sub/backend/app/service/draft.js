@@ -35,6 +35,16 @@ function picturePrompt(text) {
   return uniquePrompt(text);
 }
 
+function rosterText(script) {
+  const people = Array.isArray(script?.characters) ? script.characters : [];
+  return people.map(person => [ person?.name, person?.look, person?.stage_note ]
+    .map(item => String(item || '').trim())
+    .filter(Boolean)
+    .join(' '))
+    .filter(Boolean)
+    .join('\n');
+}
+
 function coveredPlaceNames(script, description) {
   const text = String(description || '');
   const places = (Array.isArray(script?.places) ? script.places : [])
@@ -66,7 +76,7 @@ function lockIssues(script, body) {
 function clampDurationSec(value, fallback = 10) {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
-  return Math.min(15, Math.max(8, Math.round(n)));
+  return Math.min(12, Math.max(5, Math.round(n)));
 }
 
 function negativeNeedsRetry(prompt) {
@@ -479,15 +489,20 @@ class DraftService extends Service {
               draft_positive_zh: picturePrompt(prompt.positive_zh),
               draft_negative_zh: String(prompt.negative_zh || '').trim(),
               draft_production_note: String(prompt.production_note || '').trim(),
+              roster_text: rosterText(settledScript.script),
             }],
           },
         });
         const again = (outputOf(closed).prompts || [])[0] || {};
         const closedPositive = picturePrompt(again.positive_zh) || String(again.positive_zh || '').trim();
+        const closedStart = picturePrompt(again.frame_start_zh);
+        const closedEnd = picturePrompt(again.frame_end_zh);
         if (closedPositive) {
           prompt = {
             ...prompt,
             positive_zh: closedPositive,
+            ...(closedStart ? { frame_start_zh: closedStart } : {}),
+            ...(closedEnd ? { frame_end_zh: closedEnd } : {}),
             negative_zh: String(again.negative_zh || prompt.negative_zh || '').trim(),
             production_note: String(again.production_note || prompt.production_note || '').trim(),
           };
