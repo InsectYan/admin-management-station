@@ -32,6 +32,10 @@
               <el-input-number v-model="fps" :min="1" :max="120" :step="1" :precision="0" :controls="false" @change="writeFps" />
               <p class="precheck-module__hint">写入成片节点的每秒帧数。预览里填写生成时间时，按这个数把秒数换成帧数。MiniMax H3 常用 24，Wan 常用 8。</p>
             </el-form-item>
+            <el-form-item class="precheck-workflow-steps" label="基础提示词规则">
+              <el-input v-model="promptRule" type="textarea" :rows="4" placeholder="留空则不追加" />
+              <p class="precheck-module__hint">有内容时，这条工作流每次生成都会把这段接在正向提示词末尾。画风仍拼在前面。留空就只提交原来的提示词。规则跟工作流走，换工作流或换模型时改这里，不用改项目。</p>
+            </el-form-item>
             <div v-if="slots.length" class="precheck-workflow-models">
               <p class="precheck-module__hint">模型来自当前 ComfyUI 已加载的列表。有子目录时逐级选到文件。改完后点保存，工作流才换成新模型。</p>
               <el-form-item v-for="slot in slots" :key="`${slot.id}:${slot.key}`" :label="slotLabel(slot)">
@@ -83,6 +87,7 @@ const saving = ref(false);
 const previewJson = ref(null);
 const steps = ref(8);
 const fps = ref(24);
+const promptRule = ref('');
 const width = ref(1024);
 const height = ref(1024);
 const SIZE_CATEGORIES = new Set([ 'text_to_image', 'image_edit', 'text_to_video', 'image_to_video' ]);
@@ -246,6 +251,7 @@ function payload(apiJson) {
     category: category.value,
     api_json: apiJson,
     suggested_vram_gb: vram === '' ? null : Number(vram),
+    prompt_rule: promptRule.value,
   };
 }
 async function inspect() {
@@ -282,6 +288,7 @@ async function load() {
   name.value = row.name || '';
   category.value = row.category || 'text_to_image';
   suggestedVram.value = row.suggested_vram_gb ?? '';
+  promptRule.value = row.prompt_rule || '';
   raw.value = JSON.stringify(row.api_json, null, 2);
   syncSteps();
   syncSize();

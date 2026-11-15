@@ -100,6 +100,7 @@ class WorkflowService extends Service {
       required_nodes: parsed.required_nodes,
       required_models: parsed.required_models,
       suggested_vram_gb: payload.suggested_vram_gb || null,
+      prompt_rule: payload.prompt_rule == null ? null : String(payload.prompt_rule),
     });
   }
 
@@ -119,6 +120,7 @@ class WorkflowService extends Service {
       required_nodes: parsed.required_nodes,
       required_models: parsed.required_models,
       suggested_vram_gb: payload.suggested_vram_gb === undefined ? row.suggested_vram_gb : payload.suggested_vram_gb,
+      prompt_rule: payload.prompt_rule === undefined ? row.prompt_rule : String(payload.prompt_rule || ''),
     });
     return row.reload();
   }

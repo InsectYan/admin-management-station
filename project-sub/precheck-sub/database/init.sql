@@ -21,3 +21,4 @@ CREATE TABLE IF NOT EXISTS precheck_workflows (
 );
 
 ALTER TABLE precheck_workflows ADD COLUMN IF NOT EXISTS preview_json JSONB;
+ALTER TABLE precheck_workflows ADD COLUMN IF NOT EXISTS prompt_rule VARCHAR(4000);

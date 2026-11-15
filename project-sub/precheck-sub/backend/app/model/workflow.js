@@ -11,6 +11,7 @@ module.exports = app => {
     required_models: { type: JSONB, allowNull: false, defaultValue: [] },
     suggested_vram_gb: { type: INTEGER, allowNull: true },
     preview_json: { type: JSONB, allowNull: true },
+    prompt_rule: { type: STRING(4000), allowNull: true },
   }, { tableName: 'precheck_workflows' });
   return Workflow;
 };

@@ -123,17 +123,38 @@ function seedFromValues(values) {
   return Number.isSafeInteger(num) && num >= 0 ? num : null;
 }
 
+function appendPromptRule(text, rule) {
+  const body = String(text || '').trim();
+  const extra = String(rule || '').trim();
+  if (!extra) return body;
+  if (!body) return extra;
+  if (body === extra || body.endsWith(`\n${extra}`)) return body;
+  return `${body}\n${extra}`;
+}
+
+function isPositiveField(item) {
+  if (!item || item.type === 'image' || item.type === 'video' || item.type === 'number' || item.type === 'duration') return false;
+  const key = String(item.key || '').toLowerCase();
+  const label = String(item.label || '');
+  if (/negative|负向/.test(`${key} ${label}`)) return false;
+  return key === 'text' || key === 'prompt' || key === 'positive_prompt' || key === 'text_input' || key === 'custom_prompt' || /正向|提示词/.test(label);
+}
+
+function appendRuleToValues(values, rule) {
+  const extra = String(rule || '').trim();
+  const rows = (values || []).map(item => ({ ...item }));
+  if (!extra) return rows;
+  const target = rows.find(isPositiveField);
+  if (!target) return rows;
+  target.value = appendPromptRule(target.value, extra);
+  return rows;
+}
+
 function mergeStylePrompt(values, stylePrompt) {
   const style = String(stylePrompt || '').trim();
   const rows = (values || []).map(item => ({ ...item }));
   if (!style) return rows;
-  const target = rows.find(item => {
-    if (!item || item.type === 'image' || item.type === 'video' || item.type === 'number' || item.type === 'duration') return false;
-    const key = String(item.key || '').toLowerCase();
-    const label = String(item.label || '');
-    if (/negative|负向/.test(`${key} ${label}`)) return false;
-    return key === 'text' || key === 'prompt' || key === 'positive_prompt' || key === 'text_input' || key === 'custom_prompt' || /正向|提示词/.test(label);
-  });
+  const target = rows.find(isPositiveField);
   if (!target) return rows;
   const body = String(target.value || '').trim();
   target.value = body ? `${style}\n${body}` : style;
@@ -331,7 +352,7 @@ class WorkflowPreviewService extends Service {
 
   async bind(workflowId, payload) {
     const row = await this.ctx.service.workflow.show(workflowId);
-    const positive = String(payload.positive ?? payload.positive_zh ?? '').trim();
+    const positive = appendPromptRule(payload.positive ?? payload.positive_zh, row.prompt_rule);
     const negative = String(payload.negative ?? payload.negative_zh ?? '');
     if (!positive) {
       const error = new Error('需要一句正向提示词');
@@ -381,7 +402,12 @@ class WorkflowPreviewService extends Service {
 
   async start({ workflowId, draftKey, apiJson, values, refmodIds, refImages, batch, seeds, stylePrompt, outputName, styleNames }) {
     const imageSeeds = resolveImageSeeds(apiJson, values, batch, seeds);
-    const styledValues = mergeStylePrompt(values, stylePrompt);
+    let promptRule = '';
+    if (workflowId) {
+      const saved = await this.ctx.service.workflow.show(workflowId);
+      promptRule = saved.prompt_rule;
+    }
+    const styledValues = appendRuleToValues(mergeStylePrompt(values, stylePrompt), promptRule);
     const outputBase = productBaseName(outputName);
     let source = apiJson;
     const referenceFiles = [];
