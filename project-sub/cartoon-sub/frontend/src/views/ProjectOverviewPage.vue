@@ -200,10 +200,12 @@
               <el-pagination
                 v-if="selectedBoard && boardShots.length"
                 v-model:current-page="boardPage"
+                v-model:page-size="boardPageSize"
                 class="cartoon-pager"
-                :page-size="10"
+                :page-sizes="PAGE_SIZES"
                 :total="boardShots.length"
-                layout="total, prev, pager, next"
+                :layout="PAGER_LAYOUT"
+                @size-change="boardPage = 1"
               />
             </div>
           </div>
@@ -291,6 +293,7 @@ import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 import { hasPanel, isLocalType, supportsAv } from '../lib/contentTypes.js';
 import { framePromptText } from '../lib/framePrompt.js';
+import { PAGE_SIZES, PAGER_LAYOUT } from '../lib/pager.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -440,12 +443,16 @@ const boardShots = computed(() => {
   return shots.filter(shot => String(shot.import_id) === String(current.importId));
 });
 const boardPage = ref(1);
-const boardPageRows = computed(() => boardShots.value.slice((boardPage.value - 1) * 10, boardPage.value * 10));
+const boardPageSize = ref(10);
+const boardPageRows = computed(() => {
+  const size = boardPageSize.value;
+  return boardShots.value.slice((boardPage.value - 1) * size, boardPage.value * size);
+});
 watch(selectedImportKey, () => {
   boardPage.value = 1;
 });
 watch(boardShots, (rows) => {
-  const max = Math.max(1, Math.ceil(rows.length / 10));
+  const max = Math.max(1, Math.ceil(rows.length / boardPageSize.value));
   if (boardPage.value > max) boardPage.value = max;
 });
 
@@ -728,6 +735,7 @@ onMounted(async () => {
 .cartoon-board__main { flex: 1; min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .cartoon-shot-table { width: 100%; }
 .cartoon-pager { margin-top: 12px; justify-content: flex-end; }
+.cartoon-board__main > .cartoon-pager { margin-top: auto; }
 .cartoon-snap-table { width: 100%; }
 .cartoon-snap-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .cartoon-snap__actions { display: flex; flex-wrap: wrap; gap: 8px; }

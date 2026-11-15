@@ -1,7 +1,7 @@
 <template>
   <PageShell title="产物" :loading="loading" :data-filter="`${filterTick}|${filtered.length}`">
-    <div class="cartoon-module">
-      <el-tabs v-model="section">
+    <div class="cartoon-module cartoon-output-page">
+      <el-tabs v-model="section" class="cartoon-output-tabs">
         <el-tab-pane label="媒体" name="media">
       <div class="cartoon-output-bar">
         <el-select v-model="mediaKind" clearable placeholder="图片或视频" style="width: 140px" @change="refreshFilter">
@@ -65,13 +65,15 @@
         </el-table-column>
       </el-table>
       <el-empty v-if="!loading && !filtered.length" :description="emptyText" />
-      <div v-if="filtered.length > pageSize" class="cartoon-output-pager">
+      <div v-if="filtered.length" class="cartoon-output-pager">
         <el-pagination
           v-model:current-page="page"
-          :page-size="pageSize"
+          v-model:page-size="pageSize"
+          :page-sizes="PAGE_SIZES"
           :total="filtered.length"
-          layout="total, prev, pager, next"
+          :layout="PAGER_LAYOUT"
           background
+          @size-change="page = 1"
         />
       </div>
         </el-tab-pane>
@@ -174,6 +176,7 @@ import PageShell from '../components/PageShell.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 import { taskKindLabel } from '../lib/taskKind.js';
+import { PAGE_SIZES, PAGER_LAYOUT } from '../lib/pager.js';
 
 const rows = ref([]);
 const promptRows = ref([]);
@@ -182,7 +185,7 @@ const selected = ref([]);
 const loading = ref(true);
 const loadError = ref('');
 const page = ref(1);
-const pageSize = 20;
+const pageSize = ref(10);
 const section = ref('media');
 const mediaKind = ref('');
 const taskType = ref('');
@@ -221,7 +224,10 @@ const taskTypes = computed(() => {
   return [ '文生视频[RefMod]', '首尾帧[RefMod]', '参考生视频[RefMod]', '文生视频', '首尾帧', '图生视频', '文生图', '改图', '成片', '[RefMod]' ]
     .filter(item => found.has(item));
 });
-const pageRows = computed(() => filtered.value.slice((page.value - 1) * pageSize, page.value * pageSize));
+const pageRows = computed(() => {
+  const size = pageSize.value;
+  return filtered.value.slice((page.value - 1) * size, page.value * size);
+});
 const emptyText = computed(() => {
   if (loadError.value) return loadError.value;
   if (rows.value.length) return '没有符合筛选的产物';
@@ -271,7 +277,7 @@ async function load() {
   try {
     rows.value = await request('/library/outputs') || [];
     promptRows.value = await request('/library/captions') || [];
-    const maxPage = Math.max(1, Math.ceil(filtered.value.length / pageSize));
+    const maxPage = Math.max(1, Math.ceil(filtered.value.length / pageSize.value));
     if (page.value > maxPage) page.value = maxPage;
   } catch (err) {
     rows.value = [];
@@ -378,9 +384,24 @@ onMounted(load);
   font-size: 16px;
   vertical-align: middle;
 }
+.cartoon-output-tabs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.cartoon-output-tabs :deep(.el-tabs__content),
+.cartoon-output-tabs :deep(.el-tab-pane) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
 .cartoon-output-pager {
   display: flex;
   justify-content: flex-end;
-  margin-top: 12px;
+  margin-top: auto;
+  flex: none;
+  padding-top: 12px;
 }
 </style>

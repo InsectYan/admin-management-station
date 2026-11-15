@@ -263,12 +263,6 @@ const frameHeight = ref(768);
 const frameSeed = ref(null);
 const frameSeedField = ref(null);
 const projectStyle = ref(null);
-const FRAME_TAIL = [
-  '参考图约束：这些图是设定总图，不是这一帧的成片。',
-  '人物图是一张白底排版，里面有大头特写和正面、侧面、背面全身，只用来锁定这个人的脸、体态和服装。',
-  '场景图是一张多视角排版，里面有正面、侧面、背面和俯视，只用来锁定空间、陈设和结构。',
-  '成片只画这一帧提示词里的一个机位、一个瞬间。不要画出分格、白底、三视图、多视角拼图，也不要画出这一帧提示词里没有点名的人。',
-].join('\n');
 const framePrompt = computed({
   get() { return imageFrame.value === 'end' ? frameEndText.value : frameStartText.value; },
   set(value) {
@@ -499,13 +493,7 @@ const stageLineText = computed(() => {
   stageRows.value.forEach(row => {
     const note = String(stageNotes[row.bucket]?.[row.name] || '').trim();
     const kind = row.bucket === 'places' ? '场景' : '角色';
-    const assetKind = row.bucket === 'places' ? 'scene' : 'character';
-    if (note) {
-      lines.push(`本章说明：${kind}「${row.name}」在这一章的差别：${note}`);
-      return;
-    }
-    const base = assetText(assetKind, row.name);
-    if (base) lines.push(`${kind}「${row.name}」：${base}`);
+    if (note) lines.push(`本章说明：${kind}「${row.name}」在这一章的差别：${note}`);
   });
   return lines.join('\n');
 });
@@ -625,53 +613,69 @@ function openRefmodDetail(item) {
 function kindLabel(kind) {
   return { character: '人物', scene: '场景', prop: '道具' }[kind] || '资产';
 }
-function assetBrief(asset) {
-  const bits = [];
-  const push = value => {
-    const text = String(value || '').trim();
-    if (text) bits.push(text);
-  };
-  push(asset.description);
-  if (asset.kind === 'character') {
-    push(asset.consistency_note);
-    if (String(asset.costume_note || '').trim()) bits.push(`服装：${String(asset.costume_note).trim()}`);
-    if (String(asset.expression_note || '').trim()) bits.push(`表情：${String(asset.expression_note).trim()}`);
+function pictureLock(entries) {
+  const lines = [];
+  let cursor = 0;
+  let index = 0;
+  const list = Array.isArray(entries) ? entries : [];
+  while (index < list.length) {
+    const entry = list[index] || {};
+    const name = String(entry.name || '').trim();
+    if (!name) {
+      index += 1;
+      continue;
+    }
+    const scene = Boolean(entry.scene);
+    const who = `${scene ? '场景' : '角色'}「${name}」`;
+    const batch = [];
+    while (index < list.length) {
+      const next = list[index] || {};
+      if (String(next.name || '').trim() !== name || Boolean(next.scene) !== scene) break;
+      batch.push(next);
+      index += 1;
+    }
+    batch.forEach(item => {
+      cursor += 1;
+      const note = String(item.note || '').trim();
+      if (note) lines.push(`<Picture ${cursor}>：${note}`);
+      lines.push(`<Picture ${cursor}> 是${who}的参考图`);
+    });
+    lines.push(`这些图都是${who}，按每张图自己的说明使用，不要互相替代`);
   }
-  if (asset.kind === 'scene') push(asset.scene_type);
-  if (asset.kind === 'prop') push(asset.prop_category);
-  return bits.join('。');
+  return lines.join('\n');
 }
 function composeCondition(assets, shotPrompt, pictures, packRows, lock) {
   const rows = lock ? assets.filter(asset => asset.kind === 'character' || asset.kind === 'scene') : assets;
   const lines = [];
-  let cursor = 1;
+  const entries = [];
   rows.forEach(asset => {
     const pack = packRows.find(item => item.asset_id === asset.id);
     const names = pictures && pack ? pickedNames(asset.id, pack) : [];
+    const scene = asset.kind === 'scene';
     const who = lock
-      ? `${asset.kind === 'scene' ? '场景' : '角色'}「${asset.name}」`
+      ? `${scene ? '场景' : '角色'}「${asset.name}」`
       : `${kindLabel(asset.kind)}「${asset.name}」`;
-    const pictureLines = names.map(name => {
-      const note = String(pack?.notes?.[name] || '').trim();
-      const line = note
-        ? `<Picture ${cursor}>：${note}。这张图属于${who}`
-        : `<Picture ${cursor}> 是${who}的参考图`;
-      cursor += 1;
-      return line;
-    });
-    const brief = assetBrief(asset);
-    if (lock) {
-      const head = pictureLines.length
-        ? `${pictureLines.join('\n')}\n这些图都是${who}，按每张图自己的说明使用，不要互相替代`
-        : (asset.kind === 'scene'
-          ? `${who}。锁定这个场景的空间、陈设和结构，本段画面保持一致`
-          : `${who}。锁定这张脸、体态和服装，本段画面保持一致`);
-      lines.push(brief ? `${head}。${brief}` : head);
+    if (names.length) {
+      names.forEach(name => {
+        const note = String(pack?.notes?.[name] || '').trim();
+        entries.push({
+          name: asset.name,
+          scene,
+          note: note || `${scene ? '场景' : '人物'}「${asset.name}」设定总图`,
+        });
+      });
       return;
     }
-    const head = pictureLines.length ? pictureLines.join('\n') : who;
-    lines.push(brief ? `${head}。${brief}` : head);
+    if (lock) {
+      lines.push(scene
+        ? `${who}。锁定这个场景的空间、陈设和结构，本段画面保持一致`
+        : `${who}。锁定这张脸、体态和服装，本段画面保持一致`);
+      return;
+    }
+    lines.push(who);
   });
+  const locked = pictureLock(entries);
+  if (locked) lines.unshift(locked);
   const shot = String(shotPrompt || '').trim();
   if (!lines.length) return shot;
   if (lock) return [ lines.join('\n'), shot ].filter(Boolean).join('\n');
@@ -1059,7 +1063,16 @@ const frameRefAssets = computed(() => {
 });
 const frameSubmitPreview = computed(() => {
   const text = String(framePrompt.value || '').trim();
-  return [ frameLead(text), text, stageLineText.value, frameRefAssets.value.length ? FRAME_TAIL : '' ].filter(Boolean).join('\n');
+  const lock = pictureLock(frameRefAssets.value.map(item => {
+    const matched = String(item.label || '').match(/^(人物|角色|场景)「([^」]+)」/);
+    if (!matched) return null;
+    return {
+      name: matched[2],
+      scene: matched[1] === '场景',
+      note: `${matched[1]}「${matched[2]}」设定总图`,
+    };
+  }).filter(Boolean));
+  return [ frameLead(text), lock, text, stageLineText.value ].filter(Boolean).join('\n');
 });
 function syncFrameSize() {
   const workflow = frameWorkflow.value;
@@ -1126,7 +1139,6 @@ async function generateFrame() {
         height,
         seed: Number(nextSeed),
         lead_zh: frameLead(text),
-        tail_zh: frameRefAssets.value.length ? FRAME_TAIL : '',
         stage_notes: stagePayload(),
       },
     });

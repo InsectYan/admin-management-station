@@ -230,18 +230,40 @@
             </el-table>
             <el-pagination
               v-model:current-page="voicePage"
+              v-model:page-size="voicePageSize"
               class="cartoon-pager"
-              :page-size="10"
+              :page-sizes="PAGE_SIZES"
               :total="voiceFiltered.length"
-              layout="total, prev, pager, next"
+              :layout="PAGER_LAYOUT"
+              @size-change="voicePage = 1"
             />
             <audio ref="voiceAudio" class="cartoon-voice-player" controls></audio>
             <p v-if="selectedVoice" class="cartoon-module__hint">已选 {{ selectedVoice.folder }} / {{ selectedVoice.name }}</p>
           </div>
           <div class="cartoon-voice__shots">
-            <el-table :data="voiceLines" size="small" row-key="key" @selection-change="voicePicks = $event">
+            <div class="cartoon-preview-filter">
+              <span>快照</span>
+              <el-select :model-value="voiceImportId" clearable placeholder="全部快照" style="width: 280px" @change="setVoiceImport">
+                <el-option v-for="item in previewImports" :key="item.id" :label="previewImportLabel(item)" :value="String(item.id)" />
+              </el-select>
+              <el-input
+                v-model="voiceSpeakerDraft"
+                clearable
+                placeholder="人物，回车筛选"
+                style="width: 180px"
+                @keyup.enter="applySpeakerFilter"
+                @clear="applySpeakerFilter"
+              />
+            </div>
+            <el-table v-loading="voiceLinesLoading" :data="voiceVisibleLines" size="small" row-key="key" @selection-change="voicePicks = $event">
               <el-table-column type="selection" width="42" fixed="left" />
               <el-table-column prop="shot_code" label="镜头" width="110" />
+              <el-table-column prop="snapshot" label="快照" width="180" show-overflow-tooltip />
+              <el-table-column label="人物" width="120">
+                <template #default="{ row }">
+                  <el-input :model-value="row.speaker" @change="value => saveLineSpeaker(row, value)" />
+                </template>
+              </el-table-column>
               <el-table-column label="对白" min-width="180">
                 <template #default="{ row }">
                   <el-input :model-value="row.text" @change="value => saveLineText(row, value)" />
@@ -261,7 +283,7 @@
               <el-form label-position="top">
                 <el-form-item v-if="lineMode === 'add'" label="镜头">
                   <el-select v-model="lineShotId" filterable style="width: 100%">
-                    <el-option v-for="item in shots" :key="item.id" :label="item.shot_code || `镜头 ${item.id}`" :value="item.id" />
+                    <el-option v-for="item in voiceShotOptions" :key="item.id" :label="item.shot_code || `镜头 ${item.id}`" :value="item.id" />
                   </el-select>
                 </el-form-item>
                 <el-form-item :label="lineMode === 'split' ? '一行一句' : '对白'">
@@ -350,10 +372,12 @@
           <el-pagination
             v-if="previewShots.length"
             v-model:current-page="previewPage"
+            v-model:page-size="previewPageSize"
             class="cartoon-pager"
-            :page-size="10"
+            :page-sizes="PAGE_SIZES"
             :total="previewShots.length"
-            layout="total, prev, pager, next"
+            :layout="PAGER_LAYOUT"
+            @size-change="previewPage = 1"
           />
         </section>
         <ShotOutputsPage v-if="shotQuery" :key="`preview-${shotQuery}`" :reload-token="navTarget" />
@@ -426,6 +450,7 @@ import FullAutoPage from './FullAutoPage.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { isLocalType, typeLabel } from '../lib/contentTypes.js';
 import { styleDisplayLabel } from '../utils/visualStyles.js';
+import { PAGE_SIZES, PAGER_LAYOUT } from '../lib/pager.js';
 
 const nodes = [
   { id: 'input', title: '输入与绑定' },
@@ -468,6 +493,7 @@ const voiceFolders = ref([]);
 const voiceQuery = ref('');
 const voiceFolder = ref('');
 const voicePage = ref(1);
+const voicePageSize = ref(10);
 const selectedVoice = ref(null);
 const voicePreviewUrl = ref('');
 const voiceAudio = ref(null);
@@ -528,27 +554,75 @@ const voiceFiltered = computed(() => voiceRows.value.filter(item => {
   const keyword = voiceQuery.value.trim();
   return !keyword || item.name.includes(keyword);
 }));
-const voicePageRows = computed(() => voiceFiltered.value.slice((voicePage.value - 1) * 10, voicePage.value * 10));
+const voicePageRows = computed(() => {
+  const size = voicePageSize.value;
+  return voiceFiltered.value.slice((voicePage.value - 1) * size, voicePage.value * size);
+});
+const voiceLineRows = ref([]);
+const voiceLinesLoading = ref(false);
+const voiceImportId = ref('');
+const voiceSpeakerDraft = ref('');
+const voiceSpeakerQuery = ref('');
+let voiceLineSeq = 0;
+function splitSpeaker(text) {
+  const raw = String(text || '').trim();
+  const matched = raw.match(/^([^：:\n]{1,16})[：:](.*)$/);
+  if (!matched) return { speaker: '', text: raw };
+  const name = matched[1].trim();
+  if (!name || /[。！？，,、]/.test(name)) return { speaker: '', text: raw };
+  return { speaker: name, text: matched[2].trim() };
+}
 function lineList(shot) {
   const stored = shot?.dialogue_lines;
   if (Array.isArray(stored) && stored.length) {
-    return stored.map(item => ({
-      text: String(item?.text || '').trim(),
-      voice_key: String(item?.voice_key || '').trim(),
-    })).filter(item => item.text);
+    return stored.map(item => {
+      const speaker = String(item?.speaker || '').trim();
+      const parsed = speaker ? { speaker, text: String(item?.text || '').trim() } : splitSpeaker(item?.text);
+      return {
+        speaker: parsed.speaker,
+        text: parsed.text,
+        voice_key: String(item?.voice_key || '').trim(),
+      };
+    }).filter(item => item.text);
   }
   const cue = (bundle.value?.voice_cues || []).find(item => String(item.shot_id) === String(shot?.id));
   return String(shot?.dialogue || '').split(/\n+/).map(text => text.trim()).filter(Boolean)
-    .map(text => ({ text, voice_key: cue?.voice_key || '' }));
+    .map(text => ({ ...splitSpeaker(text), voice_key: cue?.voice_key || '' }));
 }
-const voiceLines = computed(() => shots.value.flatMap(shot => lineList(shot).map((line, index) => ({
-  key: `${shot.id}:${index}`,
-  shot_id: shot.id,
-  index,
-  shot_code: shot.shot_code || `镜头 ${shot.id}`,
-  text: line.text,
-  voice_key: line.voice_key,
-}))));
+const voiceShotOptions = computed(() => (
+  voiceImportId.value
+    ? shots.value.filter(item => String(item.import_id) === voiceImportId.value)
+    : shots.value
+));
+const voiceVisibleLines = computed(() => {
+  const keyword = voiceSpeakerQuery.value;
+  if (!keyword) return voiceLineRows.value;
+  return voiceLineRows.value.filter(row => String(row.speaker || '').includes(keyword));
+});
+async function loadVoiceLines() {
+  const id = projectKey();
+  if (!id) return;
+  const seq = ++voiceLineSeq;
+  voiceLinesLoading.value = true;
+  try {
+    const params = {};
+    if (voiceImportId.value) params.import_id = voiceImportId.value;
+    const data = await request(`/projects/${id}/voice-lines`, { params });
+    if (seq !== voiceLineSeq) return;
+    voiceLineRows.value = data?.list || [];
+  } catch (err) {
+    if (seq === voiceLineSeq) ElMessage.error(err.message || '对白没有加载出来');
+  } finally {
+    if (seq === voiceLineSeq) voiceLinesLoading.value = false;
+  }
+}
+function setVoiceImport(value) {
+  voiceImportId.value = value ? String(value) : '';
+  loadVoiceLines();
+}
+function applySpeakerFilter() {
+  voiceSpeakerQuery.value = voiceSpeakerDraft.value.trim();
+}
 function voiceLabel(key) {
   if (!key) return '—';
   const asset = assets.value.find(item => item.kind === 'voice' && item.voice_key === key);
@@ -578,9 +652,19 @@ async function saveLineText(row, value) {
     ElMessage.success('对白已保存');
   });
 }
+async function saveLineSpeaker(row, value) {
+  const shot = shotById(row.shot_id);
+  if (!shot) return;
+  const lines = lineList(shot);
+  lines[row.index] = { ...lines[row.index], speaker: String(value || '').trim() };
+  await runAction(async () => {
+    await writeLines(shot, lines);
+    ElMessage.success('人物已保存');
+  });
+}
 function openAddLine() {
   lineMode.value = 'add';
-  lineShotId.value = shots.value[0]?.id || null;
+  lineShotId.value = voiceShotOptions.value[0]?.id || null;
   lineText.value = '';
   lineDialog.value = true;
 }
@@ -613,10 +697,17 @@ async function submitLineDialog() {
   }
   const lines = lineList(shot);
   if (lineMode.value === 'split') {
-    const current = lines[lineIndex.value] || { voice_key: '' };
-    lines.splice(lineIndex.value, 1, ...parts.map(text => ({ text, voice_key: current.voice_key || '' })));
+    const current = lines[lineIndex.value] || { voice_key: '', speaker: '' };
+    lines.splice(lineIndex.value, 1, ...parts.map(text => {
+      const parsed = splitSpeaker(text);
+      return {
+        speaker: parsed.speaker || current.speaker || '',
+        text: parsed.text,
+        voice_key: current.voice_key || '',
+      };
+    }));
   } else {
-    parts.forEach(text => lines.push({ text, voice_key: '' }));
+    parts.forEach(text => lines.push({ ...splitSpeaker(text), voice_key: '' }));
   }
   await runAction(async () => {
     await writeLines(shot, lines);
@@ -716,9 +807,13 @@ function setPreviewImport(value) {
   router.replace({ query });
 }
 const previewPage = ref(1);
-const previewPageRows = computed(() => previewShots.value.slice((previewPage.value - 1) * 10, previewPage.value * 10));
+const previewPageSize = ref(10);
+const previewPageRows = computed(() => {
+  const size = previewPageSize.value;
+  return previewShots.value.slice((previewPage.value - 1) * size, previewPage.value * size);
+});
 watch(previewShots, (rows) => {
-  const max = Math.max(1, Math.ceil(rows.length / 10));
+  const max = Math.max(1, Math.ceil(rows.length / previewPageSize.value));
   if (previewPage.value > max) previewPage.value = max;
 });
 const episodeTitle = computed(() => episode.value?.title || '第1集');
@@ -1252,6 +1347,7 @@ async function load(mask = false) {
   bundle.value = detail;
   episode.value = current || null;
   shots.value = (detail.shots || []).filter(item => !item.deleted_at);
+  if (node.value === 'voice') await loadVoiceLines();
   try {
     const [ pipe, meta ] = await Promise.all([
       request('/pipelines', { params: { content_type: detail.project.content_type } }),
@@ -1571,6 +1667,7 @@ onUnmounted(() => {
 .cartoon-asset-table { cursor: pointer; }
 .cartoon-preview-table { width: 100%; }
 .cartoon-pager { margin-top: 12px; justify-content: flex-end; }
+.cartoon-workbench__main > .cartoon-module > .cartoon-pager { margin-top: auto; }
 .cartoon-preview-filter { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
 .cartoon-preview-filter span { color: #5c6b62; }
 .cartoon-preview-table :deep(.el-table__row),

@@ -1,6 +1,19 @@
 <template>
   <section class="cartoon-edit-inspector cartoon-module">
     <h3 class="cartoon-module__title">片段</h3>
+    <div class="cartoon-edit-snapshot">
+      <span>快照</span>
+      <el-select
+        :model-value="importId"
+        clearable
+        placeholder="全部快照"
+        :disabled="busy"
+        @change="value => emit('snapshot', value || '')"
+      >
+        <el-option v-for="item in imports" :key="item.id" :label="snapshotLabel(item)" :value="String(item.id)" />
+      </el-select>
+    </div>
+    <p class="cartoon-module__hint">选中或清除快照，都会按产物重新排列时间线，并换掉这里可选的片段。</p>
     <el-empty v-if="!clip" description="点时间线上的一段" />
     <el-form v-else label-position="top">
       <el-form-item label="绑定的视频">
@@ -29,7 +42,17 @@
 import { computed } from 'vue';
 import { useEditTimelineStore } from '../../stores/editTimeline.js';
 
+defineProps({
+  imports: { type: Array, default: () => [] },
+  importId: { type: String, default: '' },
+  busy: { type: Boolean, default: false },
+});
+const emit = defineEmits([ 'snapshot' ]);
 const store = useEditTimelineStore();
+function snapshotLabel(item) {
+  const title = String(item?.chapter_title || '').trim();
+  return title || `快照 #${item.id}`;
+}
 const clip = computed(() => store.clips.find(item => item.id === store.selectedClipId) || null);
 
 function seconds(ms) {
@@ -74,3 +97,9 @@ function onDuration(value) {
   commit(limit(clip.value.trim_in_ms, Number(value) * 1000, max));
 }
 </script>
+
+<style scoped>
+.cartoon-edit-snapshot { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.cartoon-edit-snapshot span { flex: none; color: #5c6b62; }
+.cartoon-edit-snapshot .el-select { flex: 1; min-width: 0; }
+</style>

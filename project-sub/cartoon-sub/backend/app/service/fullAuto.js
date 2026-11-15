@@ -1084,15 +1084,6 @@ class FullAutoService extends Service {
     return lines.join('\n');
   }
 
-  frameReferenceTail() {
-    return [
-      '参考图约束：这些图是设定总图，不是这一帧的成片。',
-      '人物图是一张白底排版，里面有大头特写和正面、侧面、背面全身，只用来锁定这个人的脸、体态和服装。',
-      '场景图是一张多视角排版，里面有正面、侧面、背面和俯视，只用来锁定空间、陈设和结构。',
-      '成片只画这一帧提示词里的一个机位、一个瞬间。不要画出分格、白底、三视图、多视角拼图，也不要画出这一帧提示词里没有点名的人。',
-    ].join('\n');
-  }
-
   async renderFrame(run, shot, target, videoText, frameStart, frameEnd, negative) {
     const choice = await this.ctx.service.generate.choiceById(run.frame_workflow_id);
     const frameText = target === 'end' ? frameEnd : frameStart;
@@ -1115,7 +1106,6 @@ class FullAutoService extends Service {
       asset_ids: [],
       images,
       lead_zh: lead,
-      tail_zh: images.length ? this.frameReferenceTail() : '',
       width: run.frame_width,
       height: run.frame_height,
     }, 'image');

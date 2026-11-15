@@ -296,12 +296,14 @@
                 </el-table>
                 <el-pagination
                   v-if="scriptShotTotal"
+                  v-model:current-page="scriptPage"
+                  v-model:page-size="scriptPageSize"
                   class="cartoon-pager"
-                  :current-page="scriptPage"
-                  :page-size="pageSize"
+                  :page-sizes="PAGE_SIZES"
                   :total="scriptShotTotal"
-                  layout="total, prev, pager, next"
+                  :layout="PAGER_LAYOUT"
                   @current-change="changeScriptShotPage"
+                  @size-change="changeScriptShotSize"
                 />
               </el-tab-pane>
             </el-tabs>
@@ -445,10 +447,12 @@
             <el-pagination
               v-if="selectedBoard && boardShots.length"
               v-model:current-page="boardPage"
+              v-model:page-size="boardPageSize"
               class="cartoon-pager"
-              :page-size="pageSize"
+              :page-sizes="PAGE_SIZES"
               :total="boardShots.length"
-              layout="total, prev, pager, next"
+              :layout="PAGER_LAYOUT"
+              @size-change="boardPage = 1"
             />
         </div>
       </div>
@@ -471,10 +475,12 @@
           </el-table>
           <el-pagination
             v-model:current-page="recordPage"
+            v-model:page-size="recordPageSize"
             class="cartoon-pager"
-            :page-size="pageSize"
+            :page-sizes="PAGE_SIZES"
             :total="autoRecords.length"
-            layout="total, prev, pager, next"
+            :layout="PAGER_LAYOUT"
+            @size-change="recordPage = 1"
           />
         </template>
       </el-tab-pane>
@@ -716,6 +722,7 @@ import { canMake } from '../lib/appAccess.js';
 import { isLocalType, supportsAv } from '../lib/contentTypes.js';
 import { uncoveredScenes } from '../utils/sceneCoverage.js';
 import { framePromptText, hasPromptSet } from '../lib/framePrompt.js';
+import { PAGE_SIZES, PAGER_LAYOUT } from '../lib/pager.js';
 
 const props = defineProps({
   forcedStep: { type: Number, default: 0 },
@@ -816,7 +823,9 @@ const shot = reactive({
   frame_start_zh: '',
   frame_end_zh: '',
 });
-const pageSize = 10;
+const scriptPageSize = ref(10);
+const boardPageSize = ref(10);
+const recordPageSize = ref(10);
 const scriptPage = ref(1);
 const boardPage = ref(1);
 const novelBrief = ref(null);
@@ -947,9 +956,12 @@ const autoProgressParts = computed(() => {
   return [ prompt, video ].filter(Boolean);
 });
 watch(runMark, () => rememberAutoRun(projectKey(), runMark), { deep: true });
-const recordPageRows = computed(() => autoRecords.value.slice((recordPage.value - 1) * pageSize, recordPage.value * pageSize));
+const recordPageRows = computed(() => {
+  const size = recordPageSize.value;
+  return autoRecords.value.slice((recordPage.value - 1) * size, recordPage.value * size);
+});
 watch(autoRecords, (rows) => {
-  const max = Math.max(1, Math.ceil(rows.length / pageSize));
+  const max = Math.max(1, Math.ceil(rows.length / recordPageSize.value));
   if (recordPage.value > max) recordPage.value = max;
 }, { deep: true });
 watch(shotTab, () => {
@@ -1058,6 +1070,7 @@ const shotTotals = reactive({});
 let scriptFetchSerial = 0;
 let scriptShotSerial = 0;
 let scriptShotPaging = false;
+let scriptShotSizing = false;
 const selectedScriptImport = computed(() => scriptSnapshot.value);
 const activeScriptData = computed(() => {
   const raw = scriptSnapshot.value?.script_data;
@@ -1213,7 +1226,10 @@ const boardShots = computed(() => {
   if (current.importId == null) return shots.filter(shotRow => shotRow.import_id == null);
   return shots.filter(shotRow => String(shotRow.import_id) === String(current.importId));
 });
-const boardPageRows = computed(() => boardShots.value.slice((boardPage.value - 1) * pageSize, boardPage.value * pageSize));
+const boardPageRows = computed(() => {
+  const size = boardPageSize.value;
+  return boardShots.value.slice((boardPage.value - 1) * size, boardPage.value * size);
+});
 const videoAutoHint = computed(() => {
   const picked = videoAutoIds.value.length;
   if (!picked) return '请至少选择一条镜头。';
@@ -1230,7 +1246,7 @@ watch(selectedImportKey, () => {
   boardPage.value = 1;
 });
 watch(boardShots, (rows) => {
-  const max = Math.max(1, Math.ceil(rows.length / pageSize));
+  const max = Math.max(1, Math.ceil(rows.length / boardPageSize.value));
   if (boardPage.value > max) boardPage.value = max;
 });
 function openBoardCard(key) {
@@ -1250,7 +1266,7 @@ async function loadScriptShots(page) {
   scriptShotLoading.value = true;
   try {
     const data = await request(`/projects/${projectKey()}/imports/${importId}/shots`, {
-      params: { page: page || 1, pageSize },
+      params: { page: page || 1, pageSize: scriptPageSize.value },
     });
     if (serial !== scriptShotSerial) return;
     scriptShotRows.value = Array.isArray(data?.list) ? data.list : [];
@@ -1270,11 +1286,16 @@ async function loadScriptShots(page) {
   }
 }
 function changeScriptShotPage(page) {
-  if (scriptShotPaging) return;
+  if (scriptShotPaging || scriptShotSizing) return;
   const next = Number(page) || 1;
-  if (next === scriptPage.value) return;
   scriptPage.value = next;
   loadScriptShots(next);
+}
+function changeScriptShotSize() {
+  scriptShotSizing = true;
+  scriptPage.value = 1;
+  loadScriptShots(1);
+  nextTick(() => { scriptShotSizing = false; });
 }
 function ensureBoard() {
   const items = boardItems.value;
@@ -2738,6 +2759,7 @@ onUnmounted(() => {
   flex: 1 1 0;
   min-height: 120px;
 }
+.cartoon-shot-page :deep(.el-tab-pane) > .cartoon-pager { margin-top: auto; }
 .cartoon-drawer-footer { display: flex; flex-direction: column; gap: 8px; }
 .cartoon-drawer-footer__actions { display: flex; justify-content: flex-end; gap: 8px; }
 .cartoon-setting-grid {
@@ -2770,8 +2792,21 @@ onUnmounted(() => {
 .cartoon-col-hint .el-icon { color: #5c6b62; cursor: help; }
 .cartoon-missing { color: #c45656; margin-left: 8px; font-size: 12px; }
 .cartoon-script-tabs { flex: 1 1 auto; min-height: 280px; display: flex; flex-direction: column; }
-.cartoon-script-tabs :deep(.el-tabs__content) { flex: 1 1 auto; min-height: 240px; overflow: auto; }
-.cartoon-script-tabs :deep(.el-tab-pane) { min-height: 220px; }
+.cartoon-script-tabs :deep(.el-tabs__content) {
+  flex: 1 1 auto;
+  min-height: 240px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.cartoon-script-tabs :deep(.el-tab-pane) {
+  flex: 1 1 auto;
+  min-height: 220px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+.cartoon-script-tabs :deep(.el-tab-pane) > .cartoon-pager { margin-top: auto; flex: none; }
 .cartoon-snap__actions {
   display: flex;
   flex-wrap: wrap;
@@ -2802,6 +2837,8 @@ onUnmounted(() => {
 .cartoon-board__main { flex: 1; min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .cartoon-shot-table { width: 100%; }
 .cartoon-pager { margin-top: 12px; justify-content: flex-end; }
+.cartoon-board__main > .cartoon-pager,
+.cartoon-shot-page :deep(.el-tab-pane) > .cartoon-pager { margin-top: auto; }
 .cartoon-board__head { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 12px; }
 .cartoon-script { margin-top: 8px; }
 .cartoon-script h4 { margin: 16px 0 8px; font-size: 15px; }

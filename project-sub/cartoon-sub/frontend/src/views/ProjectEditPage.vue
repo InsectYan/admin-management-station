@@ -27,7 +27,12 @@
     <template v-else-if="store.edit">
       <div class="cartoon-edit-layout">
         <PreviewStage />
-        <ClipInspector />
+        <ClipInspector
+          :imports="composeImports"
+          :import-id="composeImportId"
+          :busy="seeding"
+          @snapshot="applySnapshot"
+        />
       </div>
       <TimelineBoard />
       <div class="cartoon-edit-toolbar">
@@ -68,6 +73,8 @@ const saving = ref(false);
 const seeding = ref(false);
 const exporting = ref(false);
 const job = ref(null);
+const composeImports = ref([]);
+const composeImportId = ref('');
 let pollTimer = null;
 
 const canvasKey = computed(() => {
@@ -86,9 +93,15 @@ function stopPoll() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = null;
 }
-async function reload() {
-  const payload = await request(`/projects/${projectId.value}/edit`);
+function takePayload(payload) {
+  composeImports.value = payload?.imports || [];
   store.applyPayload(payload);
+}
+async function reload() {
+  const params = {};
+  if (composeImportId.value) params.import_id = composeImportId.value;
+  const payload = await request(`/projects/${projectId.value}/edit`, { params });
+  takePayload(payload);
 }
 async function save() {
   if (!store.edit) return;
@@ -96,6 +109,7 @@ async function save() {
   try {
     const payload = await request(`/projects/${projectId.value}/edit`, {
       method: 'put',
+      params: composeImportId.value ? { import_id: composeImportId.value } : {},
       data: {
         updated_at: store.edit.updated_at,
         title: store.edit.title,
@@ -117,7 +131,7 @@ async function save() {
         })),
       },
     });
-    store.applyPayload(payload);
+    takePayload(payload);
     ElMessage.success('已保存');
   } catch (err) {
     ElMessage.error(err.message);
@@ -137,15 +151,40 @@ async function seed(replace) {
   try {
     const payload = await request(`/projects/${projectId.value}/edit/seed`, {
       method: 'post',
-      data: { replace },
+      data: {
+        replace,
+        ...(composeImportId.value ? { import_id: Number(composeImportId.value) } : {}),
+      },
     });
-    store.applyPayload(payload);
+    takePayload(payload);
     if (payload.skipped?.length) {
       ElMessage.warning(payload.skipped.map(item => `分镜 ${item.shot_id}：${item.reason}`).join('；'));
     } else {
       ElMessage.success('已按镜序排列');
     }
   } catch (err) {
+    ElMessage.error(err.message);
+  } finally {
+    seeding.value = false;
+  }
+}
+async function applySnapshot(value) {
+  const next = value ? String(value) : '';
+  const previous = composeImportId.value;
+  composeImportId.value = next;
+  seeding.value = true;
+  try {
+    const payload = await request(`/projects/${projectId.value}/edit/seed`, {
+      method: 'post',
+      data: {
+        replace: Boolean(store.edit),
+        ...(next ? { import_id: Number(next) } : {}),
+      },
+    });
+    takePayload(payload);
+    ElMessage.success(next ? '已按这个快照重新排列' : '已恢复全部镜头的排列');
+  } catch (err) {
+    composeImportId.value = previous;
     ElMessage.error(err.message);
   } finally {
     seeding.value = false;

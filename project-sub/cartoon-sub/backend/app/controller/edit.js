@@ -19,7 +19,9 @@ class EditController extends Controller {
 
   async show() {
     try {
-      ok(this.ctx, await this.ctx.service.edit.presentProject(this.ctx.params.id));
+      ok(this.ctx, await this.ctx.service.edit.presentProject(this.ctx.params.id, {
+        importId: this.ctx.query.import_id,
+      }));
     } catch (err) {
       fail(this.ctx, err);
     }
@@ -27,7 +29,9 @@ class EditController extends Controller {
 
   async save() {
     try {
-      ok(this.ctx, await this.ctx.service.edit.save(this.ctx.params.id, this.ctx.request.body || {}));
+      ok(this.ctx, await this.ctx.service.edit.save(this.ctx.params.id, this.ctx.request.body || {}, {
+        importId: this.ctx.query.import_id,
+      }));
     } catch (err) {
       fail(this.ctx, err);
     }

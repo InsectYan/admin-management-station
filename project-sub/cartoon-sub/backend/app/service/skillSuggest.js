@@ -290,7 +290,7 @@ class SkillSuggestService extends Service {
       });
       await shot.update({
         dialogue_lines: lines,
-        dialogue: lines.map(item => item.text).join('\n'),
+        dialogue: lines.map(item => this.ctx.service.project.spokenLine(item)).join('\n'),
       });
       await this.ctx.service.project.syncLineCues(shot, lines);
     }

@@ -1,12 +1,23 @@
 import { defineComponent, h, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 
+function pagerBox(el) {
+  if (!el) return null;
+  if (el.classList.contains('el-pagination') || el.classList.contains('cartoon-pager') || el.classList.contains('cartoon-output-pager')) {
+    return el;
+  }
+  return el.querySelector?.('.el-pagination, .cartoon-pager, .cartoon-output-pager') || null;
+}
+
 function tailHeight(el) {
   const next = el.nextElementSibling;
-  if (!next) return 8;
-  if (next.classList.contains('el-pagination') || next.classList.contains('cartoon-pager')) {
-    return next.offsetHeight + 16;
-  }
-  return 8;
+  const pager = pagerBox(next);
+  if (!pager) return 8;
+  return pager.offsetHeight + 16;
+}
+
+function inMultiTable(el) {
+  const host = el.closest('.cartoon-voice, .cartoon-pipeline');
+  return Boolean(host && host.querySelectorAll('.el-table').length > 1);
 }
 
 export function installFitTable(app) {
@@ -35,6 +46,10 @@ export function installFitTable(app) {
         if (!el.isConnected || !el.closest('.cartoon-sub-root')) return;
         if (el.closest('.el-dialog, .el-drawer, .el-overlay, .el-popper')) return;
         if (el.offsetParent === null) return;
+        if (inMultiTable(el)) {
+          if (maxHeight.value != null) maxHeight.value = null;
+          return;
+        }
         const rect = el.getBoundingClientRect();
         if (rect.width < 40) return;
         const page = el.closest('.cartoon-page, .cartoon-overview, .cartoon-workbench__main, .cartoon-sub-content');

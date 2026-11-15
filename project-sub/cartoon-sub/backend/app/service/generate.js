@@ -331,25 +331,29 @@ class GenerateService extends Service {
     if (kind === 'refmod' && !/\[refmod\]/i.test(workflowName)) {
       this.ctx.throw(400, '请选择一条 [RefMod] 工作流');
     }
+    const ephemeralId = Number(payload.ephemeral_refmod_id) || 0;
     const composed = await this.ctx.service.refmod.composePrompt(
       projectId,
-      assetIds,
+      ephemeralId ? [] : assetIds,
       text,
-      videoKind ? { pictures: true, lock: true, picks } : false,
+      videoKind && !ephemeralId ? { pictures: true, lock: true, picks } : false,
     );
     if (videoKind && composed.refmodIds.length && !useRefs) {
       this.ctx.throw(400, `工作流「${workflowName || '未选择'}」不能引用 RefMod 图片。这条镜头已经绑了参考图，用这条工作流提交时 ComfyUI 收不到图，成片不会像参考人物。请改用带 [RefMod] 的工作流。`);
     }
-    const ephemeralId = Number(payload.ephemeral_refmod_id) || 0;
     let pictureNote = '';
     if (ephemeralId) {
       const pack = await this.ctx.model.Refmod.findByPk(ephemeralId);
       if (!pack || String(pack.project_id) !== String(projectId)) this.ctx.throw(400, '临时参考包不存在');
       const presented = this.ctx.service.refmod.present(pack);
-      pictureNote = (presented.images || []).map((name, index) => {
+      const entries = (presented.images || []).map(name => {
         const note = presented.notes?.[name] || '设定总图';
-        return `<Picture ${index + 1}>：${note}`;
-      }).join('\n');
+        const matched = String(note).match(/^(人物|角色|场景)「([^」]+)」/);
+        return matched
+          ? { name: matched[2], scene: matched[1] === '场景', note }
+          : { name: '', note };
+      });
+      pictureNote = this.ctx.service.refmod.lockLines(entries);
     }
     if (useRefs && !composed.refmodIds.length && !ephemeralId) {
       this.ctx.throw(400, '请勾选已经绑了 RefMod 的角色或场景，并至少留一张参考图');
@@ -362,9 +366,23 @@ class GenerateService extends Service {
     let positive = pictureNote ? `${pictureNote}\n${composed.positive}` : composed.positive;
     const lead = String(payload.lead_zh || '').trim();
     const tail = String(payload.tail_zh || '').trim();
+    const sheetTail = tail.includes('人物图是一张白底排版');
     if (lead) positive = `${lead}\n${positive}`;
     if (stageText) positive = `${positive}\n${stageText}`;
-    if (tail) positive = `${positive}\n${tail}`;
+    if (tail && !sheetTail) positive = `${positive}\n${tail}`;
+    let rawImages = Array.isArray(payload.images) ? payload.images : [];
+    if (!videoKind && Array.isArray(payload.reference_asset_ids) && payload.reference_asset_ids.length) {
+      const choice = workflowOverride ? await this.choiceById(workflowOverride) : null;
+      const refs = await this.imagesFromAssets(projectId, payload.reference_asset_ids, choice);
+      if (refs.length) rawImages = rawImages.concat(refs);
+    }
+    if (!videoKind) {
+      const lock = this.ctx.service.refmod.lockLines(this.referenceEntries(rawImages));
+      if (lock) {
+        if (lead && positive.startsWith(`${lead}\n`)) positive = `${lead}\n${lock}\n${positive.slice(lead.length + 1)}`;
+        else positive = `${lock}\n${positive}`;
+      }
+    }
     const compliance = await complianceCheck(this.ctx, positive);
     const hit = compliance?.hits?.[0];
     if (hit) this.ctx.throw(400, `命中规则 ${hit.id}`);
@@ -406,12 +424,6 @@ class GenerateService extends Service {
       durationSec = seconds;
     }
     if (useRefs) await this.assertRefmodWorkflow(workflowOverride);
-    let rawImages = Array.isArray(payload.images) ? payload.images : [];
-    if (!videoKind && Array.isArray(payload.reference_asset_ids) && payload.reference_asset_ids.length) {
-      const choice = workflowOverride ? await this.choiceById(workflowOverride) : null;
-      const refs = await this.imagesFromAssets(projectId, payload.reference_asset_ids, choice);
-      if (refs.length) rawImages = rawImages.concat(refs);
-    }
     const images = await this.attachFrames(freshShot, workflowOverride, rawImages);
 
     const profileRow = project
@@ -1085,6 +1097,27 @@ class GenerateService extends Service {
     const absolute = resolveInside(outputRoot(this.app), relative);
     if (!absolute || !fs.existsSync(absolute)) return null;
     return absolute;
+  }
+
+  referenceEntries(images) {
+    const entries = [];
+    const visit = file => {
+      const label = String(file?.label || '').trim();
+      if (!label || /帧$/.test(label)) return;
+      const matched = label.match(/^(人物|角色|场景)「([^」]+)」/);
+      if (!matched) return;
+      entries.push({
+        name: matched[2],
+        scene: matched[1] === '场景',
+        note: label.includes('设定') ? label : `${matched[1]}「${matched[2]}」设定总图`,
+      });
+    };
+    (images || []).forEach(slot => {
+      const listed = Array.isArray(slot?.files) ? slot.files : [];
+      if (listed.length) listed.forEach(visit);
+      else visit(slot);
+    });
+    return entries;
   }
 
   async imagesFromAssets(projectId, assetIds, choice) {

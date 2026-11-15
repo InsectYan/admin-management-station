@@ -32,6 +32,14 @@ class ProjectController extends Controller {
     }
   }
 
+  async voiceLines() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.voiceLines(this.ctx.params.id, this.ctx.query || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async listImportShots() {
     try {
       ok(this.ctx, await this.ctx.service.project.listImportShots(

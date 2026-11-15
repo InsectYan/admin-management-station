@@ -83,6 +83,7 @@ class EditService extends Service {
     return {
       id: item.output.id,
       shot_id: item.shot?.id || item.task?.shot_id || null,
+      import_id: item.shot?.import_id || null,
       sort_order: item.shot?.sort_order ?? null,
       description: item.shot?.description || '',
       duration_ms: item.output.duration_ms,
@@ -145,10 +146,24 @@ class EditService extends Service {
     };
   }
 
-  async presentProject(projectId) {
+  async presentProject(projectId, options = {}) {
     const project = await this.projectOrThrow(projectId);
+    const importId = Number(options.importId) || 0;
+    if (importId) {
+      const chapter = await this.ctx.model.Import.findOne({
+        where: { id: importId, project_id: project.id },
+      });
+      if (!chapter || chapter.deleted_at) this.ctx.throw(404, '章节快照不存在');
+    }
     const videoRows = await this.videoOutputs(project.id);
     await this.probeMissing(videoRows);
+    const visibleRows = importId
+      ? videoRows.filter(item => Number(item.shot?.import_id) === importId)
+      : videoRows;
+    const chapters = await this.ctx.model.Import.findAll({
+      where: { project_id: project.id },
+      order: [[ 'id', 'ASC' ]],
+    });
     const tools = await inspect(this.app);
     const edit = await this.ctx.model.Edit.findOne({ where: { project_id: project.id } });
     let presented = null;
@@ -171,10 +186,14 @@ class EditService extends Service {
       project: { id: project.id, name: project.name },
       tools,
       edit: presented,
-      videos: videoRows.map(item => this.presentVideo(item)).sort((a, b) => {
+      videos: visibleRows.map(item => this.presentVideo(item)).sort((a, b) => {
         const order = (a.sort_order ?? 0) - (b.sort_order ?? 0);
         return order || b.id - a.id;
       }),
+      imports: chapters.filter(item => !item.deleted_at).map(item => ({
+        id: item.id,
+        chapter_title: item.chapter_title || '',
+      })),
       exports,
     };
   }
@@ -244,7 +263,15 @@ class EditService extends Service {
   async seed(projectId, body) {
     const project = await this.projectOrThrow(projectId);
     const replace = Boolean(body?.replace);
-    const videoRows = await this.videoOutputs(project.id);
+    const importId = Number(body?.import_id) || 0;
+    if (importId) {
+      const chapter = await this.ctx.model.Import.findOne({
+        where: { id: importId, project_id: project.id },
+      });
+      if (!chapter || chapter.deleted_at) this.ctx.throw(404, '章节快照不存在');
+    }
+    const videoRows = (await this.videoOutputs(project.id))
+      .filter(item => !importId || Number(item.shot?.import_id) === importId);
     await this.probeMissing(videoRows);
     const existing = await this.ctx.model.Edit.findOne({ where: { project_id: project.id } });
     if (existing && !replace) this.ctx.throw(409, '已有时间线，如需重排请使用重新从产物排列');
@@ -278,7 +305,7 @@ class EditService extends Service {
         ...(canvas || {}),
       }, { transaction: trx });
       await trx.commit();
-      const payload = await this.presentProject(project.id);
+      const payload = await this.presentProject(project.id, { importId });
       return { ...payload, skipped: placed.skipped };
     } catch (err) {
       await trx.rollback();
@@ -296,7 +323,7 @@ class EditService extends Service {
     });
   }
 
-  async save(projectId, body) {
+  async save(projectId, body, options = {}) {
     const project = await this.projectOrThrow(projectId);
     const edit = await this.ctx.model.Edit.findOne({ where: { project_id: project.id } });
     if (!edit) this.ctx.throw(404, '还没有时间线');
@@ -392,7 +419,7 @@ class EditService extends Service {
       await trx.rollback();
       throw err;
     }
-    return this.presentProject(project.id);
+    return this.presentProject(project.id, options);
   }
 }
 

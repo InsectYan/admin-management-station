@@ -1591,6 +1591,15 @@ class ProjectService extends Service {
     }
   }
 
+  splitSpeaker(text) {
+    const raw = String(text || '').trim();
+    const matched = raw.match(/^([^：:\n]{1,16})[：:](.*)$/);
+    if (!matched) return { speaker: '', text: raw };
+    const name = matched[1].trim();
+    if (!name || /[。！？，,、]/.test(name)) return { speaker: '', text: raw };
+    return { speaker: name, text: matched[2].trim() };
+  }
+
   linesOf(shot, cues = []) {
     const stored = shot?.dialogue_lines;
     let list = stored;
@@ -1598,15 +1607,72 @@ class ProjectService extends Service {
       try { list = JSON.parse(stored); } catch { list = null; }
     }
     if (Array.isArray(list) && list.length) {
-      return list.map(item => ({
-        text: String(item?.text || '').trim(),
-        voice_key: String(item?.voice_key || '').trim(),
-      })).filter(item => item.text);
+      return list.map(item => {
+        const speaker = String(item?.speaker || '').trim();
+        const parsed = speaker ? { speaker, text: String(item?.text || '').trim() } : this.splitSpeaker(item?.text);
+        return {
+          speaker: parsed.speaker,
+          text: parsed.text,
+          voice_key: String(item?.voice_key || '').trim(),
+        };
+      }).filter(item => item.text);
     }
     const cue = (cues || []).find(item => String(item.shot_id) === String(shot?.id));
     const voice = String(cue?.voice_key || '').trim();
     return String(shot?.dialogue || '').split(/\n+/).map(text => text.trim()).filter(Boolean)
-      .map(text => ({ text, voice_key: voice }));
+      .map(text => ({ ...this.splitSpeaker(text), voice_key: voice }));
+  }
+
+  spokenLine(line) {
+    const speaker = String(line?.speaker || '').trim();
+    const text = String(line?.text || '').trim();
+    return speaker ? `${speaker}：${text}` : text;
+  }
+
+  async voiceLines(projectId, query = {}) {
+    const project = await this.ctx.model.Project.findByPk(projectId);
+    if (!project || project.deleted_at) this.ctx.throw(404, '项目不存在');
+    const importId = Number(query.import_id) || 0;
+    const where = { project_id: project.id };
+    if (importId) {
+      const chapter = await this.ctx.model.Import.findOne({
+        where: { id: importId, project_id: project.id },
+      });
+      if (!chapter || chapter.deleted_at) this.ctx.throw(404, '章节快照不存在');
+      where.import_id = chapter.id;
+    }
+    const [ shots, chapters, cues ] = await Promise.all([
+      this.ctx.model.Shot.findAll({
+        where,
+        order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
+      }),
+      this.ctx.model.Import.findAll({
+        where: { project_id: project.id },
+        order: [[ 'id', 'ASC' ]],
+      }),
+      this.ctx.model.VoiceCue.findAll({ where: { project_id: project.id } }),
+    ]);
+    const chapterById = new Map(chapters.map(item => [ item.id, item ]));
+    const list = [];
+    shots.forEach(shot => {
+      const chapter = chapterById.get(shot.import_id);
+      const snapshot = String(chapter?.chapter_title || '').trim()
+        || (shot.import_id ? `快照 #${shot.import_id}` : '未关联快照');
+      this.linesOf(shot, cues).forEach((line, index) => {
+        list.push({
+          key: `${shot.id}:${index}`,
+          shot_id: shot.id,
+          index,
+          shot_code: shot.shot_code || `镜头 ${shot.id}`,
+          import_id: shot.import_id || null,
+          snapshot,
+          speaker: line.speaker,
+          text: line.text,
+          voice_key: line.voice_key,
+        });
+      });
+    });
+    return { list };
   }
 
   async syncLineCues(shot, lines) {
@@ -1637,13 +1703,6 @@ class ProjectService extends Service {
     const saved = shot.stage_notes && typeof shot.stage_notes === 'object' ? shot.stage_notes : {};
     const characters = saved.characters || {};
     const places = saved.places || {};
-    const assets = await this.ctx.model.Asset.findAll({
-      where: { project_id: shot.project_id, disabled: false },
-    });
-    const baseOf = (kind, name) => {
-      const hit = assets.find(item => item.kind === kind && item.name === name);
-      return String(hit?.description || '').trim();
-    };
     const lines = [];
     (Array.isArray(data.characters) ? data.characters : []).forEach(person => {
       const name = String(person?.name || '').trim();
@@ -1651,12 +1710,7 @@ class ProjectService extends Service {
       const note = Object.prototype.hasOwnProperty.call(characters, name)
         ? String(characters[name] || '').trim()
         : String(person?.stage_note || '').trim();
-      if (note) {
-        lines.push(`本章说明：角色「${name}」在这一章的差别：${note}`);
-        return;
-      }
-      const base = baseOf('character', name);
-      if (base) lines.push(`角色「${name}」：${base}`);
+      if (note) lines.push(`本章说明：角色「${name}」在这一章的差别：${note}`);
     });
     (Array.isArray(data.places) ? data.places : []).forEach(place => {
       const name = String(place?.name || '').trim();
@@ -1664,12 +1718,7 @@ class ProjectService extends Service {
       const note = Object.prototype.hasOwnProperty.call(places, name)
         ? String(places[name] || '').trim()
         : String(place?.stage_note || '').trim();
-      if (note) {
-        lines.push(`本章说明：场景「${name}」在这一章的差别：${note}`);
-        return;
-      }
-      const base = baseOf('scene', name);
-      if (base) lines.push(`场景「${name}」：${base}`);
+      if (note) lines.push(`本章说明：场景「${name}」在这一章的差别：${note}`);
     });
     return lines.join('\n');
   }
@@ -1729,12 +1778,13 @@ class ProjectService extends Service {
     let dialogueLines;
     if (Array.isArray(payload.dialogue_lines)) {
       dialogueLines = payload.dialogue_lines.map(item => ({
+        speaker: String(item?.speaker || '').trim().slice(0, 40),
         text: String(item?.text || '').trim().slice(0, 2000),
         voice_key: String(item?.voice_key || '').trim().slice(0, 80),
       })).filter(item => item.text);
     }
     const nextDialogue = dialogueLines
-      ? dialogueLines.map(item => item.text).join('\n')
+      ? dialogueLines.map(item => this.spokenLine(item)).join('\n')
       : (payload.dialogue ?? shot.dialogue);
     const overridePayload = dialogueLines ? { ...payload, dialogue: nextDialogue } : payload;
     const next = {

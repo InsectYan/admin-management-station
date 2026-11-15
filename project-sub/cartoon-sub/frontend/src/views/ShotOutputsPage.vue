@@ -83,18 +83,6 @@
               </div>
             </header>
             <template v-if="panelOf(task)">
-              <div v-if="panelPicture(task)" class="cartoon-brief__shots">
-                <figure>
-                  <el-image
-                    :src="panelPicture(task)"
-                    fit="contain"
-                    :preview-src-list="[panelPicture(task)]"
-                    preview-teleported
-                    hide-on-click-modal
-                  />
-                  <figcaption>{{ briefTab(task) === 'video' ? '成片' : (briefTab(task) === 'end' ? '尾帧' : '首帧') }}</figcaption>
-                </figure>
-              </div>
               <dl class="cartoon-brief__list">
                 <div>
                   <dt>工作流</dt>
@@ -113,14 +101,28 @@
                 <div>
                   <dt>参考图</dt>
                   <dd>
-                    <div v-if="panelRefs(task).length" class="cartoon-brief__refs">
-                      <figure v-for="item in panelRefs(task)" :key="item.url">
-                        <el-image :src="item.url" fit="cover" :preview-src-list="panelRefs(task).map(row => row.url)" preview-teleported hide-on-click-modal />
-                        <figcaption>{{ item.label }}</figcaption>
+                    <div v-if="panelPicture(task) || panelRefs(task).length" class="cartoon-brief__visual">
+                      <figure v-if="panelPicture(task)" class="cartoon-brief__product">
+                        <video v-if="briefTab(task) === 'video'" :src="panelPicture(task)" controls></video>
+                        <el-image
+                          v-else
+                          :src="panelPicture(task)"
+                          fit="contain"
+                          :preview-src-list="[panelPicture(task)]"
+                          preview-teleported
+                          hide-on-click-modal
+                        />
+                        <figcaption>{{ briefTab(task) === 'video' ? '成片' : (briefTab(task) === 'end' ? '尾帧' : '首帧') }}</figcaption>
                       </figure>
+                      <div v-if="panelRefs(task).length" class="cartoon-brief__refs">
+                        <figure v-for="item in panelRefs(task)" :key="item.url">
+                          <el-image :src="item.url" fit="cover" :preview-src-list="panelRefs(task).map(row => row.url)" preview-teleported hide-on-click-modal />
+                          <figcaption>{{ item.label }}</figcaption>
+                        </figure>
+                      </div>
                     </div>
                     <p v-if="panelRefs(task).length && panelRefsLive(task)" class="cartoon-module__hint">当时没有单独存档，这里显示资产里现在的设定图。</p>
-                    <template v-else-if="!panelRefs(task).length">{{ refEmptyText(task) }}</template>
+                    <template v-else-if="!panelRefs(task).length && !panelPicture(task)">{{ refEmptyText(task) }}</template>
                   </dd>
                 </div>
                 <div>
@@ -161,8 +163,8 @@
               </p>
             </template>
             <div v-else>
-              <div v-if="panelPicture(task)" class="cartoon-brief__shots">
-                <figure>
+              <div v-if="panelPicture(task)" class="cartoon-brief__visual">
+                <figure class="cartoon-brief__product">
                   <el-image :src="panelPicture(task)" fit="contain" :preview-src-list="[panelPicture(task)]" preview-teleported hide-on-click-modal />
                   <figcaption>{{ briefTab(task) === 'end' ? '尾帧' : '首帧' }}</figcaption>
                 </figure>
@@ -531,18 +533,30 @@ onUnmounted(stopPoll);
   cursor: pointer;
 }
 .cartoon-brief__switch button.is-active { background: #2f8a5b; color: #fff; }
-.cartoon-brief__shots,
-.cartoon-brief__refs { display: flex; flex-wrap: wrap; gap: 8px; }
-.cartoon-brief__shots figure,
+.cartoon-brief__visual,
+.cartoon-brief__list .cartoon-brief__visual { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 3fr); gap: 12px; align-items: start; }
+.cartoon-brief__visual:not(:has(.cartoon-brief__product)),
+.cartoon-brief__list .cartoon-brief__visual:not(:has(.cartoon-brief__product)) { grid-template-columns: minmax(0, 1fr); }
+.cartoon-brief__product { width: 100%; min-width: 0; margin: 0; }
+.cartoon-brief__product video,
+.cartoon-brief__product :deep(.el-image) {
+  width: 100%;
+  max-height: 220px;
+  border-radius: 8px;
+  background: #111;
+  display: block;
+  object-fit: contain;
+}
+.cartoon-brief__refs { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.cartoon-brief__list .cartoon-brief__visual:has(.cartoon-brief__product) .cartoon-brief__refs { grid-column: 2; }
 .cartoon-brief__refs figure { margin: 0; width: 96px; }
-.cartoon-brief__shots :deep(.el-image),
 .cartoon-brief__refs :deep(.el-image) {
   width: 96px;
   height: 96px;
   border-radius: 8px;
   background: #eef3ef;
 }
-.cartoon-brief__shots figcaption,
+.cartoon-brief__product figcaption,
 .cartoon-brief__refs figcaption { margin-top: 4px; color: #5c6b62; font-size: 12px; line-height: 1.4; }
 .cartoon-brief__list { display: grid; gap: 10px; margin: 10px 0 0; }
 .cartoon-brief__list div { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 8px; }

@@ -17,23 +17,6 @@ function packKind(value) {
   return 'character';
 }
 
-function assetBrief(asset) {
-  const bits = [];
-  const push = value => {
-    const text = String(value || '').trim();
-    if (text) bits.push(text);
-  };
-  push(asset.description);
-  if (asset.kind === 'character') {
-    push(asset.consistency_note);
-    if (String(asset.costume_note || '').trim()) bits.push(`服装：${String(asset.costume_note).trim()}`);
-    if (String(asset.expression_note || '').trim()) bits.push(`表情：${String(asset.expression_note).trim()}`);
-  }
-  if (asset.kind === 'scene') push(asset.scene_type);
-  if (asset.kind === 'prop') push(asset.prop_category);
-  return bits.join('。');
-}
-
 function noteText(value) {
   return String(value || '').trim().slice(0, 80);
 }
@@ -100,6 +83,41 @@ class RefmodService extends Service {
       items: images.map(name => ({ name, note: noteText(notes[name]) })),
       created_at: row.created_at,
     };
+  }
+
+  lockLines(entries) {
+    const lines = [];
+    let cursor = 0;
+    let index = 0;
+    const list = Array.isArray(entries) ? entries : [];
+    while (index < list.length) {
+      const entry = list[index] || {};
+      const name = String(entry.name || '').trim();
+      if (!name) {
+        cursor += 1;
+        const note = String(entry.note || '').trim();
+        if (note) lines.push(`<Picture ${cursor}>：${note}`);
+        index += 1;
+        continue;
+      }
+      const scene = Boolean(entry.scene);
+      const who = `${scene ? '场景' : '角色'}「${name}」`;
+      const batch = [];
+      while (index < list.length) {
+        const next = list[index] || {};
+        if (String(next.name || '').trim() !== name || Boolean(next.scene) !== scene) break;
+        batch.push(next);
+        index += 1;
+      }
+      batch.forEach(item => {
+        cursor += 1;
+        const note = String(item.note || '').trim();
+        if (note) lines.push(`<Picture ${cursor}>：${note}`);
+        lines.push(`<Picture ${cursor}> 是${who}的参考图`);
+      });
+      lines.push(`这些图都是${who}，按每张图自己的说明使用，不要互相替代`);
+    }
+    return lines.join('\n');
   }
 
   normalizePicks(raw) {
@@ -184,41 +202,40 @@ class RefmodService extends Service {
       : [];
     const packByAsset = new Map(packs.map(row => [ row.asset_id, row ]));
     const lines = [];
+    const entries = [];
     const refmodIds = [];
     const picks = options?.picks || null;
-    let cursor = 1;
     used.forEach(asset => {
       const pack = packByAsset.get(asset.id);
       const names = pack ? chosenNames(fileNames(pack.images), asset.id, picks) : [];
       const notes = pack ? noteMap(pack.image_notes) : {};
       const label = KIND_LABEL[asset.kind] || '资产';
+      const scene = asset.kind === 'scene';
       const who = lock
-        ? `${asset.kind === 'scene' ? '场景' : '角色'}「${asset.name}」`
+        ? `${scene ? '场景' : '角色'}「${asset.name}」`
         : `${label}「${asset.name}」`;
-      const pictureLines = [];
       if (pictures && names.length) {
         names.forEach(name => {
           const note = noteText(notes[name]);
-          pictureLines.push(note
-            ? `<Picture ${cursor}>：${note}。这张图属于${who}`
-            : `<Picture ${cursor}> 是${who}的参考图`);
-          cursor += 1;
+          entries.push({
+            name: asset.name,
+            scene,
+            note: note || `${scene ? '场景' : '人物'}「${asset.name}」设定总图`,
+          });
         });
         refmodIds.push(pack.id);
-      }
-      const brief = assetBrief(asset);
-      if (lock) {
-        const head = pictureLines.length
-          ? `${pictureLines.join('\n')}\n这些图都是${who}，按每张图自己的说明使用，不要互相替代`
-          : (asset.kind === 'scene'
-            ? `${who}。锁定这个场景的空间、陈设和结构，本段画面保持一致`
-            : `${who}。锁定这张脸、体态和服装，本段画面保持一致`);
-        lines.push(brief ? `${head}。${brief}` : head);
         return;
       }
-      const head = pictureLines.length ? pictureLines.join('\n') : who;
-      lines.push(brief ? `${head}。${brief}` : head);
+      if (lock) {
+        lines.push(scene
+          ? `${who}。锁定这个场景的空间、陈设和结构，本段画面保持一致`
+          : `${who}。锁定这张脸、体态和服装，本段画面保持一致`);
+        return;
+      }
+      lines.push(who);
     });
+    const locked = this.lockLines(entries);
+    if (locked) lines.unshift(locked);
     const shot = String(shotPrompt || '').trim();
     const positive = lines.length
       ? [ lines.join('\n'), lock ? shot : (shot ? `镜头：${shot}` : '') ].filter(Boolean).join('\n')
