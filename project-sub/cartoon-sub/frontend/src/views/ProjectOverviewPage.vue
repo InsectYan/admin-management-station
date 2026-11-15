@@ -53,7 +53,14 @@
           <el-alert v-if="gaps.length" class="cartoon-module" type="warning" :closable="false" show-icon :title="`待补：${gaps.join('、')}`" />
           <dl class="cartoon-overview__facts">
             <div><dt>项目名称</dt><dd>{{ detail.project.name }}</dd></div>
-            <div><dt>画面风格</dt><dd>{{ styleLabel || '未选择' }}</dd></div>
+            <div>
+              <dt>画面风格</dt>
+              <dd>
+                <el-tooltip :content="styleLabel" placement="top" :show-after="300" :disabled="!styleFactOverflow">
+                  <span ref="styleFactEl" class="cartoon-overview__style-fact">{{ styleLabel || '未选择' }}</span>
+                </el-tooltip>
+              </dd>
+            </div>
             <div v-if="supportsAv(detail.project.content_type)"><dt>AV</dt><dd>{{ detail.project.av_mode ? '开启' : '关闭' }}</dd></div>
             <div v-if="isLocal"><dt>文案</dt><dd>本地文案</dd></div>
             <div v-else><dt>来源小说</dt><dd>{{ novelBrief?.title || '未绑定' }}</dd></div>
@@ -266,7 +273,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { QuestionFilled } from '@element-plus/icons-vue';
@@ -331,6 +338,26 @@ const styleLabel = computed(() => {
   const hit = styles.value.find(item => item.value === detail.value?.project?.visual_style);
   return hit?.label || hit?.name || '';
 });
+const styleFactEl = ref(null);
+const styleFactOverflow = ref(false);
+let styleFactObserver;
+function measureStyleFact() {
+  const el = styleFactEl.value;
+  styleFactOverflow.value = !!(el && styleLabel.value && el.scrollHeight > el.clientHeight + 1);
+}
+watch(styleFactEl, el => {
+  styleFactObserver?.disconnect();
+  styleFactObserver = null;
+  if (!el || typeof ResizeObserver === 'undefined') {
+    nextTick(measureStyleFact);
+    return;
+  }
+  styleFactObserver = new ResizeObserver(() => measureStyleFact());
+  styleFactObserver.observe(el);
+  measureStyleFact();
+});
+watch(styleLabel, () => nextTick(measureStyleFact));
+onBeforeUnmount(() => styleFactObserver?.disconnect());
 const liveImports = computed(() => (detail.value?.imports || []).filter(item => !item.deleted_at));
 const chapterBodyOpen = ref(false);
 const chapterBodyTitle = ref('');
@@ -672,6 +699,15 @@ onMounted(async () => {
 .cartoon-overview__facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; margin: 0; }
 .cartoon-overview__facts dt { color: #5c6b62; font-size: 12px; }
 .cartoon-overview__facts dd { margin: 4px 0 0; }
+.cartoon-overview__style-fact {
+  display: -webkit-box;
+  width: 100%;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-height: 1.5;
+  word-break: break-word;
+}
 .cartoon-overview__snap { margin-bottom: 12px; }
 .cartoon-overview__snap-body {
   margin-top: 6px;
