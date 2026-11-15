@@ -157,6 +157,7 @@ module.exports = app => {
   router.post('/api/outputs/batch-delete', controller.project.removeOutputs);
   router.delete('/api/outputs/:id', controller.project.removeOutput);
   router.get('/api/tasks/:id/workflow', controller.project.taskWorkflow);
+  router.get('/api/tasks/:id/refs/:index', controller.project.taskReference);
   router.delete('/api/tasks/:id', controller.project.removeTask);
   router.get('/api/outputs/:id/file', controller.project.outputFile);
 };

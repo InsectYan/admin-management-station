@@ -134,6 +134,22 @@ function parseBrief(raw) {
   return typeof raw === 'object' ? raw : null;
 }
 
+function decodeReference(file) {
+  const raw = String(file?.data_base64 || file?.data || '');
+  if (!raw) return null;
+  const marked = raw.match(/^data:([^;,]+);base64,([\s\S]*)$/);
+  const body = marked ? marked[2] : raw;
+  const bytes = Buffer.from(body, 'base64');
+  if (!bytes.length) return null;
+  const fromName = path.extname(String(file.filename || '')).toLowerCase();
+  const ext = /^\.(png|jpe?g|webp|gif)$/.test(fromName) ? (fromName === '.jpeg' ? '.jpg' : fromName) : '.png';
+  const filename = path.basename(String(file.filename || ''));
+  let label = String(file.label || '').trim();
+  if (!label && filename === 'first.png') label = '首帧';
+  if (!label && filename === 'end.png') label = '尾帧';
+  return { bytes, ext, label: label || '参考图' };
+}
+
 function linkedText(graph, field) {
   if (!graph || typeof graph !== 'object') return '';
   const seeds = [];
@@ -390,7 +406,13 @@ class GenerateService extends Service {
       durationSec = seconds;
     }
     if (useRefs) await this.assertRefmodWorkflow(workflowOverride);
-    const images = await this.attachFrames(freshShot, workflowOverride, Array.isArray(payload.images) ? payload.images : []);
+    let rawImages = Array.isArray(payload.images) ? payload.images : [];
+    if (!videoKind && Array.isArray(payload.reference_asset_ids) && payload.reference_asset_ids.length) {
+      const choice = workflowOverride ? await this.choiceById(workflowOverride) : null;
+      const refs = await this.imagesFromAssets(projectId, payload.reference_asset_ids, choice);
+      if (refs.length) rawImages = rawImages.concat(refs);
+    }
+    const images = await this.attachFrames(freshShot, workflowOverride, rawImages);
 
     const profileRow = project
       ? await this.ctx.model.AgentConfig.findOne({ where: { content_type: project.content_type, role: 'video' } })
@@ -426,6 +448,8 @@ class GenerateService extends Service {
       durationSec,
       width: videoKind ? undefined : payload.width,
       height: videoKind ? undefined : payload.height,
+      part: videoKind ? 'video' : frameTarget,
+      frames: payload.frame_tasks && typeof payload.frame_tasks === 'object' ? payload.frame_tasks : null,
       negative: payload.negative_zh != null ? String(payload.negative_zh) : '',
       signal: stop.signal,
       refmodPicks: picks,
@@ -470,6 +494,7 @@ class GenerateService extends Service {
       slot_id: start.id,
       filename: 'first.png',
       data_base64: bytes.toString('base64'),
+      label: current?.manual_frame_path ? '指定首帧' : '上镜尾帧',
     });
     return list;
   }
@@ -819,6 +844,7 @@ class GenerateService extends Service {
       return task.reload();
     }
     if (await this.stopped(task, options.signal)) return task.reload();
+    options.references = await this.archiveReferences(task, images, refImages);
     await this.rememberGeneration(task, workflowId, text, options, workflowName);
     const depUrl = `${this.precheckBase()}/api/workflows/${workflowId}/dependencies`;
     this.ctx.logger.info('[cartoon] precheck GET %s', depUrl);
@@ -1052,6 +1078,181 @@ class GenerateService extends Service {
     });
   }
 
+  assetAbsolute(projectId, referencePath) {
+    const name = path.basename(String(referencePath || '').split('?')[0]);
+    if (!name) return null;
+    const relative = path.join('asset-files', String(projectId), name);
+    const absolute = resolveInside(outputRoot(this.app), relative);
+    if (!absolute || !fs.existsSync(absolute)) return null;
+    return absolute;
+  }
+
+  async imagesFromAssets(projectId, assetIds, choice) {
+    const slots = (choice?.images || []).filter(slot => slot.role === 'reference' || slot.role === 'image');
+    if (!slots.length) return [];
+    const ids = [ ...new Set((assetIds || []).map(id => Number(id)).filter(id => id > 0)) ];
+    if (!ids.length) return [];
+    const rows = await this.ctx.model.Asset.findAll({
+      where: { project_id: projectId, id: ids, disabled: false },
+    });
+    const byId = new Map(rows.map(row => [ row.id, row ]));
+    const files = [];
+    ids.forEach(id => {
+      const asset = byId.get(id);
+      if (!asset || (asset.kind !== 'character' && asset.kind !== 'scene')) return;
+      const absolute = this.assetAbsolute(projectId, asset.reference_path);
+      if (!absolute) return;
+      const ext = path.extname(absolute) || '.png';
+      const kind = asset.kind === 'scene' ? '场景' : '人物';
+      files.push({
+        filename: `ref-${files.length + 1}${ext}`,
+        data_base64: fs.readFileSync(absolute).toString('base64'),
+        label: `${kind}「${asset.name}」`,
+      });
+    });
+    if (!files.length) return [];
+    const slot = slots[0];
+    if (slot.expand || slots.length === 1) return [{ id: slot.id, slot_id: slot.id, files }];
+    return files.slice(0, slots.length).map((file, index) => ({
+      id: slots[index].id,
+      slot_id: slots[index].id,
+      filename: file.filename,
+      data_base64: file.data_base64,
+      label: file.label,
+    }));
+  }
+
+  flattenReferenceFiles(images, refImages) {
+    const rows = [];
+    const push = file => {
+      const decoded = decodeReference(file);
+      if (!decoded) return;
+      rows.push(decoded);
+    };
+    (images || []).forEach(slot => {
+      const listed = Array.isArray(slot?.files) ? slot.files : [];
+      if (listed.length) listed.forEach(push);
+      else push(slot);
+    });
+    (refImages || []).forEach(file => push({
+      ...file,
+      label: file?.label || (file?.pack ? `参考图「${file.pack}」` : ''),
+    }));
+    return rows;
+  }
+
+  async archiveReferences(task, images, refImages) {
+    const rows = this.flattenReferenceFiles(images, refImages);
+    if (!rows.length) return [];
+    try {
+      const relativeDir = path.join('generation-refs', String(task.id));
+      const absoluteDir = resolveInside(outputRoot(this.app), relativeDir);
+      if (!absoluteDir) return [];
+      await fs.promises.mkdir(absoluteDir, { recursive: true });
+      const saved = [];
+      for (let index = 0; index < rows.length; index += 1) {
+        const name = `${index + 1}${rows[index].ext}`;
+        await fs.promises.writeFile(path.join(absoluteDir, name), rows[index].bytes);
+        saved.push({
+          label: rows[index].label,
+          file: path.join(relativeDir, name).split(path.sep).join('/'),
+        });
+      }
+      return saved;
+    } catch (err) {
+      this.ctx.logger.warn('[cartoon] archive references %s', err.message);
+      return [];
+    }
+  }
+
+  inferFramePart(task, prompt) {
+    const stored = task.generation?.part;
+    if (stored === 'start' || stored === 'end') return stored;
+    const text = String(task.generation?.positive || '');
+    const start = String(prompt?.frame_start_zh || '').trim();
+    const end = String(prompt?.frame_end_zh || '').trim();
+    const tail = value => (value.length >= 12 ? value.slice(-40) : '');
+    const startHit = Boolean(tail(start) && text.includes(tail(start)));
+    const endHit = Boolean(tail(end) && text.includes(tail(end)));
+    if (startHit && !endHit) return 'start';
+    if (endHit && !startHit) return 'end';
+    return '';
+  }
+
+  frameSlice(task) {
+    return {
+      id: task.id,
+      status: task.status,
+      operator_name: task.operator_name || '',
+      error_message: task.error_message || '',
+      generation: task.generation,
+      outputs: task.outputs || [],
+    };
+  }
+
+  linkFrameViews(taskViews, promptByShot) {
+    const videoKinds = new Set([ 'video', 'i2v', 't2v', 'refmod' ]);
+    const byId = new Map(taskViews.map(item => [ Number(item.id), item ]));
+    const byShot = new Map();
+    taskViews.forEach(item => {
+      const key = String(item.shot_id || '');
+      if (!byShot.has(key)) byShot.set(key, []);
+      byShot.get(key).push(item);
+    });
+    for (const rows of byShot.values()) {
+      rows.sort((a, b) => Number(a.id) - Number(b.id));
+      const prompt = promptByShot?.get(rows[0]?.shot_id) || null;
+      let carried = { start: null, end: null };
+      let pending = [];
+      rows.forEach(row => {
+        if (row.kind === 'image') {
+          pending.push(row);
+          return;
+        }
+        if (!videoKinds.has(row.kind)) return;
+        const assigned = { start: null, end: null };
+        const loose = [];
+        pending.forEach(item => {
+          const part = this.inferFramePart(item, prompt);
+          if (part === 'start' && !assigned.start) assigned.start = item;
+          else if (part === 'end' && !assigned.end) assigned.end = item;
+          else loose.push(item);
+        });
+        loose.forEach(item => {
+          if (!assigned.start) assigned.start = item;
+          else if (!assigned.end) assigned.end = item;
+        });
+        const explicit = row.generation?.frames || {};
+        const explicitStart = byId.get(Number(explicit.start_task_id));
+        const explicitEnd = byId.get(Number(explicit.end_task_id));
+        if (explicitStart) assigned.start = explicitStart;
+        if (explicitEnd) assigned.end = explicitEnd;
+        if (assigned.start) carried.start = assigned.start;
+        if (assigned.end) carried.end = assigned.end;
+        pending = [];
+        row.generation = {
+          ...row.generation,
+          frame_start: carried.start ? this.frameSlice(carried.start) : null,
+          frame_end: carried.end ? this.frameSlice(carried.end) : null,
+        };
+      });
+    }
+    return taskViews;
+  }
+
+  async sendReference(taskId, index) {
+    const task = await this.ctx.model.Task.findByPk(taskId);
+    if (!task) this.ctx.throw(404, '记录不存在');
+    const brief = parseBrief(task.generation_brief);
+    const item = Array.isArray(brief?.references) ? brief.references[Number(index)] : null;
+    if (!item?.file) this.ctx.throw(404, '参考图不存在');
+    const absolute = resolveInside(outputRoot(this.app), item.file);
+    if (!absolute || !fs.existsSync(absolute)) this.ctx.throw(404, '参考图不在磁盘上');
+    const ext = path.extname(absolute).toLowerCase();
+    this.ctx.type = ext === '.jpg' || ext === '.jpeg' ? 'jpeg' : (ext === '.webp' ? 'webp' : 'png');
+    this.ctx.body = fs.createReadStream(absolute);
+  }
+
   async sendFile(outputId) {
     const output = await this.ctx.model.Output.findByPk(outputId);
     if (!output?.file_path) this.ctx.throw(404, '产物不存在');
@@ -1177,6 +1378,11 @@ class GenerateService extends Service {
           assets,
           seed: Number.isSafeInteger(options.seed) ? options.seed : null,
           duration_sec: Number(options.durationSec) > 0 ? Number(options.durationSec) : null,
+          part: options.part || '',
+          width: Number(options.width) > 0 ? Number(options.width) : null,
+          height: Number(options.height) > 0 ? Number(options.height) : null,
+          references: Array.isArray(options.references) ? options.references : [],
+          frames: options.frames || null,
         },
       });
     } catch (err) {
@@ -1201,6 +1407,16 @@ class GenerateService extends Service {
       assets_from_prompt: !recorded && mentioned.length > 0,
       seed: stored?.seed ?? extracted.seed ?? null,
       duration_sec: stored?.duration_sec ?? null,
+      part: stored?.part || '',
+      width: stored?.width || null,
+      height: stored?.height || null,
+      references: Array.isArray(stored?.references)
+        ? stored.references.map((item, index) => ({ label: String(item?.label || '参考图'), index }))
+        : [],
+      frames: stored?.frames && typeof stored.frames === 'object' ? {
+        start_task_id: Number(stored.frames.start_task_id) || null,
+        end_task_id: Number(stored.frames.end_task_id) || null,
+      } : null,
     };
     const flagged = json.has_workflow_snapshot;
     const hasWorkflow = flagged === true || flagged === 't' || flagged === 'true'

@@ -257,6 +257,7 @@ class ProjectService extends Service {
         this.ctx.logger.warn('[cartoon] workflow names %s', err.message);
       }
     }
+    taskViews = this.ctx.service.generate.linkFrameViews(taskViews, promptByShot);
     const shotViews = await Promise.all(shots.map(async shot => {
       const json = shot.toJSON();
       const sizes = normalizeShotSizes(json.shot_size);

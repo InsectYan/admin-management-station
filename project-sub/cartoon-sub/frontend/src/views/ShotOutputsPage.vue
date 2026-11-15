@@ -72,58 +72,103 @@
           </div>
         </el-tab-pane>
         <el-tab-pane label="基础信息" name="info">
-          <article v-for="task in tasks" :key="task.id" class="cartoon-brief">
+          <article v-for="task in infoRecords" :key="task.id" class="cartoon-brief">
             <header class="cartoon-brief__head">
               <strong>{{ taskKindLabel(task) }} · {{ statusLabel(task.status) }}</strong>
               <span class="cartoon-record">记录 #{{ task.id }}</span>
+              <div class="cartoon-brief__switch">
+                <button type="button" :class="{ 'is-active': briefTab(task) === 'video' }" @click="setBriefTab(task, 'video')">视频</button>
+                <button type="button" :class="{ 'is-active': briefTab(task) === 'start' }" @click="setBriefTab(task, 'start')">首帧</button>
+                <button type="button" :class="{ 'is-active': briefTab(task) === 'end' }" @click="setBriefTab(task, 'end')">尾帧</button>
+              </div>
             </header>
-            <dl class="cartoon-brief__list">
-              <div>
-                <dt>工作流</dt>
-                <dd>
-                  {{ generationOf(task).workflow_name || '没有记下名称' }}
-                  <template v-if="generationOf(task).workflow_id"> · #{{ generationOf(task).workflow_id }}</template>
-                  <a
-                    v-if="generationOf(task).workflow_id"
-                    class="cartoon-precheck-link"
-                    :href="precheckHref(generationOf(task).workflow_id)"
-                    target="_blank"
-                    rel="noreferrer"
-                  >打开预检</a>
-                </dd>
+            <template v-if="panelOf(task)">
+              <div v-if="panelPicture(task)" class="cartoon-brief__shots">
+                <figure>
+                  <el-image
+                    :src="panelPicture(task)"
+                    fit="contain"
+                    :preview-src-list="[panelPicture(task)]"
+                    preview-teleported
+                    hide-on-click-modal
+                  />
+                  <figcaption>{{ briefTab(task) === 'video' ? '成片' : (briefTab(task) === 'end' ? '尾帧' : '首帧') }}</figcaption>
+                </figure>
               </div>
-              <div>
-                <dt>涉及资产</dt>
-                <dd>
-                  <template v-if="generationOf(task).assets.length">
-                    <span v-if="generationOf(task).assets_from_prompt" class="cartoon-module__hint">从提交的提示词里读到：</span>
-                    <span v-for="asset in generationOf(task).assets" :key="asset.id" class="cartoon-brief__asset">
-                      {{ assetKindLabel(asset.kind) }}「{{ asset.name }}」
-                    </span>
-                  </template>
-                  <template v-else-if="generationOf(task).assets_recorded">这次生成没有关联资产</template>
-                  <template v-else>这次生成没有记下涉及资产</template>
-                </dd>
+              <dl class="cartoon-brief__list">
+                <div>
+                  <dt>工作流</dt>
+                  <dd>
+                    {{ panelOf(task).generation?.workflow_name || '没有记下名称' }}
+                    <template v-if="panelOf(task).generation?.workflow_id"> · #{{ panelOf(task).generation.workflow_id }}</template>
+                    <a
+                      v-if="panelOf(task).generation?.workflow_id"
+                      class="cartoon-precheck-link"
+                      :href="precheckHref(panelOf(task).generation.workflow_id)"
+                      target="_blank"
+                      rel="noreferrer"
+                    >打开预检</a>
+                  </dd>
+                </div>
+                <div>
+                  <dt>参考图</dt>
+                  <dd>
+                    <div v-if="panelRefs(task).length" class="cartoon-brief__refs">
+                      <figure v-for="item in panelRefs(task)" :key="item.url">
+                        <el-image :src="item.url" fit="cover" :preview-src-list="panelRefs(task).map(row => row.url)" preview-teleported hide-on-click-modal />
+                        <figcaption>{{ item.label }}</figcaption>
+                      </figure>
+                    </div>
+                    <p v-if="panelRefs(task).length && panelRefsLive(task)" class="cartoon-module__hint">当时没有单独存档，这里显示资产里现在的设定图。</p>
+                    <template v-else-if="!panelRefs(task).length">{{ refEmptyText(task) }}</template>
+                  </dd>
+                </div>
+                <div>
+                  <dt>涉及资产</dt>
+                  <dd>
+                    <template v-if="(panelOf(task).generation?.assets || []).length">
+                      <span v-if="panelOf(task).generation.assets_from_prompt" class="cartoon-module__hint">从提交的提示词里读到：</span>
+                      <span v-for="asset in panelOf(task).generation.assets" :key="asset.id" class="cartoon-brief__asset">
+                        {{ assetKindLabel(asset.kind) }}「{{ asset.name }}」
+                      </span>
+                    </template>
+                    <template v-else-if="panelOf(task).generation?.assets_recorded">这次生成没有关联资产</template>
+                    <template v-else>这次生成没有记下涉及资产</template>
+                  </dd>
+                </div>
+                <div>
+                  <dt>提交的提示词</dt>
+                  <dd><pre class="cartoon-brief__prompt">{{ panelOf(task).generation?.positive || '没有留下提交时的提示词' }}</pre></dd>
+                </div>
+                <div>
+                  <dt>负向提示词</dt>
+                  <dd><pre class="cartoon-brief__prompt">{{ panelOf(task).generation?.negative || '无' }}</pre></dd>
+                </div>
+                <div>
+                  <dt>生成参数</dt>
+                  <dd>
+                    种子 {{ panelOf(task).generation?.seed ?? '未记' }}
+                    <template v-if="briefTab(task) === 'video'"> · 时长 {{ durationText(panelOf(task)) }}</template>
+                    <template v-if="panelOf(task).generation?.width && panelOf(task).generation?.height">
+                      · {{ panelOf(task).generation.width }} × {{ panelOf(task).generation.height }}
+                    </template>
+                    · 操作人 {{ panelOf(task).operator_name || task.operator_name || '未记' }}
+                  </dd>
+                </div>
+              </dl>
+              <p v-if="panelOf(task).error_message || (briefTab(task) === 'video' && task.error_message)" class="cartoon-output__error">
+                {{ panelOf(task).error_message || task.error_message }}
+              </p>
+            </template>
+            <div v-else>
+              <div v-if="panelPicture(task)" class="cartoon-brief__shots">
+                <figure>
+                  <el-image :src="panelPicture(task)" fit="contain" :preview-src-list="[panelPicture(task)]" preview-teleported hide-on-click-modal />
+                  <figcaption>{{ briefTab(task) === 'end' ? '尾帧' : '首帧' }}</figcaption>
+                </figure>
               </div>
-              <div>
-                <dt>提交的提示词</dt>
-                <dd><pre class="cartoon-brief__prompt">{{ generationOf(task).positive || '没有留下提交时的提示词' }}</pre></dd>
-              </div>
-              <div>
-                <dt>负向提示词</dt>
-                <dd><pre class="cartoon-brief__prompt">{{ generationOf(task).negative || '无' }}</pre></dd>
-              </div>
-              <div>
-                <dt>生成参数</dt>
-                <dd>
-                  种子 {{ generationOf(task).seed ?? '未记' }}
-                  · 时长 {{ durationText(task) }}
-                  · 操作人 {{ task.operator_name || '未记' }}
-                  <template v-if="task.model_profile"> · 模型 {{ task.model_profile }}</template>
-                </dd>
-              </div>
-            </dl>
-            <p v-if="task.error_message" class="cartoon-output__error">{{ task.error_message }}</p>
+              <p class="cartoon-module__hint">{{ emptyBrief(task) }}</p>
+            </div>
           </article>
         </el-tab-pane>
       </el-tabs>
@@ -132,7 +177,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
 import MediaFileList from '../components/MediaFileList.vue';
@@ -149,12 +194,25 @@ const route = useRoute();
 const router = useRouter();
 const shot = ref(null);
 const tasks = ref([]);
+const assets = ref([]);
 const loaded = ref(false);
 const profiles = ref({});
 const leftId = ref(null);
 const rightId = ref(null);
 const frames = ref([]);
 const previewTab = ref('assets');
+const briefTabs = reactive({});
+const VIDEO_KINDS = new Set([ 'video', 'i2v', 't2v', 'refmod' ]);
+const infoRecords = computed(() => {
+  const hidden = new Set();
+  tasks.value.forEach(task => {
+    const startId = Number(task.generation?.frame_start?.id);
+    const endId = Number(task.generation?.frame_end?.id);
+    if (startId) hidden.add(startId);
+    if (endId) hidden.add(endId);
+  });
+  return tasks.value.filter(task => !hidden.has(Number(task.id)));
+});
 const outputChoices = computed(() => tasks.value.flatMap(item => item.outputs || []));
 const cards = computed(() => tasks.value.flatMap(task => {
   const outputs = task.outputs || [];
@@ -193,13 +251,98 @@ function busy(task) {
 function generationOf(task) {
   return task?.generation || {};
 }
+function isVideoTask(task) {
+  return VIDEO_KINDS.has(task?.kind);
+}
+function briefTab(task) {
+  return briefTabs[task.id] || 'video';
+}
+function setBriefTab(task, name) {
+  briefTabs[task.id] = name;
+}
+function panelOf(task) {
+  const tab = briefTab(task);
+  if (tab === 'video') {
+    if (!isVideoTask(task)) return null;
+    return {
+      id: task.id,
+      generation: task.generation || {},
+      outputs: task.outputs || [],
+      operator_name: task.operator_name,
+      error_message: task.error_message,
+    };
+  }
+  if (isVideoTask(task)) {
+    const frame = tab === 'end' ? task.generation?.frame_end : task.generation?.frame_start;
+    return frame || null;
+  }
+  const part = task.generation?.part === 'end' ? 'end' : 'start';
+  if (tab !== part) return null;
+  return {
+    id: task.id,
+    generation: task.generation || {},
+    outputs: task.outputs || [],
+    operator_name: task.operator_name,
+    error_message: task.error_message,
+  };
+}
+function emptyBrief(task) {
+  const tab = briefTab(task);
+  if (tab === 'video') return '这条记录没有视频。';
+  return tab === 'end' ? '这条记录没有单独生成尾帧。' : '这条记录没有单独生成首帧。';
+}
+function panelPicture(task) {
+  const panel = panelOf(task);
+  const image = (panel?.outputs || []).find(item => (briefTab(task) === 'video' ? item.media_kind === 'video' : item.media_kind !== 'video'));
+  if (image) return fileUrl(image.id);
+  if (briefTab(task) === 'video' || !shot.value) return '';
+  if (briefTab(task) === 'end') {
+    if (!shot.value.end_frame_mtime) return '';
+    return `${resolveApiBase()}/projects/${projectId.value}/shots/${shotId.value}/frame/end?v=${shot.value.end_frame_mtime}`;
+  }
+  const which = shot.value.manual_frame_path ? 'manual' : (shot.value.first_frame_path ? 'auto' : '');
+  if (!which) return '';
+  const version = which === 'manual' ? shot.value.manual_frame_mtime : shot.value.first_frame_mtime;
+  return `${resolveApiBase()}/projects/${projectId.value}/shots/${shotId.value}/frame/${which}?v=${version || 1}`;
+}
+function liveAssetRefs(text) {
+  return assets.value
+    .filter(asset => (asset.kind === 'character' || asset.kind === 'scene') && asset.name && asset.reference_path && String(text || '').includes(asset.name))
+    .sort((a, b) => String(b.name).length - String(a.name).length)
+    .filter((asset, index, list) => !list.slice(0, index).some(kept => String(kept.name).includes(asset.name)));
+}
+function panelRefs(task) {
+  const panel = panelOf(task);
+  if (!panel) return [];
+  const archived = panel.generation?.references || [];
+  if (archived.length) {
+    return archived.map(item => ({
+      label: item.label || '参考图',
+      url: `${resolveApiBase()}/tasks/${panel.id}/refs/${item.index}`,
+      live: false,
+    }));
+  }
+  return liveAssetRefs(panel.generation?.positive).map(asset => ({
+    label: `${asset.kind === 'scene' ? '场景' : '人物'}「${asset.name}」`,
+    url: String(asset.reference_path).startsWith('/') ? `${resolveApiBase()}${asset.reference_path}` : '',
+    live: true,
+  })).filter(item => item.url);
+}
+function panelRefsLive(task) {
+  return panelRefs(task).some(item => item.live);
+}
+function refEmptyText(task) {
+  const name = panelOf(task)?.generation?.workflow_name || '';
+  if (name.includes('文生图')) return '这条是文生图，没有参考图。';
+  return '这次没有记下参考图。';
+}
 function assetKindLabel(kind) {
   return { character: '人物', scene: '场景', prop: '道具' }[kind] || '资产';
 }
-function durationText(task) {
-  const sec = Number(generationOf(task).duration_sec);
+function durationText(source) {
+  const sec = Number(generationOf(source).duration_sec);
   if (sec > 0) return `${sec} 秒`;
-  const ms = (task.outputs || []).map(item => Number(item.duration_ms)).find(value => value > 0);
+  const ms = (source?.outputs || []).map(item => Number(item.duration_ms)).find(value => value > 0);
   if (ms) return `成片 ${Math.round(ms / 1000)} 秒`;
   return '未记';
 }
@@ -281,7 +424,9 @@ async function removeOutput(output) {
 }
 function back() {
   if (inWorkbench.value) {
-    router.replace({ query: { node: 'preview' } });
+    const query = { node: 'preview' };
+    if (route.query.import) query.import = String(route.query.import);
+    router.replace({ query });
     return;
   }
   if (route.query.from === 'work') {
@@ -318,6 +463,7 @@ async function load() {
     const detail = await request(`/projects/${projectId.value}`);
     shot.value = (detail.shots || []).find(item => String(item.id) === String(shotId.value)) || null;
     tasks.value = (detail.tasks || []).filter(item => String(item.shot_id) === String(shotId.value));
+    assets.value = detail.assets || [];
     const outputs = tasks.value.flatMap(item => item.outputs || []);
     if (outputs.length > 1 && !leftId.value) {
       leftId.value = outputs[0].id;
@@ -375,7 +521,29 @@ onUnmounted(stopPoll);
 .cartoon-device__frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cartoon-brief { padding: 12px 0; border-top: 1px solid #e6ebe7; }
 .cartoon-brief:first-child { border-top: 0; padding-top: 0; }
-.cartoon-brief__head { display: flex; gap: 12px; align-items: baseline; }
+.cartoon-brief__head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.cartoon-brief__switch { display: inline-flex; border: 1px solid rgba(47, 138, 91, 0.35); border-radius: 6px; overflow: hidden; }
+.cartoon-brief__switch button {
+  border: 0;
+  background: transparent;
+  padding: 2px 10px;
+  color: #1f3d2c;
+  cursor: pointer;
+}
+.cartoon-brief__switch button.is-active { background: #2f8a5b; color: #fff; }
+.cartoon-brief__shots,
+.cartoon-brief__refs { display: flex; flex-wrap: wrap; gap: 8px; }
+.cartoon-brief__shots figure,
+.cartoon-brief__refs figure { margin: 0; width: 96px; }
+.cartoon-brief__shots :deep(.el-image),
+.cartoon-brief__refs :deep(.el-image) {
+  width: 96px;
+  height: 96px;
+  border-radius: 8px;
+  background: #eef3ef;
+}
+.cartoon-brief__shots figcaption,
+.cartoon-brief__refs figcaption { margin-top: 4px; color: #5c6b62; font-size: 12px; line-height: 1.4; }
 .cartoon-brief__list { display: grid; gap: 10px; margin: 10px 0 0; }
 .cartoon-brief__list div { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 8px; }
 .cartoon-brief__list dt { margin: 0; color: #5c6b62; }

@@ -389,6 +389,7 @@ class RefmodService extends Service {
     for (const id of ids || []) {
       const row = await this.owned(projectId, id);
       const images = chosenNames(fileNames(row.images), row.asset_id, picks);
+      const notes = noteMap(row.image_notes);
       for (const filename of images) {
         const relative = path.join('refmods', String(projectId), String(row.id), filename);
         const absolute = resolveInside(outputRoot(this.app), relative);
@@ -397,6 +398,7 @@ class RefmodService extends Service {
           filename,
           data_base64: fs.readFileSync(absolute).toString('base64'),
           pack: row.name,
+          label: noteText(notes[filename]) || `参考图「${row.name}」`,
         });
       }
     }

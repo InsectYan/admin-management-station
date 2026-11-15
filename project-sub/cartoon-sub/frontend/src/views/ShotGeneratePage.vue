@@ -169,6 +169,53 @@
           </div>
         </el-form-item>
         </el-tab-pane>
+        <el-tab-pane label="首尾帧" name="frames" :lazy="false">
+          <el-form-item label="这次生成">
+            <el-button :type="imageFrame === 'start' ? 'primary' : 'default'" @click="imageFrame = 'start'">首帧</el-button>
+            <el-button :type="imageFrame === 'end' ? 'primary' : 'default'" @click="imageFrame = 'end'">尾帧</el-button>
+          </el-form-item>
+          <el-form-item :label="imageFrame === 'end' ? '尾帧提示词' : '首帧提示词'">
+            <el-input v-model="framePrompt" type="textarea" :rows="8" />
+          </el-form-item>
+          <el-form-item label="工作流">
+            <el-select v-model="frameWorkflowId" filterable placeholder="选择生图工作流" style="width: 100%">
+              <el-option-group label="文生图">
+                <el-option v-for="item in frameTextWorkflows" :key="`frame-text-${item.id}`" :label="workflowLabel(item)" :value="item.id" />
+              </el-option-group>
+              <el-option-group label="图生图">
+                <el-option v-for="item in frameEditWorkflows" :key="`frame-edit-${item.id}`" :label="workflowLabel(item)" :value="item.id" />
+              </el-option-group>
+            </el-select>
+            <p v-if="frameWorkflowIsEdit" class="cartoon-module__hint">图生图会带上这一帧提示词里点名的人物和场景设定图。</p>
+            <p v-else-if="frameWorkflowId" class="cartoon-module__hint">文生图只按提示词生成，不使用参考图。</p>
+          </el-form-item>
+          <el-form-item label="宽高">
+            <div class="cartoon-full-size">
+              <span>宽</span>
+              <el-input-number v-model="frameWidth" :min="64" :max="2048" :step="32" :precision="0" controls-position="right" />
+              <span>高</span>
+              <el-input-number v-model="frameHeight" :min="64" :max="2048" :step="32" :precision="0" controls-position="right" />
+            </div>
+          </el-form-item>
+          <el-form-item label="种子">
+            <RandomSeedField ref="frameSeedField" v-model="frameSeed" />
+            <p class="cartoon-module__hint">打开随机时，每次点击生成都会换一个新种子。</p>
+          </el-form-item>
+          <el-form-item v-if="frameRefAssets.length" label="准备提交的参考图">
+            <div class="cartoon-linked-sheets">
+              <figure v-for="item in frameRefAssets" :key="item.id">
+                <el-image :src="item.url" fit="cover" :preview-src-list="frameRefAssets.map(row => row.url)" preview-teleported hide-on-click-modal />
+                <figcaption>{{ item.label }}</figcaption>
+              </figure>
+            </div>
+          </el-form-item>
+          <el-form-item label="准备提交的提示词">
+            <el-input :model-value="frameSubmitPreview" type="textarea" :rows="8" readonly />
+          </el-form-item>
+          <el-button type="primary" :disabled="!canMake()" :loading="generating" @click="generateFrame">
+            {{ imageFrame === 'end' ? '生成尾帧' : '生成首帧' }}
+          </el-button>
+        </el-tab-pane>
         </el-tabs>
       </el-form>
     </section>
@@ -188,8 +235,10 @@ import { computed, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
+import RandomSeedField from '../components/RandomSeedField.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { useRegionLoad } from '../lib/useRegionLoad.js';
+import { canMake } from '../lib/appAccess.js';
 
 const props = defineProps({
   plain: { type: Boolean, default: false },
@@ -208,6 +257,25 @@ const promptText = ref('');
 const frameStartText = ref('');
 const frameEndText = ref('');
 const imageFrame = ref('start');
+const frameWorkflowId = ref(null);
+const frameWidth = ref(768);
+const frameHeight = ref(768);
+const frameSeed = ref(null);
+const frameSeedField = ref(null);
+const projectStyle = ref(null);
+const FRAME_TAIL = [
+  '参考图约束：这些图是设定总图，不是这一帧的成片。',
+  '人物图是一张白底排版，里面有大头特写和正面、侧面、背面全身，只用来锁定这个人的脸、体态和服装。',
+  '场景图是一张多视角排版，里面有正面、侧面、背面和俯视，只用来锁定空间、陈设和结构。',
+  '成片只画这一帧提示词里的一个机位、一个瞬间。不要画出分格、白底、三视图、多视角拼图，也不要画出这一帧提示词里没有点名的人。',
+].join('\n');
+const framePrompt = computed({
+  get() { return imageFrame.value === 'end' ? frameEndText.value : frameStartText.value; },
+  set(value) {
+    if (imageFrame.value === 'end') frameEndText.value = value;
+    else frameStartText.value = value;
+  },
+});
 const negativeText = ref('');
 const shotSizes = ref([ '中景' ]);
 const cameraMoves = ref([ '固定' ]);
@@ -242,6 +310,11 @@ const projectId = computed(() => projectKey());
 const shotId = computed(() => props.shotIdOverride || route.params.shotId || route.query.shot);
 const inWorkbench = computed(() => route.name === 'workbench');
 const choices = computed(() => (contracts.value.workflows || []).filter(item => item.media === media.value));
+const imageWorkflows = computed(() => (contracts.value.workflows || []).filter(item => item.media === 'image'));
+const frameTextWorkflows = computed(() => imageWorkflows.value.filter(item => !String(item.name || '').includes('图生图')));
+const frameEditWorkflows = computed(() => imageWorkflows.value.filter(item => String(item.name || '').includes('图生图')));
+const frameWorkflow = computed(() => imageWorkflows.value.find(item => item.id === frameWorkflowId.value) || null);
+const frameWorkflowIsEdit = computed(() => String(frameWorkflow.value?.name || '').includes('图生图'));
 const selected = computed(() => choices.value.find(item => item.id === workflowId.value) || null);
 const slots = computed(() => selected.value?.images || []);
 const needsRefmod = computed(() => String(selected.value?.name || '').includes('[RefMod]'));
@@ -754,6 +827,7 @@ async function load() {
   ]);
   if (meta?.shot_sizes?.length) sizeOptions.value = meta.shot_sizes;
   if (meta?.camera_moves?.length) moveOptions.value = meta.camera_moves;
+  projectStyle.value = (meta?.visual_styles || []).find(item => item.value === detail.project?.visual_style) || null;
   const found = (detail.shots || []).find(item => String(item.id) === String(shotId.value));
   if (!found) {
     ElMessage.error('分镜不存在');
@@ -823,6 +897,7 @@ async function load() {
     ElMessage.error(err.message);
   }
   primeStoredFrames();
+  ensureFrameWorkflow();
   });
 }
 let echoing = false;
@@ -942,7 +1017,148 @@ async function saveAssets() {
     savingAssets.value = false;
   }
 }
+function frameLead(text) {
+  const label = String(projectStyle.value?.label || '').trim();
+  const prompt = String(projectStyle.value?.prompt || '').trim();
+  const lines = [];
+  if (label && !text.includes(label)) lines.push(`画面风格：${label}`);
+  if (prompt && !text.includes(prompt)) lines.push(prompt);
+  return lines.join('\n');
+}
+function frameRefCap(workflow) {
+  const slots = (workflow?.images || []).filter(slot => slot.role === 'reference' || slot.role === 'image');
+  if (!slots.length) return 0;
+  const expanded = slots.find(slot => slot.expand && Number(slot.limit) > 1);
+  if (expanded) return Number(expanded.limit);
+  return slots.reduce((sum, slot) => sum + (Number(slot.limit) > 0 ? Number(slot.limit) : 1), 0);
+}
+const frameRefAssets = computed(() => {
+  if (!frameWorkflowIsEdit.value) return [];
+  const cap = frameRefCap(frameWorkflow.value);
+  if (!cap) return [];
+  const text = String(framePrompt.value || '');
+  const named = projectAssets.value
+    .filter(asset => !asset.disabled && (asset.kind === 'character' || asset.kind === 'scene') && asset.name && asset.reference_path && text.includes(asset.name))
+    .sort((a, b) => String(b.name).length - String(a.name).length)
+    .filter((asset, index, list) => !list.slice(0, index).some(kept => String(kept.name).includes(asset.name)));
+  const sceneLabel = String(shot.value?.scene_label || '').trim();
+  const scenes = named.filter(asset => asset.kind === 'scene');
+  const scene = scenes.find(asset => sceneLabel && asset.name === sceneLabel)
+    || scenes[0]
+    || projectAssets.value.find(asset => !asset.disabled && asset.kind === 'scene' && sceneLabel && asset.name === sceneLabel && asset.reference_path)
+    || null;
+  const characters = named.filter(asset => asset.kind === 'character');
+  const characterCap = scene && cap > 1 ? cap - 1 : cap;
+  const picked = characters.slice(0, characterCap);
+  if (scene && picked.length < cap && !picked.some(asset => asset.id === scene.id)) picked.push(scene);
+  return picked.map(asset => ({
+    id: asset.id,
+    label: `${asset.kind === 'scene' ? '场景' : '人物'}「${asset.name}」`,
+    url: `${resolveApiBase()}${asset.reference_path}`,
+  }));
+});
+const frameSubmitPreview = computed(() => {
+  const text = String(framePrompt.value || '').trim();
+  return [ frameLead(text), text, stageLineText.value, frameRefAssets.value.length ? FRAME_TAIL : '' ].filter(Boolean).join('\n');
+});
+function syncFrameSize() {
+  const workflow = frameWorkflow.value;
+  if (Number(workflow?.width) > 0) frameWidth.value = workflow.width;
+  if (Number(workflow?.height) > 0) frameHeight.value = workflow.height;
+}
+function ensureFrameWorkflow() {
+  if (frameWorkflowId.value && imageWorkflows.value.some(item => item.id === frameWorkflowId.value)) return;
+  const found = frameEditWorkflows.value[0] || frameTextWorkflows.value[0] || null;
+  frameWorkflowId.value = found ? found.id : null;
+  syncFrameSize();
+}
+async function generateFrame() {
+  if (!frameWorkflowId.value) {
+    ElMessage.error('请选择工作流');
+    return;
+  }
+  const text = String(framePrompt.value || '').trim();
+  if (!text) {
+    ElMessage.warning(imageFrame.value === 'end' ? '请填写尾帧提示词' : '请填写首帧提示词');
+    return;
+  }
+  const width = Number(frameWidth.value);
+  const height = Number(frameHeight.value);
+  const sizeOk = [ width, height ].every(value => Number.isInteger(value) && value >= 64 && value <= 2048 && value % 32 === 0);
+  if (!sizeOk) {
+    ElMessage.warning('宽高需要是 64 到 2048 之间的 32 倍数');
+    return;
+  }
+  const nextSeed = frameSeedField.value?.takeSeed?.() ?? frameSeed.value;
+  if (!Number.isSafeInteger(Number(nextSeed)) || Number(nextSeed) < 0) {
+    ElMessage.warning('请填写种子');
+    return;
+  }
+  haltQuiet = false;
+  generateAbort = new AbortController();
+  generating.value = true;
+  jobLive.value = true;
+  publishRunning(true);
+  jobPercent.value = 0;
+  jobMax.value = 0;
+  jobNote.value = '排队';
+  const id = projectKey();
+  if (!id) {
+    generating.value = false;
+    jobLive.value = false;
+    publishRunning(false);
+    ElMessage.error('项目编号丢了');
+    return;
+  }
+  try {
+    const task = await request(`/projects/${id}/shots/${shotId.value}/generate?kind=image`, {
+      method: 'post',
+      signal: generateAbort.signal,
+      data: {
+        positive_zh: promptText.value,
+        frame_start_zh: frameStartText.value,
+        frame_end_zh: frameEndText.value,
+        frame_target: imageFrame.value,
+        negative_zh: negativeText.value,
+        workflow_id: frameWorkflowId.value,
+        reference_asset_ids: frameRefAssets.value.map(item => item.id),
+        width,
+        height,
+        seed: Number(nextSeed),
+        lead_zh: frameLead(text),
+        tail_zh: frameRefAssets.value.length ? FRAME_TAIL : '',
+        stage_notes: stagePayload(),
+      },
+    });
+    if (task.status === 'cancelled') {
+      jobLive.value = false;
+      jobNote.value = '已停止';
+      publishRunning(false);
+      if (!haltQuiet) ElMessage.info(task.error_message || '已停止');
+    } else if (task.status === 'failed') {
+      jobLive.value = false;
+      publishRunning(false);
+      ElMessage.error(task.error_message || '生成失败');
+    } else if (task.status === 'success') {
+      jobLive.value = false;
+      publishRunning(false);
+      ElMessage.success('生成成功');
+      emit('saved');
+    }
+    if ([ 'queued', 'running', 'saving' ].includes(task.status)) beginPoll(task);
+  } catch (err) {
+    jobLive.value = false;
+    publishRunning(false);
+    if (!haltQuiet && !isStop(err)) ElMessage.error(err.message);
+  } finally {
+    generating.value = false;
+  }
+}
 async function generate() {
+  if (formTab.value === 'frames') {
+    await generateFrame();
+    return;
+  }
   if (!workflowId.value) {
     ElMessage.error('请选择工作流');
     return;
@@ -1052,6 +1268,10 @@ watch(media, () => {
   resetFiles();
 });
 watch(workflowId, resetFiles);
+watch(frameWorkflowId, () => {
+  if (echoing) return;
+  syncFrameSize();
+});
 watch(slots, next => {
   (next || []).forEach(slot => ensureList(slot.id));
 }, { immediate: true });
@@ -1078,6 +1298,8 @@ defineExpose({
 
 <style scoped>
 .cartoon-image-field { width: 100%; max-width: 420px; }
+.cartoon-full-size { display: flex; align-items: center; gap: 8px; }
+.cartoon-full-size span { color: #5c6b62; font-size: 13px; }
 .cartoon-image-upload { display: block; }
 .cartoon-generate-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cartoon-asset-marks { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }

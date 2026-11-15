@@ -638,6 +638,14 @@ class ProjectController extends Controller {
     }
   }
 
+  async taskReference() {
+    try {
+      await this.ctx.service.generate.sendReference(this.ctx.params.id, this.ctx.params.index);
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async removeTask() {
     try {
       ok(this.ctx, await this.ctx.service.generate.removeTask(this.ctx.params.id));

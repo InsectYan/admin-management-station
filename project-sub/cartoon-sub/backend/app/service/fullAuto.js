@@ -63,6 +63,13 @@ function rollSeed() {
   return min + Math.floor(Math.random() * (10 ** digits - min));
 }
 
+function takeFreshSeed(bag) {
+  let seed = rollSeed();
+  for (let attempt = 0; attempt < 12 && bag.has(seed); attempt += 1) seed = rollSeed();
+  bag.add(seed);
+  return seed;
+}
+
 function parseJson(raw, fallback) {
   try {
     const data = JSON.parse(raw || '');
@@ -505,6 +512,13 @@ class FullAutoService extends Service {
     }
   }
 
+  takeSeed(run) {
+    if (!this.seedBags) this.seedBags = new Map();
+    const key = Number(run?.id) || 0;
+    if (!this.seedBags.has(key)) this.seedBags.set(key, new Set());
+    return takeFreshSeed(this.seedBags.get(key));
+  }
+
   async alive(run) {
     const fresh = await run.reload();
     return fresh.status === 'running';
@@ -778,7 +792,7 @@ class FullAutoService extends Service {
     await this.track(run, task.id);
     let saved = await this.ctx.service.generate.execute(task, prompt, [], {
       workflowOverride: run.asset_workflow_id,
-      seed: rollSeed(),
+      seed: this.takeSeed(run),
       signal: this.signal(run.id),
       width: run.asset_width,
       height: run.asset_height,
@@ -971,9 +985,9 @@ class FullAutoService extends Service {
     const frameEnd = String(prompt?.frame_end_zh || '').trim();
     const negative = String(prompt?.negative_zh || '').trim();
     const code = shot.shot_code || shot.id;
-    const startFile = await this.ensureStartFrame(run, shot, sameScene, scene, videoText, frameStart, frameEnd, negative);
-    const endFile = await this.ensureEndFrame(run, shot, videoText, frameStart, frameEnd, negative);
-    if (!startFile || !endFile) throw new Error(`${code} 首尾帧没有生成`);
+    const startHeld = await this.ensureStartFrame(run, shot, sameScene, scene, videoText, frameStart, frameEnd, negative);
+    const endHeld = await this.ensureEndFrame(run, shot, videoText, frameStart, frameEnd, negative);
+    if (!startHeld?.bytes || !endHeld?.bytes) throw new Error(`${code} 首尾帧没有生成`);
     await this.mark(run, 'video', 'running', `正在生成镜头 ${code}`);
     const packId = await this.stageShotPack(run, shot);
     try {
@@ -987,13 +1001,18 @@ class FullAutoService extends Service {
         workflow_id: run.video_workflow_id,
         asset_ids: assetIds,
         duration_sec: shot.duration_ms ? Math.max(1, Math.round(shot.duration_ms / 1000)) : 10,
-        seed: rollSeed(),
+        seed: this.takeSeed(run),
         ephemeral_refmod_id: packId,
+        frame_tasks: {
+          start_task_id: startHeld.taskId || null,
+          end_task_id: endHeld.taskId || null,
+        },
         images: [{
           id: endSlot.id,
           slot_id: endSlot.id,
           filename: 'end.png',
-          data_base64: endFile.toString('base64'),
+          data_base64: endHeld.bytes.toString('base64'),
+          label: '尾帧',
         }],
       }, 'refmod');
       if (task?.id) await this.track(run, task.id);
@@ -1022,20 +1041,20 @@ class FullAutoService extends Service {
     if (planted) {
       await shot.update({ manual_frame_path: '' });
       await this.pushLog(run, 'video', `${code} 与上一镜同一场景「${scene}」，首帧用上一镜尾帧`);
-      return fs.readFileSync(planted);
+      return { bytes: fs.readFileSync(planted), taskId: null };
     }
     const manual = this.frameAbsolute(fresh.manual_frame_path);
     if (manual) {
       await this.pushLog(run, 'video', `${code} 已有首帧`);
-      return fs.readFileSync(manual);
+      return { bytes: fs.readFileSync(manual), taskId: null };
     }
     await this.pushLog(run, 'video', `${code} 缺少首帧，按提示词生成`);
-    const file = await this.renderFrame(run, shot, 'start', videoText, frameStart, frameEnd, negative);
+    const rendered = await this.renderFrame(run, shot, 'start', videoText, frameStart, frameEnd, negative);
     await this.ctx.service.project.saveManualFrame(run.project_id, shot.id, {
       filename: 'manual.png',
-      data_base64: file.toString('base64'),
+      data_base64: rendered.bytes.toString('base64'),
     });
-    return file;
+    return rendered;
   }
 
   async ensureEndFrame(run, shot, videoText, frameStart, frameEnd, negative) {
@@ -1044,15 +1063,15 @@ class FullAutoService extends Service {
     const existing = this.frameAbsolute(relative);
     if (existing) {
       await this.pushLog(run, 'video', `${code} 已有尾帧`);
-      return fs.readFileSync(existing);
+      return { bytes: fs.readFileSync(existing), taskId: null };
     }
     await this.pushLog(run, 'video', `${code} 缺少尾帧，按提示词生成`);
-    const file = await this.renderFrame(run, shot, 'end', videoText, frameStart, frameEnd, negative);
+    const rendered = await this.renderFrame(run, shot, 'end', videoText, frameStart, frameEnd, negative);
     const absolute = resolveInside(outputRoot(this.app), relative);
     if (!absolute) throw new Error(`${code} 尾帧路径无效`);
     await fs.promises.mkdir(path.dirname(absolute), { recursive: true });
-    await fs.promises.writeFile(absolute, file);
-    return file;
+    await fs.promises.writeFile(absolute, rendered.bytes);
+    return rendered;
   }
 
   frameStyleLead(style, frameText) {
@@ -1092,7 +1111,7 @@ class FullAutoService extends Service {
       negative_zh: negative,
       workflow_id: run.frame_workflow_id,
       frame_target: target,
-      seed: rollSeed(),
+      seed: this.takeSeed(run),
       asset_ids: [],
       images,
       lead_zh: lead,
@@ -1105,7 +1124,7 @@ class FullAutoService extends Service {
     if (!task || task.status !== 'success') {
       throw new Error(task?.error_message || `${shot.shot_code || shot.id} ${target === 'end' ? '尾帧' : '首帧'}没有生成`);
     }
-    return this.readOutput(task.id);
+    return { bytes: await this.readOutput(task.id), taskId: task.id };
   }
 
   referenceSlots(choice) {
@@ -1133,6 +1152,7 @@ class FullAutoService extends Service {
     const batch = files.map((file, index) => ({
       filename: `ref-${index + 1}${file.ext || '.png'}`,
       data_base64: file.bytes.toString('base64'),
+      label: file.label,
     }));
     if (slot.expand || slots.length === 1) {
       return [{ id: slot.id, slot_id: slot.id, files: batch }];
@@ -1142,6 +1162,7 @@ class FullAutoService extends Service {
       slot_id: slots[index].id,
       filename: file.filename,
       data_base64: file.data_base64,
+      label: file.label,
     }));
   }
 

@@ -321,7 +321,13 @@
           <el-empty v-if="!shots.length" description="还没有镜头">
             <el-button type="primary" @click="selectNode('storyboard')">去镜头</el-button>
           </el-empty>
-          <el-table v-else class="cartoon-preview-table" :data="previewPageRows" @row-click="pickShot">
+          <div v-else class="cartoon-preview-filter">
+            <span>快照</span>
+            <el-select :model-value="previewImportId" clearable placeholder="全部快照" style="width: 280px" @change="setPreviewImport">
+              <el-option v-for="item in previewImports" :key="item.id" :label="previewImportLabel(item)" :value="String(item.id)" />
+            </el-select>
+          </div>
+          <el-table v-if="previewShots.length" class="cartoon-preview-table" :data="previewPageRows" @row-click="pickShot">
             <el-table-column prop="shot_code" label="镜头" width="130" fixed="left" />
             <el-table-column prop="chapter_title" label="章节" width="220" show-overflow-tooltip />
             <el-table-column label="描述" width="560">
@@ -340,6 +346,7 @@
               </template>
             </el-table-column>
           </el-table>
+          <el-empty v-if="shots.length && !previewShots.length" description="这个快照还没有镜头" />
           <el-pagination
             v-if="previewShots.length"
             v-model:current-page="previewPage"
@@ -684,7 +691,7 @@ async function stopPipeline() {
 const shotQuery = computed(() => String(route.query.shot || ''));
 const previewShots = computed(() => {
   const imports = bundle.value?.imports || [];
-  const importId = String(route.query.import || '');
+  const importId = previewImportId.value;
   return shots.value.filter(item => !importId || String(item.import_id) === importId).map(item => {
     const chapter = imports.find(row => String(row.id) === String(item.import_id));
     return {
@@ -693,6 +700,21 @@ const previewShots = computed(() => {
     };
   });
 });
+const previewImportId = ref(String(route.query.import || ''));
+const previewImports = computed(() => (bundle.value?.imports || []).filter(item => !item.deleted_at));
+function previewImportLabel(item) {
+  const title = String(item.chapter_title || '').trim();
+  return title || `快照 #${item.id}`;
+}
+function setPreviewImport(value) {
+  previewImportId.value = value ? String(value) : '';
+  previewPage.value = 1;
+  const query = { ...route.query, node: 'preview' };
+  delete query.shot;
+  if (previewImportId.value) query.import = previewImportId.value;
+  else delete query.import;
+  router.replace({ query });
+}
 const previewPage = ref(1);
 const previewPageRows = computed(() => previewShots.value.slice((previewPage.value - 1) * 10, previewPage.value * 10));
 watch(previewShots, (rows) => {
@@ -1150,7 +1172,9 @@ function selectNode(id) {
   router.replace({ query });
 }
 function pickShot(row) {
-  router.replace({ query: { node: node.value, shot: String(row.id) } });
+  const query = { node: node.value, shot: String(row.id) };
+  if (previewImportId.value) query.import = previewImportId.value;
+  router.replace({ query });
 }
 const workflowOpen = ref(false);
 const workflowLoading = ref(false);
@@ -1547,6 +1571,8 @@ onUnmounted(() => {
 .cartoon-asset-table { cursor: pointer; }
 .cartoon-preview-table { width: 100%; }
 .cartoon-pager { margin-top: 12px; justify-content: flex-end; }
+.cartoon-preview-filter { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.cartoon-preview-filter span { color: #5c6b62; }
 .cartoon-preview-table :deep(.el-table__row),
 .cartoon-preview-table :deep(.el-button) { cursor: pointer; }
 </style>

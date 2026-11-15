@@ -16,6 +16,13 @@ function rollSeed() {
   return min + Math.floor(Math.random() * (10 ** digits - min));
 }
 
+function takeFreshSeed(bag) {
+  let seed = rollSeed();
+  for (let attempt = 0; attempt < 12 && bag.has(seed); attempt += 1) seed = rollSeed();
+  bag.add(seed);
+  return seed;
+}
+
 function skipped(message) {
   const err = new Error(message);
   err.skip = true;
@@ -31,6 +38,13 @@ function stopped(err) {
 }
 
 class AutoJobService extends Service {
+  takeSeed(job) {
+    if (!this.seedBags) this.seedBags = new Map();
+    const key = Number(job?.id) || 0;
+    if (!this.seedBags.has(key)) this.seedBags.set(key, new Set());
+    return takeFreshSeed(this.seedBags.get(key));
+  }
+
   async itemsOf(jobId) {
     return this.ctx.model.AutoJobItem.findAll({
       where: { job_id: jobId },
@@ -125,7 +139,7 @@ class AutoJobService extends Service {
         workflow_id: workflow.id,
         asset_ids: bound,
         duration_sec: shot.duration_ms ? Math.round(shot.duration_ms / 1000) : 10,
-        seed: rollSeed(),
+        seed: this.takeSeed(job),
       },
     };
   }
