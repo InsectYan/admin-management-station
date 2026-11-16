@@ -578,6 +578,10 @@
         <el-form-item label="每个镜头的生成次数">
           <el-input-number v-model="allResetCount" :min="1" :max="8" :step="1" :precision="0" controls-position="right" />
         </el-form-item>
+        <el-form-item label="是否生成尾帧">
+          <el-checkbox v-model="allResetGenerateEnd">生成尾帧</el-checkbox>
+          <p class="cartoon-module__hint">不勾选则这次不提交尾帧，同一场景的下一镜不拿上一镜成片尾帧当首帧。</p>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="allResetOpen = false">取消</el-button>
@@ -589,6 +593,10 @@
       <el-form label-position="top" @submit.prevent>
         <el-form-item label="每个镜头的生成次数">
           <el-input-number v-model="videoResetCount" :min="1" :max="8" :step="1" :precision="0" controls-position="right" />
+        </el-form-item>
+        <el-form-item label="是否生成尾帧">
+          <el-checkbox v-model="videoResetGenerateEnd">生成尾帧</el-checkbox>
+          <p class="cartoon-module__hint">不勾选则这次不提交尾帧，同一场景的下一镜不拿上一镜成片尾帧当首帧。</p>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -634,7 +642,11 @@
         </el-form-item>
         <el-form-item label="每个镜头的视频条数">
           <el-input-number v-model="fullAutoVideoCount" :min="1" :max="8" :step="1" :precision="0" controls-position="right" />
-          <p class="cartoon-module__hint">每个镜头生成这么多条视频，默认 1 条，最多 8 条。每条使用不同种子。</p>
+          <p class="cartoon-module__hint">每个镜头生成这么多条视频，默认 1 条，最多 8 条。每条使用不同种子。每一条都会重新生成首帧；勾选尾帧时，尾帧也按条重画。同一场景里，上一镜第 1 条的成片尾帧给下一镜第 1 条做首帧，第 2 条对第 2 条。</p>
+        </el-form-item>
+        <el-form-item label="是否生成尾帧">
+          <el-checkbox v-model="fullAutoGenerateEnd">生成尾帧</el-checkbox>
+          <p class="cartoon-module__hint">不勾选则每个镜头只生成首帧，视频不提交尾帧，下一镜也不衔接上一镜尾帧。</p>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -1842,10 +1854,13 @@ const fullAutoLoading = ref(false);
 const fullAutoStarting = ref(false);
 const fullAutoFresh = ref(false);
 const fullAutoVideoCount = ref(1);
+const fullAutoGenerateEnd = ref(true);
 const videoResetOpen = ref(false);
 const videoResetCount = ref(1);
+const videoResetGenerateEnd = ref(true);
 const allResetOpen = ref(false);
 const allResetCount = ref(1);
+const allResetGenerateEnd = ref(true);
 const fullAutoShotCount = computed(() => {
   const id = fullAutoTarget.value?.id;
   if (!id) return 0;
@@ -1877,6 +1892,7 @@ async function runFullAuto(item) {
   if (flowBusy.value) return;
   fullAutoFresh.value = false;
   fullAutoVideoCount.value = 1;
+  fullAutoGenerateEnd.value = true;
   fullAutoTarget.value = item;
   fullAutoOpen.value = true;
   if (fullAutoWorkflows.value.length) return;
@@ -1911,6 +1927,7 @@ async function submitFullAuto() {
         frame_height: fullAutoFrameHeight.value,
         fresh: fullAutoFresh.value,
         video_count: fullAutoVideoCount.value,
+        generate_end: fullAutoGenerateEnd.value,
       },
     });
     fullAutoOpen.value = false;
@@ -2349,12 +2366,12 @@ function continuingBatch(liveTasks) {
   }
   return null;
 }
-async function startServerVideo(shotIds, videoCount = 1) {
+async function startServerVideo(shotIds, videoCount = 1, generateEnd = true) {
   const count = Math.min(8, Math.max(1, Math.round(Number(videoCount) || 1)));
   try {
     const job = await request(`/projects/${projectKey()}/auto-jobs`, {
       method: 'post',
-      data: { shot_ids: shotIds, video_count: count },
+      data: { shot_ids: shotIds, video_count: count, generate_end: generateEnd !== false },
     });
     applyAutoJob(job);
     armServerPoll();
@@ -2382,6 +2399,7 @@ function openVideoReset() {
     return;
   }
   videoResetCount.value = 1;
+  videoResetGenerateEnd.value = true;
   videoResetOpen.value = true;
 }
 function openAllReset() {
@@ -2391,6 +2409,7 @@ function openAllReset() {
     return;
   }
   allResetCount.value = 1;
+  allResetGenerateEnd.value = true;
   allResetOpen.value = true;
 }
 async function confirmAllReset() {
@@ -2408,7 +2427,7 @@ async function confirmAllReset() {
   const outcome = await runAuto('prompt', null, true, { quiet: true });
   if (!outcome || outcome.stopped) return;
   if (outcome.failed) ElMessage.warning(`有 ${outcome.failed} 条提示词没写成，视频仍会按次数提交`);
-  await startServerVideo(shots.map(row => row.id), count);
+  await startServerVideo(shots.map(row => row.id), count, allResetGenerateEnd.value);
 }
 async function confirmVideoReset() {
   const shots = boardShots.value;
@@ -2422,7 +2441,7 @@ async function confirmVideoReset() {
     return;
   }
   videoResetOpen.value = false;
-  await startServerVideo(shots.map(row => row.id), count);
+  await startServerVideo(shots.map(row => row.id), count, videoResetGenerateEnd.value);
 }
 async function resetAuto(mode) {
   if (autoRunning.value || flowBusy.value) return;

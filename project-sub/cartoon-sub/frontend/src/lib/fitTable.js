@@ -20,14 +20,37 @@ function inMultiTable(el) {
   return Boolean(host && host.querySelectorAll('.el-table').length > 1);
 }
 
+const TABLE_METHODS = [
+  'clearSelection',
+  'getSelectionRows',
+  'getHalfSelectionRows',
+  'toggleRowSelection',
+  'toggleAllSelection',
+  'toggleRowExpansion',
+  'setCurrentRow',
+  'clearSort',
+  'clearFilter',
+  'doLayout',
+  'sort',
+  'scrollTo',
+  'setScrollTop',
+  'setScrollLeft',
+  'updateKeyChildren',
+];
+
 export function installFitTable(app) {
   const Original = app.component('ElTable');
   if (!Original) return;
   app.component('ElTable', defineComponent({
     name: 'ElTable',
     inheritAttrs: false,
-    setup(_, { attrs, slots }) {
+    setup(_, { attrs, slots, expose }) {
       const root = ref(null);
+      const api = {};
+      TABLE_METHODS.forEach(name => {
+        api[name] = (...args) => root.value?.[name]?.(...args);
+      });
+      expose(api);
       const maxHeight = ref(null);
       let observer;
       const onResize = () => measure();

@@ -271,6 +271,15 @@ function rowSelectable(row) {
 function onSelect(list) {
   selected.value = list;
 }
+function applySelection(ids) {
+  const keep = new Set(ids || []);
+  const rowsKept = filtered.value.filter(row => keep.has(row.id));
+  selected.value = rowsKept;
+  const table = tableRef.value;
+  if (typeof table?.clearSelection !== 'function') return;
+  table.clearSelection();
+  rowsKept.forEach(row => table.toggleRowSelection?.(row, true));
+}
 async function load() {
   loading.value = true;
   loadError.value = '';
@@ -323,8 +332,7 @@ async function removeSelected() {
     }
     await load();
     await nextTick();
-    tableRef.value?.clearSelection();
-    selected.value = [];
+    applySelection(skipped.map(item => item.id));
   } catch (err) {
     ElMessage.error(err.message || '删除失败');
   }
@@ -343,7 +351,10 @@ async function removeRow(row) {
     await request(`/outputs/${row.id}`, { method: 'delete' });
     if (detail.value?.id === row.id) drawerOpen.value = false;
     ElMessage.success('产物已删除');
+    const rest = selected.value.map(item => item.id).filter(id => id !== row.id);
     await load();
+    await nextTick();
+    applySelection(rest);
   } catch (err) {
     ElMessage.error(err.message || '删除失败');
   }
@@ -354,7 +365,7 @@ function openPrompt(row) {
 function refreshFilter() {
   filterTick.value += 1;
   page.value = 1;
-  tableRef.value?.clearSelection();
+  nextTick(() => applySelection([]));
 }
 onMounted(load);
 </script>

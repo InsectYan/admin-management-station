@@ -107,7 +107,8 @@ class AutoJobService extends Service {
     return items;
   }
 
-  async videoPayload(projectId, shot) {
+  async videoPayload(job, shot) {
+    const projectId = job.project_id;
     const prompt = await this.ctx.model.Prompt.findOne({ where: { shot_id: shot.id } });
     const positive = String(prompt?.positive_zh || '').trim();
     if (!positive) throw skipped(`${shot.shot_code || shot.id} 没有视频提示词`);
@@ -149,7 +150,7 @@ class AutoJobService extends Service {
     };
   }
 
-  async start(projectId, shotIds, videoCountValue) {
+  async start(projectId, shotIds, videoCountValue, generateEnd) {
     const project = await this.ctx.model.Project.findByPk(projectId);
     if (!project) this.ctx.throw(404, '项目不存在');
     const ids = [ ...new Set((Array.isArray(shotIds) ? shotIds : []).map(id => Number(id)).filter(id => id > 0)) ];
@@ -175,6 +176,7 @@ class AutoJobService extends Service {
       status: 'running',
       total: ordered.length,
       video_count: perShot,
+      generate_end: generateEnd !== false,
     });
     await this.ctx.model.AutoJobItem.bulkCreate(ordered.map((shot, index) => ({
       job_id: job.id,
@@ -319,7 +321,13 @@ class AutoJobService extends Service {
             return;
           }
           await item.update({ reason: perShot > 1 ? `正在提交第 ${nth + 1}/${perShot} 条` : '正在提交' });
-          const payload = await this.videoPayload(job.project_id, shot);
+          if (job.generate_end === false && /b\d+-from-prev\.png$/.test(String(shot.manual_frame_path || ''))) {
+            await shot.update({ manual_frame_path: '' });
+          }
+          if (job.generate_end !== false) await this.ctx.service.fullAuto.adoptPreviousEnd(shot, nth);
+          const payload = await this.videoPayload(job, shot);
+          payload.data.generate_end = job.generate_end !== false;
+          payload.data.chain_batch = nth;
           task = await this.ctx.service.generate.start(job.project_id, shot.id, payload.data, payload.kind);
           if (!task?.id) throw new Error('没有拿到生成任务');
           await item.update({ task_id: task.id, reason: perShot > 1 ? `正在生成第 ${nth + 1}/${perShot} 条` : '正在生成' });

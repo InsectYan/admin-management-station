@@ -182,6 +182,12 @@ function describeCallInputs(apiJson) {
   return { positive: findPositive(graph), negative: findNegative(graph), images };
 }
 
+function negativeKeysOf(node) {
+  const inputs = node?.inputs || {};
+  if (typeof inputs.negative_prompt === 'string') return [ 'negative_prompt' ];
+  return promptKeysOf(node);
+}
+
 function findNegative(graph) {
   const seeds = [];
   Object.values(graph || {}).forEach(node => {
@@ -194,7 +200,7 @@ function findNegative(graph) {
       seen.add(currentId);
       const node = graph[currentId];
       if (!node) break;
-      const keys = promptKeysOf(node);
+      const keys = negativeKeysOf(node);
       if (keys.length) {
         return { node_id: currentId, key: keys[0], keys, value: node.inputs[keys[0]] };
       }

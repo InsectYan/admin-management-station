@@ -393,35 +393,8 @@ function applyQwen21OutputSize(graph) {
     const width = Number(node.inputs?.width);
     const height = Number(node.inputs?.height);
     if (!(width >= 64) || !(height >= 64)) return;
-    const targetW = snap32(width);
-    const targetH = snap32(height);
-    node.inputs.width = targetW;
-    node.inputs.height = targetH;
-    node.inputs.resolution = 0;
-    Object.entries(node.inputs).forEach(([ key, value ]) => {
-      if (!Array.isArray(value) || !/^images\.image_\d+$/.test(key)) return;
-      const current = graph[String(value[0])];
-      if (current?.class_type === 'ImageScale') {
-        current.inputs.width = targetW;
-        current.inputs.height = targetH;
-        return;
-      }
-      const scaleId = String(Object.keys(graph).reduce((max, id) => {
-        const num = Number(id);
-        return Number.isFinite(num) ? Math.max(max, num) : max;
-      }, 0) + 1);
-      graph[scaleId] = {
-        class_type: 'ImageScale',
-        inputs: {
-          image: value,
-          upscale_method: 'lanczos',
-          width: targetW,
-          height: targetH,
-          crop: 'disabled',
-        },
-      };
-      node.inputs[key] = [ scaleId, 0 ];
-    });
+    node.inputs.width = snap32(width);
+    node.inputs.height = snap32(height);
   });
   return graph;
 }

@@ -13,6 +13,8 @@ const { begin, finish, cancelProject } = require('../lib/activeRuns');
 const { usageSummary } = require('../lib/usageSummary');
 const { cardLine } = require('../lib/assetProfile');
 const { promptCoveredMs } = require('../lib/promptDuration');
+const { collapseFrameStyle, referenceUseLine, withReferenceUse } = require('../lib/framePrompt');
+const { styleLabelOf, stylePromptOf } = require('../lib/cartoonMeta');
 
 function snap32(value) {
   const n = Number(value);
@@ -48,9 +50,15 @@ function applySize(graph, width, height) {
   const nextHeight = snap32(height);
   if (!nextWidth || !nextHeight) return graph;
   Object.values(graph || {}).forEach(node => {
-    if (!(Number(node?.inputs?.width) > 0) || !(Number(node?.inputs?.height) > 0)) return;
-    node.inputs.width = nextWidth;
-    node.inputs.height = nextHeight;
+    const inputs = node?.inputs;
+    if (!inputs) return;
+    const numeric = value => typeof value === 'number' || (typeof value === 'string' && String(value).trim() && Number.isFinite(Number(value)));
+    if (!numeric(inputs.width) || !numeric(inputs.height)) return;
+    const filled = Number(inputs.width) > 0 && Number(inputs.height) > 0;
+    const qwen = node.class_type === 'TextEncodeQwenImage21';
+    if (!filled && !qwen) return;
+    inputs.width = nextWidth;
+    inputs.height = nextHeight;
   });
   return graph;
 }
@@ -127,6 +135,12 @@ function mediaOf(row, detail) {
 }
 
 const PROMPT_KEYS = [ 'text', 'prompt', 'positive_prompt', 'caption', 'string', 'text_g', 'text_l', 'value', 'negative_prompt' ];
+
+function chainBatchOf(value) {
+  if (value == null || value === '') return null;
+  const batch = Number(value);
+  return Number.isInteger(batch) && batch >= 0 ? batch : null;
+}
 
 function parseBrief(raw) {
   if (!raw) return null;
@@ -378,18 +392,25 @@ class GenerateService extends Service {
       const refs = await this.imagesFromAssets(projectId, payload.reference_asset_ids, choice);
       if (refs.length) rawImages = rawImages.concat(refs);
     }
+    let frameEntries = [];
     if (!videoKind) {
-      const entries = await this.withPictureFacts(projectId, this.referenceEntries(rawImages));
-      const lock = this.ctx.service.refmod.lockLines(entries);
+      frameEntries = await this.withPictureFacts(projectId, this.referenceEntries(rawImages));
+      const lock = this.ctx.service.refmod.lockLines(frameEntries);
       if (lock) {
         if (lead && positive.startsWith(`${lead}\n`)) positive = `${lead}\n${lock}\n${positive.slice(lead.length + 1)}`;
         else positive = `${lock}\n${positive}`;
       }
     }
+    const project = await this.ctx.model.Project.findByPk(projectId);
+    if (!videoKind) {
+      positive = withReferenceUse(
+        collapseFrameStyle(positive, styleLabelOf(project?.visual_style), stylePromptOf(project?.visual_style)),
+        referenceUseLine(frameEntries),
+      );
+    }
     const compliance = await complianceCheck(this.ctx, positive);
     const hit = compliance?.hits?.[0];
     if (hit) this.ctx.throw(400, `命中规则 ${hit.id}`);
-    const project = await this.ctx.model.Project.findByPk(projectId);
     if (project?.deleted_at) this.ctx.throw(400, '项目已删除');
     const caps = project
       ? await this.ctx.model.Rule.findAll({ where: { content_type: project.content_type, kind: 'cost', enabled: true } })
@@ -428,7 +449,14 @@ class GenerateService extends Service {
       durationSec = seconds;
     }
     if (useRefs) await this.assertRefmodWorkflow(workflowOverride);
-    const images = await this.attachFrames(freshShot, workflowOverride, rawImages);
+    if (payload.generate_end === false && workflowOverride) {
+      const chosen = await this.choiceById(workflowOverride);
+      const endIds = new Set((chosen.images || []).filter(slot => slot.role === 'end').map(slot => slot.id));
+      rawImages = rawImages.filter(item => !endIds.has(item.slot_id || item.id));
+    }
+    const images = await this.attachFrames(freshShot, workflowOverride, rawImages, {
+      allowPlanted: payload.generate_end !== false,
+    });
 
     const profileRow = project
       ? await this.ctx.model.AgentConfig.findOne({ where: { content_type: project.content_type, role: 'video' } })
@@ -469,6 +497,8 @@ class GenerateService extends Service {
       negative: payload.negative_zh != null ? String(payload.negative_zh) : '',
       signal: stop.signal,
       refmodPicks: picks,
+      chainBatch: chainBatchOf(payload.chain_batch),
+      chainEnd: payload.generate_end !== false,
     }).then(saved => {
       finish(this.app, claim.row, null, saved);
       return saved;
@@ -481,7 +511,7 @@ class GenerateService extends Service {
     }
   }
 
-  async attachFrames(shot, workflowId, images) {
+  async attachFrames(shot, workflowId, images, options = {}) {
     const list = Array.isArray(images) ? images.slice() : [];
     if (!workflowId || !shot) return list;
     const chosen = await this.choiceById(workflowId);
@@ -493,7 +523,7 @@ class GenerateService extends Service {
       return list;
     }
     const current = await this.ctx.model.Shot.findByPk(shot.id);
-    const relative = current?.manual_frame_path || current?.first_frame_path;
+    const relative = current?.manual_frame_path || (options.allowPlanted === false ? '' : current?.first_frame_path);
     if (!relative) {
       const error = new Error('这条工作流需要首帧。没有上镜尾帧时，请先上传指定首帧');
       error.status = 400;
@@ -564,8 +594,19 @@ class GenerateService extends Service {
 
   async plantTail(task, lastFile) {
     if (!task.shot_id) return;
+    const brief = parseBrief(task.generation_brief) || {};
+    if (brief.chain_end === false) return;
     const shot = await this.ctx.model.Shot.findByPk(task.shot_id);
     if (!shot) return;
+    const batch = chainBatchOf(brief.chain_batch);
+    if (batch != null) {
+      const relative = `frames/${shot.project_id}/${shot.id}/b${batch}-last.png`;
+      const absolute = resolveInside(outputRoot(this.app), relative);
+      if (absolute) {
+        await fs.promises.mkdir(path.dirname(absolute), { recursive: true });
+        await fs.promises.copyFile(lastFile, absolute);
+      }
+    }
     const next = await this.ctx.model.Shot.findOne({
       where: {
         project_id: shot.project_id,
@@ -1435,6 +1476,8 @@ class GenerateService extends Service {
           height: Number(options.height) > 0 ? Number(options.height) : null,
           references: Array.isArray(options.references) ? options.references : [],
           frames: options.frames || null,
+          chain_batch: chainBatchOf(options.chainBatch),
+          chain_end: options.chainEnd !== false,
         },
       });
     } catch (err) {

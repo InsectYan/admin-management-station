@@ -30,6 +30,7 @@ module.exports = app => {
     fresh: { type: BOOLEAN, allowNull: false, defaultValue: false },
     scope: { type: STRING(32), allowNull: false, defaultValue: 'all' },
     video_count: { type: INTEGER, allowNull: false, defaultValue: 1 },
+    generate_end: { type: BOOLEAN, allowNull: false, defaultValue: true },
     temp_refmod_id: { type: INTEGER, allowNull: true },
   }, {
     tableName: 'cartoon_full_runs',

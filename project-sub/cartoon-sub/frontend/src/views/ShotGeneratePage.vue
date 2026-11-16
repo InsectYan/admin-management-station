@@ -240,6 +240,7 @@ import { request, resolveApiBase } from '../services/apiConfig.js';
 import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { canMake } from '../lib/appAccess.js';
 import { promptCoveredMs } from '../lib/promptDuration.js';
+import { collapseFrameStyle, referenceUseLine, withReferenceUse } from '../lib/framePrompt.js';
 
 const props = defineProps({
   plain: { type: Boolean, default: false },
@@ -1080,18 +1081,21 @@ const frameRefAssets = computed(() => {
 });
 const frameSubmitPreview = computed(() => {
   const text = String(framePrompt.value || '').trim();
-  const lock = pictureLock(frameRefAssets.value.map(item => {
+  const entries = frameRefAssets.value.map(item => {
     const matched = String(item.label || '').match(/^(人物|角色|场景)「([^」]+)」/);
     if (!matched) return null;
-    const asset = projectAssets.value.find(item => item.name === matched[2] && (matched[1] === '场景' ? item.kind === 'scene' : item.kind === 'character'));
+    const asset = projectAssets.value.find(row => row.name === matched[2] && (matched[1] === '场景' ? row.kind === 'scene' : row.kind === 'character'));
     return {
       name: matched[2],
       scene: matched[1] === '场景',
       note: `${matched[1]}「${matched[2]}」设定总图`,
       fact: matched[1] === '场景' ? '' : cardFact(asset),
     };
-  }).filter(Boolean));
-  return [ frameLead(text), lock, text, stageLineText.value ].filter(Boolean).join('\n');
+  }).filter(Boolean);
+  const lock = pictureLock(entries);
+  const joined = [ lock, text, stageLineText.value ].filter(Boolean).join('\n');
+  const styled = collapseFrameStyle(joined, projectStyle.value?.label, projectStyle.value?.prompt);
+  return withReferenceUse(styled, referenceUseLine(entries));
 });
 function syncFrameSize() {
   const workflow = frameWorkflow.value;

@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { Op } = require('sequelize');
 const Service = require('egg').Service;
 const { invokeSkill } = require('../lib/agentProxy');
 const { cancelProject } = require('../lib/activeRuns');
@@ -263,8 +264,9 @@ class FullAutoService extends Service {
       && /满血-h3-首尾帧/i.test(entry.name)
       && /\[refmod\]/i.test(entry.name));
     if (!videoWorkflow) this.ctx.throw(400, '没有找到满血 H3 首尾帧 RefMod 工作流');
+    const generateEnd = payload.generate_end !== false;
     const endSlot = (videoWorkflow.images || []).find(slot => slot.role === 'end');
-    if (!endSlot) this.ctx.throw(400, '满血首尾帧工作流没有尾帧入口');
+    if (generateEnd && !endSlot) this.ctx.throw(400, '满血首尾帧工作流没有尾帧入口');
     const run = await this.ctx.model.FullRun.create({
       project_id: project.id,
       import_id: chapter.id,
@@ -287,6 +289,7 @@ class FullAutoService extends Service {
       fresh: Boolean(payload.fresh),
       scope: 'all',
       video_count: videoCount(payload.video_count),
+      generate_end: generateEnd,
     });
     const runId = run.id;
     setImmediate(() => {
@@ -907,11 +910,12 @@ class FullAutoService extends Service {
   }
 
   async dropFreshFrames(run, shot) {
-    const names = [ 'manual.png', 'end.png' ];
-    for (const name of names) {
-      const relative = `frames/${run.project_id}/${shot.id}/${name}`;
-      const absolute = resolveInside(outputRoot(this.app), relative);
-      if (absolute && fs.existsSync(absolute)) await fs.promises.unlink(absolute).catch(() => {});
+    const dir = resolveInside(outputRoot(this.app), `frames/${run.project_id}/${shot.id}`);
+    if (dir && fs.existsSync(dir)) {
+      const names = await fs.promises.readdir(dir);
+      await Promise.all(names
+        .filter(name => name === 'manual.png' || name === 'end.png' || /^b\d+-/.test(name))
+        .map(name => fs.promises.unlink(path.join(dir, name)).catch(() => {})));
     }
     if (shot.manual_frame_path) await shot.update({ manual_frame_path: '' });
   }
@@ -925,8 +929,9 @@ class FullAutoService extends Service {
     const want = videoCount(run.video_count);
     const readyCounts = run.fresh ? new Map() : await this.videoShotCounts(run.project_id, shots.map(item => item.id));
     const videoChoice = await this.ctx.service.generate.choiceById(run.video_workflow_id);
+    const wantEnd = run.generate_end !== false;
     const endSlot = (videoChoice.images || []).find(slot => slot.role === 'end');
-    if (!endSlot) throw new Error('满血首尾帧工作流没有尾帧入口');
+    if (wantEnd && !endSlot) throw new Error('满血首尾帧工作流没有尾帧入口');
     let previousScene = '';
     for (let index = 0; index < shots.length; index += 1) {
       const shot = await this.ctx.model.Shot.findByPk(shots[index].id);
@@ -947,11 +952,15 @@ class FullAutoService extends Service {
         continue;
       }
       if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
+      if (run.fresh) await this.dropFreshFrames(run, shot);
       for (let nth = 0; nth < missing; nth += 1) {
         if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
         const made = have + nth + 1;
         await this.mark(run, 'video', 'running', `正在生成镜头 ${code} 第 ${made}/${want} 条（${index + 1}/${shots.length}）`);
-        await this.shoot(run, shot, endSlot, same, scene, { keepFrames: nth > 0 });
+        await this.shoot(run, shot, endSlot, same, scene, {
+          batchIndex: have + nth,
+          wantEnd,
+        });
       }
       done.add(shot.id);
       const raw = JSON.stringify([ ...done ]);
@@ -979,16 +988,24 @@ class FullAutoService extends Service {
       if (!settled || settled.status !== 'success') throw new Error(settled?.error_message || `${code} 视频没有生成`);
       return;
     }
-    if (run.fresh && !options.keepFrames) await this.dropFreshFrames(run, shot);
     const prompt = await this.fillShotPrompt(run, shot, { quiet: true });
     const videoText = String(prompt?.positive_zh || '').trim();
     const frameStart = String(prompt?.frame_start_zh || '').trim();
     const frameEnd = String(prompt?.frame_end_zh || '').trim();
     const negative = String(prompt?.negative_zh || '').trim();
     const code = shot.shot_code || shot.id;
-    const startHeld = await this.ensureStartFrame(run, shot, sameScene, scene, videoText, frameStart, frameEnd, negative);
-    const endHeld = await this.ensureEndFrame(run, shot, videoText, frameStart, frameEnd, negative);
-    if (!startHeld?.bytes || !endHeld?.bytes) throw new Error(`${code} 首尾帧没有生成`);
+    const wantEnd = options.wantEnd !== false;
+    const batchIndex = Number.isInteger(options.batchIndex) ? options.batchIndex : 0;
+    const startHeld = await this.ensureStartFrame(run, shot, sameScene, scene, videoText, frameStart, frameEnd, negative, {
+      batchIndex,
+      chain: wantEnd && sameScene,
+      regen: true,
+    });
+    const endHeld = wantEnd
+      ? await this.ensureEndFrame(run, shot, videoText, frameStart, frameEnd, negative, { batchIndex, regen: true })
+      : null;
+    if (!startHeld?.bytes) throw new Error(`${code} 首帧没有生成`);
+    if (wantEnd && !endHeld?.bytes) throw new Error(`${code} 尾帧没有生成`);
     await this.mark(run, 'video', 'running', `正在生成镜头 ${code}`);
     const packId = await this.stageShotPack(run, shot);
     try {
@@ -1008,17 +1025,19 @@ class FullAutoService extends Service {
         })(),
         seed: this.takeSeed(run),
         ephemeral_refmod_id: packId,
+        generate_end: wantEnd,
+        chain_batch: batchIndex,
         frame_tasks: {
           start_task_id: startHeld.taskId || null,
-          end_task_id: endHeld.taskId || null,
+          end_task_id: endHeld?.taskId || null,
         },
-        images: [{
+        images: wantEnd && endSlot ? [{
           id: endSlot.id,
           slot_id: endSlot.id,
           filename: 'end.png',
           data_base64: endHeld.bytes.toString('base64'),
           label: '尾帧',
-        }],
+        }] : [],
       }, 'refmod');
       if (task?.id) await this.track(run, task.id);
       if (!await this.alive(run)) {
@@ -1039,21 +1058,66 @@ class FullAutoService extends Service {
     return absolute;
   }
 
-  async ensureStartFrame(run, shot, sameScene, scene, videoText, frameStart, frameEnd, negative) {
+  async adoptPreviousEnd(shot, batchIndex) {
+    if (!Number.isInteger(batchIndex) || batchIndex < 0) return false;
+    const prev = await this.previousShot(shot);
+    if (!prev) return false;
+    const chapter = shot.import_id ? await this.ctx.model.Import.findByPk(shot.import_id) : null;
+    const script = chapter?.script_data || {};
+    const scene = sceneTitle(script, shot);
+    const prevScene = sceneTitle(script, prev);
+    if (!scene || scene !== prevScene) return false;
+    const planted = this.frameAbsolute(`frames/${shot.project_id}/${prev.id}/b${batchIndex}-last.png`);
+    if (!planted) return false;
+    const relative = `frames/${shot.project_id}/${shot.id}/b${batchIndex}-from-prev.png`;
+    const absolute = resolveInside(outputRoot(this.app), relative);
+    if (!absolute) return false;
+    await fs.promises.mkdir(path.dirname(absolute), { recursive: true });
+    await fs.promises.copyFile(planted, absolute);
+    await shot.update({ manual_frame_path: relative });
+    return true;
+  }
+
+  async previousShot(shot) {
+    return this.ctx.model.Shot.findOne({
+      where: {
+        project_id: shot.project_id,
+        import_id: shot.import_id || null,
+        [Op.or]: [
+          { sort_order: { [Op.lt]: shot.sort_order } },
+          { sort_order: shot.sort_order, id: { [Op.lt]: shot.id } },
+        ],
+      },
+      order: [[ 'sort_order', 'DESC' ], [ 'id', 'DESC' ]],
+    });
+  }
+
+  async ensureStartFrame(run, shot, sameScene, scene, videoText, frameStart, frameEnd, negative, options = {}) {
     const fresh = await shot.reload();
     const code = shot.shot_code || shot.id;
-    const planted = sameScene ? this.frameAbsolute(fresh.first_frame_path) : null;
-    if (planted) {
-      await shot.update({ manual_frame_path: '' });
-      await this.pushLog(run, 'video', `${code} 与上一镜同一场景「${scene}」，首帧用上一镜尾帧`);
-      return { bytes: fs.readFileSync(planted), taskId: null };
+    const batchIndex = Number.isInteger(options.batchIndex) ? options.batchIndex : null;
+    if (options.chain && batchIndex != null) {
+      const prev = await this.previousShot(fresh);
+      const planted = prev ? this.frameAbsolute(`frames/${run.project_id}/${prev.id}/b${batchIndex}-last.png`) : null;
+      if (planted) {
+        const relative = `frames/${run.project_id}/${shot.id}/b${batchIndex}-from-prev.png`;
+        const absolute = resolveInside(outputRoot(this.app), relative);
+        if (!absolute) throw new Error(`${code} 首帧路径无效`);
+        await fs.promises.mkdir(path.dirname(absolute), { recursive: true });
+        await fs.promises.copyFile(planted, absolute);
+        await shot.update({ manual_frame_path: relative });
+        await this.pushLog(run, 'video', `${code} 与上一镜同一场景「${scene}」，第 ${batchIndex + 1} 条首帧用上一镜同序号尾帧`);
+        return { bytes: fs.readFileSync(absolute), taskId: null };
+      }
     }
-    const manual = this.frameAbsolute(fresh.manual_frame_path);
-    if (manual) {
-      await this.pushLog(run, 'video', `${code} 已有首帧`);
-      return { bytes: fs.readFileSync(manual), taskId: null };
+    if (!options.regen) {
+      const manual = this.frameAbsolute(fresh.manual_frame_path);
+      if (manual) {
+        await this.pushLog(run, 'video', `${code} 已有首帧`);
+        return { bytes: fs.readFileSync(manual), taskId: null };
+      }
     }
-    await this.pushLog(run, 'video', `${code} 缺少首帧，按提示词生成`);
+    await this.pushLog(run, 'video', `${code} 生成首帧`);
     const rendered = await this.renderFrame(run, shot, 'start', videoText, frameStart, frameEnd, negative);
     await this.ctx.service.project.saveManualFrame(run.project_id, shot.id, {
       filename: 'manual.png',
@@ -1062,15 +1126,20 @@ class FullAutoService extends Service {
     return rendered;
   }
 
-  async ensureEndFrame(run, shot, videoText, frameStart, frameEnd, negative) {
+  async ensureEndFrame(run, shot, videoText, frameStart, frameEnd, negative, options = {}) {
     const code = shot.shot_code || shot.id;
-    const relative = `frames/${run.project_id}/${shot.id}/end.png`;
-    const existing = this.frameAbsolute(relative);
-    if (existing) {
-      await this.pushLog(run, 'video', `${code} 已有尾帧`);
-      return { bytes: fs.readFileSync(existing), taskId: null };
+    const batchIndex = Number.isInteger(options.batchIndex) ? options.batchIndex : null;
+    const relative = batchIndex == null
+      ? `frames/${run.project_id}/${shot.id}/end.png`
+      : `frames/${run.project_id}/${shot.id}/b${batchIndex}-end.png`;
+    if (!options.regen) {
+      const existing = this.frameAbsolute(relative);
+      if (existing) {
+        await this.pushLog(run, 'video', `${code} 已有尾帧`);
+        return { bytes: fs.readFileSync(existing), taskId: null };
+      }
     }
-    await this.pushLog(run, 'video', `${code} 缺少尾帧，按提示词生成`);
+    await this.pushLog(run, 'video', `${code} 生成尾帧`);
     const rendered = await this.renderFrame(run, shot, 'end', videoText, frameStart, frameEnd, negative);
     const absolute = resolveInside(outputRoot(this.app), relative);
     if (!absolute) throw new Error(`${code} 尾帧路径无效`);

@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = app => {
-  const { STRING, INTEGER } = app.Sequelize;
+  const { STRING, INTEGER, BOOLEAN } = app.Sequelize;
   return app.model.define('auto_job', {
     id: { type: INTEGER, primaryKey: true, autoIncrement: true },
     project_id: {
@@ -18,6 +18,7 @@ module.exports = app => {
     failed_count: { type: INTEGER, allowNull: false, defaultValue: 0 },
     skipped_count: { type: INTEGER, allowNull: false, defaultValue: 0 },
     video_count: { type: INTEGER, allowNull: false, defaultValue: 1 },
+    generate_end: { type: BOOLEAN, allowNull: false, defaultValue: true },
   }, {
     tableName: 'cartoon_auto_jobs',
     underscored: true,
