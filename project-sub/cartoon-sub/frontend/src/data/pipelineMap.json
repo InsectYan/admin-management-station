@@ -1,6 +1,6 @@
 {
-  "reviewed_at": "2026-11-14",
-  "summary": "按当前代码梳理。已完成表示页面或服务已经能执行；未完成表示技能或接口在，但页面没有入口、明确不写入，或没有进全自动。下次梳理替换这份 JSON。",
+  "reviewed_at": "2026-11-16",
+  "summary": "按当前代码梳理。已完成表示页面或服务已经能执行；未完成表示技能或接口在，但页面没有入口、明确不写入，或没有进全自动。全自动出片是先首帧、按勾选再尾帧，然后提交视频。提示词落库前会按人为维护的词语置换表替换画面句子。",
   "flows": [
     {
       "key": "overview",
@@ -12,19 +12,20 @@
         {"id": "script", "name": "剧本", "type": "action", "status": "done", "skill": "cartoon-script-skill", "runner": "skill", "description": "AI 漫剧走技能 draft。定稿检查不过不保存。科普等本地文案类型改成本地，不调技能。", "x": 436, "y": 16},
         {"id": "storyboard", "name": "镜头", "type": "action", "status": "done", "skill": "cartoon-storyboard-skill", "runner": "skill", "description": "先拆大纲再单段扩写，和镜头页共用同一批镜头。", "x": 646, "y": 16},
         {"id": "assets", "name": "资产", "type": "action", "status": "done", "skill": "cartoon-asset-sheet-skill", "runner": "skill", "description": "设定图走设定图技能再交 Comfy。绑定另有同名匹配和 cartoon-asset-skill。", "x": 856, "y": 16},
-        {"id": "prompt", "name": "镜头提示词", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "写出视频、首帧、尾帧。AV 项目再走 cartoon-av-prompt-skill。", "x": 1066, "y": 16},
-        {"id": "generate", "name": "图生视频", "type": "action", "status": "done", "skill": "", "runner": "comfy", "description": "选预检工作流提交 Comfy。没有 Skill 名。", "x": 1276, "y": 16},
-        {"id": "voice", "name": "配音", "type": "page", "status": "done", "skill": "", "runner": "local", "description": "音色库、对白关联和收音已接上。技能时间轴和出音频还没有页面入口。", "x": 1276, "y": 144},
-        {"id": "subtitle", "name": "字幕", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "按台词排时间轴，不调用技能。流水线节点默认关闭。", "x": 1066, "y": 144},
-        {"id": "review", "name": "初审", "type": "action", "status": "done", "skill": "cartoon-review-skill", "runner": "skill", "description": "技能 action 是 review_cut。只列问题，不代替人工通过或驳回。节点默认关闭。", "x": 856, "y": 144},
-        {"id": "compose", "name": "合成", "type": "action", "status": "done", "skill": "", "runner": "ffmpeg", "description": "时间线剪辑。", "x": 646, "y": 144},
-        {"id": "preview", "name": "预览", "type": "page", "status": "done", "skill": "", "runner": "local", "description": "预览成片播放。", "x": 436, "y": 144},
-        {"id": "export", "name": "导出", "type": "action", "status": "done", "skill": "", "runner": "ffmpeg", "description": "导出成片。流水线里是锁定节点。", "x": 226, "y": 144},
-        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "工作台导出之后。", "x": 16, "y": 144},
-        {"id": "caption", "name": "获取提示词", "type": "page", "status": "done", "skill": "", "runner": "comfy", "description": "项目页反推视频。不走 cartoon-prompt-skill，走预检里的视频理解工作流。", "x": 226, "y": 272},
+        {"id": "prompt", "name": "镜头提示词", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "写出视频、首帧、尾帧。时长以最新视频提示词里的时间轴终点为准。AV 项目再走 cartoon-av-prompt-skill。落库前按 phraseMap.json 做词语置换。", "x": 1066, "y": 16},
+        {"id": "frames", "name": "首尾帧", "type": "action", "status": "done", "skill": "", "runner": "comfy", "description": "用首帧工作流出首帧。勾选生成尾帧时再出尾帧。不勾选则只留首帧，下一镜不衔接。风格说明只提交一段。参考句按实际人物和场景写在提示词首部。", "x": 1276, "y": 16},
+        {"id": "video", "name": "生成视频", "type": "action", "status": "done", "skill": "", "runner": "comfy", "description": "用选定的视频工作流提交。多批次时每一条都重新出首帧和尾帧。同场时上一镜该批次的尾帧作为下一镜同一批次的首帧。", "x": 1276, "y": 144},
+        {"id": "voice", "name": "配音", "type": "page", "status": "done", "skill": "", "runner": "local", "description": "音色库、对白关联、人物过滤、快照过滤和收音已接上。技能时间轴和出音频还没有页面入口。", "x": 1066, "y": 144},
+        {"id": "subtitle", "name": "字幕", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "按台词排时间轴，不调用技能。流水线节点默认关闭。", "x": 856, "y": 144},
+        {"id": "review", "name": "初审", "type": "action", "status": "done", "skill": "cartoon-review-skill", "runner": "skill", "description": "技能 action 是 review_cut。只列问题，不代替人工通过或驳回。节点默认关闭。", "x": 646, "y": 144},
+        {"id": "compose", "name": "合成", "type": "action", "status": "done", "skill": "", "runner": "ffmpeg", "description": "时间线剪辑。片段可选快照，换快照会重置排版和可选片段。", "x": 436, "y": 144},
+        {"id": "preview", "name": "预览", "type": "page", "status": "done", "skill": "", "runner": "local", "description": "预览成片播放。基础信息里产物和参考图按整卡左右并排。", "x": 226, "y": 144},
+        {"id": "export", "name": "导出", "type": "action", "status": "done", "skill": "", "runner": "ffmpeg", "description": "导出成片。流水线里是锁定节点。", "x": 16, "y": 144},
+        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "工作台导出之后。", "x": 16, "y": 272},
+        {"id": "caption", "name": "获取提示词", "type": "page", "status": "done", "skill": "", "runner": "comfy", "description": "项目页反推视频。不走 cartoon-prompt-skill，也不走词语置换表。走预检里的视频理解工作流。", "x": 226, "y": 272},
         {"id": "package", "name": "写回故事包", "type": "action", "status": "todo", "skill": "", "runner": "none", "description": "剧本技能和页面都明确不写故事包。", "x": 436, "y": 272},
-        {"id": "extra", "name": "附加节点", "type": "action", "status": "todo", "skill": "", "runner": "none", "description": "内容类型目录项可以单独检查，但没有进全自动。", "x": 1486, "y": 16},
-        {"id": "voice-audio", "name": "台词成片", "type": "action", "status": "todo", "skill": "cartoon-voice-skill", "runner": "skill", "description": "配音页试听的是音色样本。时间轴技能和出音频的接口在，页面没有按钮。", "x": 1486, "y": 144}
+        {"id": "extra", "name": "附加节点", "type": "action", "status": "todo", "skill": "", "runner": "none", "description": "内容类型目录项可以单独检查，但没有进全自动。", "x": 1276, "y": 272},
+        {"id": "voice-audio", "name": "台词成片", "type": "action", "status": "todo", "skill": "cartoon-voice-skill", "runner": "skill", "description": "配音页试听的是音色样本。时间轴技能和出音频的接口在，页面没有按钮。", "x": 1066, "y": 272}
       ],
       "edges": [
         {"id": "o1", "source": "start", "target": "input", "label": "", "type": "next"},
@@ -32,8 +33,9 @@
         {"id": "o3", "source": "script", "target": "storyboard", "label": "", "type": "next"},
         {"id": "o4", "source": "storyboard", "target": "assets", "label": "", "type": "next"},
         {"id": "o5", "source": "assets", "target": "prompt", "label": "", "type": "next"},
-        {"id": "o6", "source": "prompt", "target": "generate", "label": "", "type": "next"},
-        {"id": "o7", "source": "generate", "target": "voice", "label": "", "type": "next"},
+        {"id": "o6", "source": "prompt", "target": "frames", "label": "", "type": "next"},
+        {"id": "o6b", "source": "frames", "target": "video", "label": "", "type": "next"},
+        {"id": "o7", "source": "video", "target": "voice", "label": "", "type": "next"},
         {"id": "o8", "source": "voice", "target": "subtitle", "label": "", "type": "next"},
         {"id": "o9", "source": "subtitle", "target": "review", "label": "", "type": "next"},
         {"id": "o10", "source": "review", "target": "compose", "label": "", "type": "next"},
@@ -42,7 +44,7 @@
         {"id": "o13", "source": "export", "target": "end", "label": "", "type": "next"},
         {"id": "o14", "source": "input", "target": "caption", "label": "项目页", "type": "branch"},
         {"id": "o15", "source": "script", "target": "package", "label": "不做", "type": "branch"},
-        {"id": "o16", "source": "generate", "target": "extra", "label": "未进全自动", "type": "branch"},
+        {"id": "o16", "source": "video", "target": "extra", "label": "未进全自动", "type": "branch"},
         {"id": "o17", "source": "voice", "target": "voice-audio", "label": "未接页面", "type": "branch"}
       ]
     },
@@ -95,7 +97,7 @@
     {
       "key": "prompt",
       "name": "镜头提示词",
-      "description": "单段扩写之后写提示词。获取提示词页的视频反推不在这条链上。",
+      "description": "单段扩写之后写提示词。落库前按人为维护的词语置换表替换画面句子。获取提示词页的视频反推不在这条链上。",
       "nodes": [
         {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "针对一条已有镜头。", "x": 16, "y": 16},
         {"id": "expand", "name": "单段扩写", "type": "action", "status": "done", "skill": "cartoon-storyboard-skill", "runner": "skill", "description": "先把这一条扩写成可用的镜头描述。", "x": 226, "y": 16},
@@ -103,7 +105,8 @@
         {"id": "negative", "name": "负向补调", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "负向不够时再调一次。失败只记日志，不中断。", "x": 646, "y": 16},
         {"id": "av", "name": "是否 AV", "type": "decision", "status": "done", "skill": "", "runner": "local", "description": "只有项目开了 AV 才走封闭提示词技能。", "x": 856, "y": 16},
         {"id": "avskill", "name": "封闭提示词", "type": "action", "status": "done", "skill": "cartoon-av-prompt-skill", "runner": "skill", "description": "action draft。非 AV 项目跳过。", "x": 1066, "y": 16},
-        {"id": "save", "name": "写回镜头", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "提示词写回这条镜头，不改 Comfy 图。", "x": 856, "y": 144},
+        {"id": "phrase", "name": "词语置换", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "读取公共动作知识库 phraseMap.json。人在表里添加原句和替换说法。视频提示词、首帧、尾帧按长句优先替换。对白引号、负向和音效备注不换。", "x": 1066, "y": 144},
+        {"id": "save", "name": "写回镜头", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "提示词写回这条镜头。镜头时长列改用视频提示词涵盖的时间，不再用扩写时的估计。", "x": 856, "y": 144},
         {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "这条镜头的提示词已齐。", "x": 646, "y": 144}
       ],
       "edges": [
@@ -112,8 +115,9 @@
         {"id": "p3", "source": "positive", "target": "negative", "label": "", "type": "next"},
         {"id": "p4", "source": "negative", "target": "av", "label": "", "type": "next"},
         {"id": "p5", "source": "av", "target": "avskill", "label": "AV", "type": "branch"},
-        {"id": "p6", "source": "av", "target": "save", "label": "非 AV", "type": "next"},
-        {"id": "p7", "source": "avskill", "target": "save", "label": "", "type": "next"},
+        {"id": "p6", "source": "av", "target": "phrase", "label": "非 AV", "type": "next"},
+        {"id": "p6b", "source": "avskill", "target": "phrase", "label": "", "type": "next"},
+        {"id": "p7", "source": "phrase", "target": "save", "label": "", "type": "next"},
         {"id": "p8", "source": "save", "target": "end", "label": "", "type": "next"}
       ]
     },
@@ -169,22 +173,31 @@
     },
     {
       "key": "generate",
-      "name": "图生视频",
-      "description": "镜头画面只走预检和 Comfy，没有 Skill。",
+      "name": "首尾帧与视频",
+      "description": "先出首帧，勾选尾帧时再出尾帧，然后提交视频。没有 Skill。宽高写进生图节点。正向和负向分字段提交。",
       "nodes": [
         {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "镜头已有提示词之后。", "x": 16, "y": 16},
-        {"id": "pick", "name": "选择预检工作流", "type": "page", "status": "done", "skill": "", "runner": "comfy", "description": "工作流来自预检，不在这里写死编号。", "x": 226, "y": 16},
-        {"id": "check", "name": "依赖检查", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "提交前检查工作流依赖。", "x": 436, "y": 16},
-        {"id": "submit", "name": "提交 Comfy", "type": "action", "status": "done", "skill": "", "runner": "comfy", "description": "没有 Skill 名。视频角色用本地 Comfy 档位。", "x": 646, "y": 16},
-        {"id": "save", "name": "产物入库", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "成功的画面进入产物。", "x": 856, "y": 16},
-        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "镜头画面已生成。", "x": 1066, "y": 16}
+        {"id": "pick-frame", "name": "选择首帧工作流", "type": "page", "status": "done", "skill": "", "runner": "comfy", "description": "首尾帧用预检里的生图工作流，和视频工作流分开。", "x": 226, "y": 16},
+        {"id": "start-frame", "name": "生成首帧", "type": "action", "status": "done", "skill": "", "runner": "comfy", "description": "参考句放在提示词首部。风格说明只留一段。请求的宽高会写进生图节点，有参考图时也按这个尺寸出图。", "x": 436, "y": 16},
+        {"id": "end-ask", "name": "是否生成尾帧", "type": "decision", "status": "done", "skill": "", "runner": "local", "description": "全自动和重置弹窗都可以取消尾帧。默认生成。不勾选则只交首帧，下一镜不拿上一镜尾帧衔接。", "x": 646, "y": 16},
+        {"id": "end-frame", "name": "生成尾帧", "type": "action", "status": "done", "skill": "", "runner": "comfy", "description": "勾选尾帧时按尾帧提示词再出一张。多批次各自生成，不复用上一批的图。", "x": 856, "y": 16},
+        {"id": "chain", "name": "同批次衔接", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "同一场里，上一镜该批次视频的尾帧作为下一镜同一批次的首帧。", "x": 1066, "y": 16},
+        {"id": "pick-video", "name": "选择视频工作流", "type": "page", "status": "done", "skill": "", "runner": "comfy", "description": "视频工作流来自预检。工作流上的基础提示词规则有值时追加在提交文案尾部。", "x": 1066, "y": 144},
+        {"id": "submit", "name": "提交视频", "type": "action", "status": "done", "skill": "", "runner": "comfy", "description": "没有 Skill 名。正向写入提示词字段，负向只写入负向字段。时长用视频提示词涵盖的秒数。每条批次单独种子。", "x": 856, "y": 144},
+        {"id": "save", "name": "产物入库", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "成功的首帧、尾帧和视频进入产物。预览按视频、首帧、尾帧切换。", "x": 646, "y": 144},
+        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "这一镜的画面已生成。", "x": 436, "y": 144}
       ],
       "edges": [
-        {"id": "g1", "source": "start", "target": "pick", "label": "", "type": "next"},
-        {"id": "g2", "source": "pick", "target": "check", "label": "", "type": "next"},
-        {"id": "g3", "source": "check", "target": "submit", "label": "", "type": "next"},
-        {"id": "g4", "source": "submit", "target": "save", "label": "", "type": "next"},
-        {"id": "g5", "source": "save", "target": "end", "label": "", "type": "next"}
+        {"id": "g1", "source": "start", "target": "pick-frame", "label": "", "type": "next"},
+        {"id": "g2", "source": "pick-frame", "target": "start-frame", "label": "", "type": "next"},
+        {"id": "g3", "source": "start-frame", "target": "end-ask", "label": "", "type": "next"},
+        {"id": "g4", "source": "end-ask", "target": "end-frame", "label": "生成尾帧", "type": "branch"},
+        {"id": "g5", "source": "end-frame", "target": "chain", "label": "", "type": "next"},
+        {"id": "g6", "source": "chain", "target": "pick-video", "label": "", "type": "next"},
+        {"id": "g7", "source": "end-ask", "target": "pick-video", "label": "只首帧", "type": "next"},
+        {"id": "g8", "source": "pick-video", "target": "submit", "label": "", "type": "next"},
+        {"id": "g9", "source": "submit", "target": "save", "label": "", "type": "next"},
+        {"id": "g10", "source": "save", "target": "end", "label": "", "type": "next"}
       ]
     },
     {
@@ -264,17 +277,18 @@
     {
       "key": "auto",
       "name": "全自动",
-      "description": "全自动只跑六步：剧本、设定图、分镜、提示词、确认工作流、生成镜头。配音、字幕、初审不在里面。",
+      "description": "全自动跑剧本、设定图、分镜、提示词、确认工作流，然后按批次出首帧、可选尾帧和视频。配音、字幕、初审不在里面。",
       "nodes": [
         {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "工作台全自动。", "x": 16, "y": 16},
         {"id": "script", "name": "剧本", "type": "action", "status": "done", "skill": "cartoon-script-skill", "runner": "skill", "description": "没有生产稿时生成剧本。", "x": 226, "y": 16},
         {"id": "assets", "name": "设定图", "type": "action", "status": "done", "skill": "cartoon-asset-sheet-skill", "runner": "skill", "description": "补齐还没有设定图的人物和场景，再交 Comfy 出图。", "x": 436, "y": 16},
         {"id": "board", "name": "分镜", "type": "action", "status": "done", "skill": "cartoon-storyboard-skill", "runner": "skill", "description": "没有镜头时拆大纲并落库。", "x": 646, "y": 16},
-        {"id": "prompts", "name": "提示词", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "逐镜扩写并写提示词。AV 项目还会走 cartoon-av-prompt-skill。", "x": 856, "y": 16},
-        {"id": "workflow", "name": "确认工作流", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "把选定的视频工作流写到每条镜头。", "x": 856, "y": 144},
-        {"id": "video", "name": "生成镜头", "type": "action", "status": "done", "skill": "", "runner": "comfy", "description": "按工作流提交 Comfy。", "x": 646, "y": 144},
-        {"id": "later", "name": "配音字幕初审", "type": "action", "status": "todo", "skill": "", "runner": "none", "description": "全自动的节点只有剧本、资产、分镜、提示词、工作流、镜头。这三项不在里面。", "x": 646, "y": 272},
-        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "全自动停在镜头生成。", "x": 226, "y": 144}
+        {"id": "prompts", "name": "提示词", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "逐镜扩写并写提示词。AV 项目还会走 cartoon-av-prompt-skill。落库前按词语置换表替换画面句子。", "x": 856, "y": 16},
+        {"id": "workflow", "name": "确认工作流", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "确认首帧工作流和视频工作流，以及这一轮是否生成尾帧。", "x": 1066, "y": 16},
+        {"id": "frames", "name": "首尾帧", "type": "action", "status": "done", "skill": "", "runner": "comfy", "description": "每一批次都重新出首帧。勾选尾帧时再出该批次尾帧。同场衔接按批次编号配对。", "x": 1066, "y": 144},
+        {"id": "video", "name": "生成视频", "type": "action", "status": "done", "skill": "", "runner": "comfy", "description": "按视频工作流提交。不生成尾帧时不交尾帧图，也不给下一镜留衔接。", "x": 856, "y": 144},
+        {"id": "later", "name": "配音字幕初审", "type": "action", "status": "todo", "skill": "", "runner": "none", "description": "全自动停在视频。配音、字幕、初审不在里面。", "x": 856, "y": 272},
+        {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "全自动停在视频生成。", "x": 646, "y": 144}
       ],
       "edges": [
         {"id": "f1", "source": "start", "target": "script", "label": "", "type": "next"},
@@ -282,7 +296,8 @@
         {"id": "f3", "source": "assets", "target": "board", "label": "", "type": "next"},
         {"id": "f4", "source": "board", "target": "prompts", "label": "", "type": "next"},
         {"id": "f5", "source": "prompts", "target": "workflow", "label": "", "type": "next"},
-        {"id": "f6", "source": "workflow", "target": "video", "label": "", "type": "next"},
+        {"id": "f6", "source": "workflow", "target": "frames", "label": "", "type": "next"},
+        {"id": "f6b", "source": "frames", "target": "video", "label": "", "type": "next"},
         {"id": "f7", "source": "video", "target": "end", "label": "", "type": "next"},
         {"id": "f8", "source": "video", "target": "later", "label": "未接入", "type": "branch"}
       ]

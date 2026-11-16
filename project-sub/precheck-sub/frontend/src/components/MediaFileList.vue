@@ -53,10 +53,11 @@ const emit = defineEmits([ 'remove' ]);
 const visible = ref(false);
 const current = ref(null);
 const zoom = ref(1);
-const zoomStyle = computed(() => ({
-  width: `${Math.round(zoom.value * 100)}%`,
-  maxHeight: zoom.value > 1 ? 'none' : '70vh',
-}));
+const zoomStyle = computed(() => (
+  zoom.value === 1
+    ? undefined
+    : { transform: `scale(${zoom.value})`, transformOrigin: 'center top' }
+));
 
 function open(item) {
   current.value = item;
@@ -102,13 +103,26 @@ function paintFrame(event) {
   line-height: 1.4;
   word-break: break-all;
 }
+.media-file-list :deep(img.el-upload-list__item-thumbnail),
 .media-file-list :deep(video.el-upload-list__item-thumbnail) {
   width: 100%;
   height: 100%;
   object-fit: contain;
   pointer-events: none;
 }
-.media-file-list__stage { max-height: 78vh; overflow: auto; }
-.media-file-list :deep(video.media-file-list__preview) { display: block; width: 100%; max-height: 70vh; object-fit: contain; }
+.media-file-list__stage {
+  max-height: 78vh;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+}
+.media-file-list__preview {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+}
 .media-file-list__zoom-hint { margin: 8px 0 0; color: #5c6b62; font-size: 12px; }
 </style>

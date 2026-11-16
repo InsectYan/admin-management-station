@@ -160,7 +160,7 @@
                 :src="optionSrc(image)"
                 :preview-src-list="imagePreviewList(item)"
                 :initial-index="imagePreviewIndex(item, image)"
-                fit="cover"
+                fit="contain"
                 preview-teleported
               />
             </template>
@@ -972,7 +972,13 @@ onUnmounted(stop);
   background: #eef4f0;
   object-fit: contain;
 }
-.precheck-preview-refs :deep(.el-image__inner) { width: 100%; height: 100%; object-fit: contain; }
+.precheck-preview-refs :deep(.el-image__inner) {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
 @media (max-width: 960px) {
   .precheck-preview-stage { grid-template-columns: 1fr; }
 }
@@ -1036,5 +1042,15 @@ onUnmounted(stop);
 .precheck-frame-packs li { display: flex; align-items: center; gap: 12px; color: #243028; font-size: 13px; }
 @media (max-width: 800px) {
   .precheck-preview-form { grid-template-columns: 1fr; }
+}
+</style>
+
+<style>
+.el-image-viewer__img {
+  width: auto !important;
+  height: auto !important;
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
 }
 </style>
