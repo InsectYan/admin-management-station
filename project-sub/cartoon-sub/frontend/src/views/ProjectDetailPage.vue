@@ -1962,6 +1962,7 @@ async function runSemiAuto(item) {
     return;
   }
   autoModeId.value = item.id;
+  const note = await openFlowNote('storyboard', item.id, '正在生成剧本');
   try {
     ElMessage.info('正在生成剧本…');
     const data = await request(`/projects/${projectKey()}/imports/${item.id}/draft/script`, {
@@ -1973,6 +1974,7 @@ async function runSemiAuto(item) {
       data: { script_data: data.script_data },
     });
     ElMessage.info('剧本已写入，正在拆分分镜…');
+    await finishFlowNote(note?.id, 'running', '正在拆分分镜', [ 'script' ], 'storyboard');
     const outline = await request(`/projects/${projectKey()}/imports/${item.id}/draft/shot-outline`, {
       method: 'post',
       timeout: 1800000,
@@ -1988,18 +1990,48 @@ async function runSemiAuto(item) {
     selectedImportKey.value = String(item.id);
     const count = (detail.value?.shots || []).filter(shotRow => String(shotRow.import_id ?? '') === String(item.id)).length;
     if (!count) {
+      await finishFlowNote(note?.id, 'failed', '剧本已写入，但分镜没有落库');
       ElMessage.error('剧本已写入，但分镜没有落库');
       return;
     }
     ElMessage.success(`剧本已生成，并落库 ${count} 段分镜`);
+    await finishFlowNote(note?.id, 'success', `已落库 ${count} 段分镜`);
     step.value = 3;
     await nextTick();
     document.getElementById('script-shot-table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (err) {
+    await finishFlowNote(note?.id, 'failed', err.message || '到分镜失败');
     ElMessage.error(err.message);
   } finally {
     autoModeId.value = null;
     unlockJob(token);
+  }
+}
+async function openFlowNote(kind, importId, message) {
+  if (!projectKey() || !importId) return null;
+  try {
+    return await request(`/projects/${projectKey()}/full-auto/notes`, {
+      method: 'post',
+      data: { run_kind: kind, import_id: importId, message },
+    });
+  } catch {
+    return null;
+  }
+}
+async function finishFlowNote(noteId, status, message, done, currentNode) {
+  if (!noteId) return;
+  try {
+    await request(`/projects/${projectKey()}/full-auto/notes/${noteId}`, {
+      method: 'post',
+      data: {
+        status,
+        message,
+        done: done || [],
+        current_node: currentNode || '',
+      },
+    });
+  } catch {
+    // 记录失败不打断这次生成
   }
 }
 async function generateScript(item) {
@@ -2525,7 +2557,16 @@ async function runAuto(mode, selectedIds, fresh = false, options = {}) {
   let failed = 0;
   let skipped = 0;
   let stopped = false;
+  let noteId = 0;
   try {
+    if (selectedBoard.value?.importId && (mode === 'prompt' || mode === 'all')) {
+      const note = await openFlowNote(
+        mode === 'prompt' ? 'prompt' : 'prompt_video',
+        selectedBoard.value.importId,
+        mode === 'prompt' ? '正在生成提示词' : '正在生成提示词和视频',
+      );
+      noteId = note?.id || 0;
+    }
     for (const item of queue) {
       if (token !== runMark.token || signal.aborted) break;
       const record = openRecord(item);
@@ -2567,6 +2608,11 @@ async function runAuto(mode, selectedIds, fresh = false, options = {}) {
       else ElMessage.success('执行结束');
     }
   } finally {
+    if (noteId) {
+      const status = stopped || signal.aborted ? 'stopped' : (failed ? 'failed' : 'success');
+      const message = `成功 ${succeeded}，失败 ${failed}，跳过 ${skipped}`;
+      await finishFlowNote(noteId, status, message);
+    }
     if (token === runMark.token) autoRunning.value = false;
     if (runMark.controller === controller) runMark.controller = null;
     unlockJob(jobToken);

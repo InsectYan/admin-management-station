@@ -676,6 +676,40 @@ class ProjectService extends Service {
     ));
   }
 
+  async releaseShotMedia(shots) {
+    if (!shots.length) return;
+    const { Op } = this.app.Sequelize;
+    const root = outputRoot(this.app);
+    const gone = new Set(shots.map(shot => Number(shot.id)));
+    const projectIds = [ ...new Set(shots.map(shot => shot.project_id)) ];
+    for (const shot of shots) {
+      const dir = resolveInside(root, path.join('frames', String(shot.project_id), String(shot.id)));
+      if (dir) {
+        await fs.promises.rm(dir, { recursive: true, force: true }).catch(err => {
+          this.ctx.logger.warn('[cartoon] 镜头帧目录没有清掉 %s', err.message);
+        });
+      }
+      const audio = resolveInside(root, path.join('audio', String(shot.project_id), `${shot.id}.m4a`));
+      if (audio && fs.existsSync(audio)) {
+        await fs.promises.unlink(audio).catch(err => {
+          this.ctx.logger.warn('[cartoon] 镜头音轨没有清掉 %s', err.message);
+        });
+      }
+    }
+    const others = await this.ctx.model.Shot.findAll({
+      where: { project_id: { [Op.in]: projectIds }, id: { [Op.notIn]: [ ...gone ] } },
+    });
+    for (const other of others) {
+      const patch = {};
+      [ 'first_frame_path', 'manual_frame_path' ].forEach(field => {
+        const value = String(other[field] || '');
+        const linked = shots.some(shot => value.startsWith(`frames/${shot.project_id}/${shot.id}/`));
+        if (linked) patch[field] = '';
+      });
+      if (Object.keys(patch).length) await other.update(patch);
+    }
+  }
+
   async destroyShotsByIds(ids) {
     if (!ids.length) return 0;
     const { Op } = this.app.Sequelize;
@@ -698,6 +732,9 @@ class ProjectService extends Service {
       );
     }
     for (const task of tasks) await this.ctx.service.generate.removeTask(task.id);
+    const shots = await this.ctx.model.Shot.findAll({ where: { id: { [Op.in]: ids } } });
+    await this.releaseShotMedia(shots);
+    await this.ctx.model.PromptTrace.destroy({ where: { shot_id: { [Op.in]: ids } } });
     await this.ctx.model.Prompt.destroy({ where: { shot_id: { [Op.in]: ids } } });
     await this.ctx.model.ShotBinding.destroy({ where: { shot_id: { [Op.in]: ids } } });
     await this.ctx.model.VoiceCue.destroy({ where: { shot_id: { [Op.in]: ids } } });

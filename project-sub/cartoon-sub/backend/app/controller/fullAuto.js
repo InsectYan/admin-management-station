@@ -48,6 +48,38 @@ class FullAutoController extends Controller {
     }
   }
 
+  async showJob() {
+    try {
+      ok(this.ctx, await this.ctx.service.fullAuto.showJob(this.ctx.params.id, this.ctx.params.jobId));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async stopJob() {
+    try {
+      ok(this.ctx, { stopped: await this.ctx.service.autoJob.halt(this.ctx.params.id) });
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async openNote() {
+    try {
+      ok(this.ctx, await this.ctx.service.fullAuto.openNote(this.ctx.params.id, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async patchNote() {
+    try {
+      ok(this.ctx, await this.ctx.service.fullAuto.patchNote(this.ctx.params.id, this.ctx.params.noteId, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async start() {
     try {
       ok(this.ctx, await this.ctx.service.fullAuto.start(this.ctx.params.id, this.ctx.request.body || {}));

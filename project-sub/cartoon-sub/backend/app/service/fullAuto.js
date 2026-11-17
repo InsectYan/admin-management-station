@@ -21,6 +21,11 @@ const { minStoryUnits } = require('../lib/storyCoverage');
 const { promptCoveredMs } = require('../lib/promptDuration');
 
 const NODE_KEYS = [ 'script', 'assets', 'storyboard', 'prompts', 'workflow', 'video' ];
+const NOTE_NODES = {
+  storyboard: [ 'script', 'storyboard' ],
+  prompt: [ 'prompts', 'save' ],
+  prompt_video: [ 'prompts', 'video' ],
+};
 const NODE_LABEL = {
   script: '正在生成剧本',
   assets: '正在生成资产',
@@ -195,6 +200,8 @@ class FullAutoService extends Service {
       video_workflow_name: run.video_workflow_name || '',
       video_done: run.video_done || 0,
       video_total: run.video_total || 0,
+      run_kind: this.kindOf(run),
+      source: 'run',
       nodes: parseJson(run.nodes, {}),
       created_at: run.created_at,
       updated_at: run.updated_at,
@@ -215,12 +222,139 @@ class FullAutoService extends Service {
       where: { project_id: project.id },
       order: [[ 'id', 'DESC' ]],
     });
-    return rows.map(row => this.summary(row));
+    const jobs = await this.ctx.model.AutoJob.findAll({
+      where: { project_id: project.id },
+      order: [[ 'id', 'DESC' ]],
+    });
+    return [ ...rows.map(row => this.summary(row)), ...jobs.map(job => this.jobSummary(job)) ]
+      .sort((left, right) => new Date(right.created_at || 0) - new Date(left.created_at || 0));
+  }
+
+  kindOf(run) {
+    if (run.run_kind && run.run_kind !== 'full') return run.run_kind;
+    if (run.scope === 'profiles') return 'profiles';
+    if (run.scope === 'assets' || run.scope === 'assets-reset') return 'assets';
+    return run.run_kind || 'full';
+  }
+
+  pipelineWhere(projectId) {
+    const { Op } = this.app.Sequelize;
+    return {
+      project_id: projectId,
+      status: 'running',
+      scope: { [Op.ne]: 'note' },
+    };
+  }
+
+  jobSummary(job) {
+    const status = job.status === 'done' ? 'success' : job.status;
+    return {
+      id: job.id,
+      project_id: job.project_id,
+      import_id: null,
+      chapter_title: '视频一键执行',
+      status,
+      current_node: status === 'running' ? 'submit' : 'end',
+      message: `完成 ${job.done || 0}/${job.total || 0}，成功 ${job.success_count || 0}`,
+      error_message: '',
+      video_done: job.done || 0,
+      video_total: job.total || 0,
+      run_kind: 'video',
+      source: 'job',
+      created_at: job.created_at,
+      updated_at: job.updated_at,
+    };
+  }
+
+  async showJob(projectId, jobId) {
+    const job = await this.ctx.model.AutoJob.findOne({ where: { id: jobId, project_id: projectId } });
+    if (!job) this.ctx.throw(404, '这条视频任务不存在');
+    const items = await this.ctx.service.autoJob.itemsOf(job.id);
+    return {
+      ...this.jobSummary(job),
+      items: items.map(item => ({
+        id: item.id,
+        shot_id: item.shot_id,
+        shot_code: item.shot_code || '',
+        status: item.status,
+        reason: item.reason || '',
+        task_id: item.task_id,
+      })),
+      log: items.map(item => ({
+        at: item.updated_at,
+        node: 'submit',
+        text: `${item.shot_code || item.shot_id} ${item.reason || item.status}`,
+      })),
+    };
+  }
+
+  async openNote(projectId, payload) {
+    const kind = String(payload.run_kind || '');
+    const keys = NOTE_NODES[kind];
+    if (!keys) this.ctx.throw(400, '这个类型不能这样记');
+    const project = await this.ctx.model.Project.findByPk(projectId);
+    if (!project) this.ctx.throw(404, '项目不存在');
+    const chapter = await this.ctx.model.Import.findOne({
+      where: { id: payload.import_id, project_id: project.id },
+    });
+    if (!chapter || chapter.deleted_at) this.ctx.throw(404, '章节快照不存在');
+    const nodes = Object.fromEntries(keys.map((key, index) => [ key, { status: index ? 'pending' : 'running', note: '' } ]));
+    const run = await this.ctx.model.FullRun.create({
+      project_id: project.id,
+      import_id: chapter.id,
+      chapter_title: chapter.chapter_title || '未命名章节',
+      status: 'running',
+      current_node: keys[0],
+      message: payload.message || '已发起',
+      nodes: JSON.stringify(nodes),
+      log: '[]',
+      asset_workflow_id: 0,
+      frame_workflow_id: 0,
+      video_workflow_id: 0,
+      scope: 'note',
+      run_kind: kind,
+    });
+    await this.pushLog(run, keys[0], payload.message || '已发起');
+    return this.detail(run);
+  }
+
+  async patchNote(projectId, noteId, payload) {
+    const run = await this.ctx.model.FullRun.findOne({
+      where: { id: noteId, project_id: projectId, scope: 'note' },
+    });
+    if (!run) this.ctx.throw(404, '这条记录不存在');
+    const nodes = parseJson(run.nodes, {});
+    (Array.isArray(payload.done) ? payload.done : []).forEach(key => {
+      if (nodes[key]) nodes[key] = { status: 'success', note: '' };
+    });
+    const status = [ 'running', 'success', 'failed', 'stopped' ].includes(payload.status) ? payload.status : run.status;
+    const current = payload.current_node && nodes[payload.current_node] ? payload.current_node : run.current_node;
+    if (nodes[current] && status === 'running') nodes[current] = { status: 'running', note: payload.message || '' };
+    if (nodes[current] && status === 'failed') nodes[current] = { status: 'failed', note: payload.message || '' };
+    if (status === 'success') {
+      Object.keys(nodes).forEach(key => {
+        nodes[key] = { status: 'success', note: '' };
+      });
+    }
+    if (status === 'stopped') {
+      Object.keys(nodes).forEach(key => {
+        if (nodes[key]?.status === 'pending' || nodes[key]?.status === 'running') nodes[key] = { status: 'stopped', note: '已停止' };
+      });
+    }
+    await run.update({
+      status,
+      current_node: current,
+      message: payload.message || run.message,
+      error_message: status === 'failed' ? (payload.message || '') : '',
+      nodes: JSON.stringify(nodes),
+    });
+    if (payload.message) await this.pushLog(run, current, payload.message);
+    return this.detail(await run.reload());
   }
 
   async active(projectId) {
     const row = await this.ctx.model.FullRun.findOne({
-      where: { project_id: projectId, status: 'running' },
+      where: this.pipelineWhere(projectId),
       order: [[ 'id', 'DESC' ]],
     });
     return row ? this.summary(row) : null;
@@ -251,9 +385,7 @@ class FullAutoService extends Service {
       where: { id: payload.import_id, project_id: project.id },
     });
     if (!chapter || chapter.deleted_at) this.ctx.throw(404, '章节快照不存在');
-    const running = await this.ctx.model.FullRun.findOne({
-      where: { project_id: project.id, status: 'running' },
-    });
+    const running = await this.ctx.model.FullRun.findOne({ where: this.pipelineWhere(project.id) });
     if (running) this.ctx.throw(409, '已有全流程在执行');
     const assetWorkflow = await this.imageChoice(payload.asset_workflow_id);
     const frameWorkflow = await this.imageChoice(payload.frame_workflow_id, { allowReference: true });
@@ -288,6 +420,7 @@ class FullAutoService extends Service {
       frame_height: frameSize.height,
       fresh: Boolean(payload.fresh),
       scope: 'all',
+      run_kind: 'full',
       video_count: videoCount(payload.video_count),
       generate_end: generateEnd,
     });
@@ -311,9 +444,7 @@ class FullAutoService extends Service {
       || (Array.isArray(script.characters) && script.characters.length);
     if (!hasScript) this.ctx.throw(400, '还没有剧本');
     if (!this.sheetPlan(chapter).length) this.ctx.throw(400, '剧本里没有可生成的人物或场景');
-    const running = await this.ctx.model.FullRun.findOne({
-      where: { project_id: project.id, status: 'running' },
-    });
+    const running = await this.ctx.model.FullRun.findOne({ where: this.pipelineWhere(project.id) });
     if (running) this.ctx.throw(409, '已有全流程在执行');
     const assetWorkflow = await this.imageChoice(payload.asset_workflow_id);
     const assetSize = imageSize(payload.asset_width, payload.asset_height);
@@ -338,6 +469,7 @@ class FullAutoService extends Service {
       frame_height: 0,
       fresh: false,
       scope: payload.reset ? 'assets-reset' : 'assets',
+      run_kind: 'assets',
     });
     const runId = run.id;
     setImmediate(() => {
@@ -356,9 +488,7 @@ class FullAutoService extends Service {
     });
     const first = chapters.find(row => String(row.body || '').trim());
     if (!first) this.ctx.throw(400, '没有可读取的章节正文');
-    const running = await this.ctx.model.FullRun.findOne({
-      where: { project_id: project.id, status: 'running' },
-    });
+    const running = await this.ctx.model.FullRun.findOne({ where: this.pipelineWhere(project.id) });
     if (running) this.ctx.throw(409, '已有全流程在执行');
     const run = await this.ctx.model.FullRun.create({
       project_id: project.id,
@@ -381,6 +511,7 @@ class FullAutoService extends Service {
       frame_height: 0,
       fresh: false,
       scope: 'profiles',
+      run_kind: 'profiles',
     });
     const runId = run.id;
     setImmediate(() => {
@@ -494,8 +625,15 @@ class FullAutoService extends Service {
     const where = { project_id: projectId, status: 'running' };
     if (runId) where.id = runId;
     const runs = await this.ctx.model.FullRun.findAll({ where });
+    const notes = runs.filter(item => item.scope === 'note');
+    const live = runs.filter(item => item.scope !== 'note');
+    for (const run of notes) {
+      await run.update({ status: 'stopped', message: '已停止' });
+      await this.pushLog(run, run.current_node || 'script', '已停止');
+    }
+    if (!live.length) return { stopped: notes.length };
     cancelProject(this.app, projectId);
-    for (const run of runs) {
+    for (const run of live) {
       this.abort(run.id);
       await run.update({ status: 'stopped', message: '已停止' });
       await this.cancelTasks(run);
@@ -508,6 +646,7 @@ class FullAutoService extends Service {
   async resume() {
     const runs = await this.ctx.model.FullRun.findAll({ where: { status: 'running' } });
     for (const run of runs) {
+      if (run.scope === 'note') continue;
       const runId = run.id;
       setImmediate(() => {
         this.app.createAnonymousContext().service.fullAuto.walk(runId)
@@ -591,7 +730,7 @@ class FullAutoService extends Service {
     if (busy.has(runId)) return;
     busy.add(runId);
     const run = await this.ctx.model.FullRun.findByPk(runId);
-    if (!run || run.status !== 'running') {
+    if (!run || run.status !== 'running' || run.scope === 'note') {
       busy.delete(runId);
       return;
     }

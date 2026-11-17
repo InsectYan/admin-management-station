@@ -145,6 +145,10 @@ module.exports = app => {
   router.get('/api/projects/:id/full-auto/active', controller.fullAuto.active);
   router.get('/api/projects/:id/full-auto', controller.fullAuto.index);
   router.post('/api/projects/:id/full-auto', controller.fullAuto.start);
+  router.post('/api/projects/:id/full-auto/notes', controller.fullAuto.openNote);
+  router.post('/api/projects/:id/full-auto/notes/:noteId', controller.fullAuto.patchNote);
+  router.get('/api/projects/:id/full-auto/jobs/:jobId', controller.fullAuto.showJob);
+  router.post('/api/projects/:id/full-auto/jobs/:jobId/stop', controller.fullAuto.stopJob);
   router.get('/api/projects/:id/full-auto/:runId', controller.fullAuto.show);
   router.post('/api/projects/:id/full-auto/:runId/stop', controller.fullAuto.stop);
   router.post('/api/projects/:id/auto-jobs', controller.project.startAutoJob);
