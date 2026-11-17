@@ -18,6 +18,15 @@
       <el-form-item class="precheck-preview-duration" label="产物名称">
         <el-input v-model="outputName" maxlength="80" placeholder="留空时使用「产物」。落库和下载名称是产物名称加种子" />
       </el-form-item>
+      <el-form-item class="precheck-preview-duration" label="双采">
+        <div class="precheck-workflow-size">
+          <el-switch v-model="dualOn" aria-label="开启双采" />
+          <el-select v-if="dualOn" v-model="dualFactor" style="width: 140px">
+            <el-option v-for="item in DUAL_SCALES" :key="item" :label="`${item} 倍`" :value="item" />
+          </el-select>
+        </div>
+        <p class="precheck-preview-hint">只影响这一次预览。图片工作流会再采样一次；MiniMax H3 会在成片画面上按倍数放大。保存工作流后，卡通生成视频才沿用编辑页里的开关。</p>
+      </el-form-item>
     </el-form>
     <el-empty v-if="!fields.length && loaded" description="这份工作流没有可改的提示词或尺寸参数，仍可直接生成" />
     <el-form v-else label-position="top" class="precheck-preview-form">
@@ -241,6 +250,15 @@ const props = defineProps({
   workflowId: { type: [String, Number], default: '' },
   apiJson: { type: Object, default: null },
   refmod: { type: Boolean, default: false },
+  dualSample: { type: Boolean, default: false },
+  dualScale: { type: Number, default: 2 },
+});
+const DUAL_SCALES = [ 1.5, 2, 2.5, 3 ];
+const dualOn = ref(Boolean(props.dualSample));
+const dualFactor = ref(DUAL_SCALES.includes(Number(props.dualScale)) ? Number(props.dualScale) : 2);
+watch(() => props.dualSample, value => { dualOn.value = Boolean(value); });
+watch(() => props.dualScale, value => {
+  if (DUAL_SCALES.includes(Number(value))) dualFactor.value = Number(value);
 });
 
 const FRAME_KEYS = new Set([ 'length', 'frames', 'num_frames', 'frame_count' ]);
@@ -905,6 +923,8 @@ async function generate() {
       style_prompt: stylePrompt.value,
       output_name: outputName.value,
       style_names: styleIds.value.map(id => styles.value.find(item => item.value === id)?.name).filter(Boolean),
+      dual_sample: dualOn.value,
+      dual_scale: dualFactor.value,
     };
     const saved = props.workflowId
       ? await request(`/workflows/${props.workflowId}/preview`, { method: 'post', data })
@@ -943,6 +963,7 @@ onUnmounted(stop);
 
 <style scoped>
 .precheck-preview-form { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+.precheck-workflow-size { display: flex; align-items: center; gap: 8px; }
 .precheck-preview-stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 36%); gap: 16px; align-items: start; }
 .precheck-preview-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .precheck-style-box { width: 100%; max-height: 220px; overflow: auto; padding: 8px 10px; border: 1px solid rgba(47, 138, 91, 0.16); border-radius: 10px; }

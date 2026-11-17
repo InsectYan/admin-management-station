@@ -32,6 +32,15 @@
               <el-input-number v-model="fps" :min="1" :max="120" :step="1" :precision="0" :controls="false" @change="writeFps" />
               <p class="precheck-module__hint">写入成片节点的每秒帧数。预览里填写生成时间时，按这个数把秒数换成帧数。MiniMax H3 常用 24，Wan 常用 8。</p>
             </el-form-item>
+            <el-form-item class="precheck-workflow-steps" label="双采">
+              <div class="precheck-workflow-size">
+                <el-switch v-model="dualSample" aria-label="开启双采" />
+                <el-select v-if="dualSample" v-model="dualScale" style="width: 140px">
+                  <el-option v-for="item in DUAL_SCALES" :key="item" :label="`${item} 倍`" :value="item" />
+                </el-select>
+              </div>
+              <p class="precheck-module__hint">默认关闭。图片工作流开启后先采样，再按倍数放大潜空间并采样第二次。MiniMax H3 的采样画布有上限，第二次扩散不会把画面采得更大，开启后改为采样完成再按倍数放大成片画面。卡通生成视频走已保存的这份配置。</p>
+            </el-form-item>
             <el-form-item class="precheck-workflow-steps" label="基础提示词规则">
               <el-input v-model="promptRule" type="textarea" :rows="4" placeholder="留空则不追加" />
               <p class="precheck-module__hint">有内容时，这条工作流每次生成都会把这段接在正向提示词末尾。画风仍拼在前面。留空就只提交原来的提示词。规则跟工作流走，换工作流或换模型时改这里，不用改项目。</p>
@@ -55,7 +64,7 @@
       <el-tab-pane label="预览" name="preview">
         <div class="precheck-module">
           <p class="precheck-module__hint">改提示词、宽高或时长。每次生成都会留下一条，可以删除。</p>
-          <WorkflowPreview :workflow-id="workflowId" :api-json="previewJson" :refmod="name.includes('[RefMod]')" />
+          <WorkflowPreview :workflow-id="workflowId" :api-json="previewJson" :refmod="name.includes('[RefMod]')" :dual-sample="dualSample" :dual-scale="dualScale" />
         </div>
       </el-tab-pane>
     </el-tabs>
@@ -88,6 +97,9 @@ const previewJson = ref(null);
 const steps = ref(8);
 const fps = ref(24);
 const promptRule = ref('');
+const dualSample = ref(false);
+const dualScale = ref(2);
+const DUAL_SCALES = [ 1.5, 2, 2.5, 3 ];
 const width = ref(1024);
 const height = ref(1024);
 const SIZE_CATEGORIES = new Set([ 'text_to_image', 'image_edit', 'text_to_video', 'image_to_video' ]);
@@ -252,6 +264,8 @@ function payload(apiJson) {
     api_json: apiJson,
     suggested_vram_gb: vram === '' ? null : Number(vram),
     prompt_rule: promptRule.value,
+    dual_sample: dualSample.value,
+    dual_scale: dualScale.value,
   };
 }
 async function inspect() {
@@ -289,6 +303,8 @@ async function load() {
   category.value = row.category || 'text_to_image';
   suggestedVram.value = row.suggested_vram_gb ?? '';
   promptRule.value = row.prompt_rule || '';
+  dualSample.value = Boolean(row.dual_sample);
+  dualScale.value = DUAL_SCALES.includes(Number(row.dual_scale)) ? Number(row.dual_scale) : 2;
   raw.value = JSON.stringify(row.api_json, null, 2);
   syncSteps();
   syncSize();

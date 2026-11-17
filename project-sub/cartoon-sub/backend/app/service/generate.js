@@ -988,10 +988,13 @@ class GenerateService extends Service {
       await this.dropComfyPrompts([ submitted.prompt_id ]);
       return task.reload();
     }
+    const runningBrief = parseBrief(task.generation_brief) || {};
+    runningBrief.started_at = new Date().toISOString();
     await task.update({
       status: 'running',
       prompt_id: submitted.prompt_id,
       workflow_snapshot: submission,
+      generation_brief: runningBrief,
       error_message: '',
       precheck_workflow_id: workflowId || task.precheck_workflow_id,
       precheck_gap: null,
@@ -1096,8 +1099,14 @@ class GenerateService extends Service {
           }
         }
       }
+      const fresh = await task.reload();
+      const brief = parseBrief(fresh.generation_brief) || {};
+      const started = Date.parse(brief.started_at || fresh.created_at || fresh.createdAt || '') || Date.now();
+      const finished = Date.now();
+      brief.finished_at = new Date(finished).toISOString();
+      brief.elapsed_ms = Math.max(0, finished - started);
       const [ saved ] = await this.ctx.model.Task.update(
-        { status: 'success', error_message: '' },
+        { status: 'success', error_message: '', generation_brief: brief },
         { where: { id: task.id, status: 'saving' } },
       );
       if (saved && task.shot_id) {
@@ -1280,6 +1289,8 @@ class GenerateService extends Service {
       error_message: task.error_message || '',
       generation: task.generation,
       outputs: task.outputs || [],
+      created_at: task.created_at || task.createdAt || null,
+      updated_at: task.updated_at || task.updatedAt || null,
     };
   }
 
@@ -1502,6 +1513,9 @@ class GenerateService extends Service {
       assets_from_prompt: !recorded && mentioned.length > 0,
       seed: stored?.seed ?? extracted.seed ?? null,
       duration_sec: stored?.duration_sec ?? null,
+      elapsed_ms: Number(stored?.elapsed_ms) > 0 ? Number(stored.elapsed_ms) : null,
+      started_at: stored?.started_at || null,
+      finished_at: stored?.finished_at || null,
       part: stored?.part || '',
       width: stored?.width || null,
       height: stored?.height || null,

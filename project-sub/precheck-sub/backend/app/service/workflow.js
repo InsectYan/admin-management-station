@@ -9,6 +9,12 @@ const { QWEN21_TEMPLATES } = require('../lib/qwen21Templates');
 const { QWEN_EDIT_TEMPLATES } = require('../lib/qwenEditTemplates');
 const { IMAGE_CATALOG_TEMPLATES } = require('../lib/imageCatalogTemplates');
 const { CAPTION_TEMPLATES, CAPTION_RENAMES, patchCaptionGraph } = require('../lib/captionTemplates');
+const { SCALES } = require('../lib/dualSample');
+
+function dualScaleOf(value) {
+  const scale = Number(value);
+  return SCALES.has(scale) ? scale : 2;
+}
 
 class WorkflowService extends Service {
   async ensureTemplates() {
@@ -101,6 +107,8 @@ class WorkflowService extends Service {
       required_models: parsed.required_models,
       suggested_vram_gb: payload.suggested_vram_gb || null,
       prompt_rule: payload.prompt_rule == null ? null : String(payload.prompt_rule),
+      dual_sample: Boolean(payload.dual_sample),
+      dual_scale: dualScaleOf(payload.dual_scale),
     });
   }
 
@@ -121,6 +129,8 @@ class WorkflowService extends Service {
       required_models: parsed.required_models,
       suggested_vram_gb: payload.suggested_vram_gb === undefined ? row.suggested_vram_gb : payload.suggested_vram_gb,
       prompt_rule: payload.prompt_rule === undefined ? row.prompt_rule : String(payload.prompt_rule || ''),
+      dual_sample: payload.dual_sample === undefined ? row.dual_sample : Boolean(payload.dual_sample),
+      dual_scale: payload.dual_scale === undefined ? row.dual_scale : dualScaleOf(payload.dual_scale),
     });
     return row.reload();
   }

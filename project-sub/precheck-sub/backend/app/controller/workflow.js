@@ -134,6 +134,8 @@ class WorkflowController extends Controller {
         stylePrompt: body.style_prompt || '',
         outputName: body.output_name || '',
         styleNames: body.style_names || [],
+        dualSample: body.dual_sample,
+        dualScale: body.dual_scale,
       }));
     } catch (err) {
       this.ctx.status = err.status || 500;
@@ -158,6 +160,8 @@ class WorkflowController extends Controller {
         stylePrompt: body.style_prompt || '',
         outputName: body.output_name || '',
         styleNames: body.style_names || [],
+        dualSample: body.dual_sample,
+        dualScale: body.dual_scale,
       }));
     } catch (err) {
       this.ctx.status = err.status || 500;

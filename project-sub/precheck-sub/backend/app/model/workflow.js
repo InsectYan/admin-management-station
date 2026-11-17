@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = app => {
-  const { STRING, INTEGER, JSONB } = app.Sequelize;
+  const { STRING, INTEGER, JSONB, BOOLEAN, DOUBLE } = app.Sequelize;
   const Workflow = app.model.define('precheck_workflow', {
     id: { type: INTEGER, primaryKey: true, autoIncrement: true },
     name: { type: STRING(200), allowNull: false },
@@ -12,6 +12,8 @@ module.exports = app => {
     suggested_vram_gb: { type: INTEGER, allowNull: true },
     preview_json: { type: JSONB, allowNull: true },
     prompt_rule: { type: STRING(4000), allowNull: true },
+    dual_sample: { type: BOOLEAN, allowNull: false, defaultValue: false },
+    dual_scale: { type: DOUBLE, allowNull: false, defaultValue: 2 },
   }, { tableName: 'precheck_workflows' });
   return Workflow;
 };

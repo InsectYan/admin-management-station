@@ -13,6 +13,7 @@ const { buildSupplies } = require('../lib/supplyCatalog');
 const { listPreviewFields, applyPreviewValues, collectMedia, collectText, resolveImageSeeds, pinBatchSize, applyQwen21OutputSize, isVideoWorkflow } = require('../lib/workflowPreview');
 const { describeCallInputs, applyCallInputs, applySeed, withCallFields, expandReferenceImages } = require('../lib/workflowInputs');
 const { applyRefmod } = require('../lib/refmodApply');
+const { applyDualSample } = require('../lib/dualSample');
 
 function previewRoot() {
   return process.env.PREVIEW_DIR || '/data/previews';
@@ -370,6 +371,7 @@ class WorkflowPreviewService extends Service {
     let graph = applySeed(applyCallInputs(source, { positive, negative, imageNames: resolved.names }), payload.seed);
     graph = expandReferenceImages(graph, describeCallInputs(source).images, resolved.extras);
     applyQwen21OutputSize(graph);
+    graph = applyDualSample(graph, { enabled: row.dual_sample, scale: row.dual_scale });
     const seconds = Number(payload.duration_sec);
     if (Number.isFinite(seconds) && seconds > 0) {
       graph = applyPreviewValues(graph, [{ type: 'duration', key: 'duration_sec', value: seconds }]);
@@ -400,13 +402,21 @@ class WorkflowPreviewService extends Service {
     return submitted;
   }
 
-  async start({ workflowId, draftKey, apiJson, values, refmodIds, refImages, batch, seeds, stylePrompt, outputName, styleNames }) {
+  async start({ workflowId, draftKey, apiJson, values, refmodIds, refImages, batch, seeds, stylePrompt, outputName, styleNames, dualSample, dualScale }) {
     const imageSeeds = resolveImageSeeds(apiJson, values, batch, seeds);
     let promptRule = '';
+    let savedDual = false;
+    let savedScale = 2;
     if (workflowId) {
       const saved = await this.ctx.service.workflow.show(workflowId);
       promptRule = saved.prompt_rule;
+      savedDual = Boolean(saved.dual_sample);
+      savedScale = Number(saved.dual_scale) || 2;
     }
+    const dual = {
+      enabled: dualSample === undefined ? savedDual : Boolean(dualSample),
+      scale: dualScale === undefined ? savedScale : Number(dualScale),
+    };
     const styledValues = appendRuleToValues(mergeStylePrompt(values, stylePrompt), promptRule);
     const outputBase = productBaseName(outputName);
     let source = apiJson;
@@ -463,6 +473,7 @@ class WorkflowPreviewService extends Service {
         resolved.extras,
       );
       applyQwen21OutputSize(graph);
+      graph = applyDualSample(graph, dual);
       if (seed != null) {
         applySeed(graph, seed);
         pinBatchSize(graph);

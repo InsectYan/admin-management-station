@@ -5,7 +5,7 @@
       <el-button v-if="shot" :disabled="!canMake()" @click="openGenerate">继续生成</el-button>
       <el-button @click="openEdit">剪辑成片</el-button>
     </template>
-    <section class="cartoon-module">
+    <section class="cartoon-module cartoon-preview-page">
       <el-empty v-if="loaded && !shot" description="没有找到这条分镜" />
       <el-tabs v-else-if="loaded" v-model="previewTab">
         <el-tab-pane label="资产" name="assets">
@@ -79,7 +79,7 @@
             <el-table-column label="工作流" min-width="180" prop="workflow" />
             <el-table-column label="尺寸" width="130" prop="size" />
             <el-table-column label="种子" width="120" prop="seed" />
-            <el-table-column label="时长" width="90" prop="duration" />
+            <el-table-column label="生成时间" width="120" prop="elapsed" />
             <el-table-column label="参考图" width="90" prop="refs" />
             <el-table-column label="提示词字数" width="110" prop="chars" />
             <el-table-column label="状态" width="100" prop="status" />
@@ -163,7 +163,8 @@
                   <dt>生成参数</dt>
                   <dd>
                     种子 {{ panelOf(task).generation?.seed ?? '未记' }}
-                    <template v-if="briefTab(task) === 'video'"> · 时长 {{ durationText(panelOf(task)) }}</template>
+                    · 生成时间 {{ elapsedText(panelOf(task).generation, panelOf(task)) }}
+                    <template v-if="briefTab(task) === 'video'"> · 成片时长 {{ durationText(panelOf(task)) }}</template>
                     <template v-if="panelOf(task).generation?.width && panelOf(task).generation?.height">
                       · {{ panelOf(task).generation.width }} × {{ panelOf(task).generation.height }}
                     </template>
@@ -241,7 +242,7 @@ function submitLine(part, generation, task) {
     workflow: generation.workflow_name || '未记',
     size: generation.width && generation.height ? `${generation.width} × ${generation.height}` : '—',
     seed: generation.seed ?? '—',
-    duration: Number(generation.duration_sec) > 0 ? `${generation.duration_sec} 秒` : '—',
+    elapsed: elapsedText(generation, task),
     refs: Array.isArray(generation.references) ? generation.references.length : 0,
     chars: String(generation.positive || '').length,
     status: statusLabel(task.status),
@@ -252,14 +253,8 @@ const submitRows = computed(() => infoRecords.value.flatMap(task => {
   if (isVideoTask(task)) {
     return [
       submitLine('视频', generation, task),
-      submitLine('首帧', generation.frame_start?.generation, {
-        id: generation.frame_start?.id || task.id,
-        status: generation.frame_start?.status || task.status,
-      }),
-      submitLine('尾帧', generation.frame_end?.generation, {
-        id: generation.frame_end?.id || task.id,
-        status: generation.frame_end?.status || task.status,
-      }),
+      submitLine('首帧', generation.frame_start?.generation, generation.frame_start || task),
+      submitLine('尾帧', generation.frame_end?.generation, generation.frame_end || task),
     ].filter(Boolean);
   }
   return [ submitLine(generation.part === 'end' ? '尾帧' : '生图', generation, task) ].filter(Boolean);
@@ -389,6 +384,23 @@ function refEmptyText(task) {
 }
 function assetKindLabel(kind) {
   return { character: '人物', scene: '场景', prop: '道具' }[kind] || '资产';
+}
+function formatElapsed(ms) {
+  const sec = Math.max(1, Math.round(ms / 1000));
+  if (sec < 60) return `${sec} 秒`;
+  const min = Math.floor(sec / 60);
+  const rest = sec % 60;
+  return rest ? `${min} 分 ${rest} 秒` : `${min} 分`;
+}
+function elapsedText(generation, task) {
+  const stored = Number(generation?.elapsed_ms);
+  if (stored > 0) return formatElapsed(stored);
+  const start = Date.parse(task?.created_at || task?.createdAt || '');
+  const end = Date.parse(task?.updated_at || task?.updatedAt || '');
+  if (task?.status === 'success' && Number.isFinite(start) && Number.isFinite(end) && end > start && end - start < 3 * 60 * 60 * 1000) {
+    return formatElapsed(end - start);
+  }
+  return '未记';
 }
 function durationText(source) {
   const sec = Number(generationOf(source).duration_sec);
@@ -537,6 +549,24 @@ onUnmounted(stopPoll);
 </script>
 
 <style scoped>
+.cartoon-preview-page { min-height: 0; }
+.cartoon-preview-page :deep(.el-tabs) {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.cartoon-preview-page :deep(.el-tabs__header) { flex: none; }
+.cartoon-preview-page :deep(.el-tabs__content) {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.cartoon-preview-page :deep(.el-tab-pane) {
+  height: 100%;
+  overflow: auto;
+}
 .cartoon-compare { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
 .cartoon-compare__label { font-weight: 600; }
 .cartoon-output-wrap { container-type: inline-size; }
