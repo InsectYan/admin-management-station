@@ -226,10 +226,21 @@
               </el-tab-pane>
               <el-tab-pane :label="`场次（${(activeScriptData.scenes || []).length}）`" name="scenes">
                 <el-empty v-if="!(activeScriptData.scenes || []).length" description="还没有场次" />
-                <div v-for="(scene, index) in (activeScriptData.scenes || [])" :key="`${scene.title}-${index}`" class="cartoon-script__scene">
-                  <strong>{{ index + 1 }}. {{ scene.title || '未命名场次' }}</strong>
-                  <span v-if="scene.purpose" class="cartoon-script__note">{{ scene.purpose }}</span>
-                  <CartoonMarkdown :source="scene.summary || ''" />
+                <div
+                  v-for="(scene, index) in (activeScriptData.scenes || [])"
+                  :key="`${scene.title}-${index}`"
+                  class="cartoon-script__scene"
+                  :class="{ 'is-wardrobe': showWardrobe }"
+                >
+                  <div>
+                    <strong>{{ index + 1 }}. {{ scene.title || '未命名场次' }}</strong>
+                    <span v-if="scene.purpose" class="cartoon-script__note">{{ scene.purpose }}</span>
+                    <CartoonMarkdown :source="scene.summary || ''" />
+                  </div>
+                  <aside v-if="showWardrobe" class="cartoon-script__wardrobe">
+                    <span>服装状态</span>
+                    <p>{{ scene.wardrobe || '这一场还没有服装状态' }}</p>
+                  </aside>
                 </div>
               </el-tab-pane>
               <el-tab-pane :label="`分镜表（${scriptShotTotal}）`" name="shots">
@@ -265,6 +276,9 @@
               </el-table-column>
               <el-table-column label="原文" width="280">
                 <template #default="{ row }"><ClampText title="原文" :text="row.source_excerpt || ''" /></template>
+              </el-table-column>
+              <el-table-column v-if="showWardrobe" label="服装状态" width="280">
+                <template #default="{ row }"><ClampText title="服装状态" :text="row.wardrobe_state || ''" /></template>
               </el-table-column>
               <el-table-column label="上镜尾帧" width="120">
                 <template #default="{ row }">
@@ -406,6 +420,9 @@
             </el-table-column>
             <el-table-column label="原文" width="280">
               <template #default="{ row }"><ClampText title="原文" :text="row.source_excerpt || ''" /></template>
+            </el-table-column>
+            <el-table-column v-if="showWardrobe" label="服装状态" width="280">
+              <template #default="{ row }"><ClampText title="服装状态" :text="row.wardrobe_state || ''" /></template>
             </el-table-column>
             <el-table-column label="上镜尾帧" width="120">
               <template #default="{ row }">
@@ -814,6 +831,7 @@ const shotCreateOpen = ref(false);
 const shotPanel = ref(null);
 const pinRequired = computed(() => (detail.value?.project?.pin_mode || 'required') !== 'legacy');
 const isLocal = computed(() => isLocalType(detail.value?.project?.content_type));
+const showWardrobe = computed(() => Boolean(detail.value?.project?.av_mode));
 const packageVersions = computed(() => packageDesk.value?.versions || []);
 const matchingImport = computed(() => (detail.value?.imports || []).find(item => (
   !item.deleted_at && String(item.chapter_id) === String(chapterId.value)
@@ -2960,6 +2978,10 @@ onUnmounted(() => {
 .cartoon-script__edithead h4 { margin: 0; }
 .cartoon-frame-thumb { object-fit: contain; border-radius: 4px; background: #e7f3eb; display: block; }
 .cartoon-script__scene { margin-bottom: 12px; padding: 10px 12px; border: 1px solid rgba(47, 138, 91, 0.18); border-radius: 8px; background: #f7fbf8; }
+.cartoon-script__scene.is-wardrobe { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 12px; align-items: start; }
+.cartoon-script__wardrobe { margin: 0; padding: 8px 10px; border-left: 1px solid rgba(47, 138, 91, 0.18); }
+.cartoon-script__wardrobe span { display: block; margin-bottom: 4px; font-weight: 600; }
+.cartoon-script__wardrobe p { margin: 0; white-space: pre-wrap; }
 @media (max-width: 900px) {
   .cartoon-setting-grid { grid-template-columns: 1fr; }
 }

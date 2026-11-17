@@ -29,5 +29,6 @@ module.exports = app => {
     dialogue_lines: { type: JSONB, allowNull: true },
     scene_label: { type: STRING(200), allowNull: true },
     source_excerpt: { type: TEXT, allowNull: true },
+    wardrobe_state: { type: TEXT, allowNull: true },
   }, { tableName: 'cartoon_shots' });
 };

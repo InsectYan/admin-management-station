@@ -38,6 +38,34 @@ function picturePrompt(text) {
   return uniquePrompt(text);
 }
 
+function wardrobeText(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value !== 'object') return '';
+  const uniform = String(value.uniform || value.base || '').trim();
+  const state = String(value.state || value.status || '').trim();
+  const lines = [];
+  if (uniform) lines.push(uniform.startsWith('服装统一') ? uniform : `服装统一：${uniform}`);
+  if (state) lines.push(state.startsWith('状态') ? state : `状态：${state}`);
+  return lines.join('\n');
+}
+
+function sceneWardrobe(script, sceneIndex, sceneLabel) {
+  const scenes = Array.isArray(script?.scenes) ? script.scenes : [];
+  const index = Number(sceneIndex);
+  if (Number.isInteger(index) && index > 0 && scenes[index - 1]) {
+    const text = wardrobeText(scenes[index - 1].wardrobe);
+    if (text) return text;
+  }
+  const label = String(sceneLabel || '').trim();
+  if (!label) return '';
+  const hit = scenes.find(scene => {
+    const title = String(scene?.title || '').trim();
+    return title && label.includes(title);
+  });
+  return wardrobeText(hit?.wardrobe);
+}
+
 function clipText(text, max = 6000) {
   const value = String(text || '');
   return value.length > max ? `${value.slice(0, max)}…` : value;
@@ -59,6 +87,7 @@ function tracePacket(shot, extra = {}) {
     dialogue: shot.dialogue || '',
     source_excerpt: shot.source_excerpt || '',
     duration_sec: shot.duration_sec,
+    wardrobe_state: shot.wardrobe_state || '',
   };
   if (shot.asset_facts) packet.asset_facts = shot.asset_facts;
   if (extra.positive_zh) packet.positive_zh = extra.positive_zh;
@@ -359,6 +388,7 @@ class DraftService extends Service {
       camera_move: serializeCameraMoves(item.camera_moves != null ? item.camera_moves : item.camera_move),
       dialogue: String(item.dialogue || '').trim(),
       source_indexes: item.source_indexes,
+      wardrobe_state: wardrobeText(item.wardrobe_state),
     })).filter(item => item.coverage);
     if (!outline.length) this.ctx.throw(502, '没有有效镜头大纲');
     const locked = settled.script;
@@ -413,14 +443,21 @@ class DraftService extends Service {
           description: item.coverage,
           dialogue: item.dialogue,
         }, item.source_indexes),
+        wardrobe_state: wardrobeText(item.wardrobe_state) || sceneWardrobe(locked, item.scene_index, sceneTitle(locked, item)),
       };
       let row;
+      const fields = { ...base, shot_code: codes[i] };
       try {
-        row = await this.ctx.model.Shot.create({ ...base, shot_code: codes[i] });
+        row = await this.ctx.model.Shot.create(fields);
       } catch (err) {
-        if (!/shot_code/i.test(String(err.message || ''))) throw err;
-        this.ctx.logger.warn('[cartoon] shot_code column missing, create without code: %s', err.message);
-        row = await this.ctx.model.Shot.create(base);
+        const message = String(err.message || '');
+        const dropWardrobe = /wardrobe_state/i.test(message);
+        const dropCode = /shot_code/i.test(message);
+        if (!dropWardrobe && !dropCode) throw err;
+        if (dropWardrobe) delete fields.wardrobe_state;
+        if (dropCode) delete fields.shot_code;
+        this.ctx.logger.warn('[cartoon] shot create retry: %s', message);
+        row = await this.ctx.model.Shot.create(fields);
       }
       createdIds.push(row.id);
       order += 1;
@@ -497,6 +534,7 @@ class DraftService extends Service {
       dialogue: String(payload.dialogue != null ? payload.dialogue : (existing.dialogue || '')).trim(),
       source_excerpt: sourceExcerpt,
       scene_label: existing.scene_label || '',
+      wardrobe_state: String(existing.wardrobe_state || '').trim() || sceneWardrobe(settledScript.script, null, existing.scene_label),
     };
     const seedFacts = await this.shotFactText(project.id, [ seedShot.description, seedShot.dialogue ].join('\n'));
     seedShot.asset_facts = seedFacts;
@@ -548,6 +586,7 @@ class DraftService extends Service {
       dialogue: String(expanded?.dialogue || seedShot.dialogue).trim(),
       source_excerpt: sourceExcerpt,
       scene_label: existing.scene_label || '',
+      wardrobe_state: wardrobeText(expanded?.wardrobe_state) || seedShot.wardrobe_state || '',
     };
     if (!shot.description) {
       await this.rememberTrace(
@@ -774,13 +813,21 @@ class DraftService extends Service {
       negative_zh: prompt.negative_zh || '',
     };
     const coveredMs = promptCoveredMs(videoText);
-    await existing.update({
+    const shotPatch = {
       shot_size: shot.shot_size,
       camera_move: shot.camera_move,
       dialogue: shot.dialogue,
       duration_ms: coveredMs || shot.duration_sec * 1000,
       overridden_fields: overrides,
-    });
+    };
+    if (shot.wardrobe_state) shotPatch.wardrobe_state = shot.wardrobe_state;
+    try {
+      await existing.update(shotPatch);
+    } catch (err) {
+      if (!shotPatch.wardrobe_state || !/wardrobe_state/i.test(String(err.message || ''))) throw err;
+      delete shotPatch.wardrobe_state;
+      await existing.update(shotPatch);
+    }
     const promptRow = await this.ctx.model.Prompt.findOne({ where: { shot_id: existing.id } });
     if (promptRow) await promptRow.update(promptFields);
     else await this.ctx.model.Prompt.create({ shot_id: existing.id, ...promptFields });
