@@ -1,5 +1,8 @@
 <template>
   <PageShell title="垃圾箱" :loading="loading">
+    <template #extra>
+      <el-button type="danger" plain :disabled="!canMake() || !rows.length || clearing" :loading="clearing" @click="removeAll">一键删除</el-button>
+    </template>
     <div class="cartoon-module cartoon-trash">
       <p class="cartoon-trash__hint">这里集中已经对不上镜头的帧图、还指着这些目录的路径，以及没有镜头的提示词记录。上游已经删除的会标成已删除。</p>
       <div class="cartoon-trash__table">
@@ -54,6 +57,7 @@ import { canMake } from '../lib/appAccess.js';
 import { PAGE_SIZES, PAGER_LAYOUT } from '../lib/pager.js';
 
 const loading = ref(false);
+const clearing = ref(false);
 const rows = ref([]);
 const page = ref(1);
 const pageSize = ref(50);
@@ -80,6 +84,40 @@ async function load() {
     ElMessage.error(err?.message || '垃圾箱加载失败');
   } finally {
     loading.value = false;
+  }
+}
+
+async function removeAll() {
+  const count = rows.value.length;
+  if (!count) return;
+  try {
+    await ElMessageBox.confirm(`清除当前 ${count} 条垃圾数据？这些文件和记录会一起去掉。`, '一键删除', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+    });
+  } catch {
+    return;
+  }
+  clearing.value = true;
+  const pending = rows.value.slice();
+  let removed = 0;
+  let failed = 0;
+  try {
+    for (const row of pending) {
+      try {
+        await request(`/trash/${encodeURIComponent(row.id)}`, { method: 'DELETE' });
+        removed += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    ElMessage.success(failed ? `已清除 ${removed} 条，${failed} 条没有清掉` : `已清除 ${removed} 条`);
+    await load();
+  } catch (err) {
+    ElMessage.error(err?.message || '清除失败');
+  } finally {
+    clearing.value = false;
   }
 }
 

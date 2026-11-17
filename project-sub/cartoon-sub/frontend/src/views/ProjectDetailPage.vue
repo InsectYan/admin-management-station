@@ -263,8 +263,8 @@
               <el-table-column label="对白" width="280">
                 <template #default="{ row }"><ClampText title="对白" :text="row.dialogue || ''" /></template>
               </el-table-column>
-              <el-table-column label="原文段" width="280">
-                <template #default="{ row }"><ClampText title="原文段" :text="row.source_excerpt || ''" /></template>
+              <el-table-column label="原文" width="280">
+                <template #default="{ row }"><ClampText title="原文" :text="row.source_excerpt || ''" /></template>
               </el-table-column>
               <el-table-column label="上镜尾帧" width="120">
                 <template #default="{ row }">
@@ -403,6 +403,9 @@
             </el-table-column>
             <el-table-column label="对白" width="280">
               <template #default="{ row }"><ClampText title="对白" :text="row.dialogue || ''" /></template>
+            </el-table-column>
+            <el-table-column label="原文" width="280">
+              <template #default="{ row }"><ClampText title="原文" :text="row.source_excerpt || ''" /></template>
             </el-table-column>
             <el-table-column label="上镜尾帧" width="120">
               <template #default="{ row }">
