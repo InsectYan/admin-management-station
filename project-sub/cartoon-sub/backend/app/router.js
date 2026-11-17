@@ -27,6 +27,8 @@ module.exports = app => {
   router.get('/api/library/reviews/:id', controller.library.review);
   router.get('/api/library/versions', controller.library.versions);
   router.get('/api/library/exports', controller.library.exports);
+  router.get('/api/trash', controller.trash.index);
+  router.delete('/api/trash/:id', controller.trash.destroy);
   router.get('/api/library/outputs', controller.library.outputs);
   router.get('/api/library/outputs/:id', controller.library.output);
   router.get('/api/library/captions', controller.caption.library);

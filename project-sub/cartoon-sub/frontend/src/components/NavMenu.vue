@@ -27,6 +27,10 @@
         <el-icon><VideoCamera /></el-icon>
         <span>产物</span>
       </el-menu-item>
+      <el-menu-item index="/trash">
+        <el-icon><Delete /></el-icon>
+        <span>垃圾箱</span>
+      </el-menu-item>
       <el-menu-item index="/templates">
         <el-icon><Collection /></el-icon>
         <span>模板</span>
@@ -87,6 +91,10 @@
       <el-icon><VideoCamera /></el-icon>
       <span>产物</span>
     </el-menu-item>
+    <el-menu-item index="/trash">
+      <el-icon><Delete /></el-icon>
+      <span>垃圾箱</span>
+    </el-menu-item>
     <el-menu-item index="/templates">
       <el-icon><Collection /></el-icon>
       <span>模板</span>
@@ -133,7 +141,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { Expand, Fold, Film, VideoCamera, Collection, Operation, Notebook, User, Files, Picture, CircleCheck, Tickets, Download } from '@element-plus/icons-vue';
+import { Expand, Fold, Film, VideoCamera, Delete, Collection, Operation, Notebook, User, Files, Picture, CircleCheck, Tickets, Download } from '@element-plus/icons-vue';
 import { useNavCollapse } from '../composables/useNavCollapse.js';
 
 defineProps({ embedded: { type: Boolean, default: false } });
