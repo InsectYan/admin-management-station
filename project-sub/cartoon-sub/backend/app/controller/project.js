@@ -487,6 +487,14 @@ class ProjectController extends Controller {
     }
   }
 
+  async setShotSexual() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.setShotSexual(this.ctx.params.id, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async saveFrame() {
     try {
       ok(this.ctx, await this.ctx.service.project.saveManualFrame(

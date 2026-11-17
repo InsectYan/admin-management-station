@@ -23,6 +23,8 @@ module.exports = app => {
     asset_stale: { type: BOOLEAN, allowNull: false, defaultValue: false },
     first_frame_path: { type: STRING(500), allowNull: true },
     manual_frame_path: { type: STRING(500), allowNull: true },
+    sexual_act: { type: BOOLEAN, allowNull: true },
+    sexual_source: { type: STRING(16), allowNull: false, defaultValue: 'machine' },
     stage_notes: { type: JSONB, allowNull: true },
     dialogue_lines: { type: JSONB, allowNull: true },
     scene_label: { type: STRING(200), allowNull: true },

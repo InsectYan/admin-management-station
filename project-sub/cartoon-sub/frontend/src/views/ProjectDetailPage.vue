@@ -251,6 +251,14 @@
               <el-table-column label="时长(秒)" width="110">
                 <template #default="{ row }">{{ shotDurationLabel(row) }}</template>
               </el-table-column>
+              <el-table-column v-if="avOn" label="是否性爱" width="130">
+                <template #default="{ row }">
+                  <span class="cartoon-sexual">
+                    <span>{{ sexualText(row) }}</span>
+                    <el-tag size="small" effect="plain">{{ row.sexual_source === 'manual' ? '人工' : '机器' }}</el-tag>
+                  </span>
+                </template>
+              </el-table-column>
               <el-table-column label="主景别" width="180">
                 <template #default="{ row }">{{ shotSizeText(row) }}</template>
               </el-table-column>
@@ -281,7 +289,7 @@
               <el-table-column label="首尾帧提示词" width="420">
                 <template #default="{ row }"><ClampText title="首尾帧提示词" :text="framePromptText(row.prompt)" /></template>
               </el-table-column>
-              <el-table-column label="操作" width="200" fixed="right">
+              <el-table-column label="操作" width="240" fixed="right" class-name="cartoon-ops-cell">
                 <template #default="{ row }">
                   <el-button
                     link
@@ -290,6 +298,22 @@
                     :loading="expandingKey === String(row.id)"
                     @click="expandOutlineRow(row)"
                   >生成分镜提示词</el-button>
+                  <el-button
+                    v-if="avOn && row.sexual_act !== true"
+                    link
+                    type="primary"
+                    :disabled="!canMake()"
+                    :loading="sexualKey === `${row.id}:on`"
+                    @click="setSexual(row, true)"
+                  >开启性爱</el-button>
+                  <el-button
+                    v-if="avOn && row.sexual_act === true"
+                    link
+                    type="primary"
+                    :disabled="!canMake()"
+                    :loading="sexualKey === `${row.id}:off`"
+                    @click="setSexual(row, false)"
+                  >关闭性爱</el-button>
                   <el-button link type="danger" :disabled="!canMake()" @click="removeShot(row)">删除</el-button>
                 </template>
               </el-table-column>
@@ -772,6 +796,7 @@ const steps = [
   { step: 4, title: '镜头' },
 ];
 const flowBusy = computed(() => props.pipelineRunning);
+const avOn = computed(() => Boolean(detail.value?.project?.av_mode));
 const embedded = computed(() => props.forcedStep > 0);
 const step = ref(props.forcedStep || Number(route.query.step) || 1);
 watch(() => props.forcedStep, (value) => {
@@ -847,6 +872,7 @@ const draftingId = ref(null);
 const autoModeId = ref(null);
 const outliningId = ref(null);
 const expandingKey = ref('');
+const sexualKey = ref('');
 const selectedImportKey = ref('');
 const chapterBodyOpen = ref(false);
 const chapterBodyTitle = ref('');
@@ -1606,6 +1632,25 @@ async function removeSnapshot(item) {
     ElMessage.success('已删除快照及关联镜头');
   } catch (err) {
     ElMessage.error(err.message);
+  }
+}
+function sexualText(row) {
+  if (row?.sexual_act === true) return '是';
+  if (row?.sexual_act === false) return '否';
+  return '未判断';
+}
+async function setSexual(row, on) {
+  const key = `${row.id}:${on ? 'on' : 'off'}`;
+  sexualKey.value = key;
+  try {
+    await request(`/shots/${row.id}/sexual`, { method: 'put', data: { sexual_act: on } });
+    row.sexual_act = on;
+    row.sexual_source = 'manual';
+    ElMessage.success(on ? '这一镜已由人工标为性爱' : '这一镜已由人工标为非性爱');
+  } catch (err) {
+    ElMessage.error(err.message);
+  } finally {
+    if (sexualKey.value === key) sexualKey.value = '';
   }
 }
 function shotDurationLabel(row, withUnit) {
@@ -2800,6 +2845,8 @@ onUnmounted(() => {
 .cartoon-snap-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .cartoon-snap-table :deep(.cartoon-chapter-cell .cell) { overflow: hidden; }
 .cartoon-snap-table :deep(.cartoon-ops-cell .cell) { white-space: normal; line-height: 1.4; }
+.cartoon-shot-table :deep(.cartoon-ops-cell .cell) { white-space: normal; line-height: 1.6; }
+.cartoon-sexual { display: inline-flex; align-items: center; gap: 6px; }
 .cartoon-chapter-clamp {
   display: block;
   width: 100%;

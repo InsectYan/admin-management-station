@@ -20,6 +20,7 @@ const { normalizeScript, placeTag } = require('../lib/rosterNames');
 const { uniquePrompt } = require('../lib/promptText');
 const { promptCoveredMs } = require('../lib/promptDuration');
 const { assetFactText, namedAssets } = require('../lib/assetProfile');
+const { sexualDecision, machineSexualFields } = require('../lib/avPrompt');
 const { begin, finish } = require('../lib/activeRuns');
 
 function outputOf(result) {
@@ -334,6 +335,7 @@ class DraftService extends Service {
         dialogue: item.dialogue,
         duration_ms: item.duration_sec * 1000,
         scene_label: sceneTitle(locked, item),
+        ...machineSexualFields(project, { description: item.coverage, dialogue: item.dialogue }),
       };
       let row;
       try {
@@ -451,6 +453,10 @@ class DraftService extends Service {
       dialogue: String(expanded?.dialogue || seedShot.dialogue).trim(),
     };
     if (!shot.description) this.ctx.throw(502, '没有返回分镜描述');
+    const decision = project.av_mode ? sexualDecision(existing, shot) : { sexual: false, source: 'machine' };
+    if (project.av_mode && decision.source === 'machine') {
+      await existing.update({ sexual_act: decision.sexual, sexual_source: 'machine' });
+    }
     const shotFacts = await this.shotFactText(project.id, [ shot.description, shot.dialogue ].join('\n'));
     shot.asset_facts = shotFacts;
     const promptPayload = {
@@ -499,7 +505,7 @@ class DraftService extends Service {
         this.ctx.logger.warn('[cartoon] 负向提示词补调失败 %s', err.message);
       }
     }
-    if (project.av_mode) {
+    if (decision.sexual) {
       try {
         ensureRunning();
         const closed = await invokeSkill(this.ctx, {
@@ -509,6 +515,8 @@ class DraftService extends Service {
           signal: stop.signal,
           payload: {
             ...promptPayload,
+            av_mode: true,
+            sexual_confirmed: true,
             shots: [{
               ...shot,
               draft_positive_zh: picturePrompt(prompt.positive_zh),
@@ -538,6 +546,8 @@ class DraftService extends Service {
         if (err?.status === 499 || err?.message === '已停止') throw err;
         this.ctx.logger.warn('[cartoon] AV 收口失败，沿用已写好的提示词 %s', err.message);
       }
+    } else if (project.av_mode) {
+      this.ctx.logger.info('[cartoon] 这一镜按%s不调用 AV 收口', decision.source === 'manual' ? '人工关闭' : '机器判断');
     }
     ensureRunning();
     const overrides = (Array.isArray(existing.overridden_fields) ? existing.overridden_fields : [])

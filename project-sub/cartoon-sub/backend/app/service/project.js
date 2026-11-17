@@ -15,6 +15,7 @@ const { auditShot, mentionedAssetIds, shotText } = require('../lib/shotAssets');
 const { characterTag, placeTag, normalizeScript } = require('../lib/rosterNames');
 const { uniquePrompt } = require('../lib/promptText');
 const { promptCoveredMs } = require('../lib/promptDuration');
+const { describesSexualAct, machineSexualFields } = require('../lib/avPrompt');
 const {
   contentType,
   isLocal,
@@ -341,11 +342,33 @@ class ProjectService extends Service {
     return data;
   }
 
+  async fillMachineSexual(projectId, importId) {
+    const project = await this.ctx.model.Project.findByPk(projectId);
+    if (!project?.av_mode) return;
+    let pending = [];
+    try {
+      pending = await this.ctx.model.Shot.findAll({
+        where: { project_id: projectId, import_id: importId, sexual_act: null },
+      });
+    } catch (err) {
+      if (!/sexual_act|sexual_source/i.test(String(err.message || ''))) throw err;
+      return;
+    }
+    for (const shot of pending) {
+      if (shot.sexual_source === 'manual') continue;
+      await shot.update({
+        sexual_act: describesSexualAct(shot),
+        sexual_source: 'machine',
+      });
+    }
+  }
+
   async listImportShots(projectId, importId, query = {}) {
     const row = await this.ctx.model.Import.findOne({
       where: { id: importId, project_id: projectId },
     });
     if (!row || row.deleted_at) this.ctx.throw(404, '章节快照不存在');
+    await this.fillMachineSexual(projectId, row.id);
     const pageSize = Math.min(50, Math.max(1, Math.round(Number(query.pageSize) || 10)));
     const where = { project_id: projectId, import_id: row.id };
     const total = await this.ctx.model.Shot.count({ where });
@@ -1113,6 +1136,7 @@ class ProjectService extends Service {
     const durationMs = Number.isFinite(durationSec) && durationSec > 0
       ? Math.round(durationSec * 1000)
       : (Number(payload.duration_ms) > 0 ? Math.round(Number(payload.duration_ms)) : null);
+    const project = await this.ctx.model.Project.findByPk(projectId);
     const shot = await this.ctx.model.Shot.create({
       project_id: Number(projectId),
       import_id: importId,
@@ -1128,6 +1152,10 @@ class ProjectService extends Service {
       description: payload.description || '',
       dialogue: payload.dialogue || '',
       duration_ms: durationMs,
+      ...machineSexualFields(project, {
+        description: payload.description || '',
+        dialogue: payload.dialogue || '',
+      }),
     });
     if (payload.positive_zh || payload.negative_zh || payload.frame_start_zh || payload.frame_end_zh) {
       await this.ctx.model.Prompt.create({
@@ -1766,6 +1794,16 @@ class ProjectService extends Service {
       }));
     });
     if (pending.length) await Promise.all(pending);
+  }
+
+  async setShotSexual(id, payload) {
+    const shot = await this.ctx.model.Shot.findByPk(id);
+    if (!shot) this.ctx.throw(404, '分镜不存在');
+    const project = await this.ctx.model.Project.findByPk(shot.project_id);
+    if (!project?.av_mode) this.ctx.throw(400, '这个项目没有勾选 AV');
+    if (typeof payload.sexual_act !== 'boolean') this.ctx.throw(400, '请选择开启或关闭');
+    await shot.update({ sexual_act: payload.sexual_act, sexual_source: 'manual' });
+    return { id: shot.id, sexual_act: shot.sexual_act, sexual_source: shot.sexual_source };
   }
 
   async updateShot(id, payload) {

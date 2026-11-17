@@ -104,7 +104,7 @@
         {"id": "positive", "name": "视频与首尾帧", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "action draft。要有 positive_zh、frame_start_zh、frame_end_zh。", "x": 436, "y": 16},
         {"id": "negative", "name": "负向补调", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "负向不够时再调一次。失败只记日志，不中断。", "x": 646, "y": 16},
         {"id": "av", "name": "是否 AV", "type": "decision", "status": "done", "skill": "", "runner": "local", "description": "只有项目开了 AV 才走封闭提示词技能。", "x": 856, "y": 16},
-        {"id": "avskill", "name": "封闭提示词", "type": "action", "status": "done", "skill": "cartoon-av-prompt-skill", "runner": "skill", "description": "action draft。非 AV 项目跳过。", "x": 1066, "y": 16},
+        {"id": "avskill", "name": "封闭提示词", "type": "action", "status": "done", "skill": "cartoon-av-prompt-skill", "runner": "skill", "description": "只在项目勾选 AV，且这一镜描述或对白写了性爱时调用。双方都满二十一岁，才按模版把动作写到出场人物身上。", "x": 1066, "y": 16},
         {"id": "phrase", "name": "词语置换", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "读取公共动作知识库 phraseMap.json。人在表里添加原句和替换说法。视频提示词、首帧、尾帧按长句优先替换。对白引号、负向和音效备注不换。", "x": 1066, "y": 144},
         {"id": "save", "name": "写回镜头", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "提示词写回这条镜头。镜头时长列改用视频提示词涵盖的时间，不再用扩写时的估计。", "x": 856, "y": 144},
         {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "这条镜头的提示词已齐。", "x": 646, "y": 144}
