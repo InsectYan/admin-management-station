@@ -6,9 +6,10 @@
       <el-button @click="openEdit">剪辑成片</el-button>
     </template>
     <section class="cartoon-module">
-      <el-empty v-if="loaded && !tasks.length" description="这条分镜还没有产物" />
+      <el-empty v-if="loaded && !shot" description="没有找到这条分镜" />
       <el-tabs v-else-if="loaded" v-model="previewTab">
         <el-tab-pane label="资产" name="assets">
+          <el-empty v-if="!tasks.length" description="这条分镜还没有产物" />
           <section v-if="outputChoices.length > 1" class="cartoon-compare">
             <span class="cartoon-compare__label">逐帧对比</span>
             <el-select v-model="leftId" style="width: 140px">
@@ -72,6 +73,18 @@
           </div>
         </el-tab-pane>
         <el-tab-pane label="基础信息" name="info">
+          <el-table v-if="submitRows.length" :data="submitRows" row-key="key" size="small" style="margin-bottom: 12px">
+            <el-table-column label="记录" width="90" prop="record" />
+            <el-table-column label="提交" width="90" prop="part" />
+            <el-table-column label="工作流" min-width="180" prop="workflow" />
+            <el-table-column label="尺寸" width="130" prop="size" />
+            <el-table-column label="种子" width="120" prop="seed" />
+            <el-table-column label="时长" width="90" prop="duration" />
+            <el-table-column label="参考图" width="90" prop="refs" />
+            <el-table-column label="提示词字数" width="110" prop="chars" />
+            <el-table-column label="状态" width="100" prop="status" />
+          </el-table>
+          <p v-else class="cartoon-module__hint">还没有生图或生视频的提交记录。</p>
           <article v-for="task in infoRecords" :key="task.id" class="cartoon-brief">
             <header class="cartoon-brief__head">
               <strong>{{ taskKindLabel(task) }} · {{ statusLabel(task.status) }}</strong>
@@ -173,6 +186,9 @@
             </div>
           </article>
         </el-tab-pane>
+        <el-tab-pane label="提示词" name="prompt">
+          <PromptTracePanel :shot-id="shotId" />
+        </el-tab-pane>
       </el-tabs>
     </section>
   </PageShell>
@@ -184,6 +200,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
 import MediaFileList from '../components/MediaFileList.vue';
 import PageShell from '../components/PageShell.vue';
+import PromptTracePanel from '../components/PromptTracePanel.vue';
 import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
@@ -215,6 +232,38 @@ const infoRecords = computed(() => {
   });
   return tasks.value.filter(task => !hidden.has(Number(task.id)));
 });
+function submitLine(part, generation, task) {
+  if (!generation) return null;
+  return {
+    key: `${task.id}-${part}`,
+    record: `#${task.id}`,
+    part,
+    workflow: generation.workflow_name || '未记',
+    size: generation.width && generation.height ? `${generation.width} × ${generation.height}` : '—',
+    seed: generation.seed ?? '—',
+    duration: Number(generation.duration_sec) > 0 ? `${generation.duration_sec} 秒` : '—',
+    refs: Array.isArray(generation.references) ? generation.references.length : 0,
+    chars: String(generation.positive || '').length,
+    status: statusLabel(task.status),
+  };
+}
+const submitRows = computed(() => infoRecords.value.flatMap(task => {
+  const generation = task.generation || {};
+  if (isVideoTask(task)) {
+    return [
+      submitLine('视频', generation, task),
+      submitLine('首帧', generation.frame_start?.generation, {
+        id: generation.frame_start?.id || task.id,
+        status: generation.frame_start?.status || task.status,
+      }),
+      submitLine('尾帧', generation.frame_end?.generation, {
+        id: generation.frame_end?.id || task.id,
+        status: generation.frame_end?.status || task.status,
+      }),
+    ].filter(Boolean);
+  }
+  return [ submitLine(generation.part === 'end' ? '尾帧' : '生图', generation, task) ].filter(Boolean);
+}));
 const outputChoices = computed(() => tasks.value.flatMap(item => item.outputs || []));
 const cards = computed(() => tasks.value.flatMap(task => {
   const outputs = task.outputs || [];

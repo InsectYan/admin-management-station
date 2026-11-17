@@ -28,5 +28,6 @@ module.exports = app => {
     stage_notes: { type: JSONB, allowNull: true },
     dialogue_lines: { type: JSONB, allowNull: true },
     scene_label: { type: STRING(200), allowNull: true },
+    source_excerpt: { type: TEXT, allowNull: true },
   }, { tableName: 'cartoon_shots' });
 };

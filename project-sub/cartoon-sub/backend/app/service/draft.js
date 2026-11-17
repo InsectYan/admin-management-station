@@ -20,7 +20,7 @@ const { normalizeScript, placeTag } = require('../lib/rosterNames');
 const { uniquePrompt } = require('../lib/promptText');
 const { promptCoveredMs } = require('../lib/promptDuration');
 const { assetFactText, namedAssets } = require('../lib/assetProfile');
-const { sexualDecision, machineSexualFields } = require('../lib/avPrompt');
+const { chapterParagraphs, resolveExcerpt, matchExcerpt } = require('../lib/sourceExcerpt');
 const { begin, finish } = require('../lib/activeRuns');
 
 function outputOf(result) {
@@ -36,6 +36,25 @@ function sceneTitle(scriptData, item) {
 
 function picturePrompt(text) {
   return uniquePrompt(text);
+}
+
+function clipText(text, max = 6000) {
+  const value = String(text || '');
+  return value.length > max ? `${value.slice(0, max)}…` : value;
+}
+
+function tracePacket(shot, extra = {}) {
+  const packet = {
+    scene: shot.scene_label || '',
+    description: shot.description || '',
+    dialogue: shot.dialogue || '',
+    source_excerpt: shot.source_excerpt || '',
+    duration_sec: shot.duration_sec,
+  };
+  if (shot.asset_facts) packet.asset_facts = shot.asset_facts;
+  if (extra.positive_zh) packet.positive_zh = extra.positive_zh;
+  if (extra.prompt_part) packet.prompt_part = extra.prompt_part;
+  return clipText(JSON.stringify(packet, null, 2));
 }
 
 function rosterText(script) {
@@ -88,7 +107,31 @@ function negativeNeedsRetry(prompt) {
   return negative.length < 80 && /拦截|违规|敏感|无法提供|不能生成|内容安全/.test(negative);
 }
 
+function styleWithoutBody(styleCtx) {
+  const copy = { ...styleCtx };
+  delete copy.body;
+  return copy;
+}
+
 class DraftService extends Service {
+  async rememberTrace(existing, part, title, skill, input, output) {
+    this.traceStep = (this.traceStep || 0) + 1;
+    try {
+      await this.ctx.model.PromptTrace.create({
+        project_id: existing.project_id,
+        shot_id: existing.id,
+        part,
+        step: this.traceStep,
+        title,
+        skill,
+        input_text: clipText(input),
+        output_text: clipText(output),
+      });
+    } catch (err) {
+      this.ctx.logger.warn('[cartoon] 提示词记录没有写下 %s', err.message);
+    }
+  }
+
   async load(projectId, importId) {
     const project = await this.ctx.model.Project.findByPk(projectId);
     if (!project) this.ctx.throw(404, '项目不存在');
@@ -154,6 +197,21 @@ class DraftService extends Service {
 
   async shotFactText(projectId, text) {
     return assetFactText(namedAssets(await this.characterCards(projectId), text));
+  }
+
+  async ensureShotExcerpt(shot, chapter) {
+    const saved = String(shot?.source_excerpt || '').trim();
+    if (saved) return saved;
+    if (Number(shot?.project_id) === 4) return '';
+    const excerpt = matchExcerpt(chapterParagraphs(chapter?.body), shot);
+    if (!excerpt) return '';
+    try {
+      await shot.update({ source_excerpt: excerpt });
+    } catch (err) {
+      if (!/source_excerpt/i.test(String(err.message || ''))) throw err;
+      return '';
+    }
+    return excerpt;
   }
 
   async composeScript(projectId, importId, signal) {
@@ -260,6 +318,7 @@ class DraftService extends Service {
     }
     const styleCtx = await this.styleContext(project, chapter);
     const minShots = Math.max(1, settled.script.scenes.length);
+    const paragraphs = chapterParagraphs(chapter.body);
     const boardResult = await invokeSkill(this.ctx, {
       skill: 'cartoon-storyboard-skill',
       action: 'draft',
@@ -268,7 +327,9 @@ class DraftService extends Service {
       payload: {
         script_data: settled.script,
         outline_only: true,
-        ...styleCtx,
+        ...styleWithoutBody(styleCtx),
+        body: '',
+        source_paragraphs: paragraphs.map((text, index) => ({ index: index + 1, text })),
         ...productionInput(project),
         min_shots: minShots,
         asset_facts: await this.projectFactText(project.id),
@@ -285,6 +346,7 @@ class DraftService extends Service {
       shot_size: serializeShotSizes(item.shot_sizes != null ? item.shot_sizes : item.shot_size),
       camera_move: serializeCameraMoves(item.camera_moves != null ? item.camera_moves : item.camera_move),
       dialogue: String(item.dialogue || '').trim(),
+      source_indexes: item.source_indexes,
     })).filter(item => item.coverage);
     if (!outline.length) this.ctx.throw(502, '没有有效镜头大纲');
     const locked = settled.script;
@@ -335,7 +397,10 @@ class DraftService extends Service {
         dialogue: item.dialogue,
         duration_ms: item.duration_sec * 1000,
         scene_label: sceneTitle(locked, item),
-        ...machineSexualFields(project, { description: item.coverage, dialogue: item.dialogue }),
+        source_excerpt: resolveExcerpt(chapter.body, {
+          description: item.coverage,
+          dialogue: item.dialogue,
+        }, item.source_indexes),
       };
       let row;
       try {
@@ -402,6 +467,13 @@ class DraftService extends Service {
       payload.camera_moves != null ? payload.camera_moves
         : (payload.camera_move != null ? payload.camera_move : existing.camera_move),
     );
+    const sourceExcerpt = await this.ensureShotExcerpt(existing, chapter);
+    this.traceStep = 0;
+    try {
+      await this.ctx.model.PromptTrace.destroy({ where: { shot_id: existing.id } });
+    } catch (err) {
+      this.ctx.logger.warn('[cartoon] 旧提示词记录没有清掉 %s', err.message);
+    }
     const seedShot = {
       description: coverage,
       duration_sec: durationSec,
@@ -410,6 +482,8 @@ class DraftService extends Service {
       camera_move: serializeCameraMoves(seedMoves),
       camera_moves: seedMoves,
       dialogue: String(payload.dialogue != null ? payload.dialogue : (existing.dialogue || '')).trim(),
+      source_excerpt: sourceExcerpt,
+      scene_label: existing.scene_label || '',
     };
     const seedFacts = await this.shotFactText(project.id, [ seedShot.description, seedShot.dialogue ].join('\n'));
     seedShot.asset_facts = seedFacts;
@@ -429,7 +503,7 @@ class DraftService extends Service {
           expand_one: true,
           seed_shot: seedShot,
           asset_facts: seedFacts,
-          ...styleCtx,
+          ...styleWithoutBody(styleCtx),
           ...productionInput(project),
         },
       });
@@ -451,61 +525,81 @@ class DraftService extends Service {
       camera_move: serializeCameraMoves(expandedMoves),
       camera_moves: expandedMoves,
       dialogue: String(expanded?.dialogue || seedShot.dialogue).trim(),
+      source_excerpt: sourceExcerpt,
+      scene_label: existing.scene_label || '',
     };
     if (!shot.description) this.ctx.throw(502, '没有返回分镜描述');
-    const decision = project.av_mode ? sexualDecision(existing, shot) : { sexual: false, source: 'machine' };
-    if (project.av_mode && decision.source === 'machine') {
-      await existing.update({ sexual_act: decision.sexual, sexual_source: 'machine' });
-    }
+    await this.rememberTrace(
+      existing,
+      'video',
+      '单段扩写',
+      'cartoon-storyboard-skill',
+      tracePacket(seedShot),
+      shot.description,
+    );
     const shotFacts = await this.shotFactText(project.id, [ shot.description, shot.dialogue ].join('\n'));
     shot.asset_facts = shotFacts;
     const promptPayload = {
-      shots: [ shot ],
       repair_note: String(payload.repair_note || '').trim(),
       asset_facts: shotFacts,
-      ...styleCtx,
+      ...styleWithoutBody(styleCtx),
+      body: '',
       ...productionInput(project),
     };
-    ensureRunning();
-    const promptResult = await invokeSkill(this.ctx, {
-      skill: 'cartoon-prompt-skill',
-      action: 'draft',
-      timeoutMs: skillTimeout(this.ctx),
-      signal: stop.signal,
-      payload: promptPayload,
-    });
-    const promptOutput = outputOf(promptResult);
-    let prompt = (promptOutput.prompts || [])[0] || {};
-    const positive = String(prompt.positive_zh || '').trim();
-    const frameStart = String(prompt.frame_start_zh || '').trim();
-    const frameEnd = String(prompt.frame_end_zh || '').trim();
+    const requestPart = async (part, current) => {
+      ensureRunning();
+      const result = await invokeSkill(this.ctx, {
+        skill: 'cartoon-prompt-skill',
+        action: 'draft',
+        timeoutMs: skillTimeout(this.ctx),
+        signal: stop.signal,
+        payload: {
+          ...promptPayload,
+          prompt_part: part,
+          shots: [ current ],
+        },
+      });
+      const output = outputOf(result);
+      const row = (output.prompts || [])[0] || {};
+      row.reply = String(output.reply || output.summary || '').replace(/\s+/g, ' ').trim();
+      return row;
+    };
+    const video = await requestPart('positive', shot);
+    const positive = String(video.positive_zh || '').trim();
     if (!positive) {
-      const reply = String(promptOutput.reply || promptOutput.summary || '').replace(/\s+/g, ' ').trim();
-      this.ctx.throw(502, reply ? `没有返回视频提示词。${reply.slice(0, 160)}` : '没有返回视频提示词');
+      this.ctx.throw(502, video.reply ? `没有返回视频提示词。${video.reply.slice(0, 160)}` : '没有返回视频提示词');
     }
-    if (!frameStart) this.ctx.throw(502, '没有返回首帧提示词');
-    if (!frameEnd) this.ctx.throw(502, '没有返回尾帧提示词');
+    await this.rememberTrace(
+      existing,
+      'video',
+      '视频提示词',
+      'cartoon-prompt-skill',
+      tracePacket(shot, { prompt_part: 'positive' }),
+      positive,
+    );
+    let prompt = {
+      positive_zh: positive,
+      negative_zh: String(video.negative_zh || '').trim(),
+      production_note: String(video.production_note || '').trim(),
+    };
     if (negativeNeedsRetry(prompt)) {
       try {
-        ensureRunning();
-        const retry = await invokeSkill(this.ctx, {
-          skill: 'cartoon-prompt-skill',
-          action: 'draft',
-          timeoutMs: skillTimeout(this.ctx),
-          signal: stop.signal,
-          payload: {
-            ...promptPayload,
-            shots: [{ ...shot, positive_zh: positive, negative_only: true }],
-          },
-        });
-        const again = String((outputOf(retry).prompts || [])[0]?.negative_zh || '').trim();
-        if (again) prompt = { ...prompt, negative_zh: again };
+        const again = await requestPart('negative', { ...shot, positive_zh: positive, negative_only: true });
+        if (String(again.negative_zh || '').trim()) prompt = { ...prompt, negative_zh: String(again.negative_zh).trim() };
+        await this.rememberTrace(
+          existing,
+          'video',
+          '负向补调',
+          'cartoon-prompt-skill',
+          tracePacket(shot, { prompt_part: 'negative' }),
+          String(prompt.negative_zh || ''),
+        );
       } catch (err) {
         if (err?.status === 499 || err?.message === '已停止') throw err;
         this.ctx.logger.warn('[cartoon] 负向提示词补调失败 %s', err.message);
       }
     }
-    if (decision.sexual) {
+    if (project.av_mode) {
       try {
         ensureRunning();
         const closed = await invokeSkill(this.ctx, {
@@ -515,10 +609,11 @@ class DraftService extends Service {
           signal: stop.signal,
           payload: {
             ...promptPayload,
+            prompt_part: 'positive',
             av_mode: true,
-            sexual_confirmed: true,
             shots: [{
               ...shot,
+              positive_zh: picturePrompt(prompt.positive_zh),
               draft_positive_zh: picturePrompt(prompt.positive_zh),
               draft_negative_zh: String(prompt.negative_zh || '').trim(),
               draft_production_note: String(prompt.production_note || '').trim(),
@@ -528,17 +623,21 @@ class DraftService extends Service {
         });
         const again = (outputOf(closed).prompts || [])[0] || {};
         const closedPositive = picturePrompt(again.positive_zh) || String(again.positive_zh || '').trim();
-        const closedStart = picturePrompt(again.frame_start_zh);
-        const closedEnd = picturePrompt(again.frame_end_zh);
         if (closedPositive) {
           prompt = {
             ...prompt,
             positive_zh: closedPositive,
-            ...(closedStart ? { frame_start_zh: closedStart } : {}),
-            ...(closedEnd ? { frame_end_zh: closedEnd } : {}),
             negative_zh: String(again.negative_zh || prompt.negative_zh || '').trim(),
             production_note: String(again.production_note || prompt.production_note || '').trim(),
           };
+          await this.rememberTrace(
+            existing,
+            'video',
+            '封闭提示词',
+            'cartoon-av-prompt-skill',
+            tracePacket(shot, { prompt_part: 'positive', positive_zh: picturePrompt(positive) }),
+            closedPositive,
+          );
         } else {
           this.ctx.logger.warn('[cartoon] AV 收口没有画面提示词，沿用已写好的提示词');
         }
@@ -546,9 +645,35 @@ class DraftService extends Service {
         if (err?.status === 499 || err?.message === '已停止') throw err;
         this.ctx.logger.warn('[cartoon] AV 收口失败，沿用已写好的提示词 %s', err.message);
       }
-    } else if (project.av_mode) {
-      this.ctx.logger.info('[cartoon] 这一镜按%s不调用 AV 收口', decision.source === 'manual' ? '人工关闭' : '机器判断');
     }
+    shot.positive_zh = prompt.positive_zh;
+    const start = await requestPart('frame_start', shot);
+    const frameStart = String(start.frame_start_zh || '').trim();
+    if (!frameStart) {
+      this.ctx.throw(502, start.reply ? `没有返回首帧提示词。${start.reply.slice(0, 160)}` : '没有返回首帧提示词');
+    }
+    await this.rememberTrace(
+      existing,
+      'frame_start',
+      '首帧提示词',
+      'cartoon-prompt-skill',
+      tracePacket(shot, { prompt_part: 'frame_start', positive_zh: prompt.positive_zh }),
+      frameStart,
+    );
+    const end = await requestPart('frame_end', shot);
+    const frameEnd = String(end.frame_end_zh || '').trim();
+    if (!frameEnd) {
+      this.ctx.throw(502, end.reply ? `没有返回尾帧提示词。${end.reply.slice(0, 160)}` : '没有返回尾帧提示词');
+    }
+    await this.rememberTrace(
+      existing,
+      'frame_end',
+      '尾帧提示词',
+      'cartoon-prompt-skill',
+      tracePacket(shot, { prompt_part: 'frame_end', positive_zh: prompt.positive_zh }),
+      frameEnd,
+    );
+    prompt = { ...prompt, frame_start_zh: frameStart, frame_end_zh: frameEnd };
     ensureRunning();
     const overrides = (Array.isArray(existing.overridden_fields) ? existing.overridden_fields : [])
       .filter(field => field !== 'assets');

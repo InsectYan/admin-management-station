@@ -131,7 +131,7 @@ module.exports = app => {
   router.post('/api/projects/:id/assets', controller.project.addAsset);
   router.put('/api/projects/:id/shots/:shotId/assets', controller.project.saveShotAssets);
   router.put('/api/shots/:id', controller.project.updateShot);
-  router.put('/api/shots/:id/sexual', controller.project.setShotSexual);
+  router.get('/api/shots/:id/prompt-traces', controller.project.promptTraces);
   router.post('/api/projects/:id/shots/:shotId/frame', controller.project.saveFrame);
   router.get('/api/projects/:id/shots/:shotId/frame/:which', controller.project.frameFile);
   router.get('/api/projects/:id/audio', controller.project.audioBoard);

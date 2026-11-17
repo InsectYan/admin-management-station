@@ -487,9 +487,9 @@ class ProjectController extends Controller {
     }
   }
 
-  async setShotSexual() {
+  async promptTraces() {
     try {
-      ok(this.ctx, await this.ctx.service.project.setShotSexual(this.ctx.params.id, this.ctx.request.body || {}));
+      ok(this.ctx, await this.ctx.service.project.promptTraces(this.ctx.params.id));
     } catch (err) {
       fail(this.ctx, err);
     }

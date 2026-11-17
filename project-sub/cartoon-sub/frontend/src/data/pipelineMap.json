@@ -79,7 +79,7 @@
       "nodes": [
         {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "已有生产剧本之后。", "x": 16, "y": 16},
         {"id": "read", "name": "读取生产剧本", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "没有场次时不能拆。", "x": 226, "y": 16},
-        {"id": "outline", "name": "镜头大纲", "type": "action", "status": "done", "skill": "cartoon-storyboard-skill", "runner": "skill", "description": "action draft，outline_only。一场可以拆成多条，不能少场。", "x": 436, "y": 16},
+        {"id": "outline", "name": "镜头大纲", "type": "action", "status": "done", "skill": "cartoon-storyboard-skill", "runner": "skill", "description": "action draft，outline_only。一场可以拆成多条，不能少场。每条记下原文段号，多条可以共用同一段。", "x": 436, "y": 16},
         {"id": "gap", "name": "少场补记", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "少场或低于下限时写入 shot_omissions。", "x": 646, "y": 16},
         {"id": "save", "name": "落库镜头", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "写入 Shot。已有分镜时需要确认后才重拆。", "x": 646, "y": 144},
         {"id": "expand", "name": "单段扩写", "type": "action", "status": "done", "skill": "cartoon-storyboard-skill", "runner": "skill", "description": "action draft，expand_one。一次一条，供后面写提示词。", "x": 436, "y": 144},
@@ -97,14 +97,16 @@
     {
       "key": "prompt",
       "name": "镜头提示词",
-      "description": "单段扩写之后写提示词。落库前按人为维护的词语置换表替换画面句子。获取提示词页的视频反推不在这条链上。",
+      "description": "单段扩写之后，视频提示词、首帧、尾帧分开写。首尾帧参考已经写好的视频提示词。落库前按词语置换表替换画面句子。",
       "nodes": [
         {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "针对一条已有镜头。", "x": 16, "y": 16},
         {"id": "expand", "name": "单段扩写", "type": "action", "status": "done", "skill": "cartoon-storyboard-skill", "runner": "skill", "description": "先把这一条扩写成可用的镜头描述。", "x": 226, "y": 16},
-        {"id": "positive", "name": "视频与首尾帧", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "action draft。要有 positive_zh、frame_start_zh、frame_end_zh。", "x": 436, "y": 16},
+        {"id": "positive", "name": "视频提示词", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "只写 positive_zh。不在同一次写首尾帧。", "x": 436, "y": 16},
         {"id": "negative", "name": "负向补调", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "负向不够时再调一次。失败只记日志，不中断。", "x": 646, "y": 16},
         {"id": "av", "name": "是否 AV", "type": "decision", "status": "done", "skill": "", "runner": "local", "description": "只有项目开了 AV 才走封闭提示词技能。", "x": 856, "y": 16},
-        {"id": "avskill", "name": "封闭提示词", "type": "action", "status": "done", "skill": "cartoon-av-prompt-skill", "runner": "skill", "description": "只在项目勾选 AV，且这一镜描述或对白写了性爱时调用。双方都满二十一岁，才按模版把动作写到出场人物身上。", "x": 1066, "y": 16},
+        {"id": "avskill", "name": "封闭提示词", "type": "action", "status": "done", "skill": "cartoon-av-prompt-skill", "runner": "skill", "description": "只改写视频提示词。双方都满二十一岁，才按模版把动作写到出场人物身上。", "x": 1066, "y": 16},
+        {"id": "frame_start", "name": "首帧提示词", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "视频提示词写完后再写。对齐 0.0 秒，可以参考 positive_zh。", "x": 856, "y": 272},
+        {"id": "frame_end", "name": "尾帧提示词", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "首帧之后再写。对齐视频提示词最后一拍。", "x": 646, "y": 272},
         {"id": "phrase", "name": "词语置换", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "读取公共动作知识库 phraseMap.json。人在表里添加原句和替换说法。视频提示词、首帧、尾帧按长句优先替换。对白引号、负向和音效备注不换。", "x": 1066, "y": 144},
         {"id": "save", "name": "写回镜头", "type": "action", "status": "done", "skill": "", "runner": "local", "description": "提示词写回这条镜头。镜头时长列改用视频提示词涵盖的时间，不再用扩写时的估计。", "x": 856, "y": 144},
         {"id": "end", "name": "结束", "type": "end", "status": "done", "skill": "", "runner": "none", "description": "这条镜头的提示词已齐。", "x": 646, "y": 144}
@@ -115,8 +117,10 @@
         {"id": "p3", "source": "positive", "target": "negative", "label": "", "type": "next"},
         {"id": "p4", "source": "negative", "target": "av", "label": "", "type": "next"},
         {"id": "p5", "source": "av", "target": "avskill", "label": "AV", "type": "branch"},
-        {"id": "p6", "source": "av", "target": "phrase", "label": "非 AV", "type": "next"},
-        {"id": "p6b", "source": "avskill", "target": "phrase", "label": "", "type": "next"},
+        {"id": "p6", "source": "av", "target": "frame_start", "label": "非 AV", "type": "next"},
+        {"id": "p6b", "source": "avskill", "target": "frame_start", "label": "", "type": "next"},
+        {"id": "p6c", "source": "frame_start", "target": "frame_end", "label": "", "type": "next"},
+        {"id": "p6d", "source": "frame_end", "target": "phrase", "label": "", "type": "next"},
         {"id": "p7", "source": "phrase", "target": "save", "label": "", "type": "next"},
         {"id": "p8", "source": "save", "target": "end", "label": "", "type": "next"}
       ]

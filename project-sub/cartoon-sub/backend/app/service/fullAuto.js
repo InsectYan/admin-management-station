@@ -852,7 +852,7 @@ class FullAutoService extends Service {
       try {
         await this.ctx.service.draft.expandShot(run.project_id, run.import_id, {
           shot_id: shot.id,
-          repair_note: attempt > 1 ? '上一次没有返回视频提示词，只回复了已写入。这次必须写出 positive_zh、frame_start_zh、frame_end_zh 和 negative_zh。' : '',
+          repair_note: attempt > 1 ? '上一次这一项没有写全。视频、首帧、尾帧是三次分开的调用，这一次只写当前这一项，并写满。' : '',
         });
       } catch (err) {
         if (isStop(err)) throw err;
