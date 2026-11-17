@@ -950,22 +950,47 @@ async function stopWork() {
 function progressPart(bucket, live, label, hold) {
   if (hold) return null;
   const done = Number(bucket.done) || 0;
-  const active = Number(bucket.active) || 0;
-  const working = Boolean(runMark.running || live || active);
-  const total = Number(bucket.total) || active;
+  const working = Boolean(runMark.running || live);
+  const total = Number(bucket.total) || 0;
   if (!working || !total) return null;
   const stepping = done < total && working;
-  if (!stepping && !live && !active) return null;
+  if (!stepping && !live) return null;
   const reached = done + (stepping ? 1 : 0);
   return {
     label,
     total,
-    current: Math.min(total, Math.max(reached, active)),
+    current: Math.min(total, reached),
   };
+}
+function shotsOfRun(run) {
+  return (detail.value?.shots || [])
+    .filter(shot => String(shot.import_id) === String(run?.import_id));
+}
+function pipelineShotProgress(nodeKey, label) {
+  const run = props.pipelineRun;
+  if (!run || run.status !== 'running' || run.current_node !== nodeKey) return null;
+  const shots = shotsOfRun(run);
+  const total = shots.length;
+  if (!total) return null;
+  const marks = [ ...String(run.message || '').matchAll(/（(\d+)\s*\/\s*(\d+)）/g) ];
+  const mark = marks[marks.length - 1];
+  if (mark) {
+    const current = Number(mark[1]);
+    const markedTotal = Number(mark[2]);
+    if (current > 0 && markedTotal > 0) {
+      return { label, current: Math.min(markedTotal, current), total: markedTotal };
+    }
+  }
+  const code = String(run.message || '').match(/S\d{3,}/)?.[0] || '';
+  const index = shots.findIndex(shot => shot.shot_code === code || String(shot.id) === code);
+  if (index < 0) return null;
+  return { label, current: index + 1, total };
 }
 const autoProgressParts = computed(() => {
   const promptBusy = autoPrompt.total > 0 && autoPrompt.done < autoPrompt.total;
-  const prompt = progressPart(autoPrompt, runMark.promptLive, '生成提示词', false);
+  const serverPrompts = props.pipelineRun?.status === 'running' && props.pipelineRun?.current_node === 'prompts';
+  const pipelinePrompt = pipelineShotProgress('prompts', '生成提示词');
+  const prompt = pipelinePrompt || (serverPrompts ? null : progressPart(autoPrompt, runMark.promptLive, '生成提示词', false));
   const video = progressPart(
     autoVideo,
     runMark.videoLive,
@@ -975,6 +1000,12 @@ const autoProgressParts = computed(() => {
   return [ prompt, video ].filter(Boolean);
 });
 watch(runMark, () => rememberAutoRun(projectKey(), runMark), { deep: true });
+watch(() => pipelineShotProgress('prompts', '生成提示词'), (value) => {
+  if (!value || runMark.running) return;
+  autoPrompt.total = value.total;
+  autoPrompt.done = Math.max(0, value.current - 1);
+  autoPrompt.active = 1;
+});
 const recordPageRows = computed(() => {
   const size = recordPageSize.value;
   return autoRecords.value.slice((recordPage.value - 1) * size, recordPage.value * size);

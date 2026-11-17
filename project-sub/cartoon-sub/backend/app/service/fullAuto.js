@@ -963,9 +963,13 @@ class FullAutoService extends Service {
 
   async stepPrompts(run) {
     const shots = await this.shotsOf(run);
-    for (const shot of shots) {
+    for (let index = 0; index < shots.length; index += 1) {
       if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
-      await this.fillShotPrompt(run, shot, { force: Boolean(run.fresh) });
+      await this.fillShotPrompt(run, shots[index], {
+        force: Boolean(run.fresh),
+        index,
+        total: shots.length,
+      });
     }
   }
 
@@ -987,7 +991,8 @@ class FullAutoService extends Service {
         return existing;
       }
       if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
-      await this.mark(run, 'prompts', 'running', `正在生成提示词 ${code}`);
+      const place = options.total ? `（${Number(options.index) + 1}/${options.total}）` : '';
+      await this.mark(run, 'prompts', 'running', `正在生成提示词${place} ${code}`);
       try {
         await this.ctx.service.draft.expandShot(run.project_id, run.import_id, {
           shot_id: shot.id,
