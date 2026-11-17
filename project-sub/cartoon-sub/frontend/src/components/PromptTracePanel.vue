@@ -1,40 +1,43 @@
 <template>
   <section class="cartoon-trace">
-    <el-tabs v-model="part">
-      <el-tab-pane v-for="item in parts" :key="item.key" :label="item.label" :name="item.key" />
-    </el-tabs>
     <p v-if="loading" class="cartoon-module__hint">正在读取这次提示词记录。</p>
-    <p v-else-if="!rows.length" class="cartoon-module__hint">这一段还没有提示词调用记录。重新生成提示词之后，这里会记下每次技能的输入和输出。</p>
     <template v-else>
-      <div class="cartoon-trace__graph">
-        <button
-          v-for="(row, index) in rows"
-          :key="row.id"
-          type="button"
-          class="cartoon-trace__node"
-          :class="{ 'is-active': activeId === row.id }"
-          @click="focus(row.id)"
-        >
-          <span>{{ index + 1 }}</span>{{ row.title || row.skill }}
-        </button>
+      <div class="cartoon-trace__legend">
+        <span><i class="is-ok" />正常</span>
+        <span><i class="is-error" />异常</span>
+        <span><i class="is-wait" />跳过 / 未执行</span>
+        <span><i class="is-branch" />分支</span>
       </div>
+      <div class="cartoon-trace__canvas">
+        <PipelineFlowGraph
+          scope="prompt-trace"
+          :nodes="graphNodes"
+          :edges="graphEdges"
+          :selected-id="selectedId"
+          @select="focus"
+        />
+      </div>
+      <p v-if="!traces.length" class="cartoon-module__hint">还没有这次生成的记录。流程图从发起画到结束，执行后正常或异常会标在对应节点上。</p>
+      <el-tabs v-model="part">
+        <el-tab-pane v-for="item in parts" :key="item.key" :label="item.label" :name="item.key" />
+      </el-tabs>
       <div ref="pane" class="cartoon-trace__pane">
         <article
-          v-for="row in rows"
-          :id="`trace-${row.id}`"
-          :key="`card-${row.id}`"
+          v-for="node in tabNodes"
+          :id="`trace-${node.id}`"
+          :key="node.id"
           class="cartoon-trace__card"
-          :class="{ 'is-active': activeId === row.id }"
+          :class="[ `is-${node.status}`, { 'is-active': selectedId === node.id } ]"
         >
-          <h4>{{ row.title || '技能调用' }}</h4>
-          <p>调用工具 {{ row.skill || '未记' }}</p>
+          <h4>{{ node.title }} · {{ statusText(node.status) }}</h4>
+          <p>调用工具 {{ skillText(node) }}</p>
           <div>
             <span>输入</span>
-            <button type="button" class="cartoon-trace__clamp" @click="openDetail(row.title, '输入', row.input_text)">{{ row.input_text || '无' }}</button>
+            <button type="button" class="cartoon-trace__clamp" @click="openDetail(node.title, '输入', inputText(node))">{{ inputText(node) }}</button>
           </div>
           <div>
             <span>输出</span>
-            <button type="button" class="cartoon-trace__clamp" @click="openDetail(row.title, '输出', row.output_text)">{{ row.output_text || '无' }}</button>
+            <button type="button" class="cartoon-trace__clamp" @click="openDetail(node.title, '输出', outputText(node))">{{ outputText(node) }}</button>
           </div>
         </article>
       </div>
@@ -46,7 +49,9 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
+import PipelineFlowGraph from './pipeline/PipelineFlowGraph.vue';
+import mapData from '../data/pipelineMap.json';
 import { request } from '../services/apiConfig.js';
 
 const props = defineProps({
@@ -60,31 +65,155 @@ const parts = [
 const part = ref('video');
 const loading = ref(false);
 const traces = ref([]);
-const activeId = ref(null);
+const avMode = ref(false);
+const selectedId = ref('start');
 const pane = ref(null);
 const dialog = reactive({ open: false, title: '', text: '' });
-const rows = computed(() => traces.value.filter(item => item.part === part.value));
+const promptFlow = mapData.flows.find(item => item.key === 'prompt') || { nodes: [], edges: [] };
+const graphEdges = promptFlow.edges || [];
+const partOf = {
+  start: 'video',
+  expand: 'video',
+  positive: 'video',
+  negative: 'video',
+  av: 'video',
+  avskill: 'video',
+  frame_start: 'frame_start',
+  frame_end: 'frame_end',
+  phrase: 'video',
+  save: 'video',
+  end: 'video',
+};
+const titleOf = {
+  expand: '单段扩写',
+  positive: '视频提示词',
+  negative: '负向补调',
+  avskill: '封闭提示词',
+  frame_start: '首帧提示词',
+  frame_end: '尾帧提示词',
+  save: '写回镜头',
+};
+const stepOrder = [ 'expand', 'positive', 'negative', 'av', 'avskill', 'frame_start', 'frame_end', 'phrase', 'save', 'end' ];
 
+function latestTrace(title) {
+  if (!title) return null;
+  return traces.value.filter(item => item.title === title).at(-1) || null;
+}
+function statusOfTrace(hit) {
+  if (!hit) return '';
+  if (hit.status === 'error') return 'error';
+  if (hit.status === 'skip') return 'skip';
+  return 'ok';
+}
+
+const flow = computed(() => {
+  const started = traces.value.length > 0;
+  const interrupt = latestTrace('生成中断');
+  const status = { start: started ? 'ok' : 'wait' };
+  const attached = {};
+  Object.entries(titleOf).forEach(([ id, title ]) => {
+    const hit = latestTrace(title);
+    status[id] = statusOfTrace(hit) || 'wait';
+    if (hit) attached[id] = hit;
+  });
+  const later = [ 'avskill', 'frame_start', 'frame_end', 'save' ].some(id => status[id] !== 'wait');
+  const decisionReached = status.positive === 'ok' && (status.negative === 'ok' || status.negative === 'skip' || later);
+  status.av = decisionReached ? 'ok' : 'wait';
+  if (!avMode.value) status.avskill = decisionReached ? 'skip' : 'wait';
+  status.phrase = status.save === 'ok' ? 'ok' : 'wait';
+  status.end = status.save === 'ok' ? 'ok' : 'wait';
+  const alreadyStuck = Object.values(status).includes('error');
+  if (interrupt && !alreadyStuck) {
+    const stuck = stepOrder.find(id => status[id] === 'wait');
+    if (stuck) {
+      status[stuck] = 'error';
+      attached[stuck] = interrupt;
+    }
+  }
+  return (promptFlow.nodes || []).map(node => {
+    const state = status[node.id] || 'wait';
+    return {
+      ...node,
+      status: state,
+      subtitle: statusText(state),
+      part: partOf[node.id] || 'video',
+      title: node.name,
+      trace: attached[node.id] || null,
+    };
+  });
+});
+const graphNodes = computed(() => flow.value.map(node => ({
+  id: node.id,
+  name: node.name,
+  type: node.type,
+  x: node.x,
+  y: node.y,
+  status: node.status,
+  subtitle: node.subtitle,
+})));
+const tabNodes = computed(() => flow.value.filter(node => node.part === part.value));
+
+function statusText(status) {
+  if (status === 'error') return '异常';
+  if (status === 'skip') return '跳过';
+  if (status === 'ok') return '正常';
+  return '未执行';
+}
+function skillText(node) {
+  if (node.trace?.skill) return node.trace.skill;
+  if (node.skill) return node.skill;
+  if (node.status === 'wait') return '这一步还没有调用';
+  return '不走技能';
+}
+function inputText(node) {
+  if (node.trace?.input_text) return node.trace.input_text;
+  if (node.id === 'start') return '点击生成提示词';
+  if (node.id === 'av') return avMode.value ? '项目已开启 AV' : '项目未开启 AV';
+  if (node.id === 'phrase') return '写回前替换画面句子';
+  if (node.id === 'end') return '写回镜头之后';
+  return '无';
+}
+function outputText(node) {
+  if (node.trace?.output_text) return node.trace.output_text;
+  if (node.id === 'avskill' && node.status === 'skip') return '项目没开 AV，不走这一步';
+  if (node.status === 'wait') return '还没执行到这一步';
+  if (node.status === 'skip') return '这一步跳过';
+  if (node.id === 'start') return '已从发起开始';
+  if (node.id === 'av') return avMode.value ? '走封闭提示词' : '不走封闭提示词';
+  if (node.id === 'phrase') return '已按词语表替换';
+  if (node.id === 'end') return '这条镜头的提示词已齐';
+  return '无';
+}
 async function load() {
   if (!props.shotId) {
     traces.value = [];
+    avMode.value = false;
     return;
   }
   loading.value = true;
   try {
     const data = await request(`/shots/${props.shotId}/prompt-traces`);
     traces.value = Array.isArray(data?.list) ? data.list : [];
-    activeId.value = rows.value[0]?.id || null;
+    avMode.value = Boolean(data?.av_mode);
+    const stuck = flow.value.find(node => node.status === 'error') || flow.value.find(node => node.id === 'start');
+    selectedId.value = stuck?.id || 'start';
+    if (stuck?.part) part.value = stuck.part;
   } catch (err) {
     traces.value = [];
   } finally {
     loading.value = false;
   }
+  await nextTick();
+  if (selectedId.value) await focus(selectedId.value);
 }
-function focus(id) {
-  activeId.value = id;
+async function focus(id) {
+  const node = flow.value.find(item => item.id === id);
+  if (!node) return;
+  selectedId.value = node.id;
+  part.value = node.part;
+  await nextTick();
   const box = pane.value;
-  const card = box?.querySelector(`#trace-${id}`);
+  const card = box?.querySelector(`#trace-${node.id}`);
   if (!box || !card) return;
   box.scrollTop = Math.max(0, card.offsetTop - box.offsetTop);
 }
@@ -94,34 +223,37 @@ function openDetail(title, field, text) {
   dialog.open = true;
 }
 watch(() => props.shotId, () => { load(); }, { immediate: true });
-watch(part, () => { activeId.value = rows.value[0]?.id || null; });
 </script>
 
 <style scoped>
-.cartoon-trace__graph { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
-.cartoon-trace__node {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid rgba(47, 138, 91, 0.35);
+.cartoon-trace__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 8px 0;
+  color: #2c4336;
+}
+.cartoon-trace__legend span { display: inline-flex; align-items: center; gap: 6px; }
+.cartoon-trace__legend i {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1.5px solid;
+}
+.cartoon-trace__legend .is-ok { background: rgba(47, 138, 91, .16); border-color: #2f8a5b; }
+.cartoon-trace__legend .is-error { background: rgba(181, 71, 71, .16); border-color: #b54747; }
+.cartoon-trace__legend .is-wait { background: rgba(138, 151, 143, .12); border-color: #8a978f; }
+.cartoon-trace__legend .is-branch { background: transparent; border-color: #e6a23c; }
+.cartoon-trace__canvas {
+  width: 100%;
+  min-width: 0;
+  max-height: 440px;
+  margin-bottom: 12px;
+  overflow: auto;
   background: #fff;
-  color: #1f3d2c;
-  border-radius: 999px;
-  padding: 4px 12px;
-  cursor: pointer;
+  border: 1px solid rgba(47, 138, 91, .16);
+  border-radius: 10px;
 }
-.cartoon-trace__node span {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #e7f3ec;
-  color: #1f3d2c;
-  font-size: 12px;
-  line-height: 18px;
-  text-align: center;
-}
-.cartoon-trace__node.is-active { background: #2f8a5b; color: #fff; }
-.cartoon-trace__node.is-active span { background: #fff; color: #2f8a5b; }
 .cartoon-trace__pane {
   position: relative;
   max-height: 420px;
@@ -132,7 +264,8 @@ watch(part, () => { activeId.value = rows.value[0]?.id || null; });
 }
 .cartoon-trace__card { padding: 12px 0; border-top: 1px solid #e6ebe7; }
 .cartoon-trace__card:first-child { border-top: 0; padding-top: 0; }
-.cartoon-trace__card.is-active h4 { color: #2f8a5b; }
+.cartoon-trace__card.is-ok.is-active h4 { color: #2f8a5b; }
+.cartoon-trace__card.is-error h4 { color: #b54747; }
 .cartoon-trace__card h4,
 .cartoon-trace__card p { margin: 0 0 8px; }
 .cartoon-trace__card p { color: #5c6b62; }

@@ -99,7 +99,7 @@
       "name": "镜头提示词",
       "description": "单段扩写之后，视频提示词、首帧、尾帧分开写。首尾帧参考已经写好的视频提示词。落库前按词语置换表替换画面句子。",
       "nodes": [
-        {"id": "start", "name": "开始", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "针对一条已有镜头。", "x": 16, "y": 16},
+        {"id": "start", "name": "发起", "type": "start", "status": "done", "skill": "", "runner": "none", "description": "点击生成提示词。这一次的全流程从发起算起。", "x": 16, "y": 16},
         {"id": "expand", "name": "单段扩写", "type": "action", "status": "done", "skill": "cartoon-storyboard-skill", "runner": "skill", "description": "先把这一条扩写成可用的镜头描述。", "x": 226, "y": 16},
         {"id": "positive", "name": "视频提示词", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "只写 positive_zh。不在同一次写首尾帧。", "x": 436, "y": 16},
         {"id": "negative", "name": "负向补调", "type": "action", "status": "done", "skill": "cartoon-prompt-skill", "runner": "skill", "description": "负向不够时再调一次。失败只记日志，不中断。", "x": 646, "y": 16},

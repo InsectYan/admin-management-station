@@ -1,0 +1,1 @@
+ALTER TABLE cartoon_prompt_traces ADD COLUMN IF NOT EXISTS status VARCHAR(16) NOT NULL DEFAULT 'ok';

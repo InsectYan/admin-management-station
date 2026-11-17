@@ -8,17 +8,17 @@
     aria-label="流水线图谱"
   >
     <defs>
-      <pattern id="pipeline-flow-dot" width="16" height="16" patternUnits="userSpaceOnUse">
+      <pattern :id="`${scope}-dot`" width="16" height="16" patternUnits="userSpaceOnUse">
         <circle cx="1" cy="1" r="1" fill="rgba(47,138,91,.2)" />
       </pattern>
-      <marker id="pipeline-flow-next" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <marker :id="`${scope}-next`" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
         <path d="M0,0 L8,4 L0,8 Z" fill="#6D8A82" />
       </marker>
-      <marker id="pipeline-flow-branch" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <marker :id="`${scope}-branch`" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
         <path d="M0,0 L8,4 L0,8 Z" fill="#E6A23C" />
       </marker>
     </defs>
-    <rect width="100%" height="100%" fill="url(#pipeline-flow-dot)" />
+    <rect width="100%" height="100%" :fill="`url(#${scope}-dot)`" />
     <g v-for="edge in drawnEdges" :key="edge.id">
       <path
         :d="edge.d"
@@ -39,11 +39,11 @@
       v-for="node in nodes"
       :key="node.id"
       class="pipeline-flow__node"
-      :class="{ 'is-selected': node.id === selectedId }"
+      :class="{ 'is-selected': node.id === selectedId, 'is-error': node.status === 'error', 'is-muted': node.status === 'skip' || node.status === 'wait' }"
       :transform="`translate(${node.x},${node.y})`"
       role="button"
       tabindex="0"
-      :aria-label="`${node.name} ${node.status === 'done' ? '已完成' : '未完成'} ${lineOf(node)}`"
+      :aria-label="node.subtitle ? `${node.name} ${node.subtitle}` : `${node.name} ${node.status === 'done' ? '已完成' : '未完成'} ${lineOf(node)}`"
       @click="$emit('select', node.id)"
       @keydown.enter="$emit('select', node.id)"
     >
@@ -54,7 +54,7 @@
         :fill="paint(node).fill"
         :stroke="paint(node).stroke"
         :stroke-width="node.id === selectedId ? 2.5 : 1.5"
-        :stroke-dasharray="node.status === 'todo' ? '5 3' : ''"
+        :stroke-dasharray="node.status === 'todo' || node.status === 'wait' || node.status === 'skip' ? '5 3' : ''"
       />
       <text :x="box.width / 2" y="28" class="pipeline-flow__name" text-anchor="middle">{{ node.name }}</text>
       <text :x="box.width / 2" y="48" class="pipeline-flow__skill" text-anchor="middle">{{ lineOf(node) }}</text>
@@ -69,6 +69,7 @@ const props = defineProps({
   nodes: { type: Array, default: () => [] },
   edges: { type: Array, default: () => [] },
   selectedId: { type: String, default: '' },
+  scope: { type: String, default: 'pipeline-flow' },
 });
 defineEmits(['select']);
 
@@ -84,15 +85,18 @@ const height = computed(() => {
 });
 
 function paint(node) {
-  if (node.type === 'start' || node.type === 'end') {
+  if (node.status === 'error') return { fill: 'rgba(181,71,71,.16)', stroke: '#b54747' };
+  if (node.status === 'skip' || node.status === 'wait') return { fill: 'rgba(138,151,143,.12)', stroke: '#8a978f' };
+  if ((node.type === 'start' || node.type === 'end') && node.status !== 'ok') {
     return { fill: 'rgba(109,138,130,.18)', stroke: '#6D8A82' };
   }
   if (node.status === 'todo') return { fill: 'rgba(230,162,60,.2)', stroke: '#E6A23C' };
-  if (node.type === 'decision') return { fill: 'rgba(74,144,164,.16)', stroke: '#4A90A4' };
+  if (node.type === 'decision' && node.status !== 'ok') return { fill: 'rgba(74,144,164,.16)', stroke: '#4A90A4' };
   return { fill: 'rgba(47,138,91,.16)', stroke: '#2F8A5B' };
 }
 
 function lineOf(node) {
+  if (node.subtitle) return node.subtitle;
   if (node.type === 'start') return '开始';
   if (node.type === 'end') return '结束';
   if (node.skill) return node.skill;
@@ -158,7 +162,7 @@ const drawnEdges = computed(() => props.edges.flatMap(edge => {
     id: edge.id,
     d: points.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' '),
     color: branch ? '#E6A23C' : '#6D8A82',
-    marker: branch ? 'url(#pipeline-flow-branch)' : 'url(#pipeline-flow-next)',
+    marker: branch ? `url(#${props.scope}-branch)` : `url(#${props.scope}-next)`,
     label: edge.label || '',
     labelX: labelAt.x,
     labelY: labelAt.y,
@@ -179,6 +183,8 @@ const drawnEdges = computed(() => props.edges.flatMap(edge => {
   font-size: 11px;
 }
 .pipeline-flow__node.is-selected .pipeline-flow__name { fill: #1f3d2c; }
+.pipeline-flow__node.is-error .pipeline-flow__skill { fill: #b54747; }
+.pipeline-flow__node.is-muted .pipeline-flow__skill { fill: #8a978f; }
 .pipeline-flow__edge {
   fill: #8a5a12;
   font-size: 11px;

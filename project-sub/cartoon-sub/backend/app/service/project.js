@@ -1797,12 +1797,15 @@ class ProjectService extends Service {
       where: { shot_id: shot.id },
       order: [[ 'step', 'ASC' ], [ 'id', 'ASC' ]],
     });
+    const project = await this.ctx.model.Project.findByPk(shot.project_id);
     return {
+      av_mode: Boolean(project?.av_mode),
       list: rows.map(row => ({
         id: row.id,
         part: row.part,
         step: row.step,
         title: row.title,
+        status: row.status === 'error' || row.status === 'skip' ? row.status : 'ok',
         skill: row.skill,
         input_text: row.input_text,
         output_text: row.output_text,

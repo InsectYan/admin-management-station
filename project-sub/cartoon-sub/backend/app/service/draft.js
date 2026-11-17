@@ -43,6 +43,15 @@ function clipText(text, max = 6000) {
   return value.length > max ? `${value.slice(0, max)}…` : value;
 }
 
+function skillRaw(result) {
+  const steps = Array.isArray(result?.output?.steps) ? result.output.steps : [];
+  return steps.map(item => String(item?.rawText || '').trim()).filter(Boolean).join('\n\n');
+}
+
+function stuckText(message, raw) {
+  return [ String(message || '').trim(), String(raw || '').trim() ].filter(Boolean).join('\n\n');
+}
+
 function tracePacket(shot, extra = {}) {
   const packet = {
     scene: shot.scene_label || '',
@@ -114,8 +123,10 @@ function styleWithoutBody(styleCtx) {
 }
 
 class DraftService extends Service {
-  async rememberTrace(existing, part, title, skill, input, output) {
+  async rememberTrace(existing, part, title, skill, input, output, status = 'ok') {
     this.traceStep = (this.traceStep || 0) + 1;
+    const state = status === 'error' || status === 'skip' ? status : 'ok';
+    if (state === 'error') this.failureNoted = true;
     try {
       await this.ctx.model.PromptTrace.create({
         project_id: existing.project_id,
@@ -123,9 +134,10 @@ class DraftService extends Service {
         part,
         step: this.traceStep,
         title,
+        status: state,
         skill,
         input_text: clipText(input),
-        output_text: clipText(output),
+        output_text: clipText(output, 12000),
       });
     } catch (err) {
       this.ctx.logger.warn('[cartoon] 提示词记录没有写下 %s', err.message);
@@ -469,6 +481,7 @@ class DraftService extends Service {
     );
     const sourceExcerpt = await this.ensureShotExcerpt(existing, chapter);
     this.traceStep = 0;
+    this.failureNoted = false;
     try {
       await this.ctx.model.PromptTrace.destroy({ where: { shot_id: existing.id } });
     } catch (err) {
@@ -493,20 +506,28 @@ class DraftService extends Service {
     let boardResult;
     try {
       ensureRunning();
-      boardResult = await invokeSkill(this.ctx, {
-        skill: 'cartoon-storyboard-skill',
-        action: 'draft',
-        timeoutMs: skillTimeout(this.ctx),
-        signal: stop.signal,
-        payload: {
-          script_data: settledScript.script,
-          expand_one: true,
-          seed_shot: seedShot,
-          asset_facts: seedFacts,
-          ...styleWithoutBody(styleCtx),
-          ...productionInput(project),
-        },
-      });
+      try {
+        boardResult = await invokeSkill(this.ctx, {
+          skill: 'cartoon-storyboard-skill',
+          action: 'draft',
+          timeoutMs: skillTimeout(this.ctx),
+          signal: stop.signal,
+          payload: {
+            script_data: settledScript.script,
+            expand_one: true,
+            seed_shot: seedShot,
+            asset_facts: seedFacts,
+            ...styleWithoutBody(styleCtx),
+            ...productionInput(project),
+          },
+        });
+      } catch (err) {
+        await this.rememberTrace(
+          existing, 'video', '单段扩写', 'cartoon-storyboard-skill',
+          tracePacket(seedShot), stuckText(err.message, skillRaw(err.result)), 'error',
+        );
+        throw err;
+      }
       ensureRunning();
     const expanded = (outputOf(boardResult).shots || [])[0];
     const expandedSizes = normalizeShotSizes(
@@ -528,7 +549,13 @@ class DraftService extends Service {
       source_excerpt: sourceExcerpt,
       scene_label: existing.scene_label || '',
     };
-    if (!shot.description) this.ctx.throw(502, '没有返回分镜描述');
+    if (!shot.description) {
+      await this.rememberTrace(
+        existing, 'video', '单段扩写', 'cartoon-storyboard-skill',
+        tracePacket(seedShot), stuckText('没有返回分镜描述', skillRaw(boardResult)), 'error',
+      );
+      this.ctx.throw(502, '没有返回分镜描述');
+    }
     await this.rememberTrace(
       existing,
       'video',
@@ -546,28 +573,58 @@ class DraftService extends Service {
       body: '',
       ...productionInput(project),
     };
+    const partTitle = {
+      positive: '视频提示词',
+      negative: '负向补调',
+      frame_start: '首帧提示词',
+      frame_end: '尾帧提示词',
+    };
+    const partName = {
+      positive: 'video',
+      negative: 'video',
+      frame_start: 'frame_start',
+      frame_end: 'frame_end',
+    };
     const requestPart = async (part, current) => {
       ensureRunning();
-      const result = await invokeSkill(this.ctx, {
-        skill: 'cartoon-prompt-skill',
-        action: 'draft',
-        timeoutMs: skillTimeout(this.ctx),
-        signal: stop.signal,
-        payload: {
-          ...promptPayload,
-          prompt_part: part,
-          shots: [ current ],
-        },
-      });
+      const input = tracePacket(current, { prompt_part: part, positive_zh: current.positive_zh });
+      let result;
+      try {
+        result = await invokeSkill(this.ctx, {
+          skill: 'cartoon-prompt-skill',
+          action: 'draft',
+          timeoutMs: skillTimeout(this.ctx),
+          signal: stop.signal,
+          payload: {
+            ...promptPayload,
+            prompt_part: part,
+            shots: [ current ],
+          },
+        });
+      } catch (err) {
+        await this.rememberTrace(
+          existing, partName[part] || 'video', partTitle[part] || part, 'cartoon-prompt-skill',
+          input, err.message, 'error',
+        );
+        throw err;
+      }
       const output = outputOf(result);
       const row = (output.prompts || [])[0] || {};
       row.reply = String(output.reply || output.summary || '').replace(/\s+/g, ' ').trim();
+      row.raw_text = skillRaw(result);
       return row;
     };
     const video = await requestPart('positive', shot);
     const positive = String(video.positive_zh || '').trim();
     if (!positive) {
-      this.ctx.throw(502, video.reply ? `没有返回视频提示词。${video.reply.slice(0, 160)}` : '没有返回视频提示词');
+      const message = video.reply ? `没有返回视频提示词。${video.reply.slice(0, 160)}` : '没有返回视频提示词';
+      await this.rememberTrace(
+        existing, 'video', '视频提示词', 'cartoon-prompt-skill',
+        tracePacket(shot, { prompt_part: 'positive' }),
+        stuckText(message, video.raw_text),
+        'error',
+      );
+      this.ctx.throw(502, message);
     }
     await this.rememberTrace(
       existing,
@@ -598,6 +655,13 @@ class DraftService extends Service {
         if (err?.status === 499 || err?.message === '已停止') throw err;
         this.ctx.logger.warn('[cartoon] 负向提示词补调失败 %s', err.message);
       }
+    } else {
+      await this.rememberTrace(
+        existing, 'video', '负向补调', 'cartoon-prompt-skill',
+        tracePacket(shot, { prompt_part: 'negative' }),
+        '负向已经够用，没有再调。',
+        'skip',
+      );
     }
     if (project.av_mode) {
       try {
@@ -639,9 +703,20 @@ class DraftService extends Service {
             closedPositive,
           );
         } else {
+          await this.rememberTrace(
+            existing, 'video', '封闭提示词', 'cartoon-av-prompt-skill',
+            tracePacket(shot, { prompt_part: 'positive', positive_zh: picturePrompt(positive) }),
+            stuckText('没有画面提示词，沿用已写好的提示词', skillRaw(closed)),
+            'error',
+          );
           this.ctx.logger.warn('[cartoon] AV 收口没有画面提示词，沿用已写好的提示词');
         }
       } catch (err) {
+        await this.rememberTrace(
+          existing, 'video', '封闭提示词', 'cartoon-av-prompt-skill',
+          tracePacket(shot, { prompt_part: 'positive', positive_zh: picturePrompt(positive) }),
+          err.message, 'error',
+        );
         if (err?.status === 499 || err?.message === '已停止') throw err;
         this.ctx.logger.warn('[cartoon] AV 收口失败，沿用已写好的提示词 %s', err.message);
       }
@@ -650,7 +725,14 @@ class DraftService extends Service {
     const start = await requestPart('frame_start', shot);
     const frameStart = String(start.frame_start_zh || '').trim();
     if (!frameStart) {
-      this.ctx.throw(502, start.reply ? `没有返回首帧提示词。${start.reply.slice(0, 160)}` : '没有返回首帧提示词');
+      const message = start.reply ? `没有返回首帧提示词。${start.reply.slice(0, 160)}` : '没有返回首帧提示词';
+      await this.rememberTrace(
+        existing, 'frame_start', '首帧提示词', 'cartoon-prompt-skill',
+        tracePacket(shot, { prompt_part: 'frame_start', positive_zh: prompt.positive_zh }),
+        stuckText(message, start.raw_text),
+        'error',
+      );
+      this.ctx.throw(502, message);
     }
     await this.rememberTrace(
       existing,
@@ -663,7 +745,14 @@ class DraftService extends Service {
     const end = await requestPart('frame_end', shot);
     const frameEnd = String(end.frame_end_zh || '').trim();
     if (!frameEnd) {
-      this.ctx.throw(502, end.reply ? `没有返回尾帧提示词。${end.reply.slice(0, 160)}` : '没有返回尾帧提示词');
+      const message = end.reply ? `没有返回尾帧提示词。${end.reply.slice(0, 160)}` : '没有返回尾帧提示词';
+      await this.rememberTrace(
+        existing, 'frame_end', '尾帧提示词', 'cartoon-prompt-skill',
+        tracePacket(shot, { prompt_part: 'frame_end', positive_zh: prompt.positive_zh }),
+        stuckText(message, end.raw_text),
+        'error',
+      );
+      this.ctx.throw(502, message);
     }
     await this.rememberTrace(
       existing,
@@ -695,6 +784,7 @@ class DraftService extends Service {
     const promptRow = await this.ctx.model.Prompt.findOne({ where: { shot_id: existing.id } });
     if (promptRow) await promptRow.update(promptFields);
     else await this.ctx.model.Prompt.create({ shot_id: existing.id, ...promptFields });
+    await this.rememberTrace(existing, 'video', '写回镜头', '', '三条提示词', '已写回这条镜头', 'ok');
     await this.ctx.service.project.bindMatchedAssets(project.id, existing.id, [
       promptFields.positive_zh,
       promptFields.frame_start_zh,
@@ -708,6 +798,14 @@ class DraftService extends Service {
       finish(this.app, claim.row, null, result);
       return result;
     } catch (err) {
+      if (!this.failureNoted) {
+        await this.rememberTrace(
+          existing, 'video', '生成中断', '',
+          tracePacket(seedShot),
+          err?.message || '生成提示词中断',
+          'error',
+        );
+      }
       finish(this.app, claim.row, err);
       throw err;
     } finally {
