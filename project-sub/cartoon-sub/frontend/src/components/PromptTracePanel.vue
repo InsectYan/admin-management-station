@@ -226,7 +226,16 @@ watch(() => props.shotId, () => { load(); }, { immediate: true });
 </script>
 
 <style scoped>
+.cartoon-trace {
+  flex: 1 1 0;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 .cartoon-trace__legend {
+  flex: none;
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
@@ -247,16 +256,20 @@ watch(() => props.shotId, () => { load(); }, { immediate: true });
 .cartoon-trace__canvas {
   width: 100%;
   min-width: 0;
-  max-height: 440px;
+  flex: 1 1 0;
+  min-height: 220px;
   margin-bottom: 12px;
   overflow: auto;
   background: #fff;
   border: 1px solid rgba(47, 138, 91, .16);
   border-radius: 10px;
 }
+.cartoon-trace > .cartoon-module__hint { flex: none; }
+.cartoon-trace :deep(.el-tabs) { flex: none; }
 .cartoon-trace__pane {
   position: relative;
-  max-height: 420px;
+  flex: 1 1 0;
+  min-height: 180px;
   overflow: auto;
   border: 1px solid #e6ebe7;
   border-radius: 8px;

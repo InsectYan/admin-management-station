@@ -73,7 +73,8 @@
           </div>
         </el-tab-pane>
         <el-tab-pane label="基础信息" name="info">
-          <el-table v-if="submitRows.length" :data="submitRows" row-key="key" size="small" style="margin-bottom: 12px">
+          <div class="cartoon-preview-info__table">
+          <el-table v-if="submitRows.length" :data="submitRows" row-key="key" size="small">
             <el-table-column label="记录" width="90" prop="record" />
             <el-table-column label="提交" width="90" prop="part" />
             <el-table-column label="工作流" min-width="180" prop="workflow" />
@@ -85,6 +86,8 @@
             <el-table-column label="状态" width="100" prop="status" />
           </el-table>
           <p v-else class="cartoon-module__hint">还没有生图或生视频的提交记录。</p>
+          </div>
+          <div class="cartoon-preview-info__cards">
           <article v-for="task in infoRecords" :key="task.id" class="cartoon-brief">
             <header class="cartoon-brief__head">
               <strong>{{ taskKindLabel(task) }} · {{ statusLabel(task.status) }}</strong>
@@ -186,6 +189,7 @@
               <p class="cartoon-module__hint">{{ emptyBrief(task) }}</p>
             </div>
           </article>
+          </div>
         </el-tab-pane>
         <el-tab-pane label="提示词" name="prompt">
           <PromptTracePanel :shot-id="shotId" />
@@ -549,16 +553,24 @@ onUnmounted(stopPoll);
 </script>
 
 <style scoped>
-.cartoon-preview-page { min-height: 0; }
-.cartoon-preview-page :deep(.el-tabs) {
+.cartoon-page-body > .cartoon-module.cartoon-preview-page:not(:has(.el-table)),
+.cartoon-page-body > .cartoon-module.cartoon-preview-page:has(.el-table) {
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.cartoon-preview-page > :deep(.el-tabs) {
   flex: 1 1 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
-.cartoon-preview-page :deep(.el-tabs__header) { flex: none; }
-.cartoon-preview-page :deep(.el-tabs__content) {
+.cartoon-preview-page > :deep(.el-tabs > .el-tabs__header) { flex: none; }
+.cartoon-preview-page > :deep(.el-tabs > .el-tabs__content) {
   flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
@@ -566,6 +578,20 @@ onUnmounted(stopPoll);
 .cartoon-preview-page :deep(.el-tab-pane) {
   height: 100%;
   overflow: auto;
+}
+.cartoon-preview-page :deep(#pane-info),
+.cartoon-preview-page :deep(#pane-prompt) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.cartoon-preview-info__table { flex: none; }
+.cartoon-preview-info__table .cartoon-module__hint { margin: 0 0 8px; }
+.cartoon-preview-info__cards {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+  margin-top: 12px;
 }
 .cartoon-compare { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
 .cartoon-compare__label { font-weight: 600; }
