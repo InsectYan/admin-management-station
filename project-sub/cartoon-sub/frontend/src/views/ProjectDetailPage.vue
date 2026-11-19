@@ -401,12 +401,13 @@
             </el-button-group>
             <el-button type="danger" plain :disabled="!canStop" @click="stopWork">停止</el-button>
           </div>
+          <p v-if="selectedBoard" class="cartoon-module__hint">自动生成视频、全自动执行和对应重置都会先按全流程出首帧，再用满血 H3 首尾帧 [RefMod] 生成视频。同一场景且生成尾帧时，下一镜首帧用上一镜尾帧。</p>
           <el-table v-if="selectedBoard" class="cartoon-shot-table" :data="boardPageRows" style="margin-top: 12px">
             <el-table-column label="镜头ID" width="120" prop="shot_code" fixed="left" />
-            <el-table-column label="场次" width="200">
+            <el-table-column label="场次" width="200" fixed="left">
               <template #default="{ row }">{{ sceneCell(row, boardScript) }}</template>
             </el-table-column>
-            <el-table-column label="时长" width="90">
+            <el-table-column label="时长" width="90" fixed="left">
               <template #default="{ row }">{{ shotDurationLabel(row, true) }}</template>
             </el-table-column>
             <el-table-column label="主景别" width="180">
@@ -580,7 +581,7 @@
       </template>
     </el-drawer>
     <el-dialog v-model="videoAutoOpen" title="自动生成视频" width="480px" :close-on-click-modal="false">
-      <p class="cartoon-module__hint">本次只执行下拉框里勾选的镜头，并按镜头顺序排列。</p>
+      <p class="cartoon-module__hint">本次只执行下拉框里勾选的镜头，并按镜头顺序排列。每个镜头先生成首帧，再提交满血 H3 首尾帧 [RefMod]。</p>
       <el-form label-position="top" @submit.prevent>
         <el-form-item label="镜头ID">
           <el-select
@@ -598,6 +599,10 @@
             <el-option v-for="row in boardShots" :key="row.id" :label="row.shot_code || String(row.id)" :value="row.id" />
           </el-select>
         </el-form-item>
+        <el-form-item label="是否生成尾帧">
+          <el-checkbox v-model="videoAutoGenerateEnd">生成尾帧</el-checkbox>
+          <p class="cartoon-module__hint">不勾选则这次不提交尾帧，同一场景的下一镜不拿上一镜成片尾帧当首帧，改为重新出首帧。</p>
+        </el-form-item>
       </el-form>
       <p class="cartoon-module__hint">{{ videoAutoHint }}</p>
       <template #footer>
@@ -606,7 +611,7 @@
       </template>
     </el-dialog>
     <el-dialog v-model="allResetOpen" class="cartoon-dialog" title="重置全自动" width="480px" append-to-body :close-on-click-modal="false">
-      <p class="cartoon-module__hint">会重写当前快照里每一条镜头的提示词，已经写好的也会覆盖。然后按下面的次数再生成视频，已经有的视频会保留。</p>
+      <p class="cartoon-module__hint">会重写当前快照里每一条镜头的提示词，已经写好的也会覆盖。然后按下面的次数，先出首帧再交满血 H3 首尾帧 [RefMod]，已经有的视频会保留。</p>
       <el-form label-position="top" @submit.prevent>
         <el-form-item label="每个镜头的生成次数">
           <el-input-number v-model="allResetCount" :min="1" :max="8" :step="1" :precision="0" controls-position="right" />
@@ -622,7 +627,7 @@
       </template>
     </el-dialog>
     <el-dialog v-model="videoResetOpen" class="cartoon-dialog" title="重新生成视频" width="480px" append-to-body :close-on-click-modal="false">
-      <p class="cartoon-module__hint">会给当前快照里每一条镜头再生成这么多次视频。已经有的视频会保留。</p>
+      <p class="cartoon-module__hint">会给当前快照里每一条镜头再出首帧，并按次数提交满血 H3 首尾帧 [RefMod]。已经有的视频会保留。</p>
       <el-form label-position="top" @submit.prevent>
         <el-form-item label="每个镜头的生成次数">
           <el-input-number v-model="videoResetCount" :min="1" :max="8" :step="1" :precision="0" controls-position="right" />
@@ -895,6 +900,7 @@ const autoRunning = computed({
 });
 const shotTab = ref('table');
 const videoAutoOpen = ref(false);
+const videoAutoGenerateEnd = ref(true);
 const videoAutoIds = ref([]);
 const videoAutoAll = ref(false);
 const videoAutoSome = ref(false);
@@ -2333,6 +2339,7 @@ async function runPromptShot(row, item, signal, fresh = false) {
     } catch (err) {
       if (isStop(err) || signal?.aborted) throw stopError();
       lastError = err;
+      try { await load(); } catch { /* 失败后仍刷新已写入的提示词 */ }
     }
   }
   throw new Error(`已试 3 次：${lastError?.message || '失败'}`);
@@ -2367,12 +2374,9 @@ async function runVideoShot(row, item, signal) {
     hasRef = bound.some(id => packAssets.has(id));
   }
   const workflow = savedWorkflow
-    || (hasRef
-      ? workflows.find(entry => entry.media === 'video' && /满血-h3-文生视频/i.test(entry.name) && /\[refmod\]/i.test(entry.name))
-      : null)
-    || workflows.find(entry => entry.media === 'video' && entry.name === '满血-h3-文生视频')
-    || workflows.find(entry => entry.media === 'video' && String(entry.name).includes('文生视频') && !/refmod/i.test(entry.name));
-  if (!workflow) throw new Error('没有找到文生视频工作流');
+    || workflows.find(entry => entry.media === 'video' && /满血-h3-首尾帧/i.test(entry.name) && /\[refmod\]/i.test(entry.name))
+    || workflows.find(entry => entry.media === 'video' && String(entry.name).includes('首尾帧') && /\[refmod\]/i.test(entry.name));
+  if (!workflow) throw new Error('没有找到满血 H3 首尾帧 RefMod 工作流');
   if (hasRef && !/\[refmod\]/i.test(workflow.name)) {
     throw new Error('这条镜头绑了 RefMod 参考图，但没有找到能引用这些图的 [RefMod] 工作流');
   }
@@ -2415,6 +2419,7 @@ function openVideoAuto() {
     return;
   }
   videoAutoIds.value = shots.map(row => row.id);
+  videoAutoGenerateEnd.value = true;
   videoAutoAll.value = true;
   videoAutoSome.value = false;
   videoAutoOpen.value = true;
@@ -2488,10 +2493,12 @@ async function startServerVideo(shotIds, videoCount = 1, generateEnd = true) {
     applyAutoJob(job);
     armServerPoll();
     ElMessage.success(count > 1
-      ? `已提交 ${job?.total || shotIds.length} 个镜头，每个镜头 ${count} 条`
-      : `已提交 ${job?.total || shotIds.length} 条，后台会按顺序生成`);
+      ? `已提交 ${job?.total || shotIds.length} 个镜头，每个镜头 ${count} 条。先出首帧，再生成满血 H3 首尾帧`
+      : `已提交 ${job?.total || shotIds.length} 条。先出首帧，再生成满血 H3 首尾帧`);
+    return job;
   } catch (err) {
     ElMessage.error(err.message || '没有提交');
+    return null;
   }
 }
 function confirmVideoAuto() {
@@ -2502,7 +2509,7 @@ function confirmVideoAuto() {
     return;
   }
   videoAutoOpen.value = false;
-  runAuto('video', chosen.map(row => row.id));
+  runAuto('video', chosen.map(row => row.id), false, { generateEnd: videoAutoGenerateEnd.value });
 }
 function openVideoReset() {
   if (autoRunning.value || flowBusy.value) return;
@@ -2598,7 +2605,7 @@ async function runAuto(mode, selectedIds, fresh = false, options = {}) {
     }
   }
   if (mode === 'video') {
-    await startServerVideo(shots.map(row => row.id));
+    await startServerVideo(shots.map(row => row.id), 1, options.generateEnd !== false);
     return;
   }
   const jobToken = lockJob();
@@ -2610,7 +2617,7 @@ async function runAuto(mode, selectedIds, fresh = false, options = {}) {
   autoPrompt.done = 0;
   autoPrompt.total = mode === 'video' ? 0 : shots.length;
   autoVideo.done = 0;
-  autoVideo.total = mode === 'prompt' ? 0 : shots.length;
+  autoVideo.total = mode === 'prompt' || mode === 'all' ? 0 : shots.length;
   const queue = [];
   if (mode !== 'video') {
     shots.forEach(row => queue.push({
@@ -2621,7 +2628,7 @@ async function runAuto(mode, selectedIds, fresh = false, options = {}) {
       note: '',
     }));
   }
-  if (mode !== 'prompt') {
+  if (mode !== 'prompt' && mode !== 'all') {
     shots.forEach(row => queue.push({
       key: `v-${row.id}-${token}`,
       shotId: row.id,
@@ -2635,6 +2642,7 @@ async function runAuto(mode, selectedIds, fresh = false, options = {}) {
   let skipped = 0;
   let stopped = false;
   let noteId = 0;
+  let handedOff = false;
   try {
     if (selectedBoard.value?.importId && (mode === 'prompt' || mode === 'all')) {
       const note = await openFlowNote(
@@ -2676,7 +2684,10 @@ async function runAuto(mode, selectedIds, fresh = false, options = {}) {
       }
       if (stopped) break;
     }
-    if (!options.quiet && !stopped && !signal.aborted) {
+    if (mode === 'all' && !stopped && !signal.aborted) {
+      if (failed && !options.quiet) ElMessage.warning(`有 ${failed} 条提示词没写成，视频仍会先出首帧再提交`);
+      handedOff = Boolean(await startServerVideo(shots.map(row => row.id), 1, options.generateEnd !== false));
+    } else if (!options.quiet && !stopped && !signal.aborted) {
       const parts = [ `成功 ${succeeded}` ];
       if (failed) parts.push(`失败 ${failed}`);
       if (skipped) parts.push(`跳过 ${skipped}`);
@@ -2687,7 +2698,9 @@ async function runAuto(mode, selectedIds, fresh = false, options = {}) {
   } finally {
     if (noteId) {
       const status = stopped || signal.aborted ? 'stopped' : (failed ? 'failed' : 'success');
-      const message = `成功 ${succeeded}，失败 ${failed}，跳过 ${skipped}`;
+      const message = handedOff
+        ? `提示词成功 ${succeeded}，失败 ${failed}，跳过 ${skipped}。视频已转入后台，先出首帧再生成`
+        : `成功 ${succeeded}，失败 ${failed}，跳过 ${skipped}`;
       await finishFlowNote(noteId, status, message);
     }
     if (token === runMark.token) autoRunning.value = false;

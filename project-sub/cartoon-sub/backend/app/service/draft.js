@@ -750,7 +750,27 @@ class DraftService extends Service {
       row.raw_text = skillRaw(result);
       return row;
     };
-    const video = await requestPart('positive', shot);
+    const gaps = [];
+    const halted = err => err?.status === 499 || err?.message === '已停止' || stop.stopped();
+    const keepPrompt = async fields => {
+      const next = {};
+      [ 'positive_zh', 'frame_start_zh', 'frame_end_zh', 'negative_zh' ].forEach(key => {
+        const value = String(fields[key] || '').trim();
+        if (value) next[key] = value;
+      });
+      if (!Object.keys(next).length) return null;
+      const row = await this.ctx.model.Prompt.findOne({ where: { shot_id: existing.id } });
+      if (row) await row.update(next);
+      else await this.ctx.model.Prompt.create({ shot_id: existing.id, ...next });
+      return next;
+    };
+    let video = {};
+    try {
+      video = await requestPart('positive', shot);
+    } catch (err) {
+      if (halted(err)) throw err;
+      video = { reply: err?.message || '' };
+    }
     const positive = String(video.positive_zh || '').trim();
     if (!positive) {
       const message = video.reply ? `没有返回视频提示词。${video.reply.slice(0, 160)}` : '没有返回视频提示词';
@@ -760,9 +780,9 @@ class DraftService extends Service {
         stuckText(message, video.raw_text),
         'error',
       );
-      this.ctx.throw(502, message);
+      gaps.push(message);
     }
-    await this.rememberTrace(
+    if (positive) await this.rememberTrace(
       existing,
       'video',
       '视频提示词',
@@ -772,10 +792,10 @@ class DraftService extends Service {
     );
     let prompt = {
       positive_zh: positive,
-      negative_zh: String(video.negative_zh || '').trim(),
-      production_note: String(video.production_note || '').trim(),
+      negative_zh: positive ? String(video.negative_zh || '').trim() : '',
+      production_note: positive ? String(video.production_note || '').trim() : '',
     };
-    if (negativeNeedsRetry(prompt)) {
+    if (positive && negativeNeedsRetry(prompt)) {
       try {
         const again = await requestPart('negative', { ...shot, positive_zh: positive, negative_only: true });
         if (String(again.negative_zh || '').trim()) prompt = { ...prompt, negative_zh: String(again.negative_zh).trim() };
@@ -791,7 +811,7 @@ class DraftService extends Service {
         if (err?.status === 499 || err?.message === '已停止') throw err;
         this.ctx.logger.warn('[cartoon] 负向提示词补调失败 %s', err.message);
       }
-    } else {
+    } else if (positive) {
       await this.rememberTrace(
         existing, 'video', '负向补调', 'cartoon-prompt-skill',
         tracePacket(shot, { prompt_part: 'negative' }),
@@ -805,7 +825,7 @@ class DraftService extends Service {
     ];
     const selectedTopics = topicsOf(project);
     for (const closer of closers) {
-      if (!selectedTopics.includes(closer.key)) continue;
+      if (!positive || !selectedTopics.includes(closer.key)) continue;
       try {
         ensureRunning();
         const closed = await this.callSkill({
@@ -865,57 +885,61 @@ class DraftService extends Service {
         this.ctx.logger.warn('[cartoon] %s失败，沿用已写好的提示词 %s', closer.title, err.message);
       }
     }
-    shot.positive_zh = prompt.positive_zh;
-    const start = await requestPart('frame_start', shot);
-    const frameStart = String(start.frame_start_zh || '').trim();
-    if (!frameStart) {
-      const message = start.reply ? `没有返回首帧提示词。${start.reply.slice(0, 160)}` : '没有返回首帧提示词';
-      await this.rememberTrace(
-        existing, 'frame_start', '首帧提示词', 'cartoon-prompt-skill',
-        tracePacket(shot, { prompt_part: 'frame_start', positive_zh: prompt.positive_zh }),
-        stuckText(message, start.raw_text),
-        'error',
-      );
-      this.ctx.throw(502, message);
+    if (positive) {
+      await keepPrompt({
+        positive_zh: picturePrompt(prompt.positive_zh) || prompt.positive_zh,
+        negative_zh: prompt.negative_zh,
+      });
     }
-    await this.rememberTrace(
-      existing,
-      'frame_start',
-      '首帧提示词',
-      'cartoon-prompt-skill',
-      tracePacket(shot, { prompt_part: 'frame_start', positive_zh: prompt.positive_zh }),
-      frameStart,
-    );
-    const end = await requestPart('frame_end', shot);
-    const frameEnd = String(end.frame_end_zh || '').trim();
-    if (!frameEnd) {
-      const message = end.reply ? `没有返回尾帧提示词。${end.reply.slice(0, 160)}` : '没有返回尾帧提示词';
+    const kept = await this.ctx.model.Prompt.findOne({ where: { shot_id: existing.id } });
+    shot.positive_zh = prompt.positive_zh || String(kept?.positive_zh || '').trim();
+    const readFrame = async part => {
+      const title = partTitle[part];
+      let row = {};
+      try {
+        row = await requestPart(part, shot);
+      } catch (err) {
+        if (halted(err)) throw err;
+        gaps.push(err?.message || `没有返回${title}`);
+        return '';
+      }
+      const field = part === 'frame_start' ? 'frame_start_zh' : 'frame_end_zh';
+      const text = String(row[field] || '').trim();
+      if (!text) {
+        const message = row.reply ? `没有返回${title}。${row.reply.slice(0, 160)}` : `没有返回${title}`;
+        await this.rememberTrace(
+          existing, partName[part], title, 'cartoon-prompt-skill',
+          tracePacket(shot, { prompt_part: part, positive_zh: shot.positive_zh }),
+          stuckText(message, row.raw_text),
+          'error',
+        );
+        gaps.push(message);
+        return '';
+      }
       await this.rememberTrace(
-        existing, 'frame_end', '尾帧提示词', 'cartoon-prompt-skill',
-        tracePacket(shot, { prompt_part: 'frame_end', positive_zh: prompt.positive_zh }),
-        stuckText(message, end.raw_text),
-        'error',
+        existing,
+        partName[part],
+        title,
+        'cartoon-prompt-skill',
+        tracePacket(shot, { prompt_part: part, positive_zh: shot.positive_zh }),
+        text,
       );
-      this.ctx.throw(502, message);
-    }
-    await this.rememberTrace(
-      existing,
-      'frame_end',
-      '尾帧提示词',
-      'cartoon-prompt-skill',
-      tracePacket(shot, { prompt_part: 'frame_end', positive_zh: prompt.positive_zh }),
-      frameEnd,
-    );
+      await keepPrompt({ [field]: picturePrompt(text) || text });
+      return text;
+    };
+    const frameStart = await readFrame('frame_start');
+    const frameEnd = await readFrame('frame_end');
     prompt = { ...prompt, frame_start_zh: frameStart, frame_end_zh: frameEnd };
     ensureRunning();
     const overrides = (Array.isArray(existing.overridden_fields) ? existing.overridden_fields : [])
       .filter(field => field !== 'assets');
-    const videoText = picturePrompt(prompt.positive_zh) || String(prompt.positive_zh || '').trim();
+    const storedNow = await this.ctx.model.Prompt.findOne({ where: { shot_id: existing.id } });
+    const videoText = picturePrompt(prompt.positive_zh) || String(prompt.positive_zh || storedNow?.positive_zh || '').trim();
     const promptFields = {
-      positive_zh: videoText || shot.description,
-      frame_start_zh: picturePrompt(prompt.frame_start_zh),
-      frame_end_zh: picturePrompt(prompt.frame_end_zh),
-      negative_zh: prompt.negative_zh || '',
+      positive_zh: String(storedNow?.positive_zh || '').trim(),
+      frame_start_zh: String(storedNow?.frame_start_zh || '').trim(),
+      frame_end_zh: String(storedNow?.frame_end_zh || '').trim(),
+      negative_zh: String(storedNow?.negative_zh || '').trim(),
     };
     const coveredMs = promptCoveredMs(videoText);
     const shotPatch = {
@@ -933,10 +957,15 @@ class DraftService extends Service {
       delete shotPatch.wardrobe_state;
       await existing.update(shotPatch);
     }
-    const promptRow = await this.ctx.model.Prompt.findOne({ where: { shot_id: existing.id } });
-    if (promptRow) await promptRow.update(promptFields);
-    else await this.ctx.model.Prompt.create({ shot_id: existing.id, ...promptFields });
-    await this.rememberTrace(existing, 'video', '写回镜头', '', '三条提示词', '已写回这条镜头', 'ok');
+    const wrote = [
+      promptFields.positive_zh && '视频提示词',
+      promptFields.frame_start_zh && '首帧提示词',
+      promptFields.frame_end_zh && '尾帧提示词',
+    ].filter(Boolean);
+    const missing = [ '视频提示词', '首帧提示词', '尾帧提示词' ].filter(name => !wrote.includes(name));
+    if (wrote.length) {
+      await this.rememberTrace(existing, 'video', '写回镜头', '', wrote.join('、'), `已写入${wrote.join('、')}`, 'ok');
+    }
     await this.ctx.service.project.bindMatchedAssets(project.id, existing.id, [
       promptFields.positive_zh,
       promptFields.frame_start_zh,
@@ -946,6 +975,12 @@ class DraftService extends Service {
       shot.dialogue,
       ...coveredPlaceNames(scriptData, `${shot.description}\n${promptFields.positive_zh}\n${promptFields.frame_start_zh}\n${promptFields.frame_end_zh}`),
     ].join('\n'));
+      if (missing.length) {
+        const message = wrote.length
+          ? `已写入${wrote.join('、')}。缺少${missing.join('、')}`
+          : (gaps[0] || `缺少${missing.join('、')}`);
+        this.ctx.throw(502, message);
+      }
       const result = await this.ctx.service.project.show(project.id);
       finish(this.app, claim.row, null, result);
       return result;

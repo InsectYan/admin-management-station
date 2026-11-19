@@ -200,16 +200,21 @@ class FullAutoService extends Service {
     return this.app.fullAutoWalking;
   }
 
+  signalKey(run) {
+    if (run?.signal_key) return String(run.signal_key);
+    return String(run?.id ?? '');
+  }
+
   signal(runId) {
     const map = this.signals();
-    const key = Number(runId);
+    const key = String(runId);
     if (!map.has(key)) map.set(key, new AbortController());
     return map.get(key).signal;
   }
 
   abort(runId) {
     const map = this.signals();
-    const key = Number(runId);
+    const key = String(runId);
     const controller = map.get(key);
     if (controller) controller.abort();
     map.delete(key);
@@ -636,7 +641,7 @@ class FullAutoService extends Service {
       const result = await invokeSkill(this.ctx, {
         skill: 'cartoon-asset-profile-skill',
         action: 'draft',
-        signal: this.signal(run.id),
+        signal: this.signal(this.signalKey(run)),
         payload: {
           chapter_title: title,
           body: part,
@@ -748,7 +753,7 @@ class FullAutoService extends Service {
 
   takeSeed(run) {
     if (!this.seedBags) this.seedBags = new Map();
-    const key = Number(run?.id) || 0;
+    const key = run?.signal_key || `run:${run?.id || 0}`;
     if (!this.seedBags.has(key)) this.seedBags.set(key, new Set());
     return takeFreshSeed(this.seedBags.get(key));
   }
@@ -759,6 +764,7 @@ class FullAutoService extends Service {
   }
 
   async pushLog(run, node, text) {
+    if (!run?.constructor?.rawAttributes?.log) return;
     const log = parseJson(run.log, []);
     log.push({ at: new Date().toISOString(), node, text: String(text || '').slice(0, 500) });
     const trimmed = log.slice(-200);
@@ -768,6 +774,7 @@ class FullAutoService extends Service {
   }
 
   async mark(run, key, status, note) {
+    if (!run?.constructor?.rawAttributes?.nodes) return;
     const nodes = parseJson(run.nodes, blankNodes());
     const prev = nodes[key] || {};
     const noteText = note || '';
@@ -789,6 +796,7 @@ class FullAutoService extends Service {
   }
 
   async noteFailure(run, key, message) {
+    if (!run?.constructor?.rawAttributes?.nodes) return 0;
     const count = Number(run.fail_count || 0) + 1;
     const nodes = parseJson(run.nodes, blankNodes());
     const prev = nodes[key] || { status: 'pending', note: '', started_at: '' };
@@ -1034,7 +1042,7 @@ class FullAutoService extends Service {
     const result = await invokeSkill(this.ctx, {
       skill: 'cartoon-asset-sheet-skill',
       action: 'draft',
-      signal: this.signal(run.id),
+      signal: this.signal(this.signalKey(run)),
       payload: {
         kind: item.kind,
         name: item.name,
@@ -1082,7 +1090,18 @@ class FullAutoService extends Service {
     await this.pushLog(run, options.quiet ? 'video' : 'assets', `${item.kind === 'scene' ? '场景' : '人物'}「${item.name}」已生成一张设定总图`);
   }
 
+  sceneLabel(script, shot) {
+    return sceneTitle(script, shot);
+  }
+
+  sharesScene(left, right) {
+    const a = sceneKey(left);
+    const b = sceneKey(right);
+    return Boolean(a && a === b);
+  }
+
   async renderSheet(run, prompt) {
+    if (!Number(run.asset_workflow_id)) throw new Error('还没有设定图，无法继续出图');
     const task = await this.ctx.model.Task.create({
       project_id: run.project_id,
       shot_id: null,
@@ -1095,7 +1114,7 @@ class FullAutoService extends Service {
     let saved = await this.ctx.service.generate.execute(task, prompt, [], {
       workflowOverride: run.asset_workflow_id,
       seed: this.takeSeed(run),
-      signal: this.signal(run.id),
+      signal: this.signal(this.signalKey(run)),
       width: run.asset_width,
       height: run.asset_height,
     });
@@ -1136,8 +1155,7 @@ class FullAutoService extends Service {
     return Boolean(row
       && String(row.positive_zh || '').trim()
       && String(row.frame_start_zh || '').trim()
-      && String(row.frame_end_zh || '').trim()
-      && String(row.negative_zh || '').trim());
+      && String(row.frame_end_zh || '').trim());
   }
 
   async fillShotPrompt(run, shot, options = {}) {
@@ -1704,7 +1722,7 @@ class FullAutoService extends Service {
       await this.ctx.service.generate.settleTask(fresh, queue);
       const settled = await fresh.reload();
       if ([ 'success', 'failed', 'cancelled' ].includes(settled.status)) return settled;
-      await sleep(3000, this.signal(run.id));
+      await sleep(3000, this.signal(this.signalKey(run)));
       current = settled;
     }
     const latest = await this.ctx.model.Task.findByPk(current.id);

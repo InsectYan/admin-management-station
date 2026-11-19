@@ -17,7 +17,7 @@
           <el-select v-model="workflowId" filterable placeholder="选择工作流" style="width: 100%">
             <el-option v-for="item in choices" :key="item.id" :label="workflowLabel(item)" :value="item.id" />
           </el-select>
-          <p class="cartoon-module__hint">生图列出文生图和改图。生视频列出文生视频、首尾帧、图生视频。带 [RefMod] 的工作流会把参考图和开头的角色锁定一起交给模型。选了首尾帧后要确认首帧；尾帧可以不传，不传就只按首帧生成。</p>
+          <p class="cartoon-module__hint">生图列出文生图和改图。生视频列出文生视频、首尾帧、图生视频。这条镜头还没保存过工作流时，生视频默认是满血 H3 首尾帧 [RefMod]。带 [RefMod] 的工作流会把参考图和开头的角色锁定一起交给模型。选了首尾帧后要确认首帧；尾帧可以不传，不传就只按首帧生成。</p>
         </el-form-item>
         <el-form-item label="主景别">
           <el-select v-model="shotSizes" multiple collapse-tags :disabled="readOnly" style="width: 100%" placeholder="多选景别">
@@ -926,13 +926,12 @@ let echoing = false;
 function pickDefault(nextMedia) {
   const list = (contracts.value.workflows || []).filter(item => item.media === nextMedia);
   const nameOf = item => String(item?.name || '');
-  const textToVideo = nextMedia === 'video'
-    ? (list.find(item => /满血-h3-文生视频/i.test(nameOf(item)) && /\[refmod\]/i.test(nameOf(item)))
-      || list.find(item => nameOf(item).includes('文生视频') && /\[refmod\]/i.test(nameOf(item)))
-      || list.find(item => nameOf(item) === '满血-h3-文生视频'))
+  const flf = nextMedia === 'video'
+    ? (list.find(item => /满血-h3-首尾帧/i.test(nameOf(item)) && /\[refmod\]/i.test(nameOf(item)))
+      || list.find(item => nameOf(item).includes('首尾帧') && /\[refmod\]/i.test(nameOf(item))))
     : null;
   const preferred = nextMedia === 'image' ? contracts.value.image?.workflow_id : null;
-  const found = textToVideo || list.find(item => item.id === preferred) || list[0];
+  const found = flf || list.find(item => item.id === preferred) || list[0];
   workflowId.value = found ? found.id : null;
 }
 function jobPercentOf(task) {

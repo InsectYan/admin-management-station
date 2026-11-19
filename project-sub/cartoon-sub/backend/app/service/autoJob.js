@@ -49,6 +49,18 @@ function stopped(err) {
     || message.includes('已停止');
 }
 
+function alignedSize(width, height) {
+  const ok = value => Number.isInteger(value) && value >= 64 && value <= 2048 && value % 32 === 0;
+  const w = Number(width);
+  const h = Number(height);
+  if (ok(w) && ok(h)) return { width: w, height: h };
+  return { width: 1024, height: 1024 };
+}
+
+function missingPrompt(message) {
+  return /没有视频提示词|没有返回视频提示词|没有正向提示词|需要一句提示词|需要一句视频提示词/.test(String(message || ''));
+}
+
 class AutoJobService extends Service {
   takeSeed(job) {
     if (!this.seedBags) this.seedBags = new Map();
@@ -135,12 +147,9 @@ class AutoJobService extends Service {
       hasRef = bound.some(id => packAssets.has(id));
     }
     const workflow = savedWorkflow
-      || (hasRef
-        ? workflows.find(entry => entry.media === 'video' && /满血-h3-文生视频/i.test(entry.name) && /\[refmod\]/i.test(entry.name))
-        : null)
-      || workflows.find(entry => entry.media === 'video' && entry.name === '满血-h3-文生视频')
-      || workflows.find(entry => entry.media === 'video' && String(entry.name).includes('文生视频') && !/refmod/i.test(entry.name));
-    if (!workflow) throw new Error('没有找到文生视频工作流');
+      || workflows.find(entry => entry.media === 'video' && /满血-h3-首尾帧/i.test(entry.name) && /\[refmod\]/i.test(entry.name))
+      || workflows.find(entry => entry.media === 'video' && String(entry.name).includes('首尾帧') && /\[refmod\]/i.test(entry.name));
+    if (!workflow) throw new Error('没有找到满血 H3 首尾帧 RefMod 工作流');
     if (hasRef && !/\[refmod\]/i.test(workflow.name)) {
       throw new Error('这条镜头绑了 RefMod 参考图，但没有找到能引用这些图的 [RefMod] 工作流');
     }
@@ -160,6 +169,50 @@ class AutoJobService extends Service {
         seed: this.takeSeed(job),
       },
     };
+  }
+
+  async mediaPlan(project, generateEnd) {
+    const workflows = await this.ctx.service.generate.choices();
+    const video = workflows.find(entry => entry.media === 'video'
+      && /满血-h3-首尾帧/i.test(entry.name)
+      && /\[refmod\]/i.test(entry.name));
+    if (!video) this.ctx.throw(400, '没有找到满血 H3 首尾帧 RefMod 工作流');
+    if (generateEnd && !(video.images || []).some(slot => slot.role === 'end')) {
+      this.ctx.throw(400, '满血首尾帧工作流没有尾帧入口');
+    }
+    const images = workflows.filter(entry => entry.media === 'image' && !/反推|改图/.test(entry.name || ''));
+    const runs = await this.ctx.model.FullRun.findAll({
+      where: { project_id: project.id },
+      order: [[ 'id', 'DESC' ]],
+      limit: 30,
+    });
+    const lastFrame = runs.find(row => Number(row.frame_workflow_id) > 0);
+    let frame = lastFrame && images.find(entry => entry.id === Number(lastFrame.frame_workflow_id));
+    if (!frame) {
+      frame = images.find(entry => /图生图/.test(entry.name) && /heretic/i.test(entry.name))
+        || images.find(entry => /图生图/.test(entry.name))
+        || images.find(entry => !/图生图/.test(entry.name));
+    }
+    if (!frame) this.ctx.throw(400, '没有找到首尾帧出图工作流');
+    const frameSize = lastFrame && Number(lastFrame.frame_workflow_id) === Number(frame.id)
+      ? alignedSize(lastFrame.frame_width, lastFrame.frame_height)
+      : alignedSize(frame.width, frame.height);
+    const lastAsset = runs.find(row => Number(row.asset_workflow_id) > 0);
+    const asset = lastAsset && images.find(entry => entry.id === Number(lastAsset.asset_workflow_id) && !/图生图/.test(entry.name));
+    const assetSize = asset
+      ? alignedSize(lastAsset.asset_width, lastAsset.asset_height)
+      : alignedSize(0, 0);
+    return { video, frame, frameSize, assetId: asset ? asset.id : 0, assetSize };
+  }
+
+  lastTracked(job) {
+    try {
+      const ids = JSON.parse(job?.task_ids || '[]');
+      const last = Number(ids[ids.length - 1]);
+      return Number.isInteger(last) && last > 0 ? last : null;
+    } catch {
+      return null;
+    }
   }
 
   async start(projectId, shotIds, videoCountValue, generateEnd) {
@@ -183,10 +236,18 @@ class AutoJobService extends Service {
     const byId = new Map(shots.map(shot => [ shot.id, shot ]));
     const ordered = ids.map(id => byId.get(id));
     if (ordered.some(shot => !shot)) this.ctx.throw(400, '有镜头不在当前项目里');
+    const plan = await this.mediaPlan(project, generateEnd !== false);
     const job = await this.ctx.model.AutoJob.create({
       project_id: project.id,
       status: 'running',
       total: ordered.length,
+      frame_workflow_id: plan.frame.id,
+      frame_width: plan.frameSize.width,
+      frame_height: plan.frameSize.height,
+      video_workflow_id: plan.video.id,
+      asset_workflow_id: plan.assetId,
+      asset_width: plan.assetSize.width,
+      asset_height: plan.assetSize.height,
       video_count: perShot,
       generate_end: generateEnd !== false,
     });
@@ -209,6 +270,7 @@ class AutoJobService extends Service {
   async halt(projectId) {
     const jobs = await this.ctx.model.AutoJob.findAll({ where: { project_id: projectId, status: 'running' } });
     for (const job of jobs) {
+      this.ctx.service.fullAuto.abort(`job:${job.id}`);
       await job.update({ status: 'stopped' });
       await this.ctx.model.AutoJobItem.update(
         { status: 'stopped', reason: '已停止' },
@@ -355,79 +417,60 @@ class AutoJobService extends Service {
         if (!shot || String(shot.project_id) !== String(job.project_id)) {
           throw new Error('镜头已不在项目里');
         }
-        await item.update({ reason: '正在提交' });
+        job.signal_key = `job:${job.id}`;
+        if (Number(job.import_id) !== Number(shot.import_id || 0)) {
+          await job.update({ import_id: shot.import_id || null });
+          job.import_id = shot.import_id || null;
+          job.signal_key = `job:${job.id}`;
+        }
+        if (Number(shot.workflow_id) !== Number(job.video_workflow_id)) {
+          await shot.update({ workflow_id: job.video_workflow_id });
+        }
+        const chapter = shot.import_id ? await this.ctx.model.Import.findByPk(shot.import_id) : null;
+        const scene = this.ctx.service.fullAuto.sceneLabel(chapter?.script_data || {}, shot);
+        const prev = await this.ctx.service.fullAuto.previousShot(shot);
+        const same = Boolean(prev) && this.ctx.service.fullAuto.sharesScene(shot, prev);
+        const videoChoice = await this.ctx.service.generate.choiceById(job.video_workflow_id);
+        const endSlot = (videoChoice?.images || []).find(slot => slot.role === 'end') || null;
         const perShot = Math.max(1, Math.min(8, Math.round(Number(job.video_count) || 1)));
-        let task = null;
+        const wantEnd = job.generate_end !== false;
+        let lastTaskId = null;
         for (let nth = 0; nth < perShot; nth += 1) {
           const idle = await this.waitForIdleVideo(job);
           if (!idle) {
-            await this.finishStopped(job, item, task);
+            await this.finishStopped(job, item, null);
             return;
           }
-          await item.update({ reason: perShot > 1 ? `正在提交第 ${nth + 1}/${perShot} 条` : '正在提交' });
-          if (job.generate_end === false && /b\d+-from-prev\.png$/.test(String(shot.manual_frame_path || ''))) {
-            await shot.update({ manual_frame_path: '' });
-          }
-          if (job.generate_end !== false) await this.ctx.service.fullAuto.adoptPreviousEnd(shot, nth);
-          const payload = await this.videoPayload(job, shot);
-          payload.data.generate_end = job.generate_end !== false;
-          payload.data.chain_batch = nth;
-          task = await this.ctx.service.generate.start(job.project_id, shot.id, payload.data, payload.kind);
-          if (!task?.id) throw new Error('没有拿到生成任务');
-          await item.update({ task_id: task.id, reason: perShot > 1 ? `正在生成第 ${nth + 1}/${perShot} 条` : '正在生成' });
-          if ([ 'queued', 'running', 'saving' ].includes(task.status)) {
-            const waited = await this.waitForTask(job, task);
-            if (waited.stopped) {
-              await this.finishStopped(job, item, waited.task);
-              return;
-            }
-            task = waited.task;
-          }
-          if (!task || task.status === 'cancelled') {
-            await this.finishStopped(job, item, task);
-            return;
-          }
-          if (task.status !== 'success') break;
-        }
-        if (task?.status === 'failed') {
-          const reason = task.error_message || '视频生成失败';
-          const missing = reason.includes('没有正向提示词') || reason.includes('没有视频提示词') || reason.includes('需要一句提示词') || reason.includes('需要一句视频提示词');
-          if (missing) {
-            await item.update({ status: 'skipped', reason, task_id: task.id });
-            item.status = 'skipped';
-          } else {
-            const next = await this.failOrRetry(job, item, reason, task.id);
-            if (next === 'stop') return;
-            if (next === 'retry') {
-              index -= 1;
-              continue;
-            }
-          }
-        } else if (task.status === 'success') {
           await item.update({
-            status: 'success',
-            reason: perShot > 1 ? `已生成 ${perShot} 条视频` : '视频已生成',
-            task_id: task.id,
+            reason: perShot > 1 ? `正在生成第 ${nth + 1}/${perShot} 条的首帧和视频` : '正在生成首帧和视频',
           });
-          item.status = 'success';
-        } else {
-          const next = await this.failOrRetry(job, item, '视频没有生成', task?.id);
-          if (next === 'stop') return;
-          if (next === 'retry') {
-            index -= 1;
-            continue;
-          }
+          job.signal_key = `job:${job.id}`;
+          await this.ctx.service.fullAuto.shoot(job, shot, endSlot, same, scene, {
+            batchIndex: nth,
+            wantEnd,
+          });
+          lastTaskId = this.lastTracked(job);
+          await item.update({
+            task_id: lastTaskId,
+            reason: perShot > 1 ? `第 ${nth + 1}/${perShot} 条已生成` : '视频已生成',
+          });
         }
+        await item.update({
+          status: 'success',
+          reason: perShot > 1 ? `已生成 ${perShot} 条视频` : '视频已生成',
+          task_id: lastTaskId,
+        });
+        item.status = 'success';
       } catch (err) {
         if (stopped(err)) {
           await this.finishStopped(job, item, null);
           return;
         }
-        if (err?.skip) {
-          await item.update({ status: 'skipped', reason: err?.message || '跳过' });
+        if (err?.skip || missingPrompt(err?.message)) {
+          await item.update({ status: 'skipped', reason: err?.message || '跳过', task_id: this.lastTracked(job) });
           item.status = 'skipped';
         } else {
-          const next = await this.failOrRetry(job, item, err?.message || '失败');
+          const next = await this.failOrRetry(job, item, err?.message || '失败', this.lastTracked(job));
           if (next === 'stop') return;
           if (next === 'retry') {
             index -= 1;
