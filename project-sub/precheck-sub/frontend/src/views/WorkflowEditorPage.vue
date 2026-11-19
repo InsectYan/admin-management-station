@@ -32,6 +32,10 @@
               <el-input-number v-model="fps" :min="1" :max="120" :step="1" :precision="0" :controls="false" @change="writeFps" />
               <p class="precheck-module__hint">写入成片节点的每秒帧数。预览里填写生成时间时，按这个数把秒数换成帧数。MiniMax H3 常用 24，Wan 常用 8。</p>
             </el-form-item>
+            <el-form-item v-for="item in loraTargets" :key="item.id" class="precheck-workflow-steps" :label="loraLabel(item)">
+              <el-input-number :model-value="loraStrength[item.id]" :min="0" :max="2" :step="0.05" :precision="2" :controls="false" @change="value => writeLora(item.id, value)" />
+              <p class="precheck-module__hint">写入这个 LoRA 节点的 strength_model。0 等于不施加，1 是训练时的满强度。改完后点保存，之后的生成才用新数值。<template v-if="item.file.includes('detailed_penis')">这颗的训练触发词是 Pen15，提示词里写上才会按训练方式出现。</template></p>
+            </el-form-item>
             <el-form-item class="precheck-workflow-steps" label="双采">
               <div class="precheck-workflow-size">
                 <el-switch v-model="dualSample" aria-label="开启双采" />
@@ -168,6 +172,25 @@ function fpsTargetsOf(apiJson) {
   return found;
 }
 const fpsTargets = computed(() => fpsTargetsOf(parseRawQuiet()));
+function loraTargetsOf(apiJson) {
+  const found = [];
+  if (!apiJson || typeof apiJson !== 'object' || Array.isArray(apiJson)) return found;
+  Object.entries(apiJson).forEach(([ id, node ]) => {
+    const inputs = node?.inputs;
+    if (!inputs || typeof inputs.strength_model !== 'number') return;
+    if (node.class_type !== 'LoraLoaderModelOnly' && node.class_type !== 'LoraLoader') return;
+    const file = String(inputs.lora_name || '').split(/[\\/]/).pop();
+    found.push({ id, file, strength: inputs.strength_model });
+  });
+  return found;
+}
+const loraTargets = computed(() => loraTargetsOf(parseRawQuiet()));
+const loraStrength = ref({});
+function loraLabel(item) {
+  const same = loraTargets.value.length > 1;
+  const file = item.file || `节点 ${item.id}`;
+  return same ? `LoRA 强度（${file}）` : 'LoRA 强度';
+}
 const slots = computed(() => modelSlots(parseRawQuiet()));
 function slotLabel(slot) {
   const title = FOLDER_LABEL[slot.folder] || slot.folder;
@@ -228,6 +251,20 @@ function writeSteps(value) {
   ids.forEach(id => {
     apiJson[id].inputs.steps = count;
   });
+  raw.value = JSON.stringify(apiJson, null, 2);
+}
+function syncLora() {
+  const next = {};
+  loraTargetsOf(parseRawQuiet()).forEach(item => {
+    next[item.id] = item.strength;
+  });
+  loraStrength.value = next;
+}
+function writeLora(id, value) {
+  const count = Number(value);
+  const apiJson = parseRawQuiet();
+  if (!apiJson?.[id]?.inputs || !Number.isFinite(count)) return;
+  apiJson[id].inputs.strength_model = count;
   raw.value = JSON.stringify(apiJson, null, 2);
 }
 function syncFps() {
@@ -309,8 +346,12 @@ async function load() {
   syncSteps();
   syncSize();
   syncFps();
+  syncLora();
 }
-watch(raw, syncFps);
+watch(raw, () => {
+  syncFps();
+  syncLora();
+});
 watch(tab, value => {
   if (value !== 'preview') return;
   previewJson.value = parseRaw();

@@ -29,7 +29,11 @@
           class="cartoon-trace__card"
           :class="[ `is-${node.status}`, { 'is-active': selectedId === node.id } ]"
         >
-          <h4>{{ node.title }} · {{ statusText(node.status) }}</h4>
+          <header class="cartoon-trace__head">
+            <h4>{{ node.title }} · {{ statusText(node.status) }}</h4>
+            <span v-if="elapsedText(node)">{{ elapsedText(node) }}</span>
+            <button v-if="faultJson(node)" type="button" class="cartoon-trace__fault" @click="openDetail(node.title, '异常', faultJson(node))">查看异常</button>
+          </header>
           <p>调用工具 {{ skillText(node) }}</p>
           <div>
             <span>输入</span>
@@ -78,6 +82,7 @@ const partOf = {
   negative: 'video',
   av: 'video',
   avskill: 'video',
+  fitness: 'video',
   frame_start: 'frame_start',
   frame_end: 'frame_end',
   phrase: 'video',
@@ -89,15 +94,28 @@ const titleOf = {
   positive: '视频提示词',
   negative: '负向补调',
   avskill: '封闭提示词',
+  fitness: '健身收口',
   frame_start: '首帧提示词',
   frame_end: '尾帧提示词',
   save: '写回镜头',
 };
-const stepOrder = [ 'expand', 'positive', 'negative', 'av', 'avskill', 'frame_start', 'frame_end', 'phrase', 'save', 'end' ];
+const stepOrder = [ 'expand', 'positive', 'negative', 'av', 'avskill', 'fitness', 'frame_start', 'frame_end', 'phrase', 'save', 'end' ];
 
+function titlesFor(id) {
+  if (id === 'avskill') return [ 'AV 收口', '封闭提示词' ];
+  if (id === 'fitness') return [ '健身收口' ];
+  return titleOf[id] ? [ titleOf[id] ] : [];
+}
 function latestTrace(title) {
   if (!title) return null;
   return traces.value.filter(item => item.title === title).at(-1) || null;
+}
+function latestOf(id) {
+  for (const title of titlesFor(id)) {
+    const hit = latestTrace(title);
+    if (hit) return hit;
+  }
+  return null;
 }
 function statusOfTrace(hit) {
   if (!hit) return '';
@@ -111,15 +129,19 @@ const flow = computed(() => {
   const interrupt = latestTrace('生成中断');
   const status = { start: started ? 'ok' : 'wait' };
   const attached = {};
-  Object.entries(titleOf).forEach(([ id, title ]) => {
-    const hit = latestTrace(title);
+  Object.keys(titleOf).forEach(id => {
+    const hit = latestOf(id);
     status[id] = statusOfTrace(hit) || 'wait';
     if (hit) attached[id] = hit;
   });
-  const later = [ 'avskill', 'frame_start', 'frame_end', 'save' ].some(id => status[id] !== 'wait');
+  const later = [ 'avskill', 'fitness', 'frame_start', 'frame_end', 'save' ].some(id => status[id] !== 'wait');
   const decisionReached = status.positive === 'ok' && (status.negative === 'ok' || status.negative === 'skip' || later);
   status.av = decisionReached ? 'ok' : 'wait';
-  if (!avMode.value) status.avskill = decisionReached ? 'skip' : 'wait';
+  if (!attached.avskill && !avMode.value) status.avskill = decisionReached ? 'skip' : 'wait';
+  if (!attached.fitness) {
+    const after = [ 'frame_start', 'frame_end', 'save' ].some(id => status[id] !== 'wait');
+    status.fitness = after ? 'skip' : 'wait';
+  }
   status.phrase = status.save === 'ok' ? 'ok' : 'wait';
   status.end = status.save === 'ok' ? 'ok' : 'wait';
   const alreadyStuck = Object.values(status).includes('error');
@@ -135,7 +157,7 @@ const flow = computed(() => {
     return {
       ...node,
       status: state,
-      subtitle: statusText(state),
+      subtitle: [ statusText(state), elapsedShort({ trace: attached[node.id] || null }) ].filter(Boolean).join(' · '),
       part: partOf[node.id] || 'video',
       title: node.name,
       trace: attached[node.id] || null,
@@ -153,6 +175,28 @@ const graphNodes = computed(() => flow.value.map(node => ({
 })));
 const tabNodes = computed(() => flow.value.filter(node => node.part === part.value));
 
+function elapsedShort(node) {
+  const ms = Number(node?.trace?.elapsed_ms);
+  if (!node?.trace || !Number.isFinite(ms) || ms <= 0) return '';
+  if (ms < 1000) return '不到1秒';
+  const sec = Math.round(ms / 1000);
+  if (sec < 60) return `${sec}秒`;
+  const minute = Math.floor(sec / 60);
+  const rest = sec % 60;
+  return rest ? `${minute}分${rest}秒` : `${minute}分`;
+}
+function elapsedText(node) {
+  const label = elapsedShort(node);
+  return label ? `耗时 ${label}` : '';
+}
+function faultJson(node) {
+  if (node?.trace?.status !== 'error' && node?.status !== 'error') return '';
+  const raw = String(node?.trace?.error_json || '').trim();
+  const output = String(node?.trace?.output_text || '').trim();
+  const source = raw || output;
+  if (!source) return '';
+  try { return JSON.stringify(JSON.parse(source), null, 2); } catch { return source; }
+}
 function statusText(status) {
   if (status === 'error') return '异常';
   if (status === 'skip') return '跳过';
@@ -279,6 +323,23 @@ watch(() => props.shotId, () => { load(); }, { immediate: true });
 .cartoon-trace__card:first-child { border-top: 0; padding-top: 0; }
 .cartoon-trace__card.is-ok.is-active h4 { color: #2f8a5b; }
 .cartoon-trace__card.is-error h4 { color: #b54747; }
+.cartoon-trace__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.cartoon-trace__head h4 { margin: 0; }
+.cartoon-trace__head span { color: #5c6b62; }
+.cartoon-trace__fault {
+  margin-left: auto;
+  border: 1px solid #b54747;
+  background: #fff;
+  color: #b54747;
+  border-radius: 6px;
+  padding: 2px 10px;
+  cursor: pointer;
+}
 .cartoon-trace__card h4,
 .cartoon-trace__card p { margin: 0 0 8px; }
 .cartoon-trace__card p { color: #5c6b62; }

@@ -15,6 +15,19 @@ module.exports = app => {
     pin_mode: { type: STRING(16), allowNull: false, defaultValue: 'required' },
     template_id: { type: STRING(64), allowNull: true },
     av_mode: { type: BOOLEAN, allowNull: false, defaultValue: false },
+    topics: {
+      type: TEXT,
+      allowNull: false,
+      defaultValue: '[]',
+      get() {
+        const { topicList } = require('../lib/topics');
+        return topicList(this.getDataValue('topics'));
+      },
+      set(value) {
+        const { topicList } = require('../lib/topics');
+        this.setDataValue('topics', JSON.stringify(topicList(value)));
+      },
+    },
     deleted_at: { type: app.Sequelize.DATE, allowNull: true },
   }, { tableName: 'cartoon_projects' });
 };

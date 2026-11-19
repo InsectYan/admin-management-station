@@ -13,5 +13,7 @@ module.exports = app => {
     skill: { type: STRING(64), allowNull: false, defaultValue: '' },
     input_text: { type: TEXT, allowNull: false, defaultValue: '' },
     output_text: { type: TEXT, allowNull: false, defaultValue: '' },
+    elapsed_ms: { type: INTEGER, allowNull: false, defaultValue: 0 },
+    error_json: { type: TEXT, allowNull: false, defaultValue: '' },
   }, { tableName: 'cartoon_prompt_traces' });
 };

@@ -31,6 +31,19 @@ export function supportsAv(value) {
   return value === 'ai_comic' || value === 'ai_short';
 }
 
+export const TOPIC_OPTIONS = [
+  { value: 'av', label: 'AV' },
+  { value: 'fitness', label: '健身' },
+];
+
+export function topicsOfProject(project) {
+  const raw = project?.topics;
+  if (Array.isArray(raw) && raw.length) {
+    return TOPIC_OPTIONS.map(item => item.value).filter(value => raw.includes(value));
+  }
+  return project?.av_mode ? [ 'av' ] : [];
+}
+
 export function hasPanel(value) {
   return Boolean(typeOf(value)?.panel);
 }

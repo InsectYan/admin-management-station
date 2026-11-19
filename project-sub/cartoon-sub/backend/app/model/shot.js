@@ -27,6 +27,7 @@ module.exports = app => {
     sexual_source: { type: STRING(16), allowNull: false, defaultValue: 'machine' },
     stage_notes: { type: JSONB, allowNull: true },
     dialogue_lines: { type: JSONB, allowNull: true },
+    scene_index: { type: INTEGER, allowNull: true },
     scene_label: { type: STRING(200), allowNull: true },
     source_excerpt: { type: TEXT, allowNull: true },
     wardrobe_state: { type: TEXT, allowNull: true },

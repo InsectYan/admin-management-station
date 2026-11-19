@@ -136,6 +136,13 @@ function mediaOf(row, detail) {
 
 const PROMPT_KEYS = [ 'text', 'prompt', 'positive_prompt', 'caption', 'string', 'text_g', 'text_l', 'value', 'negative_prompt' ];
 
+function sceneKey(shot) {
+  const index = Number(shot?.scene_index);
+  if (Number.isInteger(index) && index > 0) return `n:${index}`;
+  const label = String(shot?.scene_label || '').trim();
+  return label ? `l:${label}` : '';
+}
+
 function chainBatchOf(value) {
   if (value == null || value === '') return null;
   const batch = Number(value);
@@ -456,6 +463,7 @@ class GenerateService extends Service {
     }
     const images = await this.attachFrames(freshShot, workflowOverride, rawImages, {
       allowPlanted: payload.generate_end !== false,
+      chainBatch: chainBatchOf(payload.chain_batch),
     });
 
     const profileRow = project
@@ -511,6 +519,34 @@ class GenerateService extends Service {
     }
   }
 
+  async previousFrame(shot, batchIndex) {
+    const key = sceneKey(shot);
+    if (!key || !shot) return { same: false, relative: '' };
+    const prev = await this.ctx.model.Shot.findOne({
+      where: {
+        project_id: shot.project_id,
+        import_id: shot.import_id || null,
+        [Op.or]: [
+          { sort_order: { [Op.lt]: shot.sort_order } },
+          { sort_order: shot.sort_order, id: { [Op.lt]: shot.id } },
+        ],
+      },
+      order: [[ 'sort_order', 'DESC' ], [ 'id', 'DESC' ]],
+    });
+    if (!prev || sceneKey(prev) !== key) return { same: false, relative: '' };
+    const batch = Number.isInteger(batchIndex) ? batchIndex : 0;
+    const relatives = [
+      `frames/${shot.project_id}/${prev.id}/b${batch}-end.png`,
+      `frames/${shot.project_id}/${prev.id}/end.png`,
+      `frames/${shot.project_id}/${prev.id}/b${batch}-last.png`,
+    ];
+    for (const relative of relatives) {
+      const absolute = resolveInside(outputRoot(this.app), relative);
+      if (absolute && fs.existsSync(absolute)) return { same: true, relative };
+    }
+    return { same: true, relative: '' };
+  }
+
   async attachFrames(shot, workflowId, images, options = {}) {
     const list = Array.isArray(images) ? images.slice() : [];
     if (!workflowId || !shot) return list;
@@ -523,9 +559,15 @@ class GenerateService extends Service {
       return list;
     }
     const current = await this.ctx.model.Shot.findByPk(shot.id);
-    const relative = current?.manual_frame_path || (options.allowPlanted === false ? '' : current?.first_frame_path);
+    const chained = options.allowPlanted === false || !current ? null : await this.previousFrame(current, options.chainBatch);
+    let relative = current?.manual_frame_path || '';
+    if (!relative && options.allowPlanted !== false) {
+      relative = chained?.same ? (chained.relative || '') : '';
+    }
     if (!relative) {
-      const error = new Error('这条工作流需要首帧。没有上镜尾帧时，请先上传指定首帧');
+      const error = new Error(chained?.same
+        ? '同一场的下一镜要用上一镜尾帧，请先生成上一镜尾帧'
+        : '这条工作流需要首帧。没有上镜尾帧时，请先上传指定首帧');
       error.status = 400;
       throw error;
     }
@@ -619,6 +661,9 @@ class GenerateService extends Service {
       order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
     });
     if (!next) return;
+    const shotKey = sceneKey(shot);
+    const nextKey = sceneKey(next);
+    if (!shotKey || shotKey !== nextKey) return;
     const relative = `frames/${shot.project_id}/${next.id}/auto.png`;
     const absolute = resolveInside(outputRoot(this.app), relative);
     if (!absolute) return;

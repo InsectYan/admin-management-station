@@ -17,9 +17,11 @@
               <el-option v-for="item in novels" :key="item.id" :label="item.title" :value="String(item.id)" />
             </el-select>
           </el-form-item>
-          <el-form-item v-if="supportsAv(detail.project.content_type)" label="AV">
-            <el-checkbox v-model="projectForm.av_mode">开启</el-checkbox>
-            <p class="cartoon-module__hint">开启后仍先走常规提示词，再按场记结构收口成视频和首尾帧。这一镜写明双方都已满二十一岁，才会套亲密子模版。</p>
+          <el-form-item v-if="supportsAv(detail.project.content_type)" label="专题">
+            <el-select v-model="projectForm.topics" multiple clearable placeholder="可不选" style="width: 100%">
+              <el-option v-for="item in TOPIC_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+            <p class="cartoon-module__hint">可多选。选了的专题都会在常规提示词之后各走一次收口。AV 仍先写常规稿，双方都写明满二十一岁才套亲密子模版。健身只改动作路径。</p>
           </el-form-item>
           <el-form-item label="画面风格">
             <el-select v-model="projectForm.visual_style" filterable placeholder="选择风格" style="width: 100%">
@@ -235,6 +237,8 @@
                   <div>
                     <strong>{{ index + 1 }}. {{ scene.title || '未命名场次' }}</strong>
                     <span v-if="scene.purpose" class="cartoon-script__note">{{ scene.purpose }}</span>
+                    <p v-if="scene.source_start" class="cartoon-script__note">起：{{ scene.source_start }}</p>
+                    <p v-if="scene.wardrobe" class="cartoon-script__note">服装：{{ scene.wardrobe }}</p>
                     <CartoonMarkdown :source="scene.summary || ''" />
                   </div>
                   <aside v-if="showWardrobe" class="cartoon-script__wardrobe">
@@ -255,10 +259,13 @@
                     :description="note.reason"
                   />
                 </div>
-                <p class="cartoon-module__hint">与「镜头」页同一批数据。场次和镜头只按下文字数设下限，不设上限。拆分时给每条镜头记下对应的原文段，多条可以共用同一段。生成提示词只带这一段。视频、首帧、尾帧分开写，首尾帧参考已经写好的视频提示词。</p>
+                <p class="cartoon-module__hint">与「镜头」页同一批数据。按情节分场，一场里的连续动作可以拆成十几条镜头。同一场只有第一镜是新的首帧，后面的镜头用上一镜尾帧。场次列用来确认这些镜头属于第几场。</p>
                 <el-empty v-if="!scriptShotLoading && !scriptShotTotal" description="还没有分镜，请先点「拆分分镜」" />
                 <el-table v-else v-loading="scriptShotLoading" class="cartoon-shot-table" :data="scriptShotRows" style="margin-top: 8px" row-key="id">
               <el-table-column label="镜头ID" width="120" prop="shot_code" fixed="left" />
+              <el-table-column label="场次" width="200">
+                <template #default="{ row }">{{ sceneCell(row, activeScriptData) }}</template>
+              </el-table-column>
               <el-table-column label="时长(秒)" width="110">
                 <template #default="{ row }">{{ shotDurationLabel(row) }}</template>
               </el-table-column>
@@ -341,7 +348,7 @@
           <el-button type="primary" :disabled="!canMake() || !selectedBoard || autoRunning" @click="openShotCreate">新增</el-button>
         </div>
       </div>
-      <p class="cartoon-module__hint">先在左侧选一条快照，再点右上角新增。表单在抽屉里，打开时会清空。汇总各快照已写入的剧情段（每段 5—12 秒，按剧情需要取），不从剧本页自动跳转过来。</p>
+      <p class="cartoon-module__hint">先在左侧选一条快照，再点右上角新增。表单在抽屉里，打开时会清空。汇总各快照已写入的剧情段（每段 5—15 秒，按剧情需要取），不从剧本页自动跳转过来。</p>
       <el-tabs v-model="shotTab" class="cartoon-shot-tabs">
       <el-tab-pane label="镜头表" name="table">
       <div class="cartoon-board">
@@ -396,6 +403,9 @@
           </div>
           <el-table v-if="selectedBoard" class="cartoon-shot-table" :data="boardPageRows" style="margin-top: 12px">
             <el-table-column label="镜头ID" width="120" prop="shot_code" fixed="left" />
+            <el-table-column label="场次" width="200">
+              <template #default="{ row }">{{ sceneCell(row, boardScript) }}</template>
+            </el-table-column>
             <el-table-column label="时长" width="90">
               <template #default="{ row }">{{ shotDurationLabel(row, true) }}</template>
             </el-table-column>
@@ -754,7 +764,7 @@ import { autoRunMark, rememberAutoRun } from '../lib/autoRunMark.js';
 import ClampText from '../components/ClampText.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
-import { isLocalType, supportsAv } from '../lib/contentTypes.js';
+import { isLocalType, supportsAv, TOPIC_OPTIONS, topicsOfProject } from '../lib/contentTypes.js';
 import { uncoveredScenes } from '../utils/sceneCoverage.js';
 import { framePromptText, hasPromptSet } from '../lib/framePrompt.js';
 import { PAGE_SIZES, PAGER_LAYOUT } from '../lib/pager.js';
@@ -815,7 +825,7 @@ const detail = ref(null);
 const novels = ref([]);
 const chapters = ref([]);
 const meta = reactive({ visual_styles: [], shot_sizes: [ '中景' ], camera_moves: [ '固定' ] });
-const projectForm = reactive({ name: '', source_novel_id: '', visual_style: '', av_mode: false });
+const projectForm = reactive({ name: '', source_novel_id: '', visual_style: '', topics: [] });
 const chapterId = ref('');
 const pullingAll = ref(false);
 const packageDesk = ref(null);
@@ -831,7 +841,7 @@ const shotCreateOpen = ref(false);
 const shotPanel = ref(null);
 const pinRequired = computed(() => (detail.value?.project?.pin_mode || 'required') !== 'legacy');
 const isLocal = computed(() => isLocalType(detail.value?.project?.content_type));
-const showWardrobe = computed(() => Boolean(detail.value?.project?.av_mode));
+const showWardrobe = computed(() => topicsOfProject(detail.value?.project).includes('av'));
 const packageVersions = computed(() => packageDesk.value?.versions || []);
 const matchingImport = computed(() => (detail.value?.imports || []).find(item => (
   !item.deleted_at && String(item.chapter_id) === String(chapterId.value)
@@ -1287,6 +1297,7 @@ const boardItems = computed(() => {
   return items;
 });
 const selectedBoard = computed(() => boardItems.value.find(item => item.key === selectedImportKey.value) || null);
+const boardScript = computed(() => selectedBoard.value?.raw?.script_data || null);
 const boardShots = computed(() => {
   const current = selectedBoard.value;
   if (!current) return [];
@@ -1433,7 +1444,7 @@ function fillProject() {
   projectForm.name = project.name || '';
   projectForm.source_novel_id = project.source_novel_id ? String(project.source_novel_id) : '';
   projectForm.visual_style = project.visual_style || '';
-  projectForm.av_mode = Boolean(project.av_mode);
+  projectForm.topics = topicsOfProject(project);
 }
 async function loadChapters(novelId) {
   chapters.value = [];
@@ -1541,7 +1552,7 @@ async function saveProject() {
         name: projectForm.name,
         source_novel_id: isLocal.value ? null : (projectForm.source_novel_id || null),
         visual_style: projectForm.visual_style || '',
-        av_mode: supportsAv(detail.value?.project?.content_type) && projectForm.av_mode,
+        topics: supportsAv(detail.value?.project?.content_type) ? projectForm.topics : [],
       },
     });
     await load();
@@ -1662,6 +1673,20 @@ async function removeSnapshot(item) {
   } catch (err) {
     ElMessage.error(err.message);
   }
+}
+function sceneNumber(row) {
+  const stored = Number(row?.scene_index);
+  if (Number.isInteger(stored) && stored > 0) return stored;
+  const matched = String(row?.description || '').match(/第\s*(\d+)\s*场/);
+  return matched ? Number(matched[1]) : 0;
+}
+function sceneCell(row, script) {
+  const scenes = Array.isArray(script?.scenes) ? script.scenes : [];
+  const index = sceneNumber(row);
+  const title = index ? String(scenes[index - 1]?.title || '').trim() : '';
+  if (index && title) return `第${index}场 · ${title}`;
+  if (index) return `第${index}场`;
+  return String(row?.scene_label || '').trim() || '—';
 }
 function shotDurationLabel(row, withUnit) {
   const text = formatCoveredSeconds(promptCoveredMs(row?.prompt?.positive_zh));
@@ -2134,7 +2159,7 @@ async function generateShotOutline(item) {
     return;
   }
   outliningId.value = item.id;
-  ElMessage.info('正在按剧本拆分分镜并落库（5—12 秒/段）…');
+  ElMessage.info('正在按剧本拆分分镜并落库（5—15 秒/段）…');
   try {
     const data = await request(`/projects/${projectKey()}/imports/${item.id}/draft/shot-outline`, {
       method: 'post',

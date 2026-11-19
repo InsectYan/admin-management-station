@@ -15,12 +15,15 @@ const {
   sceneTypeOf,
   splitBody,
   rosterText,
+  briefLook,
 } = require('../lib/assetProfile');
 const { settleScript } = require('../lib/scriptGate');
 const { minStoryUnits } = require('../lib/storyCoverage');
 const { promptCoveredMs } = require('../lib/promptDuration');
+const { topicsOf } = require('../lib/topics');
 
-const NODE_KEYS = [ 'script', 'assets', 'storyboard', 'prompts', 'workflow', 'video' ];
+const NODE_KEYS = [ 'script', 'profiles', 'assets', 'storyboard', 'prompts', 'workflow', 'video' ];
+const FAIL_LIMIT = 3;
 const NOTE_NODES = {
   storyboard: [ 'script', 'storyboard' ],
   prompt: [ 'prompts', 'save' ],
@@ -28,6 +31,7 @@ const NOTE_NODES = {
 };
 const NODE_LABEL = {
   script: '正在生成剧本',
+  profiles: '正在生成资产描述',
   assets: '正在生成资产',
   storyboard: '正在拆分分镜',
   prompts: '正在生成提示词',
@@ -102,6 +106,21 @@ function imageSize(width, height) {
   return { width: w, height: h };
 }
 
+const UNDERAGE_RE = /十几岁|未成年|婴儿|幼童|小孩|孩童|少女|少年|(?<![二三四五六七八九])(?:十一|十二|十三|十四|十五|十六|十七|十八|十九|二十)岁|(?<![十廿])[一二三四五六七八九]岁/;
+const ADULT_CN_RE = /二十[一二三四五六七八九]岁|[三四五六七八九]十[一二三四五六七八九]?岁/;
+const NUDE_LINE = '人物全裸，细节刻画清晰，禁止非全裸，禁止穿衣服，禁止半裸。';
+
+function adultAge(text) {
+  const source = String(text || '');
+  if (UNDERAGE_RE.test(source)) return false;
+  const ages = [ ...source.matchAll(/(\d{1,3})\s*岁/g) ]
+    .map(item => Number(item[1]))
+    .filter(age => age >= 0 && age <= 120);
+  if (ages.some(age => age < 21)) return false;
+  if (ages.length && ages.every(age => age >= 21)) return true;
+  return ADULT_CN_RE.test(source);
+}
+
 function videoCount(value) {
   const count = Math.round(Number(value == null || value === '' ? 1 : value));
   if (!Number.isInteger(count) || count < 1 || count > 8) {
@@ -114,10 +133,17 @@ function videoCount(value) {
 
 function assetText(item) {
   if (item.kind === 'scene') return String(item.look || '').trim().slice(0, 4000);
-  const look = String(item.look || '').trim();
-  const note = String(item.note || '').trim();
-  if (!note || look.includes(note)) return look.slice(0, 4000);
-  return [ look, note ].filter(Boolean).join('\n').slice(0, 4000);
+  return briefLook(item.look);
+}
+
+function scriptCast(chapter) {
+  const people = Array.isArray(chapter?.script_data?.characters) ? chapter.script_data.characters : [];
+  return people.map(item => {
+    const name = String(item?.name || '').trim();
+    if (!name) return '';
+    const look = briefLook(item.look);
+    return look ? `${name}｜${look}` : name;
+  }).filter(Boolean).join('\n').slice(0, 2000);
 }
 
 function sceneBrief(script, name, note) {
@@ -137,6 +163,13 @@ function sceneBrief(script, name, note) {
 
 function blankNodes() {
   return Object.fromEntries(NODE_KEYS.map(key => [ key, { status: 'pending', note: '' } ]));
+}
+
+function sceneKey(shot) {
+  const index = Number(shot?.scene_index);
+  if (Number.isInteger(index) && index > 0) return `n:${index}`;
+  const label = String(shot?.scene_label || '').trim();
+  return label ? `l:${label}` : '';
 }
 
 function sceneTitle(script, shot) {
@@ -226,7 +259,17 @@ class FullAutoService extends Service {
       where: { project_id: project.id },
       order: [[ 'id', 'DESC' ]],
     });
-    return [ ...rows.map(row => this.summary(row)), ...jobs.map(job => this.jobSummary(job)) ]
+    const jobIds = jobs.map(job => job.id);
+    const jobItems = jobIds.length
+      ? await this.ctx.model.AutoJobItem.findAll({ where: { job_id: jobIds } })
+      : [];
+    const itemsByJob = new Map();
+    jobItems.forEach(item => {
+      const key = Number(item.job_id);
+      if (!itemsByJob.has(key)) itemsByJob.set(key, []);
+      itemsByJob.get(key).push(item);
+    });
+    return [ ...rows.map(row => this.summary(row)), ...jobs.map(job => this.jobSummary(job, itemsByJob.get(Number(job.id)) || [])) ]
       .sort((left, right) => new Date(right.created_at || 0) - new Date(left.created_at || 0));
   }
 
@@ -246,7 +289,29 @@ class FullAutoService extends Service {
     };
   }
 
-  jobSummary(job) {
+  faultLines(items) {
+    const lines = [];
+    (items || []).forEach(item => {
+      const code = item.shot_code || item.shot_id || '';
+      let stored = [];
+      try {
+        const parsed = JSON.parse(item.failures || '[]');
+        stored = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        stored = [];
+      }
+      stored.forEach(entry => {
+        const message = String(entry?.message || '').trim();
+        if (message) lines.push(`${code}：${message}`);
+      });
+      if (!stored.length && item.status === 'failed' && item.reason) {
+        lines.push(`${code}：${item.reason}`);
+      }
+    });
+    return lines;
+  }
+
+  jobSummary(job, items = []) {
     const status = job.status === 'done' ? 'success' : job.status;
     return {
       id: job.id,
@@ -261,6 +326,7 @@ class FullAutoService extends Service {
       video_total: job.total || 0,
       run_kind: 'video',
       source: 'job',
+      faults: this.faultLines(items),
       created_at: job.created_at,
       updated_at: job.updated_at,
     };
@@ -278,8 +344,10 @@ class FullAutoService extends Service {
         shot_code: item.shot_code || '',
         status: item.status,
         reason: item.reason || '',
+        failures: this.faultLines([ item ]).map(line => line.replace(/^[^：]*：/, '')),
         task_id: item.task_id,
       })),
+      faults: this.faultLines(items),
       log: items.map(item => ({
         at: item.updated_at,
         node: 'submit',
@@ -528,43 +596,66 @@ class FullAutoService extends Service {
     });
     const list = chapters.filter(row => String(row.body || '').trim());
     if (!list.length) throw new Error('没有可读取的章节正文');
-    const project = await this.ctx.model.Project.findByPk(run.project_id);
     let index = 0;
     for (const chapter of list) {
       index += 1;
-      if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
-      const title = chapter.chapter_title || `第 ${index} 章`;
-      const message = `正在生成资产描述（${index}/${list.length}）${title}`;
-      await run.update({ import_id: chapter.id, chapter_title: title, current_node: 'assets', message });
+      await this.profileChapter(run, chapter, index, list.length, { trackChapter: true });
+    }
+  }
+
+  async stepChapterProfiles(run) {
+    const chapter = await this.ctx.model.Import.findByPk(run.import_id);
+    if (!chapter || chapter.deleted_at || !String(chapter.body || '').trim()) {
+      throw new Error('没有可读取的章节正文');
+    }
+    await this.profileChapter(run, chapter, 1, 1, { trackChapter: false });
+  }
+
+  async profileChapter(run, chapter, index, total, options = {}) {
+    if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
+    const project = await this.ctx.model.Project.findByPk(run.project_id);
+    const title = chapter.chapter_title || `第 ${index} 章`;
+    const message = `正在生成资产描述（${index}/${total}）${title}`;
+    const patch = { message };
+    if (options.trackChapter) {
+      patch.import_id = chapter.id;
+      patch.chapter_title = title;
+      patch.current_node = 'assets';
+    }
+    await run.update(patch);
+    if (options.trackChapter) {
       run.import_id = chapter.id;
       run.chapter_title = title;
-      run.message = message;
-      const parts = splitBody(chapter.body);
-      const style = await this.ctx.service.draft.styleContext(project, chapter);
-      for (const part of parts) {
-        if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
-        const assets = await this.ctx.model.Asset.findAll({ where: { project_id: run.project_id } });
-        const result = await invokeSkill(this.ctx, {
-          skill: 'cartoon-asset-profile-skill',
-          action: 'draft',
-          signal: this.signal(run.id),
-          payload: {
-            chapter_title: title,
-            body: part,
-            known_assets: rosterText(assets),
-            visual_style_label: style?.visual_style_label || '',
-          },
-        });
-        const output = result?.output || {};
-        const characters = output.characters || output.state?.characters;
-        const scenes = output.scenes || output.state?.scenes;
-        if (output.done === false || !Array.isArray(characters) || !Array.isArray(scenes)) {
-          throw new Error(`「${title}」没有返回资产描述`);
-        }
-        await this.applyProfiles(run, title, characters, scenes);
-      }
-      await this.pushLog(run, 'assets', `${title} 已读取`);
     }
+    run.message = message;
+    const parts = splitBody(chapter.body);
+    const style = await this.ctx.service.draft.styleContext(project, chapter);
+    for (const part of parts) {
+      if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
+      const assets = await this.ctx.model.Asset.findAll({ where: { project_id: run.project_id } });
+      const result = await invokeSkill(this.ctx, {
+        skill: 'cartoon-asset-profile-skill',
+        action: 'draft',
+        signal: this.signal(run.id),
+        payload: {
+          chapter_title: title,
+          body: part,
+          known_assets: rosterText(assets),
+            script_cast: scriptCast(chapter),
+            visual_style_label: style?.visual_style_label || '',
+            av_mode: topicsOf(project).includes('av'),
+            topics: topicsOf(project),
+        },
+      });
+      const output = result?.output || {};
+      const characters = output.characters || output.state?.characters;
+      const scenes = output.scenes || output.state?.scenes;
+      if (output.done === false || !Array.isArray(characters) || !Array.isArray(scenes)) {
+        throw new Error(`「${title}」没有返回资产描述`);
+      }
+      await this.applyProfiles(run, title, characters, scenes);
+    }
+    await this.pushLog(run, options.trackChapter ? 'assets' : 'profiles', `${title} 已读取`);
   }
 
   async applyProfiles(run, title, characters, scenes) {
@@ -684,7 +775,8 @@ class FullAutoService extends Service {
     const startedAt = status === 'running'
       ? (sameStep && prev.started_at ? prev.started_at : new Date().toISOString())
       : (prev.started_at || '');
-    nodes[key] = { status, note: noteText, started_at: startedAt };
+    const failures = Array.isArray(prev.failures) ? prev.failures : [];
+    nodes[key] = { status, note: noteText, started_at: startedAt, failures };
     const patch = {
       nodes: JSON.stringify(nodes),
       current_node: key,
@@ -696,33 +788,65 @@ class FullAutoService extends Service {
     if (patch.message) run.message = patch.message;
   }
 
+  async noteFailure(run, key, message) {
+    const count = Number(run.fail_count || 0) + 1;
+    const nodes = parseJson(run.nodes, blankNodes());
+    const prev = nodes[key] || { status: 'pending', note: '', started_at: '' };
+    const failures = Array.isArray(prev.failures) ? prev.failures.slice() : [];
+    failures.push({
+      at: new Date().toISOString(),
+      count,
+      message: String(message || '失败').slice(0, 500),
+    });
+    nodes[key] = {
+      status: prev.status || 'running',
+      note: prev.note || '',
+      started_at: prev.started_at || '',
+      failures,
+    };
+    const raw = JSON.stringify(nodes);
+    await run.update({ fail_count: count, nodes: raw });
+    run.fail_count = count;
+    run.nodes = raw;
+    return count;
+  }
+
   async runNode(run, key, fn) {
     if (!await this.alive(run)) return false;
     const nodes = parseJson(run.nodes, blankNodes());
     if (nodes[key]?.status === 'success') return true;
-    await this.mark(run, key, 'running', NODE_LABEL[key]);
-    await this.pushLog(run, key, NODE_LABEL[key]);
-    try {
-      await fn();
-      if (!await this.alive(run)) {
-        await this.mark(run, key, 'stopped', '已停止');
-        return false;
+    while (await this.alive(run)) {
+      await this.mark(run, key, 'running', NODE_LABEL[key]);
+      await this.pushLog(run, key, NODE_LABEL[key]);
+      try {
+        await fn();
+        if (!await this.alive(run)) {
+          await this.mark(run, key, 'stopped', '已停止');
+          return false;
+        }
+        await this.mark(run, key, 'success', '已完成');
+        return true;
+      } catch (err) {
+        if (isStop(err) || !await this.alive(run)) {
+          await this.mark(run, key, 'stopped', '已停止');
+          if (run.status === 'running') await run.update({ status: 'stopped', message: '已停止' });
+          return false;
+        }
+        const message = err?.message || '失败';
+        const count = await this.noteFailure(run, key, message);
+        await this.pushLog(run, key, `第 ${count} 次失败：${message}`);
+        this.ctx.logger.warn('[cartoon] full-auto %s %s 第%s次 %s', run.id, key, count, message);
+        if (count >= FAIL_LIMIT) {
+          await this.mark(run, key, 'failed', message);
+          await run.update({ status: 'failed', message, error_message: message, current_node: key });
+          await this.pushLog(run, key, '本轮已失败三次，停止这一条。其他排队的流程继续。');
+          return false;
+        }
+        await this.mark(run, key, 'running', `第 ${count} 次失败，正在重试`);
+        await this.pushLog(run, key, `重新执行${NODE_LABEL[key]}，后面的步骤还在`);
       }
-      await this.mark(run, key, 'success', '已完成');
-      return true;
-    } catch (err) {
-      if (isStop(err) || !await this.alive(run)) {
-        await this.mark(run, key, 'stopped', '已停止');
-        if (run.status === 'running') await run.update({ status: 'stopped', message: '已停止' });
-        return false;
-      }
-      const message = err?.message || '失败';
-      await this.mark(run, key, 'failed', message);
-      await this.pushLog(run, key, message);
-      await run.update({ status: 'failed', message, error_message: message, current_node: key });
-      this.ctx.logger.warn('[cartoon] full-auto %s %s %s', run.id, key, message);
-      return false;
     }
+    return false;
   }
 
   async walk(runId) {
@@ -736,20 +860,31 @@ class FullAutoService extends Service {
     }
     try {
       if (run.scope === 'profiles') {
-        try {
-          await this.stepProfiles(run);
-          if (await this.alive(run)) {
-            await run.update({ status: 'success', current_node: 'done', message: '资产描述已写入', error_message: '' });
-            await this.pushLog(run, 'assets', '资产描述已写入');
-          }
-        } catch (err) {
-          if (isStop(err) || !await this.alive(run)) {
-            if (run.status === 'running') await run.update({ status: 'stopped', message: '已停止' });
-          } else {
+        while (await this.alive(run)) {
+          try {
+            await this.stepProfiles(run);
+            if (await this.alive(run)) {
+              await run.update({ status: 'success', current_node: 'done', message: '资产描述已写入', error_message: '' });
+              await this.pushLog(run, 'assets', '资产描述已写入');
+            }
+            break;
+          } catch (err) {
+            if (isStop(err) || !await this.alive(run)) {
+              if (run.status === 'running') await run.update({ status: 'stopped', message: '已停止' });
+              break;
+            }
             const message = err?.message || '失败';
-            await run.update({ status: 'failed', message, error_message: message, current_node: 'assets' });
-            await this.pushLog(run, 'assets', message);
-            this.ctx.logger.warn('[cartoon] asset-profile %s %s', run.id, message);
+            const count = await this.noteFailure(run, 'assets', message);
+            await this.pushLog(run, 'assets', `第 ${count} 次失败：${message}`);
+            this.ctx.logger.warn('[cartoon] asset-profile %s 第%s次 %s', run.id, count, message);
+            if (count >= FAIL_LIMIT) {
+              await this.mark(run, 'assets', 'failed', message);
+              await run.update({ status: 'failed', message, error_message: message, current_node: 'assets' });
+              await this.pushLog(run, 'assets', '本轮已失败三次，停止这一条。其他排队的流程继续。');
+              break;
+            }
+            await this.mark(run, 'assets', 'running', `第 ${count} 次失败，正在重试`);
+            await this.pushLog(run, 'assets', '重新执行资产描述，后面的章节还在');
           }
         }
         return;
@@ -758,6 +893,7 @@ class FullAutoService extends Service {
         ? [ [ 'assets', () => this.stepAssets(run) ] ]
         : [
           [ 'script', () => this.stepScript(run) ],
+          [ 'profiles', () => this.stepChapterProfiles(run) ],
           [ 'assets', () => this.stepAssets(run) ],
           [ 'storyboard', () => this.stepStoryboard(run) ],
           [ 'prompts', () => this.stepPrompts(run) ],
@@ -835,9 +971,10 @@ class FullAutoService extends Service {
     });
     const placeNames = places.map(item => item.name);
     people.forEach(item => {
-      const others = people.map(person => person.name).concat(placeNames);
-      item.look = ownPassage({ name: item.name, look: item.look, note: item.note, body, others });
-      item.note = item.look ? '' : '正文里没有能单独归到这个人的外形。只按名称和视觉风格画，不要借用别人的头发、眼睛或衣服。';
+      item.look = briefLook(item.look);
+      item.note = item.look
+        ? ''
+        : '没有明确外形。按性别、年龄、身高、体态、脸型、眉眼、鼻唇、发型、肤色、服装各写一句。不要抄章节或剧本原文，不要写情节。';
       item.sparse = false;
     });
     places.forEach(item => {
@@ -857,7 +994,7 @@ class FullAutoService extends Service {
     const reset = run.scope === 'assets-reset';
     for (const item of this.sheetPlan(chapter)) {
       if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
-      await this.ensureSheet(run, chapter, style, item, { reset });
+      await this.ensureSheet(run, chapter, style, item, { reset, project });
     }
   }
 
@@ -877,6 +1014,13 @@ class FullAutoService extends Service {
     });
     let asset = assets.find(row => String(row.name || '').trim() === item.name);
     const description = assetText(item);
+    const stored = String(asset?.description || '').trim();
+    const look = item.kind === 'character' && stored ? stored : item.look;
+    const note = item.kind === 'character' && stored ? '' : item.note;
+    const project = options.project || await this.ctx.model.Project.findByPk(run.project_id);
+    const avNude = item.kind === 'character'
+      && Boolean(project?.av_mode)
+      && adultAge([ look, note, stored, asset?.costume_note ].join('\n'));
     const hasSheet = asset && this.assetFile(run.project_id, asset.reference_path);
     if (hasSheet && !options.reset) {
       if (description && !String(asset.description || '').trim()) await asset.update({ description });
@@ -894,14 +1038,29 @@ class FullAutoService extends Service {
       payload: {
         kind: item.kind,
         name: item.name,
-        look: item.look,
-        note: item.note,
+        look,
+        note,
         visual_style_label: style?.visual_style_label || '',
+        visual_style_prompt: style?.visual_style_prompt || '',
         sparse: Boolean(item.sparse),
+        av_nude: avNude,
       },
     });
-    const prompt = polishSheetPrompt(sheetPrompt(result));
+    let prompt = polishSheetPrompt(sheetPrompt(result));
     if (!prompt) throw new Error(`没有返回「${item.name}」的设定图提示词`);
+    if (item.kind === 'character') {
+      const lead = this.frameStyleLead(style, prompt);
+      if (lead) {
+        prompt = `${lead}\n${prompt}`;
+        await this.pushLog(run, options.quiet ? 'video' : 'assets', `人物「${item.name}」设定图带上项目风格「${style?.visual_style_label || '未命名'}」`);
+      }
+      if (avNude && !prompt.includes('禁止非全裸')) {
+        prompt = `${prompt}\n${NUDE_LINE}`;
+        await this.pushLog(run, options.quiet ? 'video' : 'assets', `人物「${item.name}」设定图按全裸绘制`);
+      } else if (project?.av_mode && !avNude) {
+        await this.pushLog(run, options.quiet ? 'video' : 'assets', `人物「${item.name}」未确认满二十一岁，设定图不写全裸`);
+      }
+    }
     if (!asset) {
       asset = await this.ctx.service.project.addAsset(run.project_id, {
         kind: item.kind,
@@ -1076,13 +1235,14 @@ class FullAutoService extends Service {
     const wantEnd = run.generate_end !== false;
     const endSlot = (videoChoice.images || []).find(slot => slot.role === 'end');
     if (wantEnd && !endSlot) throw new Error('满血首尾帧工作流没有尾帧入口');
-    let previousScene = '';
+    let previousKey = '';
     for (let index = 0; index < shots.length; index += 1) {
       const shot = await this.ctx.model.Shot.findByPk(shots[index].id);
       if (!shot) throw new Error('镜头已不在项目里');
       const scene = sceneTitle(script, shot);
-      const same = index > 0 && scene && scene === previousScene;
-      previousScene = scene || previousScene;
+      const key = sceneKey(shot);
+      const same = index > 0 && key && key === previousKey;
+      previousKey = key || previousKey;
       if (done.has(shot.id)) continue;
       const code = shot.shot_code || shot.id;
       const have = readyCounts.get(Number(shot.id)) || 0;
@@ -1195,6 +1355,20 @@ class FullAutoService extends Service {
     }
   }
 
+  sceneTail(projectId, shotId, batchIndex) {
+    const batch = Number.isInteger(batchIndex) ? batchIndex : 0;
+    const relatives = [
+      `frames/${projectId}/${shotId}/b${batch}-end.png`,
+      `frames/${projectId}/${shotId}/end.png`,
+      `frames/${projectId}/${shotId}/b${batch}-last.png`,
+    ];
+    for (const relative of relatives) {
+      const absolute = this.frameAbsolute(relative);
+      if (absolute) return absolute;
+    }
+    return null;
+  }
+
   frameAbsolute(relative) {
     if (!relative) return null;
     const absolute = resolveInside(outputRoot(this.app), String(relative).split('?')[0]);
@@ -1206,12 +1380,8 @@ class FullAutoService extends Service {
     if (!Number.isInteger(batchIndex) || batchIndex < 0) return false;
     const prev = await this.previousShot(shot);
     if (!prev) return false;
-    const chapter = shot.import_id ? await this.ctx.model.Import.findByPk(shot.import_id) : null;
-    const script = chapter?.script_data || {};
-    const scene = sceneTitle(script, shot);
-    const prevScene = sceneTitle(script, prev);
-    if (!scene || scene !== prevScene) return false;
-    const planted = this.frameAbsolute(`frames/${shot.project_id}/${prev.id}/b${batchIndex}-last.png`);
+    if (!sceneKey(shot) || sceneKey(shot) !== sceneKey(prev)) return false;
+    const planted = this.sceneTail(shot.project_id, prev.id, batchIndex);
     if (!planted) return false;
     const relative = `frames/${shot.project_id}/${shot.id}/b${batchIndex}-from-prev.png`;
     const absolute = resolveInside(outputRoot(this.app), relative);
@@ -1242,17 +1412,18 @@ class FullAutoService extends Service {
     const batchIndex = Number.isInteger(options.batchIndex) ? options.batchIndex : null;
     if (options.chain && batchIndex != null) {
       const prev = await this.previousShot(fresh);
-      const planted = prev ? this.frameAbsolute(`frames/${run.project_id}/${prev.id}/b${batchIndex}-last.png`) : null;
-      if (planted) {
-        const relative = `frames/${run.project_id}/${shot.id}/b${batchIndex}-from-prev.png`;
-        const absolute = resolveInside(outputRoot(this.app), relative);
-        if (!absolute) throw new Error(`${code} 首帧路径无效`);
-        await fs.promises.mkdir(path.dirname(absolute), { recursive: true });
-        await fs.promises.copyFile(planted, absolute);
-        await shot.update({ manual_frame_path: relative });
-        await this.pushLog(run, 'video', `${code} 与上一镜同一场景「${scene}」，第 ${batchIndex + 1} 条首帧用上一镜同序号尾帧`);
-        return { bytes: fs.readFileSync(absolute), taskId: null };
+      const planted = prev ? this.sceneTail(run.project_id, prev.id, batchIndex) : null;
+      if (!planted) {
+        throw new Error(`${code} 与上一镜同一场景「${scene}」，首帧要用上一镜尾帧，上一镜还没有尾帧`);
       }
+      const relative = `frames/${run.project_id}/${shot.id}/b${batchIndex}-from-prev.png`;
+      const absolute = resolveInside(outputRoot(this.app), relative);
+      if (!absolute) throw new Error(`${code} 首帧路径无效`);
+      await fs.promises.mkdir(path.dirname(absolute), { recursive: true });
+      await fs.promises.copyFile(planted, absolute);
+      await shot.update({ manual_frame_path: relative });
+      await this.pushLog(run, 'video', `${code} 与上一镜同一场景「${scene}」，第 ${batchIndex + 1} 条首帧用上一镜同序号尾帧`);
+      return { bytes: fs.readFileSync(absolute), taskId: null };
     }
     if (!options.regen) {
       const manual = this.frameAbsolute(fresh.manual_frame_path);
@@ -1387,7 +1558,7 @@ class FullAutoService extends Service {
       .filter((item, index, list) => !list.slice(0, index).some(kept => kept.name.includes(item.name)));
     for (const item of matched) {
       if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
-      await this.ensureSheet(run, chapter, style, item, { quiet: true });
+      await this.ensureSheet(run, chapter, style, item, { quiet: true, project });
     }
     await this.ctx.service.project.bindMatchedAssets(run.project_id, shot.id, blob);
     const bindings = await this.ctx.model.ShotBinding.findAll({ where: { shot_id: shot.id } });

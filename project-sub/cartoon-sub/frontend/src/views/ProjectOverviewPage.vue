@@ -25,7 +25,7 @@
             <el-tooltip v-if="styleLabel" :content="styleLabel" placement="bottom" :show-after="300">
               <el-tag size="small" class="cartoon-overview__style">{{ styleLabel }}</el-tag>
             </el-tooltip>
-            <el-tag v-if="detail.project.av_mode" size="small" type="danger">AV</el-tag>
+            <el-tag v-for="item in topicTags" :key="item.value" size="small" :type="item.value === 'av' ? 'danger' : 'success'">{{ item.label }}</el-tag>
             <el-tag v-if="novelBrief?.title" size="small" effect="plain">{{ novelBrief.title }}</el-tag>
             <el-tag size="small" effect="light">{{ detail.project.status || 'draft' }}</el-tag>
           </div>
@@ -61,7 +61,7 @@
                 </el-tooltip>
               </dd>
             </div>
-            <div v-if="supportsAv(detail.project.content_type)"><dt>AV</dt><dd>{{ detail.project.av_mode ? '开启' : '关闭' }}</dd></div>
+            <div v-if="supportsAv(detail.project.content_type)"><dt>专题</dt><dd>{{ topicTags.length ? topicTags.map(item => item.label).join('、') : '未选' }}</dd></div>
             <div v-if="isLocal"><dt>文案</dt><dd>本地文案</dd></div>
             <div v-else><dt>来源小说</dt><dd>{{ novelBrief?.title || '未绑定' }}</dd></div>
             <div><dt>章节快照</dt><dd>{{ liveImports.length }}</dd></div>
@@ -172,6 +172,9 @@
               <el-empty v-if="!selectedBoard" description="先选择一条章节快照" />
               <el-table v-else class="cartoon-shot-table" :data="boardPageRows">
                 <el-table-column prop="sort_order" label="#" width="70" fixed="left" />
+                <el-table-column label="场次" width="200">
+                  <template #default="{ row }">{{ sceneCell(row) }}</template>
+                </el-table-column>
                 <el-table-column label="景别" width="160">
                   <template #default="{ row }">{{ (row.shot_sizes || []).join('、') || row.shot_size || '—' }}</template>
                 </el-table-column>
@@ -228,8 +231,10 @@
               <el-option v-for="item in styles" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </el-form-item>
-          <el-form-item v-if="supportsAv(detail.project.content_type)" label="AV">
-            <el-checkbox v-model="editForm.av_mode">开启</el-checkbox>
+          <el-form-item v-if="supportsAv(detail.project.content_type)" label="专题">
+            <el-select v-model="editForm.topics" multiple clearable placeholder="可不选" style="width: 100%">
+              <el-option v-for="item in TOPIC_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
           </el-form-item>
         </div>
         <template v-if="novelBrief">
@@ -291,7 +296,7 @@ import RegionLoad from '../components/RegionLoad.vue';
 import ClampText from '../components/ClampText.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
-import { hasPanel, isLocalType, supportsAv } from '../lib/contentTypes.js';
+import { hasPanel, isLocalType, supportsAv, TOPIC_OPTIONS, topicsOfProject } from '../lib/contentTypes.js';
 import { framePromptText } from '../lib/framePrompt.js';
 import { PAGE_SIZES, PAGER_LAYOUT } from '../lib/pager.js';
 
@@ -321,7 +326,7 @@ const novelEnums = reactive({ genres: [], themes: [], audiences: [], lengths: []
 const editForm = reactive({
   name: '',
   visual_style: '',
-  av_mode: false,
+  topics: [],
   genre_category_id: null,
   genre_subcategory_id: null,
   theme_ids: [],
@@ -330,6 +335,7 @@ const editForm = reactive({
   creative_intent: '',
   summary: '',
 });
+const topicTags = computed(() => TOPIC_OPTIONS.filter(item => topicsOfProject(detail.value?.project).includes(item.value)));
 const genreChildren = computed(() => {
   const hit = novelEnums.genres.find(item => item.id === editForm.genre_category_id);
   return hit?.children || [];
@@ -380,6 +386,21 @@ function openChapterBody(row) {
 function sceneCount(row) {
   const scenes = row?.script_data?.scenes;
   return Array.isArray(scenes) ? scenes.length : 0;
+}
+function sceneNumber(row) {
+  const stored = Number(row?.scene_index);
+  if (Number.isInteger(stored) && stored > 0) return stored;
+  const matched = String(row?.description || '').match(/第\s*(\d+)\s*场/);
+  return matched ? Number(matched[1]) : 0;
+}
+function sceneCell(row) {
+  const chapter = (detail.value?.imports || []).find(item => String(item.id) === String(row?.import_id));
+  const scenes = Array.isArray(chapter?.script_data?.scenes) ? chapter.script_data.scenes : [];
+  const index = sceneNumber(row);
+  const title = index ? String(scenes[index - 1]?.title || '').trim() : '';
+  if (index && title) return `第${index}场 · ${title}`;
+  if (index) return `第${index}场`;
+  return String(row?.scene_label || '').trim() || '—';
 }
 function shotsOf(row) {
   return (detail.value?.shots || []).filter(shot => String(shot.import_id) === String(row?.id));
@@ -496,7 +517,7 @@ async function openEdit() {
   if (!project) return;
   editForm.name = project.name || '';
   editForm.visual_style = project.visual_style || '';
-  editForm.av_mode = Boolean(project.av_mode);
+  editForm.topics = topicsOfProject(project);
   const novel = novelBrief.value;
   editForm.genre_category_id = novel?.genre_category_id || null;
   editForm.genre_subcategory_id = novel?.genre_subcategory_id || null;
@@ -528,7 +549,7 @@ async function saveEdit() {
       data: {
         name: editForm.name,
         visual_style: editForm.visual_style || '',
-        av_mode: supportsAv(project.content_type) && editForm.av_mode,
+        topics: supportsAv(project.content_type) ? editForm.topics : [],
       },
     });
     if (novelBrief.value?.id) {

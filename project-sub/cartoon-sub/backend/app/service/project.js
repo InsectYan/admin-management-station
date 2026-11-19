@@ -13,8 +13,10 @@ const { reportAudit } = require('../lib/reportAudit');
 const { videoTemplateDraft, templateGaps } = require('../lib/videoTemplates');
 const { auditShot, mentionedAssetIds, shotText } = require('../lib/shotAssets');
 const { characterTag, placeTag, normalizeScript } = require('../lib/rosterNames');
+const { briefLook } = require('../lib/assetProfile');
 const { uniquePrompt } = require('../lib/promptText');
 const { promptCoveredMs } = require('../lib/promptDuration');
+const { topicPatch } = require('../lib/topics');
 const { chapterParagraphs, matchExcerpt } = require('../lib/sourceExcerpt');
 const {
   contentType,
@@ -25,11 +27,6 @@ const {
   panelReady: fieldsReady,
   normalizePanel,
 } = require('../lib/contentCatalog');
-
-function avModeOf(contentTypeId, value) {
-  const allowed = contentTypeId === 'ai_comic' || contentTypeId === 'ai_short';
-  return allowed && Boolean(value);
-}
 
 function presentPrompt(row) {
   if (!row) return null;
@@ -464,7 +461,7 @@ class ProjectService extends Service {
       status: 'draft',
       content_type: contentTypeId,
       pin_mode: pinModeOf(contentTypeId),
-      av_mode: avModeOf(contentTypeId, payload.av_mode),
+      ...topicPatch(contentTypeId, payload),
     });
   }
 
@@ -514,8 +511,8 @@ class ProjectService extends Service {
     if (payload.visual_style !== undefined) {
       patch.visual_style = assertEnum(payload.visual_style, VISUAL_STYLES, '画面风格');
     }
-    if (payload.av_mode !== undefined) {
-      patch.av_mode = avModeOf(project.content_type, payload.av_mode);
+    if (payload.topics !== undefined || payload.av_mode !== undefined) {
+      Object.assign(patch, topicPatch(project.content_type, payload, project));
     }
     await project.update(patch);
     return project;
@@ -1488,7 +1485,7 @@ class ProjectService extends Service {
         project_id: Number(projectId),
         kind: 'character',
         name,
-        description: String(item?.appearance || item?.description || ''),
+        description: briefLook(item?.appearance || item?.description || ''),
         character_id: characterId,
         disabled: false,
       });
@@ -1846,6 +1843,8 @@ class ProjectService extends Service {
         skill: row.skill,
         input_text: row.input_text,
         output_text: row.output_text,
+        elapsed_ms: Number(row.elapsed_ms) || 0,
+        error_json: row.error_json || '',
       })),
     };
   }

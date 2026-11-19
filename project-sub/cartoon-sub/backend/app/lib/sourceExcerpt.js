@@ -34,7 +34,7 @@ function normalizeIndexes(value, count) {
     list.push(n);
   });
   list.sort((a, b) => a - b);
-  return list.slice(0, 3);
+  return list.slice(0, 8);
 }
 
 function excerptFromIndexes(paragraphs, indexes) {

@@ -30,6 +30,17 @@ function skipped(message) {
   return err;
 }
 
+function readFailures(item) {
+  const raw = item?.failures;
+  if (Array.isArray(raw)) return raw.slice();
+  try {
+    const parsed = JSON.parse(raw || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function stopped(err) {
   const message = String(err?.message || '');
   return err?.stop
@@ -70,6 +81,7 @@ class AutoJobService extends Service {
         shot_code: item.shot_code,
         status: item.status,
         reason: item.reason || '',
+        failures: readFailures(item),
         task_id: item.task_id,
         updated_at: item.updated_at,
       })),
@@ -285,11 +297,43 @@ class AutoJobService extends Service {
     return { stopped: true, task: latest };
   }
 
+  async failOrRetry(job, item, reason, taskId) {
+    const count = Number(job.fail_count || 0) + 1;
+    await job.update({ fail_count: count });
+    job.fail_count = count;
+    const failures = readFailures(item);
+    failures.push({
+      at: new Date().toISOString(),
+      count,
+      message: String(reason || '失败').slice(0, 500),
+    });
+    const stored = JSON.stringify(failures);
+    if (count >= 3) {
+      await item.update({ status: 'failed', reason, failures: stored, task_id: taskId || null });
+      item.status = 'failed';
+      item.failures = stored;
+      await job.update({ status: 'failed' });
+      job.status = 'failed';
+      await this.recount(job);
+      return 'stop';
+    }
+    await item.update({
+      status: 'pending',
+      reason: `第 ${count} 次失败，重新执行。${reason}`,
+      failures: stored,
+      task_id: taskId || null,
+    });
+    item.status = 'pending';
+    item.failures = stored;
+    return 'retry';
+  }
+
   async walk(jobId) {
     const job = await this.ctx.model.AutoJob.findByPk(jobId);
     if (!job || job.status !== 'running') return;
     const items = await this.itemsOf(job.id);
-    for (const item of items) {
+    for (let index = 0; index < items.length; index += 1) {
+      const item = items[index];
       if (!await this.stillRunning(job)) {
         await this.ctx.model.AutoJobItem.update(
           { status: 'stopped', reason: '已停止' },
@@ -348,29 +392,48 @@ class AutoJobService extends Service {
         if (task?.status === 'failed') {
           const reason = task.error_message || '视频生成失败';
           const missing = reason.includes('没有正向提示词') || reason.includes('没有视频提示词') || reason.includes('需要一句提示词') || reason.includes('需要一句视频提示词');
-          await item.update({
-            status: missing ? 'skipped' : 'failed',
-            reason,
-            task_id: task.id,
-          });
+          if (missing) {
+            await item.update({ status: 'skipped', reason, task_id: task.id });
+            item.status = 'skipped';
+          } else {
+            const next = await this.failOrRetry(job, item, reason, task.id);
+            if (next === 'stop') return;
+            if (next === 'retry') {
+              index -= 1;
+              continue;
+            }
+          }
         } else if (task.status === 'success') {
           await item.update({
             status: 'success',
             reason: perShot > 1 ? `已生成 ${perShot} 条视频` : '视频已生成',
             task_id: task.id,
           });
+          item.status = 'success';
         } else {
-          await item.update({ status: 'failed', reason: '视频没有生成', task_id: task.id });
+          const next = await this.failOrRetry(job, item, '视频没有生成', task?.id);
+          if (next === 'stop') return;
+          if (next === 'retry') {
+            index -= 1;
+            continue;
+          }
         }
       } catch (err) {
         if (stopped(err)) {
           await this.finishStopped(job, item, null);
           return;
         }
-        await item.update({
-          status: err?.skip ? 'skipped' : 'failed',
-          reason: err?.message || '失败',
-        });
+        if (err?.skip) {
+          await item.update({ status: 'skipped', reason: err?.message || '跳过' });
+          item.status = 'skipped';
+        } else {
+          const next = await this.failOrRetry(job, item, err?.message || '失败');
+          if (next === 'stop') return;
+          if (next === 'retry') {
+            index -= 1;
+            continue;
+          }
+        }
       }
       await this.recount(job);
     }

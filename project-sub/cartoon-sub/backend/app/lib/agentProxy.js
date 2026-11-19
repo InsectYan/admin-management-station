@@ -70,6 +70,7 @@ function wrapAgentError(err, { skill, action, status, message, errorCode }) {
   const cause = err?.cause;
   wrapped.detail = [ errorCode, cause?.message && cause.message !== message ? cause.message : '' ].filter(Boolean).join(' ');
   if (cause) wrapped.cause = cause;
+  if (err?.response && typeof err.response === 'object') wrapped.response = err.response;
   return wrapped;
 }
 
@@ -120,22 +121,26 @@ async function invokeSkill(ctx, { skill, action, payload, timeoutMs, signal }) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       const message = data.error || data.message || `Agent HTTP ${res.status}`;
-      throw wrapAgentError(null, {
+      const httpErr = wrapAgentError(null, {
         skill,
         action,
         status: res.status >= 500 ? 502 : res.status,
         message: typeof message === 'string' ? message : `Agent HTTP ${res.status}`,
         errorCode: String(data.code || data.error_code || `HTTP_${res.status}`),
       });
+      httpErr.response = data;
+      throw httpErr;
     }
     if (data.output?.stoppedReason === 'no_llm' || data.output?.stoppedReason === 'llm_error') {
-      throw wrapAgentError(null, {
+      const llmErr = wrapAgentError(null, {
         skill,
         action,
         status: 502,
         message: data.output.summary || data.reply || 'Agent 没有完成起草',
         errorCode: String(data.output.stoppedReason),
       });
+      llmErr.response = data;
+      throw llmErr;
     }
     return data;
   } finally {

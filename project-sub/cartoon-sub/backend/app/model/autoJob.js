@@ -19,6 +19,7 @@ module.exports = app => {
     skipped_count: { type: INTEGER, allowNull: false, defaultValue: 0 },
     video_count: { type: INTEGER, allowNull: false, defaultValue: 1 },
     generate_end: { type: BOOLEAN, allowNull: false, defaultValue: true },
+    fail_count: { type: INTEGER, allowNull: false, defaultValue: 0 },
   }, {
     tableName: 'cartoon_auto_jobs',
     underscored: true,

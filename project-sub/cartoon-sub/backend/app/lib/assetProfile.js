@@ -3,6 +3,13 @@
 const PERSON_SLOTS = [ '性别', '年龄', '身高', '体态', '脸型', '眉眼', '鼻唇', '发型', '肤色', '服装' ];
 const SCENE_SLOTS = [ '空间', '尺度', '陈设', '光线' ];
 
+function briefLook(value) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!text || /正文未写/.test(text)) return '';
+  if (text.length > 60 || /[。！？]/.test(text)) return '';
+  return text;
+}
+
 function clean(value, limit) {
   return String(value || '').replace(/[|\n\r]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, limit);
 }
@@ -81,6 +88,10 @@ function mergeSlots(current, incoming, labels) {
     const kept = next[label];
     const added = incoming?.[label];
     if (!added?.text) return;
+    if (label === '年龄' && (added?.basis === 'AV至少二十一岁' || added?.basis === '正文岁数') && kept?.source !== '原文') {
+      next[label] = added;
+      return;
+    }
     if (!kept?.text || (kept.source !== '原文' && added.source === '原文')) next[label] = added;
   });
   return next;
@@ -251,4 +262,5 @@ module.exports = {
   namedAssets,
   pictureFactText,
   cardLine,
+  briefLook,
 };

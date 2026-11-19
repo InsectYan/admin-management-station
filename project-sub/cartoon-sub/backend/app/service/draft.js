@@ -19,12 +19,63 @@ const { settleScript } = require('../lib/scriptGate');
 const { normalizeScript, placeTag } = require('../lib/rosterNames');
 const { uniquePrompt } = require('../lib/promptText');
 const { promptCoveredMs } = require('../lib/promptDuration');
+const { topicsOf } = require('../lib/topics');
 const { assetFactText, namedAssets } = require('../lib/assetProfile');
 const { chapterParagraphs, resolveExcerpt, matchExcerpt } = require('../lib/sourceExcerpt');
 const { begin, finish } = require('../lib/activeRuns');
 
 function outputOf(result) {
   return result?.output || {};
+}
+
+function anchorOf(paragraphs, hint) {
+  const text = String(hint || '').trim();
+  if (text.length < 6) return -1;
+  const direct = paragraphs.findIndex(item => item.includes(text));
+  if (direct >= 0) return direct;
+  const piece = text.replace(/\s/g, '').slice(0, 12);
+  if (piece.length < 6) return -1;
+  return paragraphs.findIndex(item => item.includes(piece));
+}
+
+/** 一场的原文是从它的起始句到下一场起始句之前。 */
+function sceneSpans(script, body) {
+  const paragraphs = chapterParagraphs(body);
+  const scenes = Array.isArray(script?.scenes) ? script.scenes : [];
+  const anchors = scenes.map(scene => anchorOf(paragraphs, scene?.source_start));
+  return scenes.map((scene, index) => {
+    const from = anchors[index];
+    const base = {
+      scene_index: index + 1,
+      title: String(scene?.title || ''),
+      summary: String(scene?.summary || ''),
+      wardrobe: String(scene?.wardrobe || ''),
+      source_start: String(scene?.source_start || ''),
+    };
+    if (from < 0) return { ...base, paragraphs: [] };
+    let to = paragraphs.length - 1;
+    for (let next = index + 1; next < anchors.length; next += 1) {
+      if (anchors[next] > from) {
+        to = anchors[next] - 1;
+        break;
+      }
+    }
+    if (to < from) to = from;
+    return {
+      ...base,
+      paragraphs: paragraphs.slice(from, to + 1).map((text, offset) => ({
+        index: from + offset + 1,
+        text,
+      })),
+    };
+  });
+}
+
+function spanBeats(script, body) {
+  return sceneSpans(script, body).reduce((sum, item) => {
+    const count = item.paragraphs.length || 1;
+    return sum + Math.max(1, Math.ceil(count / 4));
+  }, 0);
 }
 
 function sceneTitle(scriptData, item) {
@@ -78,6 +129,25 @@ function skillRaw(result) {
 
 function stuckText(message, raw) {
   return [ String(message || '').trim(), String(raw || '').trim() ].filter(Boolean).join('\n\n');
+}
+
+function failureJson(err, result) {
+  if (err) {
+    const packet = {
+      message: err.message || '',
+      status: err.status || null,
+      errorCode: err.errorCode || '',
+      skill: err.skill || '',
+      action: err.action || '',
+      detail: err.detail || '',
+    };
+    if (err.response && typeof err.response === 'object') packet.response = err.response;
+    try { return JSON.stringify(packet); } catch { return String(err.message || ''); }
+  }
+  if (result && typeof result === 'object') {
+    try { return JSON.stringify(result); } catch { return ''; }
+  }
+  return '';
 }
 
 function tracePacket(shot, extra = {}) {
@@ -136,7 +206,7 @@ function lockIssues(script, body) {
 function clampDurationSec(value, fallback = 10) {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
-  return Math.min(12, Math.max(5, Math.round(n)));
+  return Math.min(15, Math.max(5, Math.round(n)));
 }
 
 function negativeNeedsRetry(prompt) {
@@ -152,9 +222,32 @@ function styleWithoutBody(styleCtx) {
 }
 
 class DraftService extends Service {
+  async callSkill(spec) {
+    const started = Date.now();
+    try {
+      const result = await invokeSkill(this.ctx, spec);
+      this.traceElapsed = Date.now() - started;
+      this.traceErrorJson = '';
+      this.traceResult = result;
+      return result;
+    } catch (err) {
+      this.traceElapsed = Date.now() - started;
+      this.traceErrorJson = failureJson(err);
+      this.traceResult = null;
+      throw err;
+    }
+  }
+
   async rememberTrace(existing, part, title, skill, input, output, status = 'ok') {
     this.traceStep = (this.traceStep || 0) + 1;
     const state = status === 'error' || status === 'skip' ? status : 'ok';
+    const elapsed = Number(this.traceElapsed) || 0;
+    const errorJson = state === 'error'
+      ? (this.traceErrorJson || failureJson(null, this.traceResult))
+      : '';
+    this.traceElapsed = 0;
+    this.traceErrorJson = '';
+    this.traceResult = null;
     if (state === 'error') this.failureNoted = true;
     try {
       await this.ctx.model.PromptTrace.create({
@@ -167,6 +260,8 @@ class DraftService extends Service {
         skill,
         input_text: clipText(input),
         output_text: clipText(output, 12000),
+        elapsed_ms: elapsed,
+        error_json: clipText(errorJson, 20000),
       });
     } catch (err) {
       this.ctx.logger.warn('[cartoon] 提示词记录没有写下 %s', err.message);
@@ -280,7 +375,7 @@ class DraftService extends Service {
       const reply = String(scriptOutput.reply || scriptOutput.summary || '').replace(/\s+/g, ' ').trim();
       this.ctx.throw(502, reply ? `剧本没有定稿。${reply.slice(0, 240)}` : '剧本没有定稿');
     }
-    const settled = lockIssues(scriptData, chapter.body);
+    const settled = settleScript(scriptData, chapter.body, minScenes, { coverStory: true });
     if (settled.issues.length) {
       this.ctx.throw(502, `剧本没有定稿。${settled.issues.slice(0, 4).join('；')}。这一稿没有保存，请再生成一次`);
     }
@@ -358,8 +453,7 @@ class DraftService extends Service {
       this.ctx.throw(400, `剧本还不能交给分镜。${settled.issues.slice(0, 4).join('；')}`);
     }
     const styleCtx = await this.styleContext(project, chapter);
-    const minShots = Math.max(1, settled.script.scenes.length);
-    const paragraphs = chapterParagraphs(chapter.body);
+    const minShots = Math.max(settled.script.scenes.length, spanBeats(settled.script, chapter.body), 1);
     const boardResult = await invokeSkill(this.ctx, {
       skill: 'cartoon-storyboard-skill',
       action: 'draft',
@@ -370,7 +464,7 @@ class DraftService extends Service {
         outline_only: true,
         ...styleWithoutBody(styleCtx),
         body: '',
-        source_paragraphs: paragraphs.map((text, index) => ({ index: index + 1, text })),
+        scene_spans: sceneSpans(settled.script, chapter.body),
         ...productionInput(project),
         min_shots: minShots,
         asset_facts: await this.projectFactText(project.id),
@@ -438,6 +532,7 @@ class DraftService extends Service {
         description: item.coverage,
         dialogue: item.dialogue,
         duration_ms: item.duration_sec * 1000,
+        scene_index: Number.isInteger(Number(item.scene_index)) && Number(item.scene_index) > 0 ? Number(item.scene_index) : null,
         scene_label: sceneTitle(locked, item),
         source_excerpt: resolveExcerpt(chapter.body, {
           description: item.coverage,
@@ -453,9 +548,11 @@ class DraftService extends Service {
         const message = String(err.message || '');
         const dropWardrobe = /wardrobe_state/i.test(message);
         const dropCode = /shot_code/i.test(message);
-        if (!dropWardrobe && !dropCode) throw err;
+        const dropScene = /scene_index/i.test(message);
+        if (!dropWardrobe && !dropCode && !dropScene) throw err;
         if (dropWardrobe) delete fields.wardrobe_state;
         if (dropCode) delete fields.shot_code;
+        if (dropScene) delete fields.scene_index;
         this.ctx.logger.warn('[cartoon] shot create retry: %s', message);
         row = await this.ctx.model.Shot.create(fields);
       }
@@ -545,7 +642,7 @@ class DraftService extends Service {
     try {
       ensureRunning();
       try {
-        boardResult = await invokeSkill(this.ctx, {
+        boardResult = await this.callSkill({
           skill: 'cartoon-storyboard-skill',
           action: 'draft',
           timeoutMs: skillTimeout(this.ctx),
@@ -629,7 +726,7 @@ class DraftService extends Service {
       const input = tracePacket(current, { prompt_part: part, positive_zh: current.positive_zh });
       let result;
       try {
-        result = await invokeSkill(this.ctx, {
+        result = await this.callSkill({
           skill: 'cartoon-prompt-skill',
           action: 'draft',
           timeoutMs: skillTimeout(this.ctx),
@@ -702,18 +799,26 @@ class DraftService extends Service {
         'skip',
       );
     }
-    if (project.av_mode) {
+    const closers = [
+      { key: 'av', skill: 'cartoon-av-prompt-skill', title: 'AV 收口' },
+      { key: 'fitness', skill: 'cartoon-fitness-prompt-skill', title: '健身收口' },
+    ];
+    const selectedTopics = topicsOf(project);
+    for (const closer of closers) {
+      if (!selectedTopics.includes(closer.key)) continue;
       try {
         ensureRunning();
-        const closed = await invokeSkill(this.ctx, {
-          skill: 'cartoon-av-prompt-skill',
+        const closed = await this.callSkill({
+          skill: closer.skill,
           action: 'draft',
           timeoutMs: skillTimeout(this.ctx),
           signal: stop.signal,
           payload: {
             ...promptPayload,
             prompt_part: 'positive',
-            av_mode: true,
+            av_mode: selectedTopics.includes('av'),
+            fitness: selectedTopics.includes('fitness'),
+            topics: selectedTopics,
             shots: [{
               ...shot,
               positive_zh: picturePrompt(prompt.positive_zh),
@@ -736,28 +841,28 @@ class DraftService extends Service {
           await this.rememberTrace(
             existing,
             'video',
-            '封闭提示词',
-            'cartoon-av-prompt-skill',
+            closer.title,
+            closer.skill,
             tracePacket(shot, { prompt_part: 'positive', positive_zh: picturePrompt(positive) }),
             closedPositive,
           );
         } else {
           await this.rememberTrace(
-            existing, 'video', '封闭提示词', 'cartoon-av-prompt-skill',
+            existing, 'video', closer.title, closer.skill,
             tracePacket(shot, { prompt_part: 'positive', positive_zh: picturePrompt(positive) }),
             stuckText('没有画面提示词，沿用已写好的提示词', skillRaw(closed)),
             'error',
           );
-          this.ctx.logger.warn('[cartoon] AV 收口没有画面提示词，沿用已写好的提示词');
+          this.ctx.logger.warn('[cartoon] %s没有画面提示词，沿用已写好的提示词', closer.title);
         }
       } catch (err) {
         await this.rememberTrace(
-          existing, 'video', '封闭提示词', 'cartoon-av-prompt-skill',
+          existing, 'video', closer.title, closer.skill,
           tracePacket(shot, { prompt_part: 'positive', positive_zh: picturePrompt(positive) }),
           err.message, 'error',
         );
         if (err?.status === 499 || err?.message === '已停止') throw err;
-        this.ctx.logger.warn('[cartoon] AV 收口失败，沿用已写好的提示词 %s', err.message);
+        this.ctx.logger.warn('[cartoon] %s失败，沿用已写好的提示词 %s', closer.title, err.message);
       }
     }
     shot.positive_zh = prompt.positive_zh;

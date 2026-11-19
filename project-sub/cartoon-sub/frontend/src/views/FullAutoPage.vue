@@ -21,6 +21,7 @@
           :nodes="liveNodes"
           :edges="liveEdges"
           :selected-id="''"
+          @select="showFaults"
         />
       </div>
       <el-table v-if="run?.source === 'job'" :data="run.items || []" size="small">
@@ -29,6 +30,9 @@
           <template #default="{ row }">{{ statusText(row.status) }}</template>
         </el-table-column>
         <el-table-column prop="reason" label="说明" min-width="220" />
+        <el-table-column label="异常" min-width="220">
+          <template #default="{ row }">{{ itemFaults(row) || '—' }}</template>
+        </el-table-column>
         <el-table-column label="任务" width="90">
           <template #default="{ row }">{{ row.task_id || '—' }}</template>
         </el-table-column>
@@ -43,6 +47,9 @@
         </li>
         </ol>
       </div>
+      <el-dialog v-model="faultDialog.open" :title="faultDialog.title" width="640px" append-to-body>
+        <pre class="cartoon-flow__fault">{{ faultDialog.text }}</pre>
+      </el-dialog>
     </div>
     <div v-else class="cartoon-flow__list">
       <h3 class="cartoon-module__title">全自动</h3>
@@ -82,6 +89,9 @@
         <el-table-column label="进度" min-width="180">
           <template #default="{ row }">{{ row.message || '—' }}</template>
         </el-table-column>
+        <el-table-column label="异常" min-width="240">
+          <template #default="{ row }">{{ faultText(row) || '—' }}</template>
+        </el-table-column>
         <el-table-column label="镜头" width="100">
           <template #default="{ row }">{{ row.video_total ? `${row.video_done}/${row.video_total}` : '—' }}</template>
         </el-table-column>
@@ -104,7 +114,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PipelineFlowGraph from '../components/pipeline/PipelineFlowGraph.vue';
@@ -123,6 +133,7 @@ const flowTemplates = {
   full: [
     [ 'start', '发起', 'start' ],
     [ 'script', '生成剧本', 'action' ],
+    [ 'profiles', '生成资产描述', 'action' ],
     [ 'assets', '生成资产', 'action' ],
     [ 'storyboard', '拆分分镜', 'action' ],
     [ 'prompts', '生成提示词', 'action' ],
@@ -234,9 +245,12 @@ const templateNodes = computed(() => templateGraph.value.nodes.map(node => ({
 })));
 const templateEdges = computed(() => templateGraph.value.edges);
 const liveGraph = computed(() => layoutOf(run.value?.run_kind || 'full'));
+const faultDialog = reactive({ open: false, title: '', text: '' });
 const liveNodes = computed(() => liveGraph.value.nodes.map(node => {
   const status = paintStatus(node.id, run.value);
-  return { ...node, status, subtitle: subtitleOf(status) };
+  const faults = faultsForNode(run.value, node.id);
+  const latest = faults.at(-1) || '';
+  return { ...node, status, subtitle: latest ? shortText(latest) : subtitleOf(status) };
 }));
 const liveEdges = computed(() => liveGraph.value.edges);
 let timer = 0;
@@ -277,6 +291,56 @@ function tagType(value) {
 }
 function kindLabel(kind) {
   return kindNames[kind] || '全流程';
+}
+function shortText(text) {
+  const value = String(text || '').replace(/\s+/g, ' ').trim();
+  return value.length > 18 ? `${value.slice(0, 18)}…` : value;
+}
+function messagesOf(node) {
+  const list = Array.isArray(node?.failures) ? node.failures : [];
+  return list.map(item => String(item?.message || '').trim()).filter(Boolean);
+}
+function faultsOf(row) {
+  if (Array.isArray(row?.faults) && row.faults.length) return row.faults;
+  const nodes = row?.nodes || {};
+  const lines = [];
+  Object.entries(nodes).forEach(([ key, node ]) => {
+    const messages = messagesOf(node);
+    messages.forEach(message => lines.push(`${nodeTitle(key)}：${message}`));
+    if (!messages.length && node?.status === 'failed' && node.note) lines.push(`${nodeTitle(key)}：${node.note}`);
+  });
+  return lines;
+}
+function faultText(row) {
+  return faultsOf(row).join('；');
+}
+function itemFaults(row) {
+  const stored = Array.isArray(row?.failures) ? row.failures : [];
+  return stored.map(entry => (typeof entry === 'string' ? entry : entry?.message)).filter(Boolean).join('；');
+}
+function faultsForNode(current, nodeId) {
+  if (!current) return [];
+  if (current.source === 'job') {
+    if (nodeId !== 'submit' && nodeId !== 'wait') return [];
+    if (Array.isArray(current.faults) && current.faults.length) return current.faults;
+    return (current.items || []).flatMap(item => {
+      const stored = Array.isArray(item.failures) ? item.failures : [];
+      const messages = stored.map(entry => (typeof entry === 'string' ? entry : entry?.message)).filter(Boolean);
+      if (!messages.length && item.status === 'failed' && item.reason) messages.push(item.reason);
+      return messages.map(message => `${item.shot_code || item.shot_id}：${message}`);
+    });
+  }
+  const node = current.nodes?.[nodeId];
+  const messages = messagesOf(node);
+  if (!messages.length && node?.status === 'failed' && node.note) return [ node.note ];
+  return messages;
+}
+function showFaults(id) {
+  const lines = faultsForNode(run.value, id);
+  if (!lines.length) return;
+  faultDialog.title = nodeTitle(id);
+  faultDialog.text = lines.join('\n\n');
+  faultDialog.open = true;
 }
 function nodeTitle(key) {
   if (key === 'done') return '已完成';
@@ -427,6 +491,13 @@ onUnmounted(() => {
   flex-direction: column;
   overflow: hidden;
 }
+.cartoon-flow__fault {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  line-height: 1.6;
+}
 .cartoon-flow__log-wrap h4 { margin: 0 0 8px; }
 .cartoon-flow__log li { display: flex; justify-content: space-between; gap: 12px; }
 .cartoon-flow__log small { flex: 0 0 auto; color: #66706a; }
@@ -457,6 +528,14 @@ onUnmounted(() => {
   border: 1px solid rgba(47, 138, 91, .16);
   border-radius: 10px;
   margin-bottom: 12px;
+}
+.cartoon-flow-detail .cartoon-flow__canvas {
+  flex: 0 0 320px;
+  height: 320px;
+  max-height: 320px;
+}
+.cartoon-flow-detail .cartoon-flow__canvas :deep(svg) {
+  max-width: none;
 }
 .cartoon-pager {
   justify-content: flex-end;

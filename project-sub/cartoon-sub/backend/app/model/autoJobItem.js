@@ -16,6 +16,7 @@ module.exports = app => {
     shot_code: { type: STRING(64), allowNull: false, defaultValue: '' },
     status: { type: STRING(32), allowNull: false, defaultValue: 'pending' },
     reason: { type: TEXT, allowNull: false, defaultValue: '' },
+    failures: { type: TEXT, allowNull: false, defaultValue: '[]' },
     task_id: { type: INTEGER, allowNull: true },
   }, {
     tableName: 'cartoon_auto_job_items',

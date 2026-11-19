@@ -149,12 +149,11 @@ function splitEmbeddedScenes(scenes) {
   return out;
 }
 
-function collectIssues(script, body, minScenes) {
+function collectIssues(script, body, minScenes, options = {}) {
   const issues = [];
   const data = script && typeof script === 'object' ? script : {};
   const scenes = Array.isArray(data.scenes) ? data.scenes : [];
   const characters = Array.isArray(data.characters) ? data.characters : [];
-  const omissions = Array.isArray(data.omissions) ? data.omissions : [];
   if (!textOf(data.logline)) {
     issues.push('章首要有一句话故事：谁想要什么、被什么挡住、要付什么代价');
   }
@@ -170,11 +169,9 @@ function collectIssues(script, body, minScenes) {
       issues.push(`第${nth}场标题要写成「内·地点·日」或「外·地点·夜」，只保留一个地点`);
     }
     if (!summary) {
-      issues.push(`第${nth}场没有可拍正文`);
+      issues.push(`第${nth}场没有这场故事的摘要`);
     } else if (CAMERA_RE.test(summary)) {
-      issues.push(`第${nth}场写成了景别或运镜，剧本只写能看见的动作，不替分镜调度镜头`);
-    } else if (!summary.includes('精髓') || !summary.includes('△')) {
-      issues.push(`第${nth}场要先写「精髓：」这场的变化，再用「△」逐条写下动作路径和物件，不要收成一句结果`);
+      issues.push(`第${nth}场写成了景别或运镜，场次只写这段故事，不替分镜调度镜头`);
     }
     if (!PURPOSES.has(textOf(scene?.purpose))) {
       issues.push(`第${nth}场要标明功能：推进剧情、揭示人物、制造冲突、埋设伏笔、释放信息`);
@@ -187,23 +184,54 @@ function collectIssues(script, body, minScenes) {
     const name = textOf(item?.name) || '未命名人物';
     lookIssues(name, item?.look, body).forEach(issue => issues.push(issue));
   });
-  const quotes = extractQuotes(body);
-  if (quotes.length) {
-    const joined = scenes.map(scene => textOf(scene?.summary)).join('\n');
-    const missing = quotes.filter(line => !joined.includes(line));
-    if (missing.length) {
-      issues.push(`原文有 ${quotes.length} 句引语，其中 ${missing.length} 句没有留在场次里`);
-    }
-  }
   const floor = Number(minScenes) > 0 ? Math.round(Number(minScenes)) : 1;
   const gap = floor - scenes.length;
   if (gap > 0) {
-    const covered = omissions.filter(item => textOf(item?.target) && textOf(item?.reason).length >= 8).length;
-    if (covered < gap) {
-      issues.push(`场次 ${scenes.length} 低于下限 ${floor}，合并掉的情节要拆开；确属删掉的，按少掉的场数逐条写入 omissions`);
-    }
+    issues.push(`场次 ${scenes.length} 低于下限 ${floor}。少掉的情节另开一场，不要用 omissions 凑数`);
   }
   return issues;
+}
+
+function sentenceAt(source, at) {
+  const marks = [ '。', '！', '？', '\n' ];
+  let left = 0;
+  marks.forEach(mark => {
+    const pos = source.lastIndexOf(mark, Math.max(0, at - 1));
+    if (pos + 1 > left) left = pos + 1;
+  });
+  let right = source.length;
+  marks.forEach(mark => {
+    const pos = source.indexOf(mark, at);
+    if (pos >= 0 && pos < right) right = pos;
+  });
+  const end = right < source.length && source[right] !== '\n' ? right + 1 : right;
+  return source.slice(left, end).replace(/\s+/g, ' ').trim().slice(0, 240);
+}
+
+/** 起句略有出入时，对齐到正文里那一句。对不上就保留模型原句，不因此作废整稿。 */
+function alignStart(body, hint) {
+  const source = String(body || '').replace(/\r\n/g, '\n');
+  const raw = textOf(hint);
+  if (!source || !raw) return raw.slice(0, 240);
+  if (raw.length >= 6 && source.includes(raw)) return raw.slice(0, 240);
+  const compact = raw.replace(/[\s「」“”"'‘’]/g, '');
+  for (let len = Math.min(18, compact.length); len >= 8; len -= 2) {
+    const step = Math.max(1, Math.floor(len / 2));
+    for (let index = 0; index + len <= compact.length; index += step) {
+      const at = source.indexOf(compact.slice(index, index + len));
+      if (at < 0) continue;
+      const sentence = sentenceAt(source, at);
+      if (sentence.length >= 6) return sentence;
+    }
+  }
+  return raw.slice(0, 240);
+}
+
+function alignSceneStarts(scenes, body) {
+  return (Array.isArray(scenes) ? scenes : []).map(scene => ({
+    ...scene,
+    source_start: alignStart(body, scene?.source_start),
+  }));
 }
 
 function sourceSentence(body, name, evidence) {
@@ -277,9 +305,9 @@ function placeQuotes(scenes, body) {
   return next;
 }
 
-function settleScript(script, body, minScenes) {
+function settleScript(script, body, minScenes, options = {}) {
   const data = script && typeof script === 'object' ? script : {};
-  const scenes = placeQuotes(splitEmbeddedScenes(data.scenes), body);
+  const scenes = alignSceneStarts(placeQuotes(splitEmbeddedScenes(data.scenes), body), body);
   const characters = (Array.isArray(data.characters) ? data.characters : []).map(item => {
     const name = textOf(item?.name);
     if (!name) return item;
@@ -288,7 +316,7 @@ function settleScript(script, body, minScenes) {
   const next = { ...data, scenes, characters };
   return {
     script: next,
-    issues: collectIssues(next, body, minScenes),
+    issues: collectIssues(next, body, minScenes, options),
   };
 }
 

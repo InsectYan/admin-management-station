@@ -32,6 +32,7 @@ module.exports = app => {
     run_kind: { type: STRING(32), allowNull: false, defaultValue: 'full' },
     video_count: { type: INTEGER, allowNull: false, defaultValue: 1 },
     generate_end: { type: BOOLEAN, allowNull: false, defaultValue: true },
+    fail_count: { type: INTEGER, allowNull: false, defaultValue: 0 },
     temp_refmod_id: { type: INTEGER, allowNull: true },
   }, {
     tableName: 'cartoon_full_runs',

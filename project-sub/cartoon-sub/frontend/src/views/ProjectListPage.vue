@@ -52,9 +52,11 @@
             <el-option v-for="item in novels" :key="item.id" :label="item.title" :value="String(item.id)" />
           </el-select>
         </el-form-item>
-        <el-form-item v-if="supportsAv(form.content_type)" label="AV">
-          <el-checkbox v-model="form.av_mode">开启</el-checkbox>
-          <p class="cartoon-module__hint">开启后仍先走常规提示词，再由 AV 技能收口成时间片画面。对白单独存放。人体和道具用实际外形，不用美化说法。</p>
+        <el-form-item v-if="supportsAv(form.content_type)" label="专题">
+          <el-select v-model="form.topics" multiple clearable placeholder="可不选" style="width: 100%">
+            <el-option v-for="item in TOPIC_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+          <p class="cartoon-module__hint">可多选。选了的专题都会在常规提示词之后各走一次收口。AV 仍要求双方写明满二十一岁才写亲密内容。</p>
         </el-form-item>
         <el-form-item label="画面风格">
           <el-select v-model="form.visual_style" filterable placeholder="选择风格" style="width: 100%">
@@ -80,7 +82,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
-import { CONTENT_TYPES, isLocalType, isOptionalType, supportsAv, typeLabel } from '../lib/contentTypes.js';
+import { CONTENT_TYPES, isLocalType, isOptionalType, supportsAv, TOPIC_OPTIONS, typeLabel } from '../lib/contentTypes.js';
 import { groupVisualStyles, styleDisplayLabel } from '../utils/visualStyles.js';
 
 const router = useRouter();
@@ -97,7 +99,7 @@ const loadError = ref('');
 const saving = ref(false);
 const visible = ref(false);
 const summary = reactive({ generating: 0, failed: 0, unpinned: 0, created_today: 0, success_rate_24h: null });
-const form = reactive({ name: '', content_type: 'ai_comic', source_novel_id: '', visual_style: '', av_mode: false });
+const form = reactive({ name: '', content_type: 'ai_comic', source_novel_id: '', visual_style: '', topics: [] });
 const opsHref = computed(() => {
   const path = '/media/ops/overview';
   const port = window.location.port;
@@ -136,14 +138,14 @@ async function load() {
 }
 function onType(value) {
   if (isLocalType(value)) form.source_novel_id = '';
-  if (!supportsAv(value)) form.av_mode = false;
+  if (!supportsAv(value)) form.topics = [];
 }
 function openCreate() {
   form.name = '';
   form.content_type = 'ai_comic';
   form.source_novel_id = '';
   form.visual_style = styles.value[0]?.value || '';
-  form.av_mode = false;
+  form.topics = [];
   visible.value = true;
 }
 async function create() {
@@ -160,7 +162,7 @@ async function create() {
         content_type: form.content_type,
         source_novel_id: isLocalType(form.content_type) ? null : (form.source_novel_id || null),
         visual_style: form.visual_style || '',
-        av_mode: supportsAv(form.content_type) && form.av_mode,
+        topics: supportsAv(form.content_type) ? form.topics : [],
       },
     });
     visible.value = false;

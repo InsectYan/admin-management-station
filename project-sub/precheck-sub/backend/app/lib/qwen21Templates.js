@@ -2,9 +2,8 @@
 
 const UNET_BF16 = 'qwen-image-2.1\\qwen_image_2.1_bf16.safetensors';
 const UNET_TURBO = 'qwen-image-2.1\\qwen_image_2.1_turbo_bf16.safetensors';
-const CLIP_T2I = 'qwen-image-2.1\\qwen3vl_8b_bf16.safetensors';
 const CLIP = 'qwen-image-2.1\\qwen3vl_8b_int8_convrot.safetensors';
-const CLIP_HERETIC = 'qwen-image-2.1\\qwen3vl_8b_fp8_heretic.safetensors';
+const CLIP_HERETIC = 'qwen-image-2.1\\qwen3vl_8b_bf16_heretic.safetensors';
 const VAE = 'qwen-image-2.1\\qwen_image_2.1_vae_bf16.safetensors';
 const PROMPT = '一位年轻女性站在木窗边，暖色侧光落在头发上，背景是虚化的绿植，画面干净。';
 
@@ -124,7 +123,7 @@ const QWEN21_TEMPLATES = [
     name: 'qwen-image-2.1-文生图',
     category: 'text_to_image',
     suggested_vram_gb: 24,
-    api_json: qwen21Graph({ unet: UNET_BF16, clip: CLIP_T2I, steps: 25, prefix: 'image/qwen-image-2.1' }),
+    api_json: qwen21Graph({ unet: UNET_BF16, clip: CLIP_HERETIC, steps: 25, prefix: 'image/qwen-image-2.1' }),
   },
   {
     name: 'qwen-image-2.1-图生图',
@@ -152,6 +151,5 @@ module.exports = {
   UNET_TURBO,
   CLIP,
   CLIP_HERETIC,
-  CLIP_T2I,
   VAE,
 };

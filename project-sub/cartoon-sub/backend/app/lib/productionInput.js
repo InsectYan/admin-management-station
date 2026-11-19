@@ -13,9 +13,11 @@ function productionInput(project, extra = {}) {
     err.status = 400;
     throw err;
   }
+  const { topicsOf } = require('./topics');
   const fields = {
     content_type: project?.content_type || '',
     av_mode: Boolean(project?.av_mode),
+    topics: topicsOf(project),
   };
   if (project?.id != null && String(project.id).trim() !== '') {
     fields.project_id = project.id;

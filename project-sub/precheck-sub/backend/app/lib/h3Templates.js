@@ -8,6 +8,8 @@ const UNET_LIGHT = 'minimax\\minimax_h3_fl2va_pruned_int8_convrot.safetensors';
 const UNET_FULL = 'minimax\\minimax_h3_fl2va_bf16.safetensors';
 const UNET_REF = 'minimax\\minimax_h3_ref2va_pruned_int8_convrot.safetensors';
 const LORA = 'minimax\\h3-realism-people-t2v-i2v-r2v.safetensors';
+const LORA_DETAIL = 'minimax\\detailed_penis_H3_v1_阴茎.safetensors';
+const LORA_M3 = 'minimax\\M3_Unlocked_V3.1_BBB.safetensors';
 const UNET_REMIX = 'minimax\\FeiHou_MiniMax-H3_Remix_HSA_turbo_v0.8_int8_convrotHQ.safetensors';
 const CLIP_REMIX = 'minimax\\qwen3vl_32b_minimax_h3_int8_convrot_uncensored_FeiHou.safetensors';
 
@@ -38,13 +40,19 @@ function h3Graph(options) {
     },
   };
   let model = [ '1', 0 ];
-  if (options.lora) {
-    nodes['2'] = {
+  const loras = [];
+  if (options.lora) loras.push(options.lora);
+  loras.push(LORA_DETAIL);
+  loras.push(LORA_M3);
+  const loraIds = [ '2', '17', '18' ];
+  loras.forEach((name, index) => {
+    const id = loraIds[index];
+    nodes[id] = {
       class_type: 'LoraLoaderModelOnly',
-      inputs: { model, lora_name: options.lora, strength_model: 1 },
+      inputs: { model, lora_name: name, strength_model: 1 },
     };
-    model = [ '2', 0 ];
-  }
+    model = [ id, 0 ];
+  });
   nodes['6'] = {
     class_type: 'MiniMaxH3SigmaShift',
     inputs: { model, shift_video: 12, shift_audio: 3 },
@@ -299,4 +307,6 @@ module.exports = {
   UNET_REMIX,
   CLIP_REMIX,
   LORA,
+  LORA_DETAIL,
+  LORA_M3,
 };
