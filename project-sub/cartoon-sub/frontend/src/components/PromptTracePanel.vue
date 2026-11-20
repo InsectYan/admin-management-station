@@ -340,7 +340,7 @@ watch(() => props.shotId, () => { load(); }, { immediate: true });
   padding: 2px 10px;
   cursor: pointer;
 }
-.cartoon-trace__card h4,
+.cartoon-trace__card h4,.cartoon-trace__card span,
 .cartoon-trace__card p { margin: 0 0 8px; }
 .cartoon-trace__card p { color: #5c6b62; }
 .cartoon-trace__card > div { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 8px; margin-top: 8px; }
