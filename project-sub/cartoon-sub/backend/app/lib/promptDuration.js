@@ -29,6 +29,35 @@ function declaredSeconds(source) {
   return null;
 }
 
+const MIN_DURATION_SEC = 5;
+const VIDEO_MAX_SEC = 15;
+const TOTAL_MAX_SEC = 30;
+const SPEECH_CHARS_PER_SEC = 4;
+
+function clampDurationSec(value, fallback = 10) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(VIDEO_MAX_SEC, Math.max(MIN_DURATION_SEC, Math.round(n)));
+}
+
+function speechSeconds(dialogue) {
+  const chars = String(dialogue || '').replace(/\s+/g, '').replace(/[「」“”‘’]/g, '').length;
+  if (!chars) return 0;
+  return Math.ceil(chars / SPEECH_CHARS_PER_SEC);
+}
+
+/** 动作秒数收在 5–15。没有对白就停在这里。有对白时，说不完的部分补到总时长，最多 30 秒。 */
+function fitDurationSec(proposed, dialogue, fallback = 10) {
+  const n = Number(proposed);
+  const raw = Number.isFinite(n) ? Math.round(n) : fallback;
+  const video = clampDurationSec(raw, fallback);
+  const speech = speechSeconds(dialogue);
+  if (!speech) return video;
+  const withSpeech = Math.max(video, speech);
+  const chosen = raw > video ? Math.max(withSpeech, raw) : withSpeech;
+  return Math.min(TOTAL_MAX_SEC, chosen);
+}
+
 /** 视频提示词时间轴覆盖到的秒数，换算成毫秒。没有时间轴时返回 null。 */
 function promptCoveredMs(text) {
   const source = String(text || '');
@@ -47,4 +76,7 @@ function promptCoveredMs(text) {
 
 module.exports = {
   promptCoveredMs,
+  clampDurationSec,
+  fitDurationSec,
+  speechSeconds,
 };

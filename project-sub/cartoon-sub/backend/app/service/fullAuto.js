@@ -19,11 +19,10 @@ const {
 } = require('../lib/assetProfile');
 const { settleScript } = require('../lib/scriptGate');
 const { minStoryUnits } = require('../lib/storyCoverage');
-const { promptCoveredMs } = require('../lib/promptDuration');
+const { promptCoveredMs, fitDurationSec } = require('../lib/promptDuration');
 const { topicsOf } = require('../lib/topics');
 
 const NODE_KEYS = [ 'script', 'profiles', 'assets', 'storyboard', 'prompts', 'workflow', 'video' ];
-const FAIL_LIMIT = 3;
 const NOTE_NODES = {
   storyboard: [ 'script', 'storyboard' ],
   prompt: [ 'prompts', 'save' ],
@@ -604,7 +603,15 @@ class FullAutoService extends Service {
     let index = 0;
     for (const chapter of list) {
       index += 1;
-      await this.profileChapter(run, chapter, index, list.length, { trackChapter: true });
+      try {
+        await this.profileChapter(run, chapter, index, list.length, { trackChapter: true });
+      } catch (err) {
+        if (isStop(err)) throw err;
+        const title = chapter.chapter_title || `第 ${index} 章`;
+        const message = err?.message || '失败';
+        await this.noteFailure(run, 'assets', `${title} ${message}`);
+        await this.pushLog(run, 'assets', `${title} 失败，跳过，继续下一章。${message}`);
+      }
     }
   }
 
@@ -637,6 +644,7 @@ class FullAutoService extends Service {
     const style = await this.ctx.service.draft.styleContext(project, chapter);
     for (const part of parts) {
       if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
+      try {
       const assets = await this.ctx.model.Asset.findAll({ where: { project_id: run.project_id } });
       const result = await invokeSkill(this.ctx, {
         skill: 'cartoon-asset-profile-skill',
@@ -659,6 +667,12 @@ class FullAutoService extends Service {
         throw new Error(`「${title}」没有返回资产描述`);
       }
       await this.applyProfiles(run, title, characters, scenes);
+      } catch (err) {
+        if (isStop(err)) throw err;
+        const message = err?.message || '失败';
+        await this.noteFailure(run, options.trackChapter ? 'assets' : 'profiles', `${title} ${message}`);
+        await this.pushLog(run, options.trackChapter ? 'assets' : 'profiles', `${title} 这一段失败，跳过，继续下一段。${message}`);
+      }
     }
     await this.pushLog(run, options.trackChapter ? 'assets' : 'profiles', `${title} 已读取`);
   }
@@ -823,38 +837,29 @@ class FullAutoService extends Service {
     if (!await this.alive(run)) return false;
     const nodes = parseJson(run.nodes, blankNodes());
     if (nodes[key]?.status === 'success') return true;
-    while (await this.alive(run)) {
-      await this.mark(run, key, 'running', NODE_LABEL[key]);
-      await this.pushLog(run, key, NODE_LABEL[key]);
-      try {
-        await fn();
-        if (!await this.alive(run)) {
-          await this.mark(run, key, 'stopped', '已停止');
-          return false;
-        }
-        await this.mark(run, key, 'success', '已完成');
-        return true;
-      } catch (err) {
-        if (isStop(err) || !await this.alive(run)) {
-          await this.mark(run, key, 'stopped', '已停止');
-          if (run.status === 'running') await run.update({ status: 'stopped', message: '已停止' });
-          return false;
-        }
-        const message = err?.message || '失败';
-        const count = await this.noteFailure(run, key, message);
-        await this.pushLog(run, key, `第 ${count} 次失败：${message}`);
-        this.ctx.logger.warn('[cartoon] full-auto %s %s 第%s次 %s', run.id, key, count, message);
-        if (count >= FAIL_LIMIT) {
-          await this.mark(run, key, 'failed', message);
-          await run.update({ status: 'failed', message, error_message: message, current_node: key });
-          await this.pushLog(run, key, '本轮已失败三次，停止这一条。其他排队的流程继续。');
-          return false;
-        }
-        await this.mark(run, key, 'running', `第 ${count} 次失败，正在重试`);
-        await this.pushLog(run, key, `重新执行${NODE_LABEL[key]}，后面的步骤还在`);
+    await this.mark(run, key, 'running', NODE_LABEL[key]);
+    await this.pushLog(run, key, NODE_LABEL[key]);
+    try {
+      await fn();
+      if (!await this.alive(run)) {
+        await this.mark(run, key, 'stopped', '已停止');
+        return false;
       }
+      await this.mark(run, key, 'success', '已完成');
+      return true;
+    } catch (err) {
+      if (isStop(err) || !await this.alive(run)) {
+        await this.mark(run, key, 'stopped', '已停止');
+        if (run.status === 'running') await run.update({ status: 'stopped', message: '已停止' });
+        return false;
+      }
+      const message = err?.message || '失败';
+      await this.noteFailure(run, key, message);
+      await this.mark(run, key, 'failed', message);
+      await this.pushLog(run, key, `${NODE_LABEL[key]}失败：${message}。跳过这一步，继续后面的步骤。`);
+      this.ctx.logger.warn('[cartoon] full-auto %s %s %s', run.id, key, message);
+      return true;
     }
-    return false;
   }
 
   async walk(runId) {
@@ -868,31 +873,21 @@ class FullAutoService extends Service {
     }
     try {
       if (run.scope === 'profiles') {
-        while (await this.alive(run)) {
-          try {
-            await this.stepProfiles(run);
-            if (await this.alive(run)) {
-              await run.update({ status: 'success', current_node: 'done', message: '资产描述已写入', error_message: '' });
-              await this.pushLog(run, 'assets', '资产描述已写入');
-            }
-            break;
-          } catch (err) {
-            if (isStop(err) || !await this.alive(run)) {
-              if (run.status === 'running') await run.update({ status: 'stopped', message: '已停止' });
-              break;
-            }
+        try {
+          await this.stepProfiles(run);
+          if (await this.alive(run)) {
+            await run.update({ status: 'success', current_node: 'done', message: '资产描述已写入', error_message: '' });
+            await this.pushLog(run, 'assets', '资产描述已写入');
+          }
+        } catch (err) {
+          if (isStop(err) || !await this.alive(run)) {
+            if (run.status === 'running') await run.update({ status: 'stopped', message: '已停止' });
+          } else {
             const message = err?.message || '失败';
-            const count = await this.noteFailure(run, 'assets', message);
-            await this.pushLog(run, 'assets', `第 ${count} 次失败：${message}`);
-            this.ctx.logger.warn('[cartoon] asset-profile %s 第%s次 %s', run.id, count, message);
-            if (count >= FAIL_LIMIT) {
-              await this.mark(run, 'assets', 'failed', message);
-              await run.update({ status: 'failed', message, error_message: message, current_node: 'assets' });
-              await this.pushLog(run, 'assets', '本轮已失败三次，停止这一条。其他排队的流程继续。');
-              break;
-            }
-            await this.mark(run, 'assets', 'running', `第 ${count} 次失败，正在重试`);
-            await this.pushLog(run, 'assets', '重新执行资产描述，后面的章节还在');
+            await this.noteFailure(run, 'assets', message);
+            await this.mark(run, 'assets', 'failed', message);
+            await run.update({ status: 'success', current_node: 'done', message: '资产描述已走完，有章节失败已跳过', error_message: '' });
+            await this.pushLog(run, 'assets', `资产描述失败：${message}。已跳过并结束这一轮。`);
           }
         }
         return;
@@ -914,9 +909,14 @@ class FullAutoService extends Service {
       }
       if (await this.alive(run)) {
         const assetRun = run.scope === 'assets' || run.scope === 'assets-reset';
-        const done = assetRun ? (run.scope === 'assets-reset' ? '设定图已重绘' : '资产已生成') : '全流程已完成';
-        await run.update({ status: 'success', current_node: 'done', message: done, error_message: '' });
-        await this.pushLog(run, assetRun ? 'assets' : 'video', done);
+        const nodes = parseJson(run.nodes, {});
+        const hadFault = Object.values(nodes).some(node => node?.status === 'failed' || (Array.isArray(node?.failures) && node.failures.length));
+        const done = assetRun
+          ? (run.scope === 'assets-reset' ? '设定图已重绘' : '资产已生成')
+          : '全流程已完成';
+        const message = hadFault ? `${done}，有单条失败已跳过` : done;
+        await run.update({ status: 'success', current_node: 'done', message, error_message: '' });
+        await this.pushLog(run, assetRun ? 'assets' : 'video', message);
       }
     } finally {
       await this.dropTemp(run);
@@ -1002,7 +1002,15 @@ class FullAutoService extends Service {
     const reset = run.scope === 'assets-reset';
     for (const item of this.sheetPlan(chapter)) {
       if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
-      await this.ensureSheet(run, chapter, style, item, { reset, project });
+      try {
+        await this.ensureSheet(run, chapter, style, item, { reset, project });
+      } catch (err) {
+        if (isStop(err)) throw err;
+        const label = `${item.kind === 'scene' ? '场景' : '人物'}「${item.name}」`;
+        const message = err?.message || '失败';
+        await this.noteFailure(run, 'assets', `${label} ${message}`);
+        await this.pushLog(run, 'assets', `${label} 失败，跳过，继续下一项。${message}`);
+      }
     }
   }
 
@@ -1143,11 +1151,20 @@ class FullAutoService extends Service {
     const shots = await this.shotsOf(run);
     for (let index = 0; index < shots.length; index += 1) {
       if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
-      await this.fillShotPrompt(run, shots[index], {
-        force: Boolean(run.fresh),
-        index,
-        total: shots.length,
-      });
+      const shot = shots[index];
+      try {
+        await this.fillShotPrompt(run, shot, {
+          force: Boolean(run.fresh),
+          index,
+          total: shots.length,
+        });
+      } catch (err) {
+        if (isStop(err)) throw err;
+        const code = shot.shot_code || shot.id;
+        const message = err?.message || '失败';
+        await this.noteFailure(run, 'prompts', `${code} ${message}`);
+        await this.pushLog(run, 'prompts', `${code} 提示词失败，跳过这一镜，继续下一镜。${message}`);
+      }
     }
   }
 
@@ -1160,36 +1177,21 @@ class FullAutoService extends Service {
 
   async fillShotPrompt(run, shot, options = {}) {
     const code = shot.shot_code || shot.id;
-    let lastError = null;
-    for (let attempt = 1; attempt <= 2; attempt += 1) {
-      const existing = await this.ctx.model.Prompt.findOne({ where: { shot_id: shot.id } });
-      if (!options.force && this.promptReady(existing)) {
-        if (attempt === 1 && !options.quiet) await this.pushLog(run, 'prompts', `${code} 已有提示词`);
-        return existing;
-      }
-      if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
-      const place = options.total ? `（${Number(options.index) + 1}/${options.total}）` : '';
-      await this.mark(run, 'prompts', 'running', `正在生成提示词${place} ${code}`);
-      try {
-        await this.ctx.service.draft.expandShot(run.project_id, run.import_id, {
-          shot_id: shot.id,
-          repair_note: attempt > 1 ? '上一次这一项没有写全。视频、首帧、尾帧是三次分开的调用，这一次只写当前这一项，并写满。' : '',
-        });
-      } catch (err) {
-        if (isStop(err)) throw err;
-        lastError = err;
-        await this.pushLog(run, 'prompts', `${code} 第 ${attempt} 次没有写全提示词，继续生成这一镜`);
-        continue;
-      }
-      const saved = await this.ctx.model.Prompt.findOne({ where: { shot_id: shot.id } });
-      if (this.promptReady(saved)) {
-        await this.pushLog(run, 'prompts', `${code} 已写入视频、首帧、尾帧提示词`);
-        return saved;
-      }
-      lastError = new Error(`${code} 没有返回视频提示词`);
-      await this.pushLog(run, 'prompts', `${code} 第 ${attempt} 次没有写全提示词，继续生成这一镜`);
+    const existing = await this.ctx.model.Prompt.findOne({ where: { shot_id: shot.id } });
+    if (!options.force && this.promptReady(existing)) {
+      if (!options.quiet) await this.pushLog(run, 'prompts', `${code} 已有提示词`);
+      return existing;
     }
-    throw lastError || new Error(`${code} 没有返回视频提示词`);
+    if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
+    const place = options.total ? `（${Number(options.index) + 1}/${options.total}）` : '';
+    await this.mark(run, 'prompts', 'running', `正在生成提示词${place} ${code}`);
+    await this.ctx.service.draft.expandShot(run.project_id, run.import_id, { shot_id: shot.id });
+    const saved = await this.ctx.model.Prompt.findOne({ where: { shot_id: shot.id } });
+    if (this.promptReady(saved)) {
+      await this.pushLog(run, 'prompts', `${code} 已写入视频、首帧、尾帧提示词`);
+      return saved;
+    }
+    throw new Error(`${code} 没有写全提示词`);
   }
 
   async stepWorkflow(run) {
@@ -1256,7 +1258,10 @@ class FullAutoService extends Service {
     let previousKey = '';
     for (let index = 0; index < shots.length; index += 1) {
       const shot = await this.ctx.model.Shot.findByPk(shots[index].id);
-      if (!shot) throw new Error('镜头已不在项目里');
+      if (!shot) {
+        await this.pushLog(run, 'video', '有一条镜头已不在项目里，跳过，继续下一镜');
+        continue;
+      }
       const scene = sceneTitle(script, shot);
       const key = sceneKey(shot);
       const same = index > 0 && key && key === previousKey;
@@ -1274,21 +1279,28 @@ class FullAutoService extends Service {
         continue;
       }
       if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
-      if (run.fresh) await this.dropFreshFrames(run, shot);
-      for (let nth = 0; nth < missing; nth += 1) {
-        if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
-        const made = have + nth + 1;
-        await this.mark(run, 'video', 'running', `正在生成镜头 ${code} 第 ${made}/${want} 条（${index + 1}/${shots.length}）`);
-        await this.shoot(run, shot, endSlot, same, scene, {
-          batchIndex: have + nth,
-          wantEnd,
-        });
+      try {
+        if (run.fresh) await this.dropFreshFrames(run, shot);
+        for (let nth = 0; nth < missing; nth += 1) {
+          if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
+          const made = have + nth + 1;
+          await this.mark(run, 'video', 'running', `正在生成镜头 ${code} 第 ${made}/${want} 条（${index + 1}/${shots.length}）`);
+          await this.shoot(run, shot, endSlot, same, scene, {
+            batchIndex: have + nth,
+            wantEnd,
+          });
+        }
+        done.add(shot.id);
+        const raw = JSON.stringify([ ...done ]);
+        await run.update({ done_shot_ids: raw, video_done: done.size });
+        run.done_shot_ids = raw;
+        await this.pushLog(run, 'video', want > 1 ? `${code} 已生成 ${want} 条视频` : `${code} 视频已生成`);
+      } catch (err) {
+        if (isStop(err) || !await this.alive(run)) throw err;
+        const message = err?.message || '失败';
+        await this.noteFailure(run, 'video', `${code} ${message}`);
+        await this.pushLog(run, 'video', `${code} 视频失败，跳过这一镜，继续下一镜。${message}`);
       }
-      done.add(shot.id);
-      const raw = JSON.stringify([ ...done ]);
-      await run.update({ done_shot_ids: raw, video_done: done.size });
-      run.done_shot_ids = raw;
-      await this.pushLog(run, 'video', want > 1 ? `${code} 已生成 ${want} 条视频` : `${code} 视频已生成`);
     }
   }
 
@@ -1320,8 +1332,7 @@ class FullAutoService extends Service {
     const batchIndex = Number.isInteger(options.batchIndex) ? options.batchIndex : 0;
     const startHeld = await this.ensureStartFrame(run, shot, sameScene, scene, videoText, frameStart, frameEnd, negative, {
       batchIndex,
-      chain: wantEnd && sameScene,
-      regen: true,
+      chain: sameScene,
     });
     const endHeld = wantEnd
       ? await this.ensureEndFrame(run, shot, videoText, frameStart, frameEnd, negative, { batchIndex, regen: true })
@@ -1342,8 +1353,8 @@ class FullAutoService extends Service {
         asset_ids: assetIds,
         duration_sec: (() => {
           const covered = promptCoveredMs(videoText);
-          if (covered) return covered / 1000;
-          return shot.duration_ms ? Math.max(0.5, shot.duration_ms / 1000) : 10;
+          const proposed = covered ? covered / 1000 : (shot.duration_ms ? shot.duration_ms / 1000 : 10);
+          return fitDurationSec(proposed, shot.dialogue, proposed);
         })(),
         seed: this.takeSeed(run),
         ephemeral_refmod_id: packId,
@@ -1377,7 +1388,6 @@ class FullAutoService extends Service {
     const batch = Number.isInteger(batchIndex) ? batchIndex : 0;
     const relatives = [
       `frames/${projectId}/${shotId}/b${batch}-end.png`,
-      `frames/${projectId}/${shotId}/end.png`,
       `frames/${projectId}/${shotId}/b${batch}-last.png`,
     ];
     for (const relative of relatives) {
@@ -1427,30 +1437,22 @@ class FullAutoService extends Service {
   async ensureStartFrame(run, shot, sameScene, scene, videoText, frameStart, frameEnd, negative, options = {}) {
     const fresh = await shot.reload();
     const code = shot.shot_code || shot.id;
-    const batchIndex = Number.isInteger(options.batchIndex) ? options.batchIndex : null;
-    if (options.chain && batchIndex != null) {
-      const prev = await this.previousShot(fresh);
-      const planted = prev ? this.sceneTail(run.project_id, prev.id, batchIndex) : null;
-      if (!planted) {
-        throw new Error(`${code} 与上一镜同一场景「${scene}」，首帧要用上一镜尾帧，上一镜还没有尾帧`);
-      }
-      const relative = `frames/${run.project_id}/${shot.id}/b${batchIndex}-from-prev.png`;
-      const absolute = resolveInside(outputRoot(this.app), relative);
-      if (!absolute) throw new Error(`${code} 首帧路径无效`);
-      await fs.promises.mkdir(path.dirname(absolute), { recursive: true });
-      await fs.promises.copyFile(planted, absolute);
-      await shot.update({ manual_frame_path: relative });
-      await this.pushLog(run, 'video', `${code} 与上一镜同一场景「${scene}」，第 ${batchIndex + 1} 条首帧用上一镜同序号尾帧`);
-      return { bytes: fs.readFileSync(absolute), taskId: null };
+    const batchIndex = Number.isInteger(options.batchIndex) ? options.batchIndex : 0;
+    const manual = this.frameAbsolute(fresh.manual_frame_path);
+    if (manual) {
+      await this.pushLog(run, 'video', `${code} 使用指定首帧`);
+      return { bytes: fs.readFileSync(manual), taskId: null };
     }
-    if (!options.regen) {
-      const manual = this.frameAbsolute(fresh.manual_frame_path);
-      if (manual) {
-        await this.pushLog(run, 'video', `${code} 已有首帧`);
-        return { bytes: fs.readFileSync(manual), taskId: null };
-      }
+    const prev = (sameScene || options.chain) ? await this.previousShot(fresh) : null;
+    const planted = prev ? this.sceneTail(run.project_id, prev.id, batchIndex) : null;
+    const carried = planted || this.frameAbsolute(fresh.first_frame_path);
+    if (carried) {
+      const where = planted ? `上一镜同序号尾帧` : '上镜尾帧';
+      const place = scene ? `「${scene}」` : '';
+      await this.pushLog(run, 'video', `${code} 没有指定首帧，使用${where}${place}`);
+      return { bytes: fs.readFileSync(carried), taskId: null };
     }
-    await this.pushLog(run, 'video', `${code} 生成首帧`);
+    await this.pushLog(run, 'video', `${code} 没有指定首帧和上镜尾帧，生成首帧`);
     const rendered = await this.renderFrame(run, shot, 'start', videoText, frameStart, frameEnd, negative);
     await this.ctx.service.project.saveManualFrame(run.project_id, shot.id, {
       filename: 'manual.png',

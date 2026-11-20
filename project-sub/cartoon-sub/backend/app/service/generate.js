@@ -12,7 +12,7 @@ const { complianceCheck } = require('../lib/complianceCheck');
 const { begin, finish, cancelProject } = require('../lib/activeRuns');
 const { usageSummary } = require('../lib/usageSummary');
 const { cardLine } = require('../lib/assetProfile');
-const { promptCoveredMs } = require('../lib/promptDuration');
+const { promptCoveredMs, fitDurationSec } = require('../lib/promptDuration');
 const { collapseFrameStyle, referenceUseLine, withReferenceUse } = require('../lib/framePrompt');
 const { styleLabelOf, stylePromptOf } = require('../lib/cartoonMeta');
 
@@ -450,7 +450,7 @@ class GenerateService extends Service {
     let durationSec;
     if (videoKind) {
       const covered = promptCoveredMs(text);
-      const seconds = covered ? covered / 1000 : Number(payload.duration_sec);
+      const seconds = fitDurationSec(covered ? covered / 1000 : payload.duration_sec, shot.dialogue, 10);
       if (!Number.isFinite(seconds) || seconds <= 0) this.ctx.throw(400, '请填写视频时长');
       if (seconds > 60) this.ctx.throw(400, '时长不能超过 60 秒');
       durationSec = seconds;
@@ -462,7 +462,6 @@ class GenerateService extends Service {
       rawImages = rawImages.filter(item => !endIds.has(item.slot_id || item.id));
     }
     const images = await this.attachFrames(freshShot, workflowOverride, rawImages, {
-      allowPlanted: payload.generate_end !== false,
       chainBatch: chainBatchOf(payload.chain_batch),
     });
 
@@ -537,7 +536,6 @@ class GenerateService extends Service {
     const batch = Number.isInteger(batchIndex) ? batchIndex : 0;
     const relatives = [
       `frames/${shot.project_id}/${prev.id}/b${batch}-end.png`,
-      `frames/${shot.project_id}/${prev.id}/end.png`,
       `frames/${shot.project_id}/${prev.id}/b${batch}-last.png`,
     ];
     for (const relative of relatives) {
@@ -559,30 +557,29 @@ class GenerateService extends Service {
       return list;
     }
     const current = await this.ctx.model.Shot.findByPk(shot.id);
-    const chained = options.allowPlanted === false || !current ? null : await this.previousFrame(current, options.chainBatch);
-    let relative = current?.manual_frame_path || '';
-    if (!relative && options.allowPlanted !== false) {
-      relative = chained?.same ? (chained.relative || '') : '';
-    }
-    if (!relative) {
+    const chained = current ? await this.previousFrame(current, options.chainBatch) : { same: false, relative: '' };
+    const stored = relative => {
+      const absolute = resolveInside(outputRoot(this.app), String(relative || '').split('?')[0]);
+      return absolute && fs.existsSync(absolute) ? String(relative).split('?')[0] : '';
+    };
+    const manual = stored(current?.manual_frame_path);
+    const carried = manual
+      || (chained?.same ? stored(chained.relative) : '')
+      || stored(current?.first_frame_path);
+    if (!carried) {
       const error = new Error(chained?.same
         ? '同一场的下一镜要用上一镜尾帧，请先生成上一镜尾帧'
         : '这条工作流需要首帧。没有上镜尾帧时，请先上传指定首帧');
       error.status = 400;
       throw error;
     }
-    const absolute = resolveInside(outputRoot(this.app), relative);
-    if (!absolute || !fs.existsSync(absolute)) {
-      const error = new Error('首帧文件不在磁盘上');
-      error.status = 400;
-      throw error;
-    }
+    const absolute = resolveInside(outputRoot(this.app), carried);
     const bytes = await this.scaleFrame(absolute, snap32(chosen.width), snap32(chosen.height));
     list.push({
       slot_id: start.id,
       filename: 'first.png',
       data_base64: bytes.toString('base64'),
-      label: current?.manual_frame_path ? '指定首帧' : '上镜尾帧',
+      label: manual ? '指定首帧' : '上镜尾帧',
     });
     return list;
   }
@@ -637,7 +634,6 @@ class GenerateService extends Service {
   async plantTail(task, lastFile) {
     if (!task.shot_id) return;
     const brief = parseBrief(task.generation_brief) || {};
-    if (brief.chain_end === false) return;
     const shot = await this.ctx.model.Shot.findByPk(task.shot_id);
     if (!shot) return;
     const batch = chainBatchOf(brief.chain_batch);
@@ -648,6 +644,14 @@ class GenerateService extends Service {
         await fs.promises.mkdir(path.dirname(absolute), { recursive: true });
         await fs.promises.copyFile(lastFile, absolute);
       }
+    }
+    let source = lastFile;
+    if (batch != null && brief.chain_end === false) {
+      const stale = resolveInside(outputRoot(this.app), `frames/${shot.project_id}/${shot.id}/b${batch}-end.png`);
+      if (stale && fs.existsSync(stale)) await fs.promises.unlink(stale).catch(() => {});
+    } else if (brief.chain_end !== false && batch != null) {
+      const generated = resolveInside(outputRoot(this.app), `frames/${shot.project_id}/${shot.id}/b${batch}-end.png`);
+      if (generated && fs.existsSync(generated)) source = generated;
     }
     const next = await this.ctx.model.Shot.findOne({
       where: {
@@ -668,7 +672,7 @@ class GenerateService extends Service {
     const absolute = resolveInside(outputRoot(this.app), relative);
     if (!absolute) return;
     await fs.promises.mkdir(path.dirname(absolute), { recursive: true });
-    await fs.promises.copyFile(lastFile, absolute);
+    await fs.promises.copyFile(source, absolute);
     next.set('first_frame_path', relative);
     next.changed('first_frame_path', true);
     await next.save();

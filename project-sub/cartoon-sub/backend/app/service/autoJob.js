@@ -1,7 +1,7 @@
 'use strict';
 
 const Service = require('egg').Service;
-const { promptCoveredMs } = require('../lib/promptDuration');
+const { promptCoveredMs, fitDurationSec } = require('../lib/promptDuration');
 
 const OPEN = [ 'pending', 'running' ];
 const VIDEO_KINDS = [ 'video', 'i2v', 't2v', 'refmod' ];
@@ -163,8 +163,8 @@ class AutoJobService extends Service {
         asset_ids: bound,
         duration_sec: (() => {
           const covered = promptCoveredMs(positive);
-          if (covered) return covered / 1000;
-          return shot.duration_ms ? Math.max(0.5, shot.duration_ms / 1000) : 10;
+          const proposed = covered ? covered / 1000 : (shot.duration_ms ? shot.duration_ms / 1000 : 10);
+          return fitDurationSec(proposed, shot.dialogue, proposed);
         })(),
         seed: this.takeSeed(job),
       },
@@ -360,34 +360,23 @@ class AutoJobService extends Service {
   }
 
   async failOrRetry(job, item, reason, taskId) {
-    const count = Number(job.fail_count || 0) + 1;
-    await job.update({ fail_count: count });
-    job.fail_count = count;
     const failures = readFailures(item);
+    const message = String(reason || '失败').slice(0, 500);
     failures.push({
       at: new Date().toISOString(),
-      count,
-      message: String(reason || '失败').slice(0, 500),
+      count: failures.length + 1,
+      message,
     });
     const stored = JSON.stringify(failures);
-    if (count >= 3) {
-      await item.update({ status: 'failed', reason, failures: stored, task_id: taskId || null });
-      item.status = 'failed';
-      item.failures = stored;
-      await job.update({ status: 'failed' });
-      job.status = 'failed';
-      await this.recount(job);
-      return 'stop';
-    }
     await item.update({
-      status: 'pending',
-      reason: `第 ${count} 次失败，重新执行。${reason}`,
+      status: 'failed',
+      reason: message,
       failures: stored,
       task_id: taskId || null,
     });
-    item.status = 'pending';
+    item.status = 'failed';
     item.failures = stored;
-    return 'retry';
+    return 'next';
   }
 
   async walk(jobId) {
@@ -470,12 +459,7 @@ class AutoJobService extends Service {
           await item.update({ status: 'skipped', reason: err?.message || '跳过', task_id: this.lastTracked(job) });
           item.status = 'skipped';
         } else {
-          const next = await this.failOrRetry(job, item, err?.message || '失败', this.lastTracked(job));
-          if (next === 'stop') return;
-          if (next === 'retry') {
-            index -= 1;
-            continue;
-          }
+          await this.failOrRetry(job, item, err?.message || '失败', this.lastTracked(job));
         }
       }
       await this.recount(job);

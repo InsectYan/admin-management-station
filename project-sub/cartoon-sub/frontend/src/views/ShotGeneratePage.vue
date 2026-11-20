@@ -239,7 +239,7 @@ import RandomSeedField from '../components/RandomSeedField.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { canMake } from '../lib/appAccess.js';
-import { promptCoveredMs } from '../lib/promptDuration.js';
+import { fitDurationSec, promptCoveredMs } from '../lib/promptDuration.js';
 import { collapseFrameStyle, referenceUseLine, withReferenceUse } from '../lib/framePrompt.js';
 
 const props = defineProps({
@@ -883,10 +883,10 @@ async function load() {
     ? found.camera_moves.slice()
     : String(found.camera_move || '固定').split(/[,，、|/]+/).map(item => item.trim()).filter(Boolean);
   const covered = promptCoveredMs(found.prompt?.positive_zh);
-  const sec = covered
+  const proposed = covered
     ? covered / 1000
     : (Number(found.duration_ms) > 0 ? Number(found.duration_ms) / 1000 : 10);
-  durationSec.value = Math.min(60, Math.max(0.5, Math.round(sec * 10) / 10));
+  durationSec.value = fitDurationSec(proposed, found.dialogue, proposed);
   const chapter = (detail.imports || []).find(item => String(item.id) === String(found.import_id));
   chapterTitle.value = chapter?.chapter_title || '未关联快照';
   fillStage(chapter?.script_data || {}, found.stage_notes);

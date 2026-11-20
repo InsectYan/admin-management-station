@@ -401,7 +401,7 @@
             </el-button-group>
             <el-button type="danger" plain :disabled="!canStop" @click="stopWork">停止</el-button>
           </div>
-          <p v-if="selectedBoard" class="cartoon-module__hint">自动生成视频、全自动执行和对应重置都会先按全流程出首帧，再用满血 H3 首尾帧 [RefMod] 生成视频。同一场景且生成尾帧时，下一镜首帧用上一镜尾帧。</p>
+          <p v-if="selectedBoard" class="cartoon-module__hint">自动生成视频、全自动执行和对应重置都用满血 H3 首尾帧 [RefMod]。这一镜有指定首帧就用指定首帧，否则用上镜尾帧；都没有才生成首帧。勾选尾帧时按工作流生成尾帧并交给下一镜；不勾选则截取成片最后一帧交给下一镜。</p>
           <el-table v-if="selectedBoard" class="cartoon-shot-table" :data="boardPageRows" style="margin-top: 12px">
             <el-table-column label="镜头ID" width="120" prop="shot_code" fixed="left" />
             <el-table-column label="场次" width="200" fixed="left">
@@ -581,7 +581,7 @@
       </template>
     </el-drawer>
     <el-dialog v-model="videoAutoOpen" title="自动生成视频" width="480px" :close-on-click-modal="false">
-      <p class="cartoon-module__hint">本次只执行下拉框里勾选的镜头，并按镜头顺序排列。每个镜头先生成首帧，再提交满血 H3 首尾帧 [RefMod]。</p>
+      <p class="cartoon-module__hint">本次只执行下拉框里勾选的镜头，并按镜头顺序排列。有指定首帧就用指定首帧，否则用上镜尾帧，都没有才生成首帧，然后提交满血 H3 首尾帧 [RefMod]。</p>
       <el-form label-position="top" @submit.prevent>
         <el-form-item label="镜头ID">
           <el-select
@@ -601,7 +601,7 @@
         </el-form-item>
         <el-form-item label="是否生成尾帧">
           <el-checkbox v-model="videoAutoGenerateEnd">生成尾帧</el-checkbox>
-          <p class="cartoon-module__hint">不勾选则这次不提交尾帧，同一场景的下一镜不拿上一镜成片尾帧当首帧，改为重新出首帧。</p>
+          <p class="cartoon-module__hint">勾选后按工作流生成这一镜尾帧，交给视频，并作为下一镜的上镜尾帧。不勾选则不单独生成尾帧，视频完成后截取成片最后一帧，作为下一镜的上镜尾帧。</p>
         </el-form-item>
       </el-form>
       <p class="cartoon-module__hint">{{ videoAutoHint }}</p>
@@ -611,14 +611,14 @@
       </template>
     </el-dialog>
     <el-dialog v-model="allResetOpen" class="cartoon-dialog" title="重置全自动" width="480px" append-to-body :close-on-click-modal="false">
-      <p class="cartoon-module__hint">会重写当前快照里每一条镜头的提示词，已经写好的也会覆盖。然后按下面的次数，先出首帧再交满血 H3 首尾帧 [RefMod]，已经有的视频会保留。</p>
+      <p class="cartoon-module__hint">会重写当前快照里每一条镜头的提示词，已经写好的也会覆盖。然后按下面的次数提交满血 H3 首尾帧 [RefMod]。有指定首帧就用指定首帧，否则用上镜尾帧。已经有的视频会保留。</p>
       <el-form label-position="top" @submit.prevent>
         <el-form-item label="每个镜头的生成次数">
           <el-input-number v-model="allResetCount" :min="1" :max="8" :step="1" :precision="0" controls-position="right" />
         </el-form-item>
         <el-form-item label="是否生成尾帧">
           <el-checkbox v-model="allResetGenerateEnd">生成尾帧</el-checkbox>
-          <p class="cartoon-module__hint">不勾选则这次不提交尾帧，同一场景的下一镜不拿上一镜成片尾帧当首帧。</p>
+          <p class="cartoon-module__hint">勾选后按工作流生成这一镜尾帧，交给视频，并作为下一镜的上镜尾帧。不勾选则不单独生成尾帧，视频完成后截取成片最后一帧，作为下一镜的上镜尾帧。</p>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -627,14 +627,14 @@
       </template>
     </el-dialog>
     <el-dialog v-model="videoResetOpen" class="cartoon-dialog" title="重新生成视频" width="480px" append-to-body :close-on-click-modal="false">
-      <p class="cartoon-module__hint">会给当前快照里每一条镜头再出首帧，并按次数提交满血 H3 首尾帧 [RefMod]。已经有的视频会保留。</p>
+      <p class="cartoon-module__hint">会给当前快照里每一条镜头按次数再提交满血 H3 首尾帧 [RefMod]。有指定首帧就用指定首帧，否则用上镜尾帧。已经有的视频会保留。</p>
       <el-form label-position="top" @submit.prevent>
         <el-form-item label="每个镜头的生成次数">
           <el-input-number v-model="videoResetCount" :min="1" :max="8" :step="1" :precision="0" controls-position="right" />
         </el-form-item>
         <el-form-item label="是否生成尾帧">
           <el-checkbox v-model="videoResetGenerateEnd">生成尾帧</el-checkbox>
-          <p class="cartoon-module__hint">不勾选则这次不提交尾帧，同一场景的下一镜不拿上一镜成片尾帧当首帧。</p>
+          <p class="cartoon-module__hint">勾选后按工作流生成这一镜尾帧，交给视频，并作为下一镜的上镜尾帧。不勾选则不单独生成尾帧，视频完成后截取成片最后一帧，作为下一镜的上镜尾帧。</p>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -684,7 +684,7 @@
         </el-form-item>
         <el-form-item label="是否生成尾帧">
           <el-checkbox v-model="fullAutoGenerateEnd">生成尾帧</el-checkbox>
-          <p class="cartoon-module__hint">不勾选则每个镜头只生成首帧，视频不提交尾帧，下一镜也不衔接上一镜尾帧。</p>
+          <p class="cartoon-module__hint">勾选后按工作流生成这一镜尾帧，交给视频，并作为下一镜的上镜尾帧。不勾选则不单独生成尾帧，视频完成后截取成片最后一帧，作为下一镜的上镜尾帧。</p>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -773,7 +773,7 @@ import { isLocalType, supportsAv, TOPIC_OPTIONS, topicsOfProject } from '../lib/
 import { uncoveredScenes } from '../utils/sceneCoverage.js';
 import { framePromptText, hasPromptSet } from '../lib/framePrompt.js';
 import { PAGE_SIZES, PAGER_LAYOUT } from '../lib/pager.js';
-import { formatCoveredSeconds, promptCoveredMs } from '../lib/promptDuration.js';
+import { fitDurationSec, promptCoveredMs } from '../lib/promptDuration.js';
 
 const props = defineProps({
   forcedStep: { type: Number, default: 0 },
@@ -1694,15 +1694,21 @@ function sceneCell(row, script) {
   if (index) return `第${index}场`;
   return String(row?.scene_label || '').trim() || '—';
 }
+function fittedShotSeconds(row) {
+  const coveredMs = promptCoveredMs(row?.prompt?.positive_zh);
+  const covered = coveredMs ? coveredMs / 1000 : 0;
+  const stored = Number(row?.duration_ms) > 0 ? Number(row.duration_ms) / 1000 : 0;
+  const proposed = covered || stored;
+  if (!proposed) return 0;
+  return fitDurationSec(proposed, row?.dialogue, proposed);
+}
 function shotDurationLabel(row, withUnit) {
-  const text = formatCoveredSeconds(promptCoveredMs(row?.prompt?.positive_zh));
-  if (!text) return '—';
-  return withUnit ? `${text}s` : text;
+  const sec = fittedShotSeconds(row);
+  if (!sec) return '—';
+  return withUnit ? `${sec}s` : String(sec);
 }
 function shotDurationSeed(row) {
-  const covered = promptCoveredMs(row?.prompt?.positive_zh);
-  if (covered) return covered / 1000;
-  const sec = Number(row?.duration_ms) > 0 ? Number(row.duration_ms) / 1000 : 0;
+  const sec = fittedShotSeconds(row);
   return sec > 0 ? sec : undefined;
 }
 function shotSizeText(row) {
@@ -2305,44 +2311,37 @@ async function runPromptShot(row, item, signal, fresh = false) {
   item.status = '进行中';
   const sizes = ensureShotSizes(row);
   const moves = cameraMovesOf(row);
-  let lastError = null;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    if (signal?.aborted) throw stopError();
-    writeNote(item, attempt === 1 ? '等待服务端写回提示词' : `第 ${attempt} 次生成提示词`);
-    try {
-      await request(`/projects/${projectKey()}/imports/${current.importId}/draft/shot-expand`, {
-        method: 'post',
-        timeout: 1800000,
-        signal,
-        data: {
-          shot_id: row.id,
-          coverage: row.description,
-          description: row.description,
-          dialogue: row.dialogue,
-          duration_sec: shotDurationSeed(row),
-          shot_sizes: sizes,
-          shot_size: sizes.join(','),
-          camera_moves: moves,
-          camera_move: moves.join(','),
-        },
-      });
-      await load();
-      const saved = (detail.value?.shots || []).find(shotRow => String(shotRow.id) === String(row.id));
-      if (!saved?.prompt?.positive_zh || !saved?.prompt?.frame_start_zh || !saved?.prompt?.frame_end_zh) {
-        throw new Error(`${row.shot_code || row.id} 没有写回视频提示词或首尾帧提示词`);
-      }
-      item.status = '完成';
-      writeNote(item, attempt === 1
-        ? (saved.prompt.negative_zh ? '已写回提示词' : '负向提示词未写回')
-        : `第 ${attempt} 次已写回提示词`);
-      return;
-    } catch (err) {
-      if (isStop(err) || signal?.aborted) throw stopError();
-      lastError = err;
-      try { await load(); } catch { /* 失败后仍刷新已写入的提示词 */ }
+  if (signal?.aborted) throw stopError();
+  writeNote(item, '等待服务端写回提示词');
+  try {
+    await request(`/projects/${projectKey()}/imports/${current.importId}/draft/shot-expand`, {
+      method: 'post',
+      timeout: 1800000,
+      signal,
+      data: {
+        shot_id: row.id,
+        coverage: row.description,
+        description: row.description,
+        dialogue: row.dialogue,
+        duration_sec: shotDurationSeed(row),
+        shot_sizes: sizes,
+        shot_size: sizes.join(','),
+        camera_moves: moves,
+        camera_move: moves.join(','),
+      },
+    });
+    await load();
+    const saved = (detail.value?.shots || []).find(shotRow => String(shotRow.id) === String(row.id));
+    if (!saved?.prompt?.positive_zh || !saved?.prompt?.frame_start_zh || !saved?.prompt?.frame_end_zh) {
+      throw new Error(`${row.shot_code || row.id} 没有写回视频提示词或首尾帧提示词`);
     }
+    item.status = '完成';
+    writeNote(item, saved.prompt.negative_zh ? '已写回提示词' : '负向提示词未写回');
+  } catch (err) {
+    if (isStop(err) || signal?.aborted) throw stopError();
+    try { await load(); } catch { /* 失败后仍刷新已写入的提示词 */ }
+    throw err;
   }
-  throw new Error(`已试 3 次：${lastError?.message || '失败'}`);
 }
 async function runVideoShot(row, item, signal) {
   item.status = '进行中';
@@ -2493,8 +2492,8 @@ async function startServerVideo(shotIds, videoCount = 1, generateEnd = true) {
     applyAutoJob(job);
     armServerPoll();
     ElMessage.success(count > 1
-      ? `已提交 ${job?.total || shotIds.length} 个镜头，每个镜头 ${count} 条。先出首帧，再生成满血 H3 首尾帧`
-      : `已提交 ${job?.total || shotIds.length} 条。先出首帧，再生成满血 H3 首尾帧`);
+      ? `已提交 ${job?.total || shotIds.length} 个镜头，每个镜头 ${count} 条。按指定首帧或上镜尾帧生成满血 H3 首尾帧`
+      : `已提交 ${job?.total || shotIds.length} 条。按指定首帧或上镜尾帧生成满血 H3 首尾帧`);
     return job;
   } catch (err) {
     ElMessage.error(err.message || '没有提交');
@@ -2685,7 +2684,7 @@ async function runAuto(mode, selectedIds, fresh = false, options = {}) {
       if (stopped) break;
     }
     if (mode === 'all' && !stopped && !signal.aborted) {
-      if (failed && !options.quiet) ElMessage.warning(`有 ${failed} 条提示词没写成，视频仍会先出首帧再提交`);
+      if (failed && !options.quiet) ElMessage.warning(`有 ${failed} 条提示词没写成，视频仍会按指定首帧或上镜尾帧提交`);
       handedOff = Boolean(await startServerVideo(shots.map(row => row.id), 1, options.generateEnd !== false));
     } else if (!options.quiet && !stopped && !signal.aborted) {
       const parts = [ `成功 ${succeeded}` ];
@@ -2699,7 +2698,7 @@ async function runAuto(mode, selectedIds, fresh = false, options = {}) {
     if (noteId) {
       const status = stopped || signal.aborted ? 'stopped' : (failed ? 'failed' : 'success');
       const message = handedOff
-        ? `提示词成功 ${succeeded}，失败 ${failed}，跳过 ${skipped}。视频已转入后台，先出首帧再生成`
+        ? `提示词成功 ${succeeded}，失败 ${failed}，跳过 ${skipped}。视频已转入后台`
         : `成功 ${succeeded}，失败 ${failed}，跳过 ${skipped}`;
       await finishFlowNote(noteId, status, message);
     }

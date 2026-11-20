@@ -15,7 +15,7 @@ const { auditShot, mentionedAssetIds, shotText } = require('../lib/shotAssets');
 const { characterTag, placeTag, normalizeScript } = require('../lib/rosterNames');
 const { briefLook } = require('../lib/assetProfile');
 const { uniquePrompt } = require('../lib/promptText');
-const { promptCoveredMs } = require('../lib/promptDuration');
+const { promptCoveredMs, fitDurationSec } = require('../lib/promptDuration');
 const { topicPatch } = require('../lib/topics');
 const { chapterParagraphs, matchExcerpt } = require('../lib/sourceExcerpt');
 const {
@@ -1816,9 +1816,11 @@ class ProjectService extends Service {
     const pending = [];
     (shots || []).forEach(shot => {
       const covered = promptCoveredMs(promptByShot.get(shot.id)?.positive_zh);
-      if (!covered || Number(shot.duration_ms) === covered) return;
-      pending.push(shot.update({ duration_ms: covered }).then(() => {
-        shot.duration_ms = covered;
+      const proposed = covered ? covered / 1000 : (Number(shot.duration_ms) > 0 ? Number(shot.duration_ms) / 1000 : 10);
+      const next = fitDurationSec(proposed, shot.dialogue, proposed) * 1000;
+      if (!next || Number(shot.duration_ms) === next) return;
+      pending.push(shot.update({ duration_ms: next }).then(() => {
+        shot.duration_ms = next;
       }));
     });
     if (pending.length) await Promise.all(pending);
@@ -1863,7 +1865,10 @@ class ProjectService extends Service {
     }
     if (payload.positive_zh != null) {
       const covered = promptCoveredMs(payload.positive_zh);
-      if (covered) durationMs = covered;
+      if (covered) {
+        const dialogue = payload.dialogue != null ? payload.dialogue : shot.dialogue;
+        durationMs = fitDurationSec(covered / 1000, dialogue, durationMs / 1000) * 1000;
+      }
     }
     const nextShotSize = payload.shot_sizes != null || payload.shot_size != null
       ? assertShotSizes(payload.shot_sizes != null ? payload.shot_sizes : payload.shot_size)

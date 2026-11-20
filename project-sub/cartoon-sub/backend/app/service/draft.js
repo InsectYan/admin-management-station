@@ -18,7 +18,7 @@ const { minStoryUnits, normalizeOmissions, uncoveredScenes } = require('../lib/s
 const { settleScript } = require('../lib/scriptGate');
 const { normalizeScript, placeTag } = require('../lib/rosterNames');
 const { uniquePrompt } = require('../lib/promptText');
-const { promptCoveredMs } = require('../lib/promptDuration');
+const { promptCoveredMs, fitDurationSec } = require('../lib/promptDuration');
 const { topicsOf } = require('../lib/topics');
 const { assetFactText, namedAssets } = require('../lib/assetProfile');
 const { chapterParagraphs, resolveExcerpt, matchExcerpt } = require('../lib/sourceExcerpt');
@@ -201,12 +201,6 @@ function skillTimeout(ctx) {
 function lockIssues(script, body) {
   const source = String(body || '');
   return settleScript(script, source, minStoryUnits(source.length));
-}
-
-function clampDurationSec(value, fallback = 10) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.min(15, Math.max(5, Math.round(n)));
 }
 
 function negativeNeedsRetry(prompt) {
@@ -477,7 +471,7 @@ class DraftService extends Service {
       index,
       scene_index: Number.isInteger(Number(item.scene_index)) && Number(item.scene_index) > 0 ? Number(item.scene_index) : undefined,
       coverage: String(item.description || item.coverage || item.summary || '').trim(),
-      duration_sec: clampDurationSec(item.duration_sec, 10),
+      duration_sec: fitDurationSec(item.duration_sec, item.dialogue, 10),
       shot_size: serializeShotSizes(item.shot_sizes != null ? item.shot_sizes : item.shot_size),
       camera_move: serializeCameraMoves(item.camera_moves != null ? item.camera_moves : item.camera_move),
       dialogue: String(item.dialogue || '').trim(),
@@ -600,8 +594,9 @@ class DraftService extends Service {
       finish(this.app, claim.row, Object.assign(new Error('需要镜头涵盖的剧本内容'), { status: 400 }));
       this.ctx.throw(400, '需要镜头涵盖的剧本内容');
     }
-    const durationSec = clampDurationSec(
+    const durationSec = fitDurationSec(
       payload.duration_sec != null ? payload.duration_sec : (existing.duration_ms ? existing.duration_ms / 1000 : 10),
+      payload.dialogue != null ? payload.dialogue : existing.dialogue,
       10,
     );
     const styleCtx = await this.styleContext(project, chapter);
@@ -675,7 +670,11 @@ class DraftService extends Service {
     );
     const shot = {
       description: String(expanded?.description || seedShot.description).trim(),
-      duration_sec: clampDurationSec(expanded?.duration_sec, durationSec),
+      duration_sec: fitDurationSec(
+        Math.max(Number(expanded?.duration_sec) || 0, durationSec),
+        expanded?.dialogue || seedShot.dialogue,
+        durationSec,
+      ),
       shot_size: serializeShotSizes(expandedSizes),
       shot_sizes: expandedSizes,
       camera_move: serializeCameraMoves(expandedMoves),
@@ -946,7 +945,7 @@ class DraftService extends Service {
       shot_size: shot.shot_size,
       camera_move: shot.camera_move,
       dialogue: shot.dialogue,
-      duration_ms: coveredMs || shot.duration_sec * 1000,
+      duration_ms: fitDurationSec((coveredMs || shot.duration_sec * 1000) / 1000, shot.dialogue, shot.duration_sec) * 1000,
       overridden_fields: overrides,
     };
     if (shot.wardrobe_state) shotPatch.wardrobe_state = shot.wardrobe_state;

@@ -27,6 +27,18 @@ function declaredSeconds(source) {
   return null;
 }
 
+export function fitDurationSec(proposed, dialogue, fallback = 10) {
+  const n = Number(proposed);
+  const raw = Number.isFinite(n) ? Math.round(n) : fallback;
+  const video = Math.min(15, Math.max(5, raw));
+  const chars = String(dialogue || '').replace(/\s+/g, '').replace(/[「」“”‘’]/g, '').length;
+  if (!chars) return video;
+  const speech = Math.ceil(chars / 4);
+  const withSpeech = Math.max(video, speech);
+  const chosen = raw > video ? Math.max(withSpeech, raw) : withSpeech;
+  return Math.min(30, chosen);
+}
+
 export function promptCoveredMs(text) {
   const source = String(text || '');
   if (!source.trim()) return null;
