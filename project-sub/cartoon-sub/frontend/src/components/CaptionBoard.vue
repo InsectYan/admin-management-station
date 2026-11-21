@@ -2,7 +2,7 @@
   <section class="cartoon-module">
     <div class="caption-board__head">
       <h3 class="cartoon-module__title">提示词</h3>
-      <el-button type="primary" plain @click="router.push(`/projects/${projectId}/captions`)">获取提示词</el-button>
+      <el-button type="primary" plain @click="router.push({ path: '/skills/prompts/reverse', query: { project: String(projectId) } })">获取提示词</el-button>
     </div>
     <p v-if="job.active" class="cartoon-module__hint">{{ job.note }}。离开页面后会继续，回到获取提示词页可以看进度。</p>
     <el-empty v-if="!loading && !cards.length" description="还没有保存的提示词" />

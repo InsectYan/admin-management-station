@@ -25,7 +25,14 @@
           </section>
           <div class="cartoon-output-wrap">
             <div class="cartoon-output-grid" :class="{ 'is-single': cards.length === 1 }">
-              <el-card v-for="card in cards" :key="card.key" shadow="never" class="cartoon-output">
+              <el-card
+                v-for="card in cards"
+                :key="card.key"
+                shadow="never"
+                class="cartoon-output"
+                :class="{ 'is-picked': String(card.task.id) === String(route.query.record || '') }"
+                :data-record="card.task.id"
+              >
                 <div class="cartoon-output__head">
                   <p>
                     <span class="cartoon-record">记录 #{{ card.task.id }}</span>
@@ -74,13 +81,14 @@
         </el-tab-pane>
         <el-tab-pane label="基础信息" name="info">
           <div class="cartoon-preview-info__table">
-          <el-table v-if="submitRows.length" :data="submitRows" row-key="key" size="small">
+          <el-table v-if="submitRows.length" :data="submitRows" row-key="key" size="small" max-height="300">
             <el-table-column label="记录" width="90" prop="record" />
             <el-table-column label="提交" width="90" prop="part" />
             <el-table-column label="工作流" min-width="180" prop="workflow" />
             <el-table-column label="尺寸" width="130" prop="size" />
             <el-table-column label="种子" width="120" prop="seed" />
-            <el-table-column label="生成时间" width="120" prop="elapsed" />
+            <el-table-column label="生成时间" width="120" prop="finished" />
+            <el-table-column label="耗时" width="120" prop="elapsed" />
             <el-table-column label="参考图" width="90" prop="refs" />
             <el-table-column label="提示词字数" width="110" prop="chars" />
             <el-table-column label="状态" width="100" prop="status" />
@@ -124,6 +132,12 @@
                   <dt>工作流</dt>
                   <dd>
                     {{ panelOf(task).generation?.workflow_name || '没有记下名称' }}
+                    <el-tag
+                      v-if="briefTab(task) === 'video' && dualText(panelOf(task))"
+                      size="small"
+                      :type="panelOf(task).generation?.dual_sample ? 'success' : 'info'"
+                      class="cartoon-brief__dual"
+                    >{{ dualText(panelOf(task)) }}</el-tag>
                     <template v-if="panelOf(task).generation?.workflow_id"> · #{{ panelOf(task).generation.workflow_id }}</template>
                     <a
                       v-if="panelOf(task).generation?.workflow_id"
@@ -200,7 +214,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useRoute, useRouter } from 'vue-router';
 import MediaFileList from '../components/MediaFileList.vue';
@@ -247,6 +261,7 @@ function submitLine(part, generation, task) {
     size: generation.width && generation.height ? `${generation.width} × ${generation.height}` : '—',
     seed: generation.seed ?? '—',
     elapsed: elapsedText(generation, task),
+    finished: finishedDate(generation, task),
     refs: Array.isArray(generation.references) ? generation.references.length : 0,
     chars: String(generation.positive || '').length,
     status: statusLabel(task.status),
@@ -303,6 +318,12 @@ function generationOf(task) {
 }
 function isVideoTask(task) {
   return VIDEO_KINDS.has(task?.kind);
+}
+function dualText(panel) {
+  const value = panel?.generation?.dual_sample;
+  if (value === true) return '双采';
+  if (value === false) return '非双采';
+  return '';
 }
 function briefTab(task) {
   return briefTabs[task.id] || 'video';
@@ -395,6 +416,16 @@ function formatElapsed(ms) {
   const min = Math.floor(sec / 60);
   const rest = sec % 60;
   return rest ? `${min} 分 ${rest} 秒` : `${min} 分`;
+}
+function finishedDate(generation, task) {
+  const raw = generation?.finished_at
+    || (task?.status === 'success' ? (task?.updated_at || task?.updatedAt) : '');
+  const time = Date.parse(raw || '');
+  if (!Number.isFinite(time)) return '未记';
+  const date = new Date(time);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 function elapsedText(generation, task) {
   const stored = Number(generation?.elapsed_ms);
@@ -538,6 +569,11 @@ async function load() {
     }
     await loadProfiles(outputs);
     loaded.value = true;
+    const record = String(route.query.record || '');
+    if (record) {
+      await nextTick();
+      document.querySelector(`[data-record="${record}"]`)?.scrollIntoView({ block: 'center' });
+    }
     const active = tasks.value.some(item => [ 'queued', 'running', 'saving' ].includes(item.status));
     if (active && !pollTimer) pollTimer = setInterval(load, 3000);
     if (!active) stopPoll();
@@ -601,6 +637,7 @@ onUnmounted(stopPoll);
   .cartoon-output-grid:not(.is-single) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .cartoon-output { margin: 0; }
+.cartoon-output.is-picked { outline: 2px solid #2f8a5b; }
 .cartoon-output__head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
 .cartoon-output__head p { margin: 0; }
 .cartoon-record { color: #2f8a5b; font-weight: 600; }
@@ -619,6 +656,7 @@ onUnmounted(stopPoll);
 .cartoon-output-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .cartoon-output-grid.is-single .cartoon-output-side { flex: 1; }
 .cartoon-output__marks { display: flex; flex-wrap: wrap; gap: 8px; }
+.cartoon-brief__dual { margin-left: 8px; vertical-align: bottom; }
 .cartoon-precheck-link { margin-left: 8px; color: #2f8a5b; }
 .cartoon-devices { display: flex; flex-wrap: wrap; gap: 8px; }
 .cartoon-device { width: 96px; flex: 0 0 96px; }

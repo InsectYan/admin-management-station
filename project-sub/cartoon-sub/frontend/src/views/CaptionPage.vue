@@ -1,23 +1,28 @@
 <template>
-  <PageShell title="获取提示词" :loading="loading && !ready">
+  <PageShell title="提示词反推" :loading="loading && !ready">
     <template #extra>
       <div v-if="job.active" class="caption-progress">
         <span>总进度 {{ job.done || 0 }}/{{ job.total || 0 }}</span>
         <el-progress :percentage="job.percent || 0" :format="formatPercent" :indeterminate="job.waiting" :stroke-width="8" color="#2f8a5b" />
         <span>{{ job.note }}</span>
       </div>
-      <el-button :disabled="!canMake() || !workflowId" @click="runEmpty">一键执行</el-button>
+      <el-button :disabled="!canMake() || !projectId || !workflowId" @click="runEmpty">一键执行</el-button>
       <el-button type="danger" plain :disabled="!canMake() || !job.active" :loading="stopping" @click="stopJob">停止</el-button>
       <el-button-group>
-        <el-button :disabled="!canMake() || job.active || !hasPrompt" :loading="clearing" @click="clearPrompts">一键清除</el-button>
-        <el-button type="danger" :disabled="!canMake() || job.active || !cards.length" :loading="deleting" @click="deleteCards">一键删除</el-button>
+        <el-button :disabled="!canMake() || !projectId || job.active || !hasPrompt" :loading="clearing" @click="clearPrompts">一键清除</el-button>
+        <el-button type="danger" :disabled="!canMake() || !projectId || job.active || !cards.length" :loading="deleting" @click="deleteCards">一键删除</el-button>
       </el-button-group>
-      <el-button link type="primary" @click="back">返回项目</el-button>
+      <el-button link type="primary" @click="back">返回提示词</el-button>
     </template>
     <div class="caption-page">
       <div class="caption-page__scroll">
         <section class="cartoon-module">
           <el-form label-position="top">
+            <el-form-item label="项目">
+              <el-select :model-value="projectId" filterable placeholder="选择项目" style="width: 100%" @change="onProject">
+                <el-option v-for="item in projects" :key="item.id" :label="item.name" :value="String(item.id)" />
+              </el-select>
+            </el-form-item>
             <el-form-item label="反推工作流">
               <el-select v-model="workflowId" filterable placeholder="选择反推工作流" style="width: 100%">
                 <el-option v-for="item in workflows" :key="item.id" :label="workflowLabel(item)" :value="item.id" />
@@ -55,7 +60,7 @@
                 accept="image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime,.mov"
                 :on-change="onPick"
               >
-                <el-button type="primary" plain :loading="uploading">批量上传</el-button>
+                <el-button type="primary" plain :disabled="!projectId" :loading="uploading">批量上传</el-button>
               </el-upload>
               <p class="cartoon-module__hint">可以一次选多张图片或多个视频。图片不超过 12MB，视频不超过 64MB。</p>
             </el-form-item>
@@ -72,7 +77,7 @@
               <strong>{{ card.original_name || (card.media_kind === 'video' ? '视频' : '图片') }}</strong>
               <span>
                 <el-button link type="danger" :disabled="busy(card)" @click="removeCard(card)">移除</el-button>
-                <el-button size="small" type="primary" :disabled="!canMake() || busy(card)" @click="runOne(card)">执行</el-button>
+                <el-button size="small" type="primary" :disabled="!canMake() || !projectId || busy(card)" @click="runOne(card)">执行</el-button>
               </span>
             </header>
             <VideoWithRate v-if="card.media_kind === 'video'" :src="fileUrl(card)" muted controls preload="metadata" />
@@ -90,14 +95,14 @@
         </div>
       </div>
       <div class="caption-page__dock">
-        <el-button type="primary" :disabled="!canMake()" :loading="saving" @click="save">保存</el-button>
+        <el-button type="primary" :disabled="!canMake() || !projectId" :loading="saving" @click="save">保存</el-button>
       </div>
     </div>
   </PageShell>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
@@ -107,7 +112,8 @@ import VideoWithRate from '../components/VideoWithRate.vue';
 
 const route = useRoute();
 const router = useRouter();
-const projectId = route.params.id;
+const projects = ref([]);
+const projectId = computed(() => String(route.query.project || route.params.id || ''));
 const loading = ref(true);
 const ready = ref(false);
 const uploading = ref(false);
@@ -137,7 +143,7 @@ function workflowLabel(item) {
   return `${item.name} · ${item.media === 'video' ? '视频' : '图片'}`;
 }
 function fileUrl(card) {
-  return `${resolveApiBase()}/projects/${projectId}/captions/${card.id}/file`;
+  return `${resolveApiBase()}/projects/${projectId.value}/captions/${card.id}/file`;
 }
 function busy(card) {
   return card.status === 'queued' || card.status === 'running';
@@ -182,7 +188,7 @@ function applyBoard(data, resetText) {
   else stop();
 }
 async function load(resetText) {
-  const data = await request(`/projects/${projectId}/captions`);
+  const data = await request(`/projects/${projectId.value}/captions`);
   applyBoard(data, resetText);
 }
 function follow() {
@@ -196,7 +202,10 @@ function stop() {
   timer = null;
 }
 function back() {
-  router.push({ path: `/projects/${projectId}`, query: { tab: '5' } });
+  router.push('/skills/prompts');
+}
+function onProject(id) {
+  router.replace({ path: '/skills/prompts/reverse', query: { project: String(id) } });
 }
 function readFile(file) {
   return new Promise((resolve, reject) => {
@@ -213,13 +222,18 @@ function onPick(uploadFile) {
 }
 async function pump() {
   if (pumping) return;
+  if (!projectId.value) {
+    ElMessage.warning('先选择项目');
+    queue.length = 0;
+    return;
+  }
   pumping = true;
   uploading.value = true;
   try {
     while (queue.length) {
       const file = queue.shift();
       const data = await readFile(file);
-      const saved = await request(`/projects/${projectId}/captions/files`, {
+      const saved = await request(`/projects/${projectId.value}/captions/files`, {
         method: 'post',
         data,
         timeout: 120000,
@@ -253,7 +267,7 @@ async function runOne(card) {
     return;
   }
   try {
-    const data = await request(`/projects/${projectId}/captions/${card.id}/run`, {
+    const data = await request(`/projects/${projectId.value}/captions/${card.id}/run`, {
       method: 'post',
       data: {
         workflow_id: workflowId.value,
@@ -275,7 +289,7 @@ async function runEmpty() {
     return;
   }
   try {
-    const data = await request(`/projects/${projectId}/captions/run-empty`, {
+    const data = await request(`/projects/${projectId.value}/captions/run-empty`, {
       method: 'post',
       data: {
         workflow_id: workflowId.value,
@@ -303,7 +317,7 @@ async function stopJob() {
   }
   stopping.value = true;
   try {
-    const data = await request(`/projects/${projectId}/captions/stop`, { method: 'post' });
+    const data = await request(`/projects/${projectId.value}/captions/stop`, { method: 'post' });
     applyBoard(data, false);
     ElMessage.success('已停止');
   } catch (err) {
@@ -315,7 +329,7 @@ async function stopJob() {
 async function save() {
   saving.value = true;
   try {
-    const data = await request(`/projects/${projectId}/captions`, { method: 'put', data: payload() });
+    const data = await request(`/projects/${projectId.value}/captions`, { method: 'put', data: payload() });
     applyBoard(data, true);
     ElMessage.success('已保存');
   } catch (err) {
@@ -336,7 +350,7 @@ async function clearPrompts() {
   }
   clearing.value = true;
   try {
-    const data = await request(`/projects/${projectId}/captions/clear-prompts`, { method: 'post' });
+    const data = await request(`/projects/${projectId.value}/captions/clear-prompts`, { method: 'post' });
     applyBoard(data, false);
     const server = new Map((data?.cards || []).map(item => [ item.id, item.result_prompt || '' ]));
     cards.value = cards.value.map(item => {
@@ -362,7 +376,7 @@ async function deleteCards() {
   }
   deleting.value = true;
   try {
-    const data = await request(`/projects/${projectId}/captions`, { method: 'delete' });
+    const data = await request(`/projects/${projectId.value}/captions`, { method: 'delete' });
     applyBoard(data, false);
     ElMessage.success('已删除全部卡片');
   } catch (err) {
@@ -378,7 +392,7 @@ async function removeCard(card) {
     return;
   }
   try {
-    const data = await request(`/projects/${projectId}/captions/${card.id}`, { method: 'delete' });
+    const data = await request(`/projects/${projectId.value}/captions/${card.id}`, { method: 'delete' });
     applyBoard(data, false);
   } catch (err) {
     ElMessage.error(err.message);
@@ -386,13 +400,28 @@ async function removeCard(card) {
 }
 onMounted(async () => {
   try {
+    projects.value = await request('/projects') || [];
+  } catch (err) {
+    ElMessage.error(err.message);
+  }
+});
+watch(projectId, async id => {
+  stop();
+  if (!id) {
+    cards.value = [];
+    ready.value = true;
+    loading.value = false;
+    return;
+  }
+  loading.value = true;
+  try {
     await load(true);
   } catch (err) {
     ElMessage.error(err.message);
   } finally {
     loading.value = false;
   }
-});
+}, { immediate: true });
 onUnmounted(stop);
 </script>
 

@@ -92,7 +92,9 @@
               <template #default="{ row }">{{ row.media_kind === 'video' ? '视频' : '图片' }}</template>
             </el-table-column>
             <el-table-column label="提示词" min-width="280">
-              <template #default="{ row }">{{ row.result_prompt || '还没有提示词' }}</template>
+              <template #default="{ row }">
+                <ClampText title="提示词" :lines="1" :text="row.result_prompt || '还没有提示词'" />
+              </template>
             </el-table-column>
             <el-table-column label="工作流" min-width="180">
               <template #default="{ row }">{{ row.workflow_name || '—' }}</template>
@@ -171,6 +173,7 @@ import { computed, nextTick, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { WarningFilled } from '@element-plus/icons-vue';
+import ClampText from '../components/ClampText.vue';
 import MediaFileList from '../components/MediaFileList.vue';
 import PageShell from '../components/PageShell.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
@@ -360,7 +363,7 @@ async function removeRow(row) {
   }
 }
 function openPrompt(row) {
-  router.push({ path: `/projects/${row.project_id}`, query: { tab: '5' } });
+  router.push('/skills/prompts');
 }
 function refreshFilter() {
   filterTick.value += 1;

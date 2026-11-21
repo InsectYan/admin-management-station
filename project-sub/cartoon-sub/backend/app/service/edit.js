@@ -171,16 +171,37 @@ class EditService extends Service {
     if (edit) {
       const graph = await this.loadGraph(edit);
       presented = this.presentEdit(edit, graph, videoRows);
+      try {
+        await this.ctx.model.EditJob.update(
+          { project_id: edit.project_id },
+          { where: { edit_id: edit.id, project_id: null } },
+        );
+      } catch (err) {
+        this.ctx.logger.warn('[cartoon] 成片项目回填 %s', err.message);
+      }
       const jobs = await this.ctx.model.EditJob.findAll({
         where: { edit_id: edit.id, status: 'success' },
         order: [[ 'id', 'DESC' ]],
-        limit: 5,
       });
-      exports = jobs.filter(job => job.output_id).map(job => ({
-        id: job.output_id,
-        job_id: job.id,
-        created_at: iso(job.created_at),
-      }));
+      const outputIds = jobs.map(job => job.output_id).filter(Boolean);
+      const outputs = outputIds.length
+        ? await this.ctx.model.Output.findAll({ where: { id: outputIds } })
+        : [];
+      const outputById = new Map(outputs.map(row => [ row.id, row ]));
+      exports = jobs.filter(job => outputById.has(job.output_id)).map(job => {
+        const output = outputById.get(job.output_id);
+        return {
+          id: output.id,
+          job_id: job.id,
+          project_id: job.project_id || edit.project_id,
+          project_name: project.name,
+          title: edit.title || '成片',
+          width: output.width || edit.width,
+          height: output.height || edit.height,
+          duration_ms: output.duration_ms || edit.duration_ms,
+          created_at: iso(job.created_at),
+        };
+      });
     }
     return {
       project: { id: project.id, name: project.name },

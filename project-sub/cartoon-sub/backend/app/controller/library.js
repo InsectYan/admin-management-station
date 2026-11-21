@@ -10,7 +10,7 @@ const { fail } = require('../lib/httpError');
 class LibraryController extends Controller {
   async assets() {
     try {
-      ok(this.ctx, await this.ctx.service.library.assets(this.ctx.params.kind || ''));
+      ok(this.ctx, await this.ctx.service.library.assets(this.ctx.params.kind || '', this.ctx.query || {}));
     } catch (err) {
       fail(this.ctx, err);
     }
@@ -67,6 +67,22 @@ class LibraryController extends Controller {
   async updateShared() {
     try {
       ok(this.ctx, await this.ctx.service.library.updateShared(this.ctx.params.id, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async setVisibility() {
+    try {
+      ok(this.ctx, await this.ctx.service.library.setVisibility(this.ctx.params.id, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async bindShared() {
+    try {
+      ok(this.ctx, await this.ctx.service.library.bindShared(this.ctx.params.id, this.ctx.request.body || {}));
     } catch (err) {
       fail(this.ctx, err);
     }

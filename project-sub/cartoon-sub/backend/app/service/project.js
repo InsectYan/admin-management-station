@@ -141,6 +141,46 @@ async function frameFileMeta(app, relative) {
   }
 }
 
+function sceneKeyOf(shot) {
+  const index = Number(shot?.scene_index);
+  if (Number.isInteger(index) && index > 0) return `n:${index}`;
+  const label = String(shot?.scene_label || '').trim();
+  return label ? `l:${label}` : '';
+}
+
+async function carryFrameList(app, projectId, prevId) {
+  const dir = resolveInside(outputRoot(app), `frames/${projectId}/${prevId}`);
+  if (!dir || !fs.existsSync(dir)) return [];
+  let names = [];
+  try {
+    names = await fs.promises.readdir(dir);
+  } catch {
+    return [];
+  }
+  const ends = new Map();
+  const lasts = new Map();
+  names.forEach(name => {
+    const end = /^b(\d+)-end\.png$/.exec(name);
+    const last = /^b(\d+)-last\.png$/.exec(name);
+    if (end) ends.set(Number(end[1]), name);
+    if (last) lasts.set(Number(last[1]), name);
+  });
+  const indexes = [ ...new Set([ ...ends.keys(), ...lasts.keys() ]) ].sort((a, b) => a - b);
+  const frames = [];
+  for (const index of indexes) {
+    const name = ends.get(index) || lasts.get(index);
+    const meta = await frameFileMeta(app, `frames/${projectId}/${prevId}/${name}`);
+    if (!meta) continue;
+    frames.push({
+      index,
+      mtime: meta.mtime,
+      width: meta.width,
+      height: meta.height,
+    });
+  }
+  return frames;
+}
+
 function novelBriefOf(novel) {
   const themes = (novel?.themes || []).map(item => item.name).filter(Boolean);
   return {
@@ -225,7 +265,24 @@ class ProjectService extends Service {
       where: { project_id: id },
       attributes: {
         exclude: [ 'workflow_snapshot' ],
-        include: [[ this.app.Sequelize.literal('(workflow_snapshot IS NOT NULL)'), 'has_workflow_snapshot' ]],
+        include: [
+          [ this.app.Sequelize.literal('(workflow_snapshot IS NOT NULL)'), 'has_workflow_snapshot' ],
+          [ this.app.Sequelize.literal(`(
+            CASE
+              WHEN workflow_snapshot IS NULL THEN NULL
+              WHEN EXISTS (
+                SELECT 1 FROM jsonb_object_keys(
+                  CASE
+                    WHEN jsonb_typeof(workflow_snapshot -> 'prompt') = 'object' THEN workflow_snapshot -> 'prompt'
+                    ELSE workflow_snapshot
+                  END
+                ) AS dual_key
+                WHERE dual_key LIKE 'dual-%'
+              ) THEN TRUE
+              ELSE FALSE
+            END
+          )`), 'dual_sample' ],
+        ],
       },
       order: [[ 'id', 'DESC' ]],
     });
@@ -258,6 +315,20 @@ class ProjectService extends Service {
       }
     }
     taskViews = this.ctx.service.generate.linkFrameViews(taskViews, promptByShot);
+    const carryFor = new Map();
+    const carryCache = new Map();
+    const previousByImport = new Map();
+    for (const shot of shots) {
+      const bucket = String(shot.import_id || '');
+      const prev = previousByImport.get(bucket) || null;
+      const key = sceneKeyOf(shot);
+      const prevKey = prev ? sceneKeyOf(prev) : '';
+      if (prev && key && key === prevKey) {
+        if (!carryCache.has(prev.id)) carryCache.set(prev.id, await carryFrameList(this.app, id, prev.id));
+        carryFor.set(shot.id, carryCache.get(prev.id));
+      }
+      previousByImport.set(bucket, shot);
+    }
     const shotViews = await Promise.all(shots.map(async shot => {
       const json = shot.toJSON();
       const sizes = normalizeShotSizes(json.shot_size);
@@ -283,6 +354,7 @@ class ProjectService extends Service {
         end_frame_width: endFrame?.width || 0,
         end_frame_height: endFrame?.height || 0,
         prompt: presentPrompt(promptByShot.get(shot.id)),
+        carry_frames: carryFor.get(shot.id) || [],
         asset_marks: this.assetMarksFor(shot, assets, importById, promptByShot, bindings),
       };
     }));
@@ -1641,6 +1713,103 @@ class ProjectService extends Service {
     return hits.map(asset => asset.id);
   }
 
+  briefPart(task) {
+    const raw = task?.generation_brief;
+    let brief = raw;
+    if (typeof raw === 'string') {
+      try { brief = JSON.parse(raw); } catch { brief = {}; }
+    }
+    return String(brief?.part || '');
+  }
+
+  reelCard(output, task, shot, chapter) {
+    return {
+      id: output.id,
+      task_id: task?.id || null,
+      shot_id: shot?.id || null,
+      shot_code: shot?.shot_code || '',
+      chapter_title: chapter?.chapter_title || '',
+      media_kind: output.media_kind,
+      version_stage: output.version_stage,
+      duration_ms: output.duration_ms,
+      part: this.briefPart(task),
+      created_at: output.created_at,
+    };
+  }
+
+  async reel(projectId) {
+    const project = await this.ctx.model.Project.findByPk(projectId);
+    if (!project || project.deleted_at) this.ctx.throw(404, '项目不存在');
+    const [ shots, imports, tasks ] = await Promise.all([
+      this.ctx.model.Shot.findAll({ where: { project_id: project.id } }),
+      this.ctx.model.Import.findAll({
+        where: { project_id: project.id },
+        attributes: [ 'id', 'chapter_title', 'deleted_at' ],
+      }),
+      this.ctx.model.Task.findAll({
+        where: { project_id: project.id, status: 'success' },
+        attributes: { exclude: [ 'workflow_snapshot' ] },
+        order: [[ 'id', 'DESC' ]],
+      }),
+    ]);
+    const shotById = new Map(shots.map(row => [ row.id, row ]));
+    const importById = new Map(imports.map(row => [ row.id, row ]));
+    const taskById = new Map(tasks.map(row => [ row.id, row ]));
+    const taskIds = tasks.map(row => row.id);
+    const outputs = taskIds.length
+      ? await this.ctx.model.Output.findAll({ where: { task_id: taskIds }, order: [[ 'id', 'DESC' ]] })
+      : [];
+    const videos = [];
+    const frames = [];
+    outputs.forEach(output => {
+      const task = taskById.get(output.task_id);
+      if (!task || output.edit_job_id) return;
+      const shot = task.shot_id ? shotById.get(task.shot_id) : null;
+      const chapter = shot?.import_id ? importById.get(shot.import_id) : null;
+      const card = this.reelCard(output, task, shot, chapter);
+      const file = String(output.file_path || '');
+      const captured = output.version_stage === 'frame_first'
+        || output.version_stage === 'frame_last'
+        || /\/frames\/(?:first|last)\.png$/i.test(file);
+      const frameTask = card.part === 'start' || card.part === 'end';
+      if (captured || (output.media_kind === 'image' && frameTask)) {
+        const end = output.version_stage === 'frame_last' || card.part === 'end' || /last\.png$/i.test(file);
+        frames.push({ ...card, frame_role: end ? 'end' : 'start' });
+        return;
+      }
+      if (output.media_kind === 'video') videos.push(card);
+    });
+    const edit = await this.ctx.model.Edit.findOne({ where: { project_id: project.id } });
+    let finals = [];
+    if (edit) {
+      const jobs = await this.ctx.model.EditJob.findAll({
+        where: { edit_id: edit.id, status: 'success' },
+        order: [[ 'id', 'DESC' ]],
+      });
+      const outputIds = jobs.map(job => job.output_id).filter(Boolean);
+      const finalOutputs = outputIds.length
+        ? await this.ctx.model.Output.findAll({ where: { id: outputIds } })
+        : [];
+      const outputById = new Map(finalOutputs.map(row => [ row.id, row ]));
+      finals = jobs.filter(job => outputById.has(job.output_id)).map(job => {
+        const output = outputById.get(job.output_id);
+        return {
+          id: output.id,
+          job_id: job.id,
+          project_id: job.project_id || project.id,
+          project_name: project.name,
+          title: edit.title || '成片',
+          media_kind: 'video',
+          duration_ms: output.duration_ms || edit.duration_ms,
+          width: output.width || edit.width,
+          height: output.height || edit.height,
+          created_at: job.created_at,
+        };
+      });
+    }
+    return { videos, frames, finals };
+  }
+
   async markRevised(shotId) {
     const tasks = await this.ctx.model.Task.findAll({ where: { shot_id: shotId, status: 'success' } });
     if (!tasks.length) return;
@@ -1796,12 +1965,44 @@ class ProjectService extends Service {
     return { manual_frame_path: relative };
   }
 
+  async previousSceneShot(shot) {
+    const key = sceneKeyOf(shot);
+    if (!key) return null;
+    const { Op } = require('sequelize');
+    const prev = await this.ctx.model.Shot.findOne({
+      where: {
+        project_id: shot.project_id,
+        import_id: shot.import_id || null,
+        [Op.or]: [
+          { sort_order: { [Op.lt]: shot.sort_order } },
+          { sort_order: shot.sort_order, id: { [Op.lt]: shot.id } },
+        ],
+      },
+      order: [[ 'sort_order', 'DESC' ], [ 'id', 'DESC' ]],
+    });
+    if (!prev || sceneKeyOf(prev) !== key) return null;
+    return prev;
+  }
+
   async sendFrame(projectId, shotId, which) {
     const shot = await this.ctx.model.Shot.findByPk(shotId);
     if (!shot || String(shot.project_id) !== String(projectId)) this.ctx.throw(404, '分镜不存在');
     const column = which === 'manual' ? 'manual_frame_path' : 'first_frame_path';
+    const carry = /^carry-(\d+)$/.exec(String(which || ''));
     let relative = '';
-    if (which === 'end') relative = `frames/${projectId}/${shot.id}/end.png`;
+    if (carry) {
+      const index = Number(carry[1]);
+      const prev = await this.previousSceneShot(shot);
+      if (!prev) this.ctx.throw(404, '帧不存在');
+      const relatives = [
+        `frames/${projectId}/${prev.id}/b${index}-end.png`,
+        `frames/${projectId}/${prev.id}/b${index}-last.png`,
+      ];
+      relative = relatives.find(item => {
+        const absolute = resolveInside(outputRoot(this.app), item);
+        return absolute && fs.existsSync(absolute);
+      }) || '';
+    } else if (which === 'end') relative = `frames/${projectId}/${shot.id}/end.png`;
     else if (which === 'manual' || which === 'auto') relative = shot[column];
     else this.ctx.throw(404, '帧不存在');
     if (!relative) this.ctx.throw(404, '帧不存在');

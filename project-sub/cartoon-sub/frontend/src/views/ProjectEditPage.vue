@@ -47,6 +47,30 @@
       <div v-if="latest" class="cartoon-edit-result">
         <VideoWithRate :src="fileUrl(latest.id)" controls />
       </div>
+      <section v-if="store.exports.length" class="cartoon-edit-finals">
+        <h3 class="cartoon-module__title">已导出成片</h3>
+        <p class="cartoon-module__hint">每次导出都留在这张表里，并记下所属项目。点记录编号可预览这一条成片。</p>
+        <el-table :data="store.exports" row-key="id" size="small">
+          <el-table-column label="成品" width="90">
+            <template #default="{ row }">#{{ row.id }}</template>
+          </el-table-column>
+          <el-table-column label="记录" width="110">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="openFinal(row)">#{{ row.job_id }}</el-button>
+            </template>
+          </el-table-column>
+          <el-table-column label="项目" min-width="140">
+            <template #default="{ row }">{{ row.project_name || store.project?.name || '当前项目' }}</template>
+          </el-table-column>
+          <el-table-column label="尺寸" width="130">
+            <template #default="{ row }">{{ row.width && row.height ? `${row.width}×${row.height}` : '—' }}</template>
+          </el-table-column>
+          <el-table-column label="时长" width="90">
+            <template #default="{ row }">{{ row.duration_ms ? `${Math.round(row.duration_ms / 1000)} 秒` : '—' }}</template>
+          </el-table-column>
+          <el-table-column label="时间" min-width="180" prop="created_at" />
+        </el-table>
+      </section>
     </template>
   </PageShell>
 </template>
@@ -88,6 +112,9 @@ const jobLabel = computed(() => ({ queued: '排队', running: '进行中', succe
 
 function fileUrl(id) {
   return `${resolveApiBase()}/outputs/${id}/file`;
+}
+function openFinal(row) {
+  router.replace({ query: { node: 'preview', final: String(row.id) } });
 }
 function stopPoll() {
   if (pollTimer) clearInterval(pollTimer);

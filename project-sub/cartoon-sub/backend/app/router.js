@@ -34,6 +34,8 @@ module.exports = app => {
   router.get('/api/library/captions', controller.caption.library);
   router.post('/api/library/shared', controller.library.createShared);
   router.put('/api/library/shared/:id', controller.library.updateShared);
+  router.post('/api/library/shared/:id/bind', controller.library.bindShared);
+  router.post('/api/library/assets/:id/visibility', controller.library.setVisibility);
   router.get('/api/rules', controller.rule.index);
   router.post('/api/rules', controller.rule.create);
   router.put('/api/rules/:id', controller.rule.update);
@@ -55,6 +57,7 @@ module.exports = app => {
   router.delete('/api/projects/:id/captions/:cardId', controller.caption.remove);
   router.get('/api/projects/:id/captions/:cardId/file', controller.caption.file);
   router.post('/api/projects/:id/captions/:cardId/run', controller.caption.run);
+  router.get('/api/projects/:id/reel', controller.project.reel);
   router.get('/api/projects/:id', controller.project.show);
   router.put('/api/projects/:id/tasks/:taskId', controller.project.touchNode);
   router.put('/api/projects/:id', controller.project.update);
@@ -113,6 +116,7 @@ module.exports = app => {
   router.post('/api/projects/:id/assets/generate', controller.fullAuto.generateAssets);
   router.post('/api/projects/:id/assets/profiles', controller.fullAuto.profileAssets);
   router.get('/api/voice-library', controller.voiceLibrary.index);
+  router.post('/api/voice-library/extract', controller.voiceLibrary.extract);
   router.get('/api/voice-library/file', controller.voiceLibrary.file);
   router.post('/api/projects/:id/voice/suggest', controller.skillSuggest.suggestVoice);
   router.post('/api/projects/:id/voice/apply', controller.skillSuggest.applyVoice);

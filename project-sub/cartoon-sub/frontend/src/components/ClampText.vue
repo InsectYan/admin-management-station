@@ -1,17 +1,22 @@
 <template>
-  <div class="cartoon-clamp" @click.stop="open = true">{{ text || '—' }}</div>
+  <div class="cartoon-clamp" :style="clampStyle" @click.stop="open = true">{{ text || '—' }}</div>
   <el-dialog v-model="open" :title="title" width="640px" append-to-body>
     <div class="cartoon-clamp__full">{{ text || '—' }}</div>
   </el-dialog>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
-defineProps({
+const props = defineProps({
   text: { type: String, default: '' },
   title: { type: String, default: '全文' },
+  lines: { type: Number, default: 5 },
 });
+const clampStyle = computed(() => ({
+  WebkitLineClamp: String(props.lines),
+  maxHeight: `calc(1.5em * ${props.lines})`,
+}));
 const open = ref(false);
 </script>
 
@@ -19,12 +24,10 @@ const open = ref(false);
 .cartoon-clamp {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 5;
   overflow: hidden;
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.5;
-  max-height: calc(1.5em * 5);
   cursor: pointer;
 }
 .cartoon-clamp__full {

@@ -55,6 +55,7 @@ class EditExportService extends Service {
       await this.clipsForExport(edit);
       const job = await this.ctx.model.EditJob.create({
         edit_id: edit.id,
+        project_id: Number(projectId),
         status: 'queued',
         progress: 0,
       });

@@ -24,6 +24,14 @@ class ProjectController extends Controller {
     }
   }
 
+  async reel() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.reel(this.ctx.params.id));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async showImport() {
     try {
       ok(this.ctx, await this.ctx.service.project.showImport(this.ctx.params.id, this.ctx.params.importId));

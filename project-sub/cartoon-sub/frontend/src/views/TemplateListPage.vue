@@ -1,5 +1,5 @@
 <template>
-  <PageShell title="模板中心" :loading="loading">
+  <PageShell title="模板" :loading="loading">
     <div class="cartoon-module cartoon-template-filters">
       <el-select v-model="contentType" clearable placeholder="内容类型" style="width: 160px">
         <el-option v-for="item in CONTENT_TYPES" :key="item.id" :label="item.label" :value="item.id" />

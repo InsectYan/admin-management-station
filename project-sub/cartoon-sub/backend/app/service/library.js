@@ -20,19 +20,85 @@ class LibraryService extends Service {
     return new Map(rows.map(row => [ row.id, row ]));
   }
 
-  async assets(kind) {
+  presentAsset(row, projects) {
+    return {
+      ...row.toJSON(),
+      row_key: `asset-${row.id}`,
+      source: 'asset',
+      project_name: projects.get(row.project_id)?.name || '',
+      is_public: Boolean(row.library_asset_id),
+      shared_label: row.library_asset_id ? `共享 #${row.library_asset_id}` : '',
+    };
+  }
+
+  presentLibrary(row) {
+    return {
+      id: row.id,
+      row_key: `library-${row.id}`,
+      source: 'library',
+      library_asset_id: row.id,
+      kind: row.kind,
+      name: row.name,
+      description: row.description || '',
+      project_id: null,
+      project_name: '',
+      reference_path: '',
+      voice_key: '',
+      prop_category: '',
+      voice_lang: '',
+      speaker_name: '',
+      angle_paths: '',
+      is_public: true,
+      shared_label: `共享 #${row.id}`,
+    };
+  }
+
+  async assets(kind, query = {}) {
     if (kind && !ASSET_KINDS[kind]) this.ctx.throw(400, '资产分类不存在');
     const { Op } = this.app.Sequelize;
-    const where = !kind
-      ? {}
-      : (kind === 'materials' ? { kind: { [Op.in]: [ 'bgm', 'sfx', 'subtitle_style', 'transition' ] } } : { kind: ASSET_KINDS[kind] });
+    const projectId = Number(query.project_id) || null;
+    const where = {};
+    if (projectId) where.project_id = projectId;
+    if (kind === 'materials') where.kind = { [Op.in]: [ 'bgm', 'sfx', 'subtitle_style', 'transition' ] };
+    else if (kind) where.kind = ASSET_KINDS[kind];
     const rows = await this.ctx.model.Asset.findAll({ where, order: [[ 'id', 'DESC' ]], limit: 100 });
     const projects = await this.names([ ...new Set(rows.map(row => row.project_id)) ]);
-    return rows.map(row => ({
-      ...row.toJSON(),
-      project_name: projects.get(row.project_id)?.name || '',
-      shared_label: row.library_asset_id ? `共享 #${row.library_asset_id}` : '',
-    }));
+    const listed = rows.map(row => this.presentAsset(row, projects));
+    if (projectId || kind === 'materials') return listed;
+    const libraryWhere = { disabled: false };
+    if (kind) libraryWhere.kind = ASSET_KINDS[kind];
+    const sharedRows = await this.ctx.model.LibraryAsset.findAll({
+      where: libraryWhere,
+      order: [[ 'id', 'DESC' ]],
+      limit: 100,
+    });
+    const linked = await this.ctx.model.Asset.findAll({
+      attributes: [ 'library_asset_id' ],
+      where: { library_asset_id: { [Op.ne]: null } },
+    });
+    const linkedIds = new Set(linked.map(row => row.library_asset_id));
+    const extras = sharedRows
+      .filter(row => !linkedIds.has(row.id))
+      .map(row => this.presentLibrary(row));
+    return [ ...extras, ...listed ];
+  }
+
+  async createBoundAsset(projectId, source) {
+    await this.ctx.service.project.show(projectId);
+    const name = String(source.name || '').trim();
+    if (!name) this.ctx.throw(400, '需要资产名称');
+    const kinds = [ 'character', 'scene', 'prop', 'voice', 'brand' ];
+    const kind = kinds.includes(source.kind) ? source.kind : 'character';
+    const characterId = kind === 'character'
+      ? await this.ctx.service.project.nextCharacterId(projectId)
+      : '';
+    return this.ctx.model.Asset.create({
+      project_id: Number(projectId),
+      kind,
+      name,
+      description: String(source.description || ''),
+      character_id: characterId,
+    });
   }
 
   async createShared(payload) {
@@ -40,11 +106,61 @@ class LibraryService extends Service {
     const name = String(payload.name || '').trim();
     if (!name) this.ctx.throw(400, '需要资产名称');
     const kind = kinds.includes(payload.kind) ? payload.kind : 'character';
-    return this.ctx.model.LibraryAsset.create({
-      kind,
-      name,
-      description: String(payload.description || '').trim(),
+    const description = String(payload.description || '').trim();
+    if (payload.public === false) {
+      const projectId = Number(payload.project_id);
+      if (!projectId) this.ctx.throw(400, '关闭公共资产需要绑定项目');
+      return this.createBoundAsset(projectId, { kind, name, description });
+    }
+    return this.ctx.model.LibraryAsset.create({ kind, name, description });
+  }
+
+  async setVisibility(assetId, payload) {
+    const asset = await this.ctx.model.Asset.findByPk(assetId);
+    if (!asset || asset.disabled) this.ctx.throw(404, '资产不存在');
+    if (payload.public === true) {
+      let shared = asset.library_asset_id
+        ? await this.ctx.model.LibraryAsset.findByPk(asset.library_asset_id)
+        : null;
+      if (!shared || shared.disabled) {
+        shared = await this.ctx.model.LibraryAsset.create({
+          kind: asset.kind,
+          name: asset.name,
+          description: String(asset.description || ''),
+        });
+      }
+      await asset.update({ library_asset_id: shared.id, library_revision: shared.revision });
+      return asset;
+    }
+    const projectId = Number(payload.project_id);
+    if (!projectId) this.ctx.throw(400, '关闭公共资产需要绑定项目');
+    await this.ctx.service.project.show(projectId);
+    const previousLibraryId = asset.library_asset_id;
+    await asset.update({
+      project_id: projectId,
+      library_asset_id: null,
+      library_revision: 0,
     });
+    if (previousLibraryId) {
+      const still = await this.ctx.model.Asset.count({ where: { library_asset_id: previousLibraryId } });
+      if (!still) {
+        const shared = await this.ctx.model.LibraryAsset.findByPk(previousLibraryId);
+        if (shared && !shared.disabled) await shared.update({ disabled: true });
+      }
+    }
+    return asset;
+  }
+
+  async bindShared(id, payload) {
+    const shared = await this.ctx.model.LibraryAsset.findByPk(id);
+    if (!shared || shared.disabled) this.ctx.throw(404, '共享资产不存在');
+    const linked = await this.ctx.model.Asset.count({ where: { library_asset_id: shared.id } });
+    if (linked) this.ctx.throw(400, '这条公共资产已经绑在项目里');
+    const projectId = Number(payload.project_id);
+    if (!projectId) this.ctx.throw(400, '关闭公共资产需要绑定项目');
+    const asset = await this.createBoundAsset(projectId, shared);
+    await shared.update({ disabled: true });
+    return asset;
   }
 
   async updateShared(id, payload) {

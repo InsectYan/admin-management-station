@@ -28,6 +28,14 @@ class VoiceLibraryController extends Controller {
     }
   }
 
+  async extract() {
+    try {
+      ok(this.ctx, await this.ctx.service.voiceLibrary.extract(this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async file() {
     try {
       const voice = await this.ctx.service.voiceLibrary.requireVoice(this.ctx.query.id);

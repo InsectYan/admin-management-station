@@ -7,7 +7,7 @@
       <el-tag size="small" effect="plain">{{ detail.stage_label }}</el-tag>
       <p v-if="detail.needs_package">创建后需要钉扎故事包。</p>
       <p v-else>创建后使用本地文案，不绑定小说。</p>
-      <router-link to="/templates">返回模板列表</router-link>
+      <router-link to="/skills/templates">返回模板列表</router-link>
     </div>
   </PageShell>
 </template>

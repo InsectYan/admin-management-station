@@ -338,7 +338,19 @@
         </el-table>
       </section>
       <template v-else-if="node === 'preview'">
-        <section v-if="!shotQuery" class="cartoon-module cartoon-workbench__note">
+        <section v-if="finalQuery && !shotQuery" class="cartoon-module">
+          <el-button link type="primary" @click="backToReel">← 返回片库</el-button>
+          <el-empty v-if="finalMissing" description="没有找到这条成片" />
+          <article v-else-if="finalDetail" class="cartoon-final-detail">
+            <header>
+              <strong>{{ finalDetail.title || '成片' }}</strong>
+              <span>记录 #{{ finalDetail.job_id || finalDetail.id }}</span>
+            </header>
+            <p class="cartoon-module__hint">{{ finalDetail.project_name || project.name }}<template v-if="finalDetail.width && finalDetail.height"> · {{ finalDetail.width }}×{{ finalDetail.height }}</template></p>
+            <VideoWithRate :src="finalFileUrl" controls />
+          </article>
+        </section>
+        <section v-else-if="!shotQuery" class="cartoon-module cartoon-workbench__note">
           <h3 class="cartoon-module__title">选择镜头</h3>
           <el-empty v-if="!shots.length" description="还没有镜头">
             <el-button type="primary" @click="selectNode('storyboard')">去镜头</el-button>
@@ -441,6 +453,7 @@ import ProjectDetailPage from './ProjectDetailPage.vue';
 import ClampText from '../components/ClampText.vue';
 import ShotOutputsPage from './ShotOutputsPage.vue';
 import ProjectEditPage from './ProjectEditPage.vue';
+import VideoWithRate from '../components/VideoWithRate.vue';
 import ExportSpecs from '../components/ExportSpecs.vue';
 import RefModPacks from '../components/RefModPacks.vue';
 import AssetImageField from '../components/AssetImageField.vue';
@@ -780,6 +793,10 @@ async function stopPipeline() {
   }
 }
 const shotQuery = computed(() => String(route.query.shot || ''));
+const finalQuery = computed(() => String(route.query.final || ''));
+const finalDetail = ref(null);
+const finalMissing = ref(false);
+const finalFileUrl = computed(() => (finalQuery.value ? `${resolveApiBase()}/outputs/${finalQuery.value}/file` : ''));
 const previewShots = computed(() => {
   const imports = bundle.value?.imports || [];
   const importId = previewImportId.value;
@@ -1271,6 +1288,23 @@ function pickShot(row) {
   if (previewImportId.value) query.import = previewImportId.value;
   router.replace({ query });
 }
+function backToReel() {
+  router.push({ path: `/projects/${projectKey()}`, query: { tab: '5' } });
+}
+async function loadFinal(id) {
+  finalDetail.value = null;
+  finalMissing.value = false;
+  if (!id) return;
+  try {
+    const data = await request(`/projects/${projectKey()}/reel`);
+    const found = (data?.finals || []).find(item => String(item.id) === String(id));
+    if (!found) finalMissing.value = true;
+    else finalDetail.value = found;
+  } catch (err) {
+    finalMissing.value = true;
+    ElMessage.error(err.message || '没有读到成片');
+  }
+}
 const workflowOpen = ref(false);
 const workflowLoading = ref(false);
 const workflowTaskId = ref(null);
@@ -1367,6 +1401,9 @@ async function load(mask = false) {
   }
 }
 
+watch(finalQuery, id => {
+  if (node.value === 'preview' && id) loadFinal(id);
+}, { immediate: true });
 watch(() => route.query.node, (value) => {
   if (value === 'generate') {
     launchShotId.value = String(route.query.shot || '');

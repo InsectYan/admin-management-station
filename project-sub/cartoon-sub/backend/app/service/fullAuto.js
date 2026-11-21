@@ -1202,18 +1202,19 @@ class FullAutoService extends Service {
     await this.pushLog(run, 'workflow', `每镜使用 ${run.video_workflow_name}`);
   }
 
-  async videoShotCounts(projectId, shotIds) {
+  async videoShotCounts(projectId, shotIds, options = {}) {
     const ids = (shotIds || []).map(id => Number(id)).filter(id => id > 0);
     const counts = new Map();
     if (!ids.length) return counts;
-    const tasks = await this.ctx.model.Task.findAll({
-      where: {
-        project_id: projectId,
-        shot_id: ids,
-        status: 'success',
-        kind: VIDEO_KINDS,
-      },
-    });
+    const where = {
+      project_id: projectId,
+      shot_id: ids,
+      status: 'success',
+      kind: VIDEO_KINDS,
+    };
+    if (options.since) where.created_at = { [Op.gte]: options.since };
+    else if (options.before) where.created_at = { [Op.lt]: options.before };
+    const tasks = await this.ctx.model.Task.findAll({ where });
     if (!tasks.length) return counts;
     const outputs = await this.ctx.model.Output.findAll({
       where: { task_id: tasks.map(item => item.id), media_kind: 'video' },
@@ -1250,10 +1251,13 @@ class FullAutoService extends Service {
     const done = new Set(parseJson(run.done_shot_ids, []).map(id => Number(id)));
     await run.update({ video_total: shots.length, video_done: done.size });
     const want = videoCount(run.video_count);
-    const readyCounts = run.fresh ? new Map() : await this.videoShotCounts(run.project_id, shots.map(item => item.id));
+    const since = run.fresh ? (run.created_at || run.createdAt || null) : null;
+    const countOptions = since ? { since } : {};
+    const readyCounts = await this.videoShotCounts(run.project_id, shots.map(item => item.id), countOptions);
     const videoChoice = await this.ctx.service.generate.choiceById(run.video_workflow_id);
     const wantEnd = run.generate_end !== false;
     const endSlot = (videoChoice.images || []).find(slot => slot.role === 'end');
+    const startSlot = (videoChoice.images || []).find(slot => slot.role === 'start') || null;
     if (wantEnd && !endSlot) throw new Error('满血首尾帧工作流没有尾帧入口');
     let previousKey = '';
     for (let index = 0; index < shots.length; index += 1) {
@@ -1269,9 +1273,16 @@ class FullAutoService extends Service {
       if (done.has(shot.id)) continue;
       const code = shot.shot_code || shot.id;
       const have = readyCounts.get(Number(shot.id)) || 0;
-      const missing = Math.max(0, want - have);
+      const startedAt = run.created_at || run.createdAt || null;
+      const prior = !run.fresh && startedAt
+        ? ((await this.videoShotCounts(run.project_id, [ shot.id ], { before: startedAt })).get(Number(shot.id)) || 0)
+        : (run.fresh ? 0 : have);
+      const during = !run.fresh && startedAt
+        ? ((await this.videoShotCounts(run.project_id, [ shot.id ], { since: startedAt })).get(Number(shot.id)) || 0)
+        : (run.fresh ? have : 0);
+      const missing = run.fresh ? Math.max(0, want - have) : Math.max(0, want - during);
       if (!missing) {
-        await this.pushLog(run, 'video', `${code} 已有 ${have} 条视频`);
+        await this.pushLog(run, 'video', run.fresh ? `${code} 已有 ${have} 条视频` : `${code} 本轮已有 ${during} 条视频`);
         done.add(shot.id);
         const raw = JSON.stringify([ ...done ]);
         await run.update({ done_shot_ids: raw, video_done: done.size });
@@ -1280,15 +1291,46 @@ class FullAutoService extends Service {
       }
       if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
       try {
-        if (run.fresh) await this.dropFreshFrames(run, shot);
-        for (let nth = 0; nth < missing; nth += 1) {
-          if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
-          const made = have + nth + 1;
-          await this.mark(run, 'video', 'running', `正在生成镜头 ${code} 第 ${made}/${want} 条（${index + 1}/${shots.length}）`);
-          await this.shoot(run, shot, endSlot, same, scene, {
-            batchIndex: have + nth,
-            wantEnd,
-          });
+        const live = run.fresh ? await this.ctx.model.Task.findOne({
+          where: {
+            project_id: run.project_id,
+            shot_id: shot.id,
+            kind: VIDEO_KINDS,
+            status: [ 'queued', 'running', 'saving' ],
+            ...(since ? { created_at: { [Op.gte]: since } } : {}),
+          },
+        }) : null;
+        if (run.fresh && !have && !live) await this.dropFreshFrames(run, shot);
+        if (run.fresh) {
+          let guard = 0;
+          while (guard < want) {
+            if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
+            const haveNow = (await this.videoShotCounts(run.project_id, [ shot.id ], countOptions)).get(Number(shot.id)) || 0;
+            if (haveNow >= want) break;
+            guard += 1;
+            await this.mark(run, 'video', 'running', `正在生成镜头 ${code} 第 ${haveNow + 1}/${want} 条（${index + 1}/${shots.length}）`);
+            await this.shoot(run, shot, endSlot, same, scene, {
+              batchIndex: haveNow,
+              wantEnd,
+              startSlot,
+            });
+          }
+          const haveAfter = (await this.videoShotCounts(run.project_id, [ shot.id ], countOptions)).get(Number(shot.id)) || 0;
+          if (haveAfter < want) {
+            await this.pushLog(run, 'video', `${code} 这一轮已有 ${haveAfter} 条，还没凑满 ${want} 条`);
+            continue;
+          }
+        } else {
+          for (let nth = 0; nth < missing; nth += 1) {
+            if (!await this.alive(run)) throw Object.assign(new Error('已停止'), { stop: true });
+            const batchIndex = prior + during + nth;
+            await this.mark(run, 'video', 'running', `正在生成镜头 ${code} 本轮第 ${during + nth + 1}/${want} 条（${index + 1}/${shots.length}）`);
+            await this.shoot(run, shot, endSlot, same, scene, {
+              batchIndex,
+              wantEnd,
+              startSlot,
+            });
+          }
         }
         done.add(shot.id);
         const raw = JSON.stringify([ ...done ]);
@@ -1339,6 +1381,7 @@ class FullAutoService extends Service {
       : null;
     if (!startHeld?.bytes) throw new Error(`${code} 首帧没有生成`);
     if (wantEnd && !endHeld?.bytes) throw new Error(`${code} 尾帧没有生成`);
+    if (startHeld.ephemeral && !options.startSlot) throw new Error(`${code} 首帧没有入口`);
     await this.mark(run, 'video', 'running', `正在生成镜头 ${code}`);
     const packId = await this.stageShotPack(run, shot);
     try {
@@ -1364,13 +1407,23 @@ class FullAutoService extends Service {
           start_task_id: startHeld.taskId || null,
           end_task_id: endHeld?.taskId || null,
         },
-        images: wantEnd && endSlot ? [{
-          id: endSlot.id,
-          slot_id: endSlot.id,
-          filename: 'end.png',
-          data_base64: endHeld.bytes.toString('base64'),
-          label: '尾帧',
-        }] : [],
+        images: [
+          ...(startHeld.ephemeral ? [{
+            id: options.startSlot.id,
+            slot_id: options.startSlot.id,
+            filename: 'first.png',
+            data_base64: startHeld.bytes.toString('base64'),
+            label: '首帧',
+            persist: false,
+          }] : []),
+          ...(wantEnd && endSlot ? [{
+            id: endSlot.id,
+            slot_id: endSlot.id,
+            filename: 'end.png',
+            data_base64: endHeld.bytes.toString('base64'),
+            label: '尾帧',
+          }] : []),
+        ],
       }, 'refmod');
       if (task?.id) await this.track(run, task.id);
       if (!await this.alive(run)) {
@@ -1441,16 +1494,24 @@ class FullAutoService extends Service {
     const manual = this.frameAbsolute(fresh.manual_frame_path);
     if (manual) {
       await this.pushLog(run, 'video', `${code} 使用指定首帧`);
-      return { bytes: fs.readFileSync(manual), taskId: null };
+      return { bytes: fs.readFileSync(manual), taskId: null, ephemeral: false };
     }
     const prev = (sameScene || options.chain) ? await this.previousShot(fresh) : null;
-    const planted = prev ? this.sceneTail(run.project_id, prev.id, batchIndex) : null;
-    const carried = planted || this.frameAbsolute(fresh.first_frame_path);
+    const same = Boolean(prev) && sceneKey(fresh) && sceneKey(fresh) === sceneKey(prev);
+    if (same) {
+      const planted = this.sceneTail(run.project_id, prev.id, batchIndex);
+      if (planted) {
+        await this.pushLog(run, 'video', `${code} 使用第 ${batchIndex + 1} 条上镜尾帧`);
+        return { bytes: fs.readFileSync(planted), taskId: null, ephemeral: false };
+      }
+      await this.pushLog(run, 'video', `${code} 没有第 ${batchIndex + 1} 条上镜尾帧，生成这一条的首帧`);
+      const rendered = await this.renderFrame(run, shot, 'start', videoText, frameStart, frameEnd, negative);
+      return { ...rendered, ephemeral: true };
+    }
+    const carried = this.frameAbsolute(fresh.first_frame_path);
     if (carried) {
-      const where = planted ? `上一镜同序号尾帧` : '上镜尾帧';
-      const place = scene ? `「${scene}」` : '';
-      await this.pushLog(run, 'video', `${code} 没有指定首帧，使用${where}${place}`);
-      return { bytes: fs.readFileSync(carried), taskId: null };
+      await this.pushLog(run, 'video', `${code} 没有指定首帧，使用上镜尾帧`);
+      return { bytes: fs.readFileSync(carried), taskId: null, ephemeral: false };
     }
     await this.pushLog(run, 'video', `${code} 没有指定首帧和上镜尾帧，生成首帧`);
     const rendered = await this.renderFrame(run, shot, 'start', videoText, frameStart, frameEnd, negative);
@@ -1458,7 +1519,7 @@ class FullAutoService extends Service {
       filename: 'manual.png',
       data_base64: rendered.bytes.toString('base64'),
     });
-    return rendered;
+    return { ...rendered, ephemeral: false };
   }
 
   async ensureEndFrame(run, shot, videoText, frameStart, frameEnd, negative, options = {}) {

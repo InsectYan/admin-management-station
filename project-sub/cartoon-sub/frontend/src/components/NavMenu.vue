@@ -16,7 +16,7 @@
       background-color="transparent"
       text-color="#2c4336"
       active-text-color="#2f8a5b"
-      :default-openeds="['pipelines']"
+      :default-openeds="['pipelines', 'skills']"
       router
     >
       <el-menu-item index="/projects">
@@ -31,10 +31,15 @@
         <el-icon><Delete /></el-icon>
         <span>垃圾箱</span>
       </el-menu-item>
-      <el-menu-item index="/templates">
-        <el-icon><Collection /></el-icon>
-        <span>模板</span>
-      </el-menu-item>
+      <el-sub-menu index="skills" popper-class="cartoon-pipeline-popper">
+        <template #title>
+          <el-icon><MagicStick /></el-icon>
+          <span>技能</span>
+        </template>
+        <el-menu-item index="/skills/templates">模板</el-menu-item>
+        <el-menu-item index="/skills/tracks">音轨</el-menu-item>
+        <el-menu-item index="/skills/prompts">提示词</el-menu-item>
+      </el-sub-menu>
       <el-sub-menu index="pipelines" popper-class="cartoon-pipeline-popper">
         <template #title>
           <el-icon><Operation /></el-icon>
@@ -95,10 +100,15 @@
       <el-icon><Delete /></el-icon>
       <span>垃圾箱</span>
     </el-menu-item>
-    <el-menu-item index="/templates">
-      <el-icon><Collection /></el-icon>
-      <span>模板</span>
-    </el-menu-item>
+    <el-sub-menu index="skills" popper-class="cartoon-pipeline-popper">
+      <template #title>
+        <el-icon><MagicStick /></el-icon>
+        <span>技能</span>
+      </template>
+      <el-menu-item index="/skills/templates">模板</el-menu-item>
+      <el-menu-item index="/skills/tracks">音轨</el-menu-item>
+      <el-menu-item index="/skills/prompts">提示词</el-menu-item>
+    </el-sub-menu>
     <el-sub-menu index="pipelines" popper-class="cartoon-pipeline-popper">
       <template #title>
         <el-icon><Operation /></el-icon>
@@ -141,7 +151,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { Expand, Fold, Film, VideoCamera, Delete, Collection, Operation, Notebook, User, Files, Picture, CircleCheck, Tickets, Download } from '@element-plus/icons-vue';
+import { Expand, Fold, Film, VideoCamera, Delete, MagicStick, Operation, Notebook, User, Files, Picture, CircleCheck, Tickets, Download } from '@element-plus/icons-vue';
 import { useNavCollapse } from '../composables/useNavCollapse.js';
 
 defineProps({ embedded: { type: Boolean, default: false } });
@@ -153,6 +163,9 @@ const active = computed(() => {
   if (path.startsWith('/projects')) return '/projects';
   if (path.startsWith('/pipelines/map')) return '/pipelines/map';
   if (path.startsWith('/pipelines')) return '/pipelines/config';
+  if (path.startsWith('/skills/tracks')) return '/skills/tracks';
+  if (path.startsWith('/skills/prompts')) return '/skills/prompts';
+  if (path.startsWith('/skills') || path.startsWith('/templates')) return '/skills/templates';
   return path;
 });
 </script>

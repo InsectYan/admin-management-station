@@ -245,6 +245,18 @@ function submittedPrompt(snapshot) {
   return snapshot;
 }
 
+function graphUsesDual(snapshot) {
+  const graph = submittedPrompt(snapshot);
+  if (!graph || typeof graph !== 'object' || Array.isArray(graph)) return false;
+  return Object.keys(graph).some(key => key.startsWith('dual-'));
+}
+
+function dualFlag(value) {
+  if (value === true || value === 't' || value === 'true') return true;
+  if (value === false || value === 'f' || value === 'false') return false;
+  return null;
+}
+
 function briefFromSnapshot(snapshot) {
   const graph = submittedPrompt(snapshot);
   return {
@@ -553,7 +565,7 @@ class GenerateService extends Service {
     if (!start) return list;
     const uploaded = list.find(item => (item.slot_id || item.id) === start.id && (item.data_base64 || item.data));
     if (uploaded) {
-      await this.ctx.service.project.saveManualFrame(shot.project_id, shot.id, uploaded);
+      if (uploaded.persist !== false) await this.ctx.service.project.saveManualFrame(shot.project_id, shot.id, uploaded);
       return list;
     }
     const current = await this.ctx.model.Shot.findByPk(shot.id);
@@ -563,12 +575,13 @@ class GenerateService extends Service {
       return absolute && fs.existsSync(absolute) ? String(relative).split('?')[0] : '';
     };
     const manual = stored(current?.manual_frame_path);
-    const carried = manual
-      || (chained?.same ? stored(chained.relative) : '')
-      || stored(current?.first_frame_path);
+    let carried = '';
+    if (manual) carried = manual;
+    else if (chained?.same) carried = stored(chained.relative);
+    else carried = stored(current?.first_frame_path);
     if (!carried) {
       const error = new Error(chained?.same
-        ? '同一场的下一镜要用上一镜尾帧，请先生成上一镜尾帧'
+        ? '这一条没有对应的上镜尾帧'
         : '这条工作流需要首帧。没有上镜尾帧时，请先上传指定首帧');
       error.status = 400;
       throw error;
@@ -1039,6 +1052,7 @@ class GenerateService extends Service {
     }
     const runningBrief = parseBrief(task.generation_brief) || {};
     runningBrief.started_at = new Date().toISOString();
+    runningBrief.dual_sample = graphUsesDual(submission);
     await task.update({
       status: 'running',
       prompt_id: submitted.prompt_id,
@@ -1555,6 +1569,7 @@ class GenerateService extends Service {
     const generation = {
       workflow_id: stored?.workflow_id || json.precheck_workflow_id || null,
       workflow_name: stored?.workflow_name || '',
+      dual_sample: dualFlag(stored?.dual_sample) ?? dualFlag(json.dual_sample),
       positive,
       negative: stored?.negative || extracted.negative || '',
       assets: recorded ? stored.assets : mentioned,
@@ -1582,6 +1597,7 @@ class GenerateService extends Service {
     delete json.has_workflow_snapshot;
     delete json.workflow_snapshot;
     delete json.generation_brief;
+    delete json.dual_sample;
     return { ...json, generation, has_workflow: hasWorkflow };
   }
 

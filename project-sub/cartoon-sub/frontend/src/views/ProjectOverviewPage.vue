@@ -13,7 +13,6 @@
           <el-button :disabled="!canMake()" @click="openEdit">编辑</el-button>
           <el-button type="danger" plain :disabled="!canMake()" @click="removeProject">删除</el-button>
           <el-button @click="openWorkbench('compose')">剪辑成片</el-button>
-          <el-button @click="router.push(`/projects/${projectId}/captions`)">获取提示词</el-button>
           <el-button type="primary" @click="openWorkbench('input')">进入制作</el-button>
         </div>
       </div>
@@ -219,7 +218,7 @@
           <BatchPanel :project-id="projectId" :science="isLocal" />
         </section>
 
-        <CaptionBoard v-if="tab === 5" :project-id="projectId" />
+        <ReelBoard v-if="tab === 5" :project-id="projectId" @open="openReel" />
       </div>
     </div>
     <el-dialog v-model="editOpen" title="编辑基础信息" width="720px">
@@ -288,7 +287,7 @@ import NovelBriefPanel from '../components/NovelBriefPanel.vue';
 import CartoonMarkdown from '../components/CartoonMarkdown.vue';
 import CopyBlocks from '../components/CopyBlocks.vue';
 import BatchPanel from '../components/BatchPanel.vue';
-import CaptionBoard from '../components/CaptionBoard.vue';
+import ReelBoard from '../components/ReelBoard.vue';
 import TypePanel from '../components/TypePanel.vue';
 import ExportSpecs from '../components/ExportSpecs.vue';
 import ReviewBox from '../components/ReviewBox.vue';
@@ -310,9 +309,9 @@ const tabs = computed(() => [
   { step: 2, title: isLocal.value ? '本地文案' : '章节快照' },
   { step: 3, title: '镜头' },
   { step: 4, title: '批量' },
-  { step: 5, title: '提示词' },
+  { step: 5, title: '片库' },
 ]);
-const tab = ref(Number(route.query.tab) || 1);
+const tab = ref(Number(route.query.tab) === 6 ? 5 : (Number(route.query.tab) || 1));
 const detail = ref(null);
 const styles = ref([]);
 const novelBrief = ref(null);
@@ -597,6 +596,16 @@ function openGenerate(row) {
 }
 function openOutputs(row) {
   openWorkbench('preview', row.id);
+}
+function openReel(card) {
+  const taskId = detail.value?.episodes?.[0]?.id;
+  const query = card?.shot_id
+    ? { node: 'preview', shot: String(card.shot_id), record: String(card.task_id || '') }
+    : { node: 'preview', final: String(card.id) };
+  const path = taskId
+    ? `/projects/${projectId.value}/tasks/${taskId}`
+    : `/projects/${projectId.value}/work`;
+  router.push({ path, query });
 }
 async function loadNovel(novelId) {
   novelBrief.value = null;

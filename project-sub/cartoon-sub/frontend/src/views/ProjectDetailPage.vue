@@ -437,13 +437,39 @@
             </el-table-column>
             <el-table-column label="上镜尾帧" width="120">
               <template #default="{ row }">
-                <img v-if="row.first_frame_path" class="cartoon-frame-thumb" :style="frameBox(row, 'auto')" :src="frameSrc(row, 'auto')" alt="" />
+                <button
+                  v-if="row.carry_frames?.length"
+                  type="button"
+                  class="cartoon-carry__item"
+                  @click="openCarry(row, row.carry_frames[0].index)"
+                >
+                  <img :src="carrySrc(row, row.carry_frames[0])" :style="carryBox(row.carry_frames[0])" alt="" />
+                </button>
+                <el-image
+                  v-else-if="row.first_frame_path"
+                  class="cartoon-frame-thumb"
+                  :style="frameBox(row, 'auto')"
+                  :src="frameSrc(row, 'auto')"
+                  fit="contain"
+                  :preview-src-list="[frameSrc(row, 'auto')]"
+                  preview-teleported
+                  hide-on-click-modal
+                />
                 <span v-else>—</span>
               </template>
             </el-table-column>
             <el-table-column label="指定首帧" width="120">
               <template #default="{ row }">
-                <img v-if="row.manual_frame_path" class="cartoon-frame-thumb" :style="frameBox(row, 'manual')" :src="frameSrc(row, 'manual')" alt="" />
+                <el-image
+                  v-if="row.manual_frame_path"
+                  class="cartoon-frame-thumb"
+                  :style="frameBox(row, 'manual')"
+                  :src="frameSrc(row, 'manual')"
+                  fit="contain"
+                  :preview-src-list="[frameSrc(row, 'manual')]"
+                  preview-teleported
+                  hide-on-click-modal
+                />
                 <span v-else>—</span>
               </template>
             </el-table-column>
@@ -642,6 +668,14 @@
         <el-button type="primary" @click="confirmVideoReset">重新生成</el-button>
       </template>
     </el-dialog>
+    <el-dialog v-model="carryOpen" class="cartoon-dialog" :title="carryTitle" width="720px" append-to-body>
+      <img v-if="carryFrame && carryShot" class="cartoon-carry__full" :src="carrySrc(carryShot, carryFrame)" alt="" />
+      <div class="cartoon-carry__nav">
+        <el-button :disabled="carryAt <= 0" @click="stepCarry(-1)">上一条</el-button>
+        <span>{{ carryAt + 1 }} / {{ carryList.length }}</span>
+        <el-button :disabled="carryAt >= carryList.length - 1" @click="stepCarry(1)">下一条</el-button>
+      </div>
+    </el-dialog>
     <el-dialog v-model="fullAutoOpen" class="cartoon-dialog" title="全流程" width="560px" append-to-body :close-on-click-modal="false">
       <p class="cartoon-module__hint">这次会按顺序做到视频。人物和场景各出一张设定总图，视频固定用满血 H3 首尾帧 RefMod。</p>
       <el-checkbox v-model="fullAutoFresh">全新</el-checkbox>
@@ -680,7 +714,7 @@
         </el-form-item>
         <el-form-item label="每个镜头的视频条数">
           <el-input-number v-model="fullAutoVideoCount" :min="1" :max="8" :step="1" :precision="0" controls-position="right" />
-          <p class="cartoon-module__hint">每个镜头生成这么多条视频，默认 1 条，最多 8 条。每条使用不同种子。每一条都会重新生成首帧；勾选尾帧时，尾帧也按条重画。同一场景里，上一镜第 1 条的成片尾帧给下一镜第 1 条做首帧，第 2 条对第 2 条。</p>
+          <p class="cartoon-module__hint">每个镜头这一轮生成这么多条视频，默认 1 条，最多 8 条。没有指定首帧时，从已有视频的下一条开始接上一镜同序号尾帧。尾帧不够的那一条再单独生成首帧，不占用指定首帧。</p>
         </el-form-item>
         <el-form-item label="是否生成尾帧">
           <el-checkbox v-model="fullAutoGenerateEnd">生成尾帧</el-checkbox>
@@ -1754,6 +1788,35 @@ function rosterPayload() {
       stage_note: String(item.stage_note || '').trim(),
     })),
   };
+}
+const carryOpen = ref(false);
+const carryShot = ref(null);
+const carryAt = ref(0);
+const carryList = computed(() => carryShot.value?.carry_frames || []);
+const carryFrame = computed(() => carryList.value[carryAt.value] || null);
+const carryTitle = computed(() => (carryFrame.value ? `上镜尾帧 · 第 ${carryFrame.value.index + 1} 条` : '上镜尾帧'));
+function carrySrc(row, frame) {
+  return `${resolveApiBase()}/projects/${projectKey()}/shots/${row.id}/frame/carry-${frame.index}?v=${frame.mtime || frame.index}`;
+}
+function carryBox(frame) {
+  const width = Number(frame?.width) || 0;
+  const height = Number(frame?.height) || 0;
+  const long = 96;
+  if (!width || !height) return { height: `${long}px`, width: 'auto' };
+  if (height >= width) return { height: `${long}px`, width: `${Math.max(36, Math.round(long * width / height))}px` };
+  return { width: `${long}px`, height: `${Math.max(36, Math.round(long * height / width))}px` };
+}
+function openCarry(row, index) {
+  const list = row.carry_frames || [];
+  const at = list.findIndex(item => item.index === index);
+  carryShot.value = row;
+  carryAt.value = at >= 0 ? at : 0;
+  carryOpen.value = true;
+}
+function stepCarry(step) {
+  const next = carryAt.value + step;
+  if (next < 0 || next >= carryList.value.length) return;
+  carryAt.value = next;
 }
 function frameSrc(row, which) {
   const stored = which === 'manual' ? row.manual_frame_path : row.first_frame_path;
@@ -3013,7 +3076,11 @@ onUnmounted(() => {
 .cartoon-script__note { margin: 6px 0 0; color: #5c6b62; white-space: pre-wrap; }
 .cartoon-script__edithead { justify-content: space-between; }
 .cartoon-script__edithead h4 { margin: 0; }
-.cartoon-frame-thumb { object-fit: contain; border-radius: 4px; background: #e7f3eb; display: block; }
+.cartoon-frame-thumb { object-fit: contain; border-radius: 4px; background: #e7f3eb; display: block; cursor: zoom-in; }
+.cartoon-carry__item { padding: 0; border: 0; background: transparent; cursor: zoom-in; }
+.cartoon-carry__item img { display: block; object-fit: contain; border-radius: 4px; background: #e7f3eb; }
+.cartoon-carry__full { display: block; width: 100%; max-height: 60vh; object-fit: contain; background: #e7f3eb; }
+.cartoon-carry__nav { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
 .cartoon-script__scene { margin-bottom: 12px; padding: 10px 12px; border: 1px solid rgba(47, 138, 91, 0.18); border-radius: 8px; background: #f7fbf8; }
 .cartoon-script__scene.is-wardrobe { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 12px; align-items: start; }
 .cartoon-script__wardrobe { margin: 0; padding: 8px 10px; border-left: 1px solid rgba(47, 138, 91, 0.18); }
