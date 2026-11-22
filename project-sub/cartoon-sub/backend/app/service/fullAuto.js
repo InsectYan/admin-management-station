@@ -1251,7 +1251,10 @@ class FullAutoService extends Service {
     const saved = await this.ctx.model.Shot.count({
       where: { project_id: run.project_id, import_id: run.import_id },
     });
-    if (!saved) throw new Error('分镜没有落库');
+    if (!saved) {
+      await this.pushLog(run, 'storyboard', '没有单独落库的镜头，已按合并记在分镜说明里');
+      return;
+    }
     await this.pushLog(run, 'storyboard', `已落库 ${saved} 条分镜`);
   }
 

@@ -249,15 +249,13 @@
               </el-tab-pane>
               <el-tab-pane :label="`分镜表（${scriptShotTotal}）`" name="shots">
                 <div v-if="coverageNotices.length" class="cartoon-coverage">
-                  <el-alert
+                  <el-tag
                     v-for="(note, index) in coverageNotices"
                     :key="`${note.title}-${index}`"
                     type="warning"
-                    :closable="false"
-                    show-icon
-                    :title="note.title"
-                    :description="note.reason"
-                  />
+                    class="cartoon-coverage__tag"
+                    @click="openCoverage(note)"
+                  >{{ note.label || note.title }}</el-tag>
                 </div>
                 <p class="cartoon-module__hint">与「镜头」页同一批数据。按情节分场，一场里的连续动作可以拆成十几条镜头。同一场只有第一镜是新的首帧，后面的镜头用上一镜尾帧。场次列用来确认这些镜头属于第几场。</p>
                 <el-empty v-if="!scriptShotLoading && !scriptShotTotal" description="还没有分镜，请先点「拆分分镜」" />
@@ -265,6 +263,14 @@
               <el-table-column label="镜头ID" width="120" prop="shot_code" fixed="left" />
               <el-table-column label="场次" width="200">
                 <template #default="{ row }">{{ sceneCell(row, activeScriptData) }}</template>
+              </el-table-column>
+              <el-table-column label="功能" min-width="220">
+                <template #default="{ row }">
+                  <div v-if="scenePurposes(row, activeScriptData).length" class="cartoon-purpose-tags">
+                    <el-tag v-for="tag in scenePurposes(row, activeScriptData)" :key="tag" size="small">{{ tag }}</el-tag>
+                  </div>
+                  <span v-else>—</span>
+                </template>
               </el-table-column>
               <el-table-column label="时长(秒)" width="110">
                 <template #default="{ row }">{{ shotDurationLabel(row) }}</template>
@@ -742,6 +748,9 @@
         <el-button type="primary" :disabled="!canMake()" @click="submitPromote">提交</el-button>
       </template>
     </el-dialog>
+    <el-dialog v-model="coverageOpen" class="cartoon-dialog" :title="coverageNote.title || '说明'" width="640px" append-to-body>
+      <p class="cartoon-coverage__body">{{ coverageNote.reason }}</p>
+    </el-dialog>
     <el-dialog v-model="chapterBodyOpen" class="cartoon-dialog cartoon-body-dialog" :title="chapterBodyTitle" width="70%" append-to-body>
       <CartoonMarkdown prose :source="chapterBodyText" empty-text="还没有正文" />
     </el-dialog>
@@ -1208,6 +1217,20 @@ const scriptBoardItems = computed(() => {
   }));
 });
 const scriptSnapshot = ref(null);
+const coverageOpen = ref(false);
+const coverageNote = ref({ title: '', reason: '' });
+function openCoverage(note) {
+  coverageNote.value = {
+    title: note?.label || note?.title || '说明',
+    reason: note?.reason || '',
+  };
+  coverageOpen.value = true;
+}
+function noticeLabel(title, target) {
+  const place = String(target || '').trim();
+  if (!place || place === '分镜') return title;
+  return `${title} · ${place}`;
+}
 const scriptSnapshotLoading = ref(false);
 const scriptShotRows = ref([]);
 const scriptShotTotal = ref(0);
@@ -1300,43 +1323,36 @@ const coverageNotices = computed(() => {
     scriptReasons.forEach(row => {
       notes.push({
         title: '剧本删减',
+        label: noticeLabel('剧本删减', row.target),
         reason: row.target ? `${row.target}：${row.reason}` : row.reason,
       });
     });
   } else if (scenes.length > 0 && scenes.length < floor) {
     notes.push({
       title: '剧本删减',
+      label: '剧本删减',
       reason: `本章约 ${bodyLen} 字，场次下限是 ${floor}，当前 ${scenes.length} 场，少掉的情节被合并或删掉了。`,
     });
   }
   const shotCount = scriptShotTotal.value;
-  const shotFloor = Math.max(floor, scenes.length);
   const shotReasons = (script.shot_omissions || []).filter(row => row && row.reason);
-  const missingScenes = shotCount > 0 ? uncoveredScenes(scenes, scriptShots.value) : [];
-  if (missingScenes.length) {
+  shotReasons.forEach(row => {
+    const title = row.notice || '分镜跳过';
     notes.push({
-      title: '分镜跳过',
-      reason: `${missingScenes.map(scene => `第${scene.index}场${scene.title ? `「${scene.title}」` : ''}`).join('、')}没有单独的镜头，被并进了其他场。一场可以拆成多条镜头，但不能少场。`,
+      title,
+      label: noticeLabel(title, row.target),
+      reason: row.target ? `${row.target}：${row.reason}` : row.reason,
     });
-  } else if (shotCount > 0 && shotCount < shotFloor) {
-    if (shotReasons.length) {
-      shotReasons.forEach(row => {
-        notes.push({
-          title: '分镜跳过',
-          reason: row.target ? `${row.target}：${row.reason}` : row.reason,
-        });
-      });
-    } else if (scenes.length && shotCount < scenes.length) {
-      notes.push({
-        title: '分镜跳过',
-        reason: `剧本 ${scenes.length} 场，分镜只有 ${shotCount} 条，少掉的场次被合并或跳过，没有单独成镜。`,
-      });
-    } else {
-      notes.push({
-        title: '分镜跳过',
-        reason: `本章约 ${bodyLen} 字，镜头下限是 ${shotFloor}，当前 ${shotCount} 条。`,
-      });
-    }
+  });
+  const mentioned = shotReasons.map(row => `${row.target || ''}\n${row.reason || ''}`).join('\n');
+  const missingScenes = shotCount > 0 ? uncoveredScenes(scenes, scriptShots.value) : [];
+  const fresh = missingScenes.filter(scene => !mentioned.includes(`第${scene.index}场`));
+  if (fresh.length) {
+    notes.push({
+      title: '分镜合并',
+      label: '分镜合并',
+      reason: `${fresh.map(scene => `第${scene.index}场${scene.title ? `「${scene.title}」` : ''}`).join('、')}没有单独的镜头，已并进其他场。`,
+    });
   }
   return notes;
 });
@@ -1802,6 +1818,14 @@ function sceneNumber(row) {
   if (Number.isInteger(stored) && stored > 0) return stored;
   const matched = String(row?.description || '').match(/第\s*(\d+)\s*场/);
   return matched ? Number(matched[1]) : 0;
+}
+const SCENE_PURPOSES = [ '推进剧情', '揭示人物', '制造冲突', '埋设伏笔', '释放信息' ];
+function scenePurposes(row, script) {
+  const scenes = Array.isArray(script?.scenes) ? script.scenes : [];
+  const index = sceneNumber(row);
+  const purpose = index ? scenes[index - 1]?.purpose : '';
+  const text = Array.isArray(purpose) ? purpose.join('、') : String(purpose || '');
+  return SCENE_PURPOSES.filter(name => text.includes(name));
 }
 function sceneCell(row, script) {
   const scenes = Array.isArray(script?.scenes) ? script.scenes : [];
@@ -3027,6 +3051,11 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.cartoon-purpose-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
 .cartoon-shot-head {
   display: flex;
   align-items: center;
@@ -3103,7 +3132,8 @@ onUnmounted(() => {
   column-gap: 24px;
   row-gap: 0;
 }
-.cartoon-coverage { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.cartoon-coverage { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.cartoon-coverage__tag { cursor: pointer; }
 .cartoon-snap-table { width: 100%; }
 .cartoon-snap-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .cartoon-snap-table :deep(.cartoon-chapter-cell .cell) { overflow: hidden; }

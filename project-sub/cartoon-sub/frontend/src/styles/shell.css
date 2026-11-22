@@ -378,6 +378,11 @@
 .cartoon-sub-root .el-alert.el-alert--info .el-alert__icon {
   color: var(--cartoon-color-primary);
 }
+.cartoon-dialog .cartoon-coverage__body {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.7;
+}
 .cartoon-sub-root .el-dialog {
   border-radius: 10px;
   overflow: hidden;

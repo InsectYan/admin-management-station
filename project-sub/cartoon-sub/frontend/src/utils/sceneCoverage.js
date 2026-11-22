@@ -33,7 +33,7 @@ function sceneNumbersIn(text) {
   return found;
 }
 
-/** 一条镜头点了多场时，只承认最先写到的那场。 */
+/** 一条镜头写到多场时，这几场都算留住。 */
 export function uncoveredScenes(scenes, shots) {
   const list = Array.isArray(scenes) ? scenes : [];
   const owned = new Set();
@@ -41,8 +41,9 @@ export function uncoveredScenes(scenes, shots) {
     const fromField = Number(shot?.scene_index);
     const fromText = sceneNumbersIn(shot?.description || shot?.coverage || '');
     const numbers = Number.isInteger(fromField) && fromField > 0 ? [ fromField, ...fromText ] : fromText;
-    const unique = numbers.filter((n, index) => numbers.indexOf(n) === index);
-    if (unique.length >= 1) owned.add(unique[0]);
+    numbers.forEach(n => {
+      if (!owned.has(n)) owned.add(n);
+    });
   }
   return list.map((scene, index) => ({
     index: index + 1,

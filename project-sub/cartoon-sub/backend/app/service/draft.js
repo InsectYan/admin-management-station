@@ -14,7 +14,7 @@ const {
   normalizeCameraMoves,
   serializeCameraMoves,
 } = require('../lib/cartoonMeta');
-const { normalizeOmissions, uncoveredScenes } = require('../lib/storyCoverage');
+const { normalizeOmissions, uncoveredParagraphs, skipExcuse } = require('../lib/storyCoverage');
 const { settleScript } = require('../lib/scriptGate');
 const { normalizeScript, placeTag } = require('../lib/rosterNames');
 const { uniquePrompt } = require('../lib/promptText');
@@ -27,6 +27,23 @@ const { openRun, closeRun, noteStep } = require('../lib/executionTrace');
 
 function outputOf(result) {
   return result?.output || {};
+}
+
+function lostParagraphOmission(sceneIndex, paragraphs, shots) {
+  const missing = uncoveredParagraphs(paragraphs, shots);
+  if (!missing.length) return null;
+  const texts = new Map((paragraphs || []).map(item => [ Number(item.index), String(item.text || '') ]));
+  const shown = missing.slice(0, 6).map(index => {
+    const text = String(texts.get(index) || '').replace(/\s+/g, ' ').trim();
+    const clip = text.length > 42 ? `${text.slice(0, 42)}…` : text;
+    return clip ? `第${index}段「${clip}」` : `第${index}段`;
+  });
+  const tail = missing.length > shown.length ? `，另有 ${missing.length - shown.length} 段` : '';
+  return {
+    target: `第${sceneIndex}场`,
+    notice: '分镜跳过',
+    reason: `这些原文没有拆成镜头：${shown.join('、')}${tail}`,
+  };
 }
 
 function anchorOf(paragraphs, hint) {
@@ -70,13 +87,6 @@ function sceneSpans(script, body) {
       })),
     };
   });
-}
-
-function spanBeats(script, body) {
-  return sceneSpans(script, body).reduce((sum, item) => {
-    const count = item.paragraphs.length || 1;
-    return sum + Math.max(1, Math.ceil(count / 4));
-  }, 0);
 }
 
 function sceneTitle(scriptData, item) {
@@ -429,6 +439,9 @@ class DraftService extends Service {
     });
     const scriptOutput = outputOf(scriptResult);
     const scriptData = scriptOutput.script_data;
+    if (scriptData?.truncated) {
+      this.ctx.throw(502, '剧本回答被截断，已经整份重写过仍不完整。这一稿没有保存，请再生成一次');
+    }
     if (!scriptData || !Array.isArray(scriptData.scenes) || !scriptData.scenes.length) {
       const reply = String(scriptOutput.reply || scriptOutput.summary || '').replace(/\s+/g, ' ').trim();
       this.ctx.throw(502, reply ? `剧本没有定稿。${reply.slice(0, 240)}` : '剧本没有定稿');
@@ -443,6 +456,7 @@ class DraftService extends Service {
       reject_reasons: [],
       shot_omissions: [],
     });
+    delete named.truncated;
     await chapter.update({
       script_data: { ...named, shot_omissions: [] },
       characters: named.characters || [],
@@ -573,7 +587,6 @@ class DraftService extends Service {
     }
     const styleCtx = await this.styleContext(project, chapter);
     const spans = sceneSpans(settled.script, chapter.body);
-    const minShots = Math.max(spanBeats(settled.script, chapter.body), 1);
     const stylePayload = styleWithoutBody(styleCtx);
     const source = productionInput(project);
     const outline = [];
@@ -595,6 +608,24 @@ class DraftService extends Service {
       ].filter(Boolean).join('\n');
       const beat = Math.max(1, Math.ceil(((span.paragraphs || []).length || 1) / 4));
       this.ctx.logger.info('[cartoon] shot-outline scene %s/%s', sceneIndex, spans.length);
+      const outlinePayload = {
+        script_data: {
+          logline: settled.script.logline || '',
+          summary: settled.script.summary || '',
+          characters: settled.script.characters || [],
+          places: settled.script.places || [],
+          scenes: [ scene ],
+        },
+        outline_only: true,
+        scene_index: sceneIndex,
+        ...stylePayload,
+        body: String(chapter.body || ''),
+        scene_spans: [ span ],
+        ...source,
+        min_shots: beat,
+        asset_facts: await this.shotFactText(project.id, sceneText),
+        prev_shot: previous,
+      };
       let boardResult;
       try {
         boardResult = await invokeSkill(this.ctx, {
@@ -602,24 +633,7 @@ class DraftService extends Service {
           action: 'draft',
           timeoutMs: skillTimeout(this.ctx),
           signal,
-          payload: {
-            script_data: {
-              logline: settled.script.logline || '',
-              summary: settled.script.summary || '',
-              characters: settled.script.characters || [],
-              places: settled.script.places || [],
-              scenes: [ scene ],
-            },
-            outline_only: true,
-            scene_index: sceneIndex,
-            ...stylePayload,
-            body: '',
-            scene_spans: [ span ],
-            ...source,
-            min_shots: beat,
-            asset_facts: await this.shotFactText(project.id, sceneText),
-            prev_shot: previous,
-          },
+          payload: outlinePayload,
         });
       } catch (err) {
         if (signal?.aborted || err?.status === 499 || err?.message === '已停止') throw err;
@@ -627,8 +641,7 @@ class DraftService extends Service {
         wrapped.status = err.status || 502;
         throw wrapped;
       }
-      const boardOutput = outputOf(boardResult);
-      const sceneShots = (Array.isArray(boardOutput.shots) ? boardOutput.shots : []).map(item => ({
+      const takeShots = output => (Array.isArray(output?.shots) ? output.shots : []).map(item => ({
         scene_index: sceneIndex,
         coverage: String(item.description || item.coverage || item.summary || '').trim(),
         duration_sec: fitDurationSec(item.duration_sec, item.dialogue, 10),
@@ -638,16 +651,41 @@ class DraftService extends Service {
         source_indexes: item.source_indexes,
         wardrobe_state: wardrobeText(item.wardrobe_state),
       })).filter(item => item.coverage);
-      if (!sceneShots.length) this.ctx.throw(502, `第${sceneIndex}场没有返回镜头大纲`);
+      const boardOutput = outputOf(boardResult);
+      const sceneShots = takeShots(boardOutput);
+      normalizeOmissions(boardOutput.omissions)
+        .filter(item => !skipExcuse(item.reason))
+        .forEach(item => {
+          shotOmissions.push({
+            target: item.target || `第${sceneIndex}场`,
+            reason: item.reason,
+            ...(item.notice ? { notice: item.notice } : {}),
+          });
+        });
+      if (!sceneShots.length) {
+        const title = String(scene?.title || '').trim();
+        const summary = String(scene?.summary || '').replace(/\s+/g, ' ').trim();
+        const summaryClip = summary.length > 80 ? `${summary.slice(0, 80)}…` : summary;
+        shotOmissions.push({
+          target: `第${sceneIndex}场`,
+          notice: '分镜合并',
+          reason: `这一场没有交镜头，剧情按合并保留${title ? `：「${title}」` : ''}${summaryClip ? `。摘要：${summaryClip}` : ''}。后面的场继续拆。`,
+        });
+        await chapter.update({
+          script_data: { ...settled.script, shot_omissions: shotOmissions },
+        });
+        await this.reportSceneWrite(
+          projectPk,
+          importPk,
+          `第${sceneIndex}/${spans.length}场没有单独镜头，已记为合并，继续后面的场`,
+        );
+        continue;
+      }
+      const missed = lostParagraphOmission(sceneIndex, span.paragraphs, sceneShots);
+      if (missed) shotOmissions.push(missed);
       sceneShots.forEach(item => {
         item.index = outline.length;
         outline.push(item);
-      });
-      normalizeOmissions(boardOutput.omissions).forEach(item => {
-        shotOmissions.push({
-          target: item.target || `第${sceneIndex}场`,
-          reason: item.reason,
-        });
       });
       const last = sceneShots[sceneShots.length - 1];
       previous = {
@@ -684,35 +722,14 @@ class DraftService extends Service {
         `第${sceneIndex}/${spans.length}场已写入 ${sceneShots.length} 条镜头，累计 ${outline.length} 条`,
       );
     }
-    if (!outline.length) this.ctx.throw(502, '没有有效镜头大纲');
     const locked = settled.script;
-    const missingScenes = uncoveredScenes(locked.scenes, outline.map(item => ({
-      description: item.coverage,
-      scene_index: item.scene_index,
-    })));
-    if (missingScenes.length) {
-      shotOmissions.push({
-        target: missingScenes.map(item => `第${item.index}场`).join('、'),
-        reason: `${missingScenes.map(item => `第${item.index}场${item.title ? `「${item.title}」` : ''}`).join('、')}没有单独的镜头，被并进了其他场。一场可以拆成多条镜头，但不能少场。`,
-      });
-    } else if (outline.length < locked.scenes.length && !shotOmissions.length) {
-      shotOmissions.push({
-        target: '分镜',
-        reason: `剧本有 ${locked.scenes.length} 场，本次只拆出 ${outline.length} 条镜头，少掉的场次被合并或跳过。`,
-      });
-    } else if (outline.length < minShots && !shotOmissions.length) {
-      shotOmissions.push({
-        target: '分镜',
-        reason: `剧本有 ${locked.scenes.length} 场，镜头下限是 ${minShots}，本次只拆出 ${outline.length} 条。`,
-      });
-    }
     await chapter.update({
       script_data: { ...locked, shot_omissions: shotOmissions },
     });
-    await this.ctx.service.project.ensureShotCodes(projectPk);
+    if (outline.length) await this.ctx.service.project.ensureShotCodes(projectPk);
     this.ctx.logger.info('[cartoon] shot-outline import=%s created=%s', importPk, createdIds.length);
     const verified = await this.ctx.model.Shot.count({ where: { project_id: projectPk, import_id: importPk } });
-    if (verified < 1) this.ctx.throw(502, '分镜写入后查询为空，请检查数据库');
+    if (outline.length && verified < 1) this.ctx.throw(502, '分镜写入后查询为空，请检查数据库');
     const detail = await this.ctx.service.project.show(projectPk);
     return {
       ...detail,

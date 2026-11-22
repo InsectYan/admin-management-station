@@ -18,7 +18,8 @@ function normalizeOmissions(value) {
     const target = String(item?.target || item?.title || '').trim();
     const reason = String(item?.reason || '').trim();
     if (!reason) continue;
-    list.push({ target, reason });
+    const notice = String(item?.notice || '').trim();
+    list.push(notice ? { target, reason, notice } : { target, reason });
   }
   return list;
 }
@@ -59,7 +60,7 @@ function sceneNumbersIn(text) {
 }
 
 /**
- * 一场可以对应多条镜头。一条镜头若同时点了多场，只承认最先写到的那场，后面的场算被并掉。
+ * 一场可以对应多条镜头。一条镜头写到多场时，这几场都算留住，不把后面的场记成丢掉。
  */
 function uncoveredScenes(scenes, shots) {
   const list = Array.isArray(scenes) ? scenes : [];
@@ -68,8 +69,9 @@ function uncoveredScenes(scenes, shots) {
     const fromField = Number(shot?.scene_index);
     const fromText = sceneNumbersIn(shot?.description || shot?.coverage || '');
     const numbers = Number.isInteger(fromField) && fromField > 0 ? [ fromField, ...fromText ] : fromText;
-    const unique = numbers.filter((n, index) => numbers.indexOf(n) === index);
-    if (unique.length >= 1) owned.add(unique[0]);
+    numbers.forEach(n => {
+      if (!owned.has(n)) owned.add(n);
+    });
   }
   return list.map((scene, index) => ({
     index: index + 1,
@@ -77,9 +79,69 @@ function uncoveredScenes(scenes, shots) {
   })).filter(scene => !owned.has(scene.index));
 }
 
+function quotedLines(text) {
+  const lines = [];
+  const source = String(text || '');
+  const re = /[「“"]([^」”"]+)[」”"]/g;
+  let match;
+  while ((match = re.exec(source))) {
+    const line = String(match[1] || '').replace(/\s+/g, '').trim();
+    if (line) lines.push(line);
+  }
+  return lines;
+}
+
+function listedIndexes(shot) {
+  const raw = Array.isArray(shot?.source_indexes)
+    ? shot.source_indexes
+    : String(shot?.source_indexes || '').split(/[,，、\s]+/);
+  const list = [];
+  raw.forEach(item => {
+    const n = Number(item);
+    if (Number.isInteger(n) && n > 0 && !list.includes(n)) list.push(n);
+  });
+  return list;
+}
+
+function compactText(text) {
+  return String(text || '').replace(/\s+/g, '').replace(/[。！？!?，,、；;：:「」“”"'‘’]/g, '');
+}
+
+function shotBlob(shots) {
+  return compactText((Array.isArray(shots) ? shots : [])
+    .map(shot => [ shot?.dialogue, shot?.coverage, shot?.description ].filter(Boolean).join('\n'))
+    .join('\n'));
+}
+
+/** 这场原文里还没有进镜头的段落。带对白的段必须能在对白或描述里找到原句。 */
+function uncoveredParagraphs(paragraphs, shots) {
+  const list = Array.isArray(paragraphs) ? paragraphs : [];
+  const rows = Array.isArray(shots) ? shots : [];
+  const blob = shotBlob(rows);
+  const indexed = new Set();
+  rows.forEach(shot => listedIndexes(shot).forEach(n => indexed.add(n)));
+  return list.filter(paragraph => {
+    const index = Number(paragraph?.index);
+    const text = String(paragraph?.text || '');
+    const quotes = quotedLines(text).map(compactText).filter(line => line.length >= 2);
+    const flat = compactText(text);
+    if (quotes.length) return !quotes.every(line => blob.includes(line));
+    if (indexed.has(index)) return false;
+    const needle = flat.slice(0, 12);
+    return !(needle.length >= 6 && blob.includes(needle));
+  }).map(paragraph => Number(paragraph.index)).filter(n => n > 0);
+}
+
+function skipExcuse(reason) {
+  return /镜头够|镜头数|合理范围|已经演过|核心已|未继续拆|不再拆|整段不拆|够了/.test(String(reason || ''));
+}
+
 module.exports = {
   minStoryUnits,
   normalizeOmissions,
   sceneNumbersIn,
   uncoveredScenes,
+  quotedLines,
+  uncoveredParagraphs,
+  skipExcuse,
 };
