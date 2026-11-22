@@ -18,7 +18,6 @@ const {
   briefLook,
 } = require('../lib/assetProfile');
 const { settleScript } = require('../lib/scriptGate');
-const { minStoryUnits } = require('../lib/storyCoverage');
 const { promptCoveredMs, fitDurationSec } = require('../lib/promptDuration');
 const { topicsOf } = require('../lib/topics');
 
@@ -240,6 +239,7 @@ class FullAutoService extends Service {
       run_kind: this.kindOf(run),
       source: 'run',
       nodes: parseJson(run.nodes, {}),
+      log: parseJson(run.log, []),
       created_at: run.created_at,
       updated_at: run.updated_at,
     };
@@ -787,6 +787,28 @@ class FullAutoService extends Service {
     run.log = raw;
   }
 
+  async reportSlice(run, key, text) {
+    const note = String(text || '').slice(0, 500);
+    await this.pushLog(run, key, note);
+    const nodes = parseJson(run.nodes, blankNodes());
+    const prev = nodes[key] || { status: 'running', note: '', started_at: '', failures: [] };
+    nodes[key] = {
+      status: 'running',
+      note,
+      started_at: prev.started_at || new Date().toISOString(),
+      failures: Array.isArray(prev.failures) ? prev.failures : [],
+    };
+    const raw = JSON.stringify(nodes);
+    await run.update({
+      nodes: raw,
+      current_node: key,
+      message: note,
+    });
+    run.nodes = raw;
+    run.current_node = key;
+    run.message = note;
+  }
+
   async mark(run, key, status, note) {
     if (!run?.constructor?.rawAttributes?.nodes) return;
     const nodes = parseJson(run.nodes, blankNodes());
@@ -930,7 +952,7 @@ class FullAutoService extends Service {
     const existing = current?.script_data?.scenes;
     if (!run.fresh && Array.isArray(existing) && existing.length) {
       const source = String(current.body || '');
-      const settled = settleScript(current.script_data, source, minStoryUnits(source.length));
+      const settled = settleScript(current.script_data, source, 0);
       if (settled.issues.length) {
         throw new Error(`已有剧本还不能往下做。${settled.issues.slice(0, 3).join('；')}。请重新生成剧本`);
       }

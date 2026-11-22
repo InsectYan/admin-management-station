@@ -228,6 +228,66 @@ class VoiceLibraryService extends Service {
     const found = catalog.rows.find(item => item.source === 'extract' && item.rel === filename);
     return found ? this.present(found) : null;
   }
+
+  tokenFor(voice, filename) {
+    if (voice.source === 'extract') return `${EXTRACT_PREFIX}${filename}`;
+    const parts = String(voice.rel || '').split('/');
+    parts[parts.length - 1] = filename;
+    return parts.filter(Boolean).join('/');
+  }
+
+  voiceKey(token) {
+    return `v${crypto.createHash('sha1').update(token).digest('hex').slice(0, 20)}`;
+  }
+
+  async shiftVoiceKey(from, to) {
+    if (!from || from === to) return;
+    const patch = { voice_key: to || '' };
+    await this.ctx.model.Asset.update(patch, { where: { voice_key: from } });
+    await this.ctx.model.VoiceCue.update(patch, { where: { voice_key: from } });
+  }
+
+  writeError(err) {
+    const code = String(err?.code || '');
+    if (code === 'EROFS' || code === 'EPERM' || code === 'EACCES') {
+      this.ctx.throw(400, '这个音色在只读目录里，不能修改');
+    }
+    throw err;
+  }
+
+  async rename(id, name) {
+    const voice = await this.requireVoice(id);
+    const nextName = this.voiceName({ name }, path.basename(voice.absolute));
+    const ext = path.extname(voice.absolute);
+    const current = path.basename(voice.absolute, ext);
+    if (nextName === current) return this.present(voice);
+    const filename = `${nextName}${ext}`;
+    const target = path.join(path.dirname(voice.absolute), filename);
+    if (fs.existsSync(target)) this.ctx.throw(400, '已经有同名音频');
+    try {
+      await fs.promises.rename(voice.absolute, target);
+    } catch (err) {
+      this.writeError(err);
+    }
+    const token = this.tokenFor(voice, filename);
+    await this.shiftVoiceKey(voice.voice_key, this.voiceKey(token));
+    this.app.voiceLibraryCatalog = null;
+    const catalog = await this.catalog();
+    const found = catalog.rows.find(item => item.id === encodeId(token));
+    return found ? this.present(found) : null;
+  }
+
+  async remove(id) {
+    const voice = await this.requireVoice(id);
+    try {
+      await fs.promises.rm(voice.absolute, { force: true });
+    } catch (err) {
+      this.writeError(err);
+    }
+    await this.shiftVoiceKey(voice.voice_key, '');
+    this.app.voiceLibraryCatalog = null;
+    return { id: voice.id };
+  }
 }
 
 module.exports = VoiceLibraryService;

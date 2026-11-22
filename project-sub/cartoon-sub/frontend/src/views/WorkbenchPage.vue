@@ -235,17 +235,21 @@
                 </template>
               </el-table-column>
             </el-table>
-            <el-pagination
-              v-model:current-page="voicePage"
-              v-model:page-size="voicePageSize"
-              class="cartoon-pager"
-              :page-sizes="PAGE_SIZES"
-              :total="voiceFiltered.length"
-              :layout="PAGER_LAYOUT"
-              @size-change="voicePage = 1"
-            />
-            <audio ref="voiceAudio" class="cartoon-voice-player" controls></audio>
-            <p v-if="selectedVoice" class="cartoon-module__hint">已选 {{ selectedVoice.folder }} / {{ selectedVoice.name }}</p>
+            <div class="cartoon-voice-foot">
+              <div class="cartoon-voice-foot__player">
+                <audio ref="voiceAudio" class="cartoon-voice-player" controls></audio>
+                <p v-if="selectedVoice" class="cartoon-module__hint">已选 {{ selectedVoice.folder }} / {{ selectedVoice.name }}</p>
+              </div>
+              <el-pagination
+                v-model:current-page="voicePage"
+                v-model:page-size="voicePageSize"
+                class="cartoon-pager"
+                :page-sizes="PAGE_SIZES"
+                :total="voiceFiltered.length"
+                :layout="'total, sizes, prev, next'"
+                @size-change="voicePage = 1"
+              />
+            </div>
           </div>
           <div class="cartoon-voice__shots">
             <div class="cartoon-preview-filter">
@@ -1443,7 +1447,7 @@ watch(navTarget, (value) => {
 });
 watch(() => pipeline.value?.updated_at, () => {
   if (pipeline.value?.status !== 'running') return;
-  if ([ 'assets', 'preview', 'voice' ].includes(node.value)) refreshWorkbench();
+  if ([ 'assets', 'preview', 'voice', 'storyboard' ].includes(node.value) || pipeline.value?.current_node === 'storyboard') refreshWorkbench();
 });
 watch(() => pipeline.value?.status, (status, prev) => {
   if (prev === 'running' && status && status !== 'running' && node.value === 'assets') refreshWorkbench();
@@ -1713,7 +1717,19 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
 }
-.cartoon-voice-player { width: 100%; margin-top: 8px; }
+.cartoon-voice-foot {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 8px;
+  padding-right: 8px;
+  box-sizing: border-box;
+}
+.cartoon-voice-foot__player { flex: none; width: min(240px, 42%); min-width: 0; }
+.cartoon-voice-player { width: 100%; margin: 0; }
+.cartoon-voice-foot__player .cartoon-module__hint { margin: 4px 0 0; }
+.cartoon-voice-foot :deep(.cartoon-pager) { margin: 0 0 0 auto; }
 .cartoon-asset-table { cursor: pointer; }
 .cartoon-preview-table { width: 100%; }
 .cartoon-pager { margin-top: 12px; justify-content: flex-end; }

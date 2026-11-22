@@ -10,9 +10,13 @@ function pagerBox(el) {
 
 function tailHeight(el) {
   const next = el.nextElementSibling;
+  if (!next) return 8;
   const pager = pagerBox(next);
-  if (!pager) return 8;
-  return pager.offsetHeight + 16;
+  if (pager) return pager.offsetHeight + 16;
+  if (next.classList.contains('cartoon-track-foot') || next.classList.contains('cartoon-voice-foot')) {
+    return next.offsetHeight + 12;
+  }
+  return 8;
 }
 
 function inMultiTable(el) {
@@ -70,7 +74,16 @@ export function installFitTable(app) {
         if (el.closest('.el-dialog, .el-drawer, .el-overlay, .el-popper')) return;
         if (el.offsetParent === null) return;
         if (inMultiTable(el)) {
-          if (maxHeight.value != null) maxHeight.value = null;
+          const column = el.closest('.cartoon-voice__library, .cartoon-voice__shots');
+          if (!column) {
+            if (maxHeight.value != null) maxHeight.value = null;
+            return;
+          }
+          const columnRect = el.getBoundingClientRect();
+          if (columnRect.width < 40) return;
+          const room = Math.floor(column.getBoundingClientRect().bottom - columnRect.top - tailHeight(el));
+          if (room < 120) return;
+          if (maxHeight.value == null || Math.abs(maxHeight.value - room) > 2) maxHeight.value = room;
           return;
         }
         const rect = el.getBoundingClientRect();
@@ -91,6 +104,10 @@ export function installFitTable(app) {
           observer.observe(el);
           const page = el.closest('.cartoon-page, .cartoon-overview, .cartoon-workbench__main, .cartoon-sub-content');
           if (page) observer.observe(page);
+          const foot = el.nextElementSibling;
+          if (foot && (foot.classList.contains('cartoon-track-foot') || foot.classList.contains('cartoon-voice-foot'))) {
+            observer.observe(foot);
+          }
         }
         window.addEventListener('resize', onResize);
       });

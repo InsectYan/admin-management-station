@@ -14,7 +14,7 @@ const {
   normalizeCameraMoves,
   serializeCameraMoves,
 } = require('../lib/cartoonMeta');
-const { minStoryUnits, normalizeOmissions, uncoveredScenes } = require('../lib/storyCoverage');
+const { normalizeOmissions, uncoveredScenes } = require('../lib/storyCoverage');
 const { settleScript } = require('../lib/scriptGate');
 const { normalizeScript, placeTag } = require('../lib/rosterNames');
 const { uniquePrompt } = require('../lib/promptText');
@@ -218,7 +218,7 @@ function skillTimeout(ctx) {
 
 function lockIssues(script, body) {
   const source = String(body || '');
-  return settleScript(script, source, minStoryUnits(source.length));
+  return settleScript(script, source, 0);
 }
 
 function negativeNeedsRetry(prompt) {
@@ -415,8 +415,6 @@ class DraftService extends Service {
 
   async composeScript(projectId, importId, signal) {
     const { project, chapter } = await this.load(projectId, importId);
-    const bodyLen = String(chapter.body || '').length;
-    const minScenes = minStoryUnits(bodyLen);
     const scriptResult = await invokeSkill(this.ctx, {
       skill: 'cartoon-script-skill',
       action: 'draft',
@@ -426,7 +424,6 @@ class DraftService extends Service {
         chapter_title: chapter.chapter_title || '',
         ...productionInput(project),
         body: chapter.body,
-        min_scenes: minScenes,
         asset_facts: await this.projectFactText(project.id),
       },
     });
@@ -436,7 +433,7 @@ class DraftService extends Service {
       const reply = String(scriptOutput.reply || scriptOutput.summary || '').replace(/\s+/g, ' ').trim();
       this.ctx.throw(502, reply ? `剧本没有定稿。${reply.slice(0, 240)}` : '剧本没有定稿');
     }
-    const settled = settleScript(scriptData, chapter.body, minScenes, { coverStory: true });
+    const settled = settleScript(scriptData, chapter.body, 0, { coverStory: true });
     if (settled.issues.length) {
       this.ctx.throw(502, `剧本没有定稿。${settled.issues.slice(0, 4).join('；')}。这一稿没有保存，请再生成一次`);
     }
@@ -479,6 +476,69 @@ class DraftService extends Service {
   }
 
   /** 按已有剧本拆镜头大纲并落库；与镜头页共用同一批 Shot */
+  async insertOutlineShots({ projectPk, importPk, chapter, script, shots, episode, order }) {
+    const episodeRow = episode || await this.ctx.service.project.ensureEpisode(projectPk);
+    let next = order;
+    if (!Number.isFinite(next)) {
+      const maxOrder = await this.ctx.model.Shot.max('sort_order', { where: { project_id: projectPk } });
+      next = Number.isFinite(maxOrder) ? maxOrder + 1 : 0;
+    }
+    const codes = await this.ctx.service.project.allocateShotCodes(projectPk, shots.length);
+    const ids = [];
+    for (let i = 0; i < shots.length; i += 1) {
+      const item = shots[i];
+      const fields = {
+        project_id: projectPk,
+        import_id: importPk,
+        video_task_id: episodeRow.id,
+        sort_order: next,
+        shot_code: codes[i],
+        shot_size: item.shot_size,
+        camera_move: item.camera_move,
+        description: item.coverage,
+        dialogue: item.dialogue,
+        duration_ms: item.duration_sec * 1000,
+        scene_index: Number.isInteger(Number(item.scene_index)) && Number(item.scene_index) > 0 ? Number(item.scene_index) : null,
+        scene_label: sceneTitle(script, item),
+        source_excerpt: resolveExcerpt(chapter.body, {
+          description: item.coverage,
+          dialogue: item.dialogue,
+        }, item.source_indexes),
+        wardrobe_state: wardrobeText(item.wardrobe_state) || sceneWardrobe(script, item.scene_index, sceneTitle(script, item)),
+      };
+      let row;
+      try {
+        row = await this.ctx.model.Shot.create(fields);
+      } catch (err) {
+        const message = String(err.message || '');
+        const dropWardrobe = /wardrobe_state/i.test(message);
+        const dropCode = /shot_code/i.test(message);
+        const dropScene = /scene_index/i.test(message);
+        if (!dropWardrobe && !dropCode && !dropScene) throw err;
+        if (dropWardrobe) delete fields.wardrobe_state;
+        if (dropCode) delete fields.shot_code;
+        if (dropScene) delete fields.scene_index;
+        this.ctx.logger.warn('[cartoon] shot create retry: %s', message);
+        row = await this.ctx.model.Shot.create(fields);
+      }
+      ids.push(row.id);
+      next += 1;
+    }
+    return { episode: episodeRow, order: next, ids };
+  }
+
+  async reportSceneWrite(projectPk, importPk, text) {
+    const run = await this.ctx.model.FullRun.findOne({
+      where: { project_id: projectPk, import_id: importPk, status: 'running' },
+      order: [[ 'id', 'DESC' ]],
+    });
+    if (!run) return;
+    const kind = String(run.run_kind || '');
+    const node = String(run.current_node || '');
+    if (node !== 'storyboard' && kind !== 'storyboard') return;
+    await this.ctx.service.fullAuto.reportSlice(run, 'storyboard', text);
+  }
+
   async suggestShotOutline(projectId, importId, payload = {}) {
     const claim = begin(this.app, { projectId, kind: 'outline', targetId: importId });
     if (claim.joined) return claim.done;
@@ -513,12 +573,16 @@ class DraftService extends Service {
     }
     const styleCtx = await this.styleContext(project, chapter);
     const spans = sceneSpans(settled.script, chapter.body);
-    const minShots = Math.max(settled.script.scenes.length, spanBeats(settled.script, chapter.body), 1);
+    const minShots = Math.max(spanBeats(settled.script, chapter.body), 1);
     const stylePayload = styleWithoutBody(styleCtx);
     const source = productionInput(project);
     const outline = [];
     const shotOmissions = [];
+    const createdIds = [];
     let previous = null;
+    let episode = null;
+    let order = null;
+    let retired = false;
     for (const span of spans) {
       if (signal?.aborted) throw stopError();
       const sceneIndex = span.scene_index;
@@ -594,6 +658,31 @@ class DraftService extends Service {
         duration_sec: last.duration_sec,
         same_scene: false,
       };
+      if (!retired && existing.length) {
+        await this.ctx.service.project.destroyShotsByIds(existing.map(item => item.id));
+        retired = true;
+        order = null;
+      }
+      const inserted = await this.insertOutlineShots({
+        projectPk,
+        importPk,
+        chapter,
+        script: settled.script,
+        shots: sceneShots,
+        episode,
+        order,
+      });
+      episode = inserted.episode;
+      order = inserted.order;
+      createdIds.push(...inserted.ids);
+      await chapter.update({
+        script_data: { ...settled.script, shot_omissions: shotOmissions },
+      });
+      await this.reportSceneWrite(
+        projectPk,
+        importPk,
+        `第${sceneIndex}/${spans.length}场已写入 ${sceneShots.length} 条镜头，累计 ${outline.length} 条`,
+      );
     }
     if (!outline.length) this.ctx.throw(502, '没有有效镜头大纲');
     const locked = settled.script;
@@ -620,57 +709,8 @@ class DraftService extends Service {
     await chapter.update({
       script_data: { ...locked, shot_omissions: shotOmissions },
     });
-
-    if (existing.length) {
-      await this.ctx.service.project.destroyShotsByIds(existing.map(item => item.id));
-    }
-
-    const episode = await this.ctx.service.project.ensureEpisode(projectPk);
-    const maxOrder = await this.ctx.model.Shot.max('sort_order', { where: { project_id: projectPk } });
-    let order = Number.isFinite(maxOrder) ? maxOrder + 1 : 0;
-    const codes = await this.ctx.service.project.allocateShotCodes(projectPk, outline.length);
-    const createdIds = [];
-    for (let i = 0; i < outline.length; i += 1) {
-      const item = outline[i];
-      const base = {
-        project_id: projectPk,
-        import_id: importPk,
-        video_task_id: episode.id,
-        sort_order: order,
-        shot_size: item.shot_size,
-        camera_move: item.camera_move,
-        description: item.coverage,
-        dialogue: item.dialogue,
-        duration_ms: item.duration_sec * 1000,
-        scene_index: Number.isInteger(Number(item.scene_index)) && Number(item.scene_index) > 0 ? Number(item.scene_index) : null,
-        scene_label: sceneTitle(locked, item),
-        source_excerpt: resolveExcerpt(chapter.body, {
-          description: item.coverage,
-          dialogue: item.dialogue,
-        }, item.source_indexes),
-        wardrobe_state: wardrobeText(item.wardrobe_state) || sceneWardrobe(locked, item.scene_index, sceneTitle(locked, item)),
-      };
-      let row;
-      const fields = { ...base, shot_code: codes[i] };
-      try {
-        row = await this.ctx.model.Shot.create(fields);
-      } catch (err) {
-        const message = String(err.message || '');
-        const dropWardrobe = /wardrobe_state/i.test(message);
-        const dropCode = /shot_code/i.test(message);
-        const dropScene = /scene_index/i.test(message);
-        if (!dropWardrobe && !dropCode && !dropScene) throw err;
-        if (dropWardrobe) delete fields.wardrobe_state;
-        if (dropCode) delete fields.shot_code;
-        if (dropScene) delete fields.scene_index;
-        this.ctx.logger.warn('[cartoon] shot create retry: %s', message);
-        row = await this.ctx.model.Shot.create(fields);
-      }
-      createdIds.push(row.id);
-      order += 1;
-    }
     await this.ctx.service.project.ensureShotCodes(projectPk);
-    this.ctx.logger.info('[cartoon] shot-outline import=%s created=%s codes=%j', importPk, createdIds.length, codes);
+    this.ctx.logger.info('[cartoon] shot-outline import=%s created=%s', importPk, createdIds.length);
     const verified = await this.ctx.model.Shot.count({ where: { project_id: projectPk, import_id: importPk } });
     if (verified < 1) this.ctx.throw(502, '分镜写入后查询为空，请检查数据库');
     const detail = await this.ctx.service.project.show(projectPk);

@@ -518,7 +518,7 @@
       </div>
       </el-tab-pane>
       <el-tab-pane label="执行记录" name="log">
-        <el-empty v-if="!autoRecords.length" description="还没有执行记录" />
+        <el-empty v-if="!recordRows.length" description="还没有执行记录" />
         <template v-else>
           <el-table :data="recordPageRows">
             <el-table-column label="时间" width="110" prop="at" fixed="left" />
@@ -538,7 +538,7 @@
             v-model:page-size="recordPageSize"
             class="cartoon-pager"
             :page-sizes="PAGE_SIZES"
-            :total="autoRecords.length"
+            :total="recordRows.length"
             :layout="PAGER_LAYOUT"
             @size-change="recordPage = 1"
           />
@@ -943,6 +943,7 @@ const autoRecords = computed({
   get: () => runMark.records,
   set: value => { runMark.records = value; },
 });
+const liveSliceLog = ref([]);
 const recordPage = ref(1);
 const autoPrompt = runMark.prompt;
 const autoVideo = runMark.video;
@@ -1075,11 +1076,36 @@ watch(() => pipelineShotProgress('prompts', '生成提示词'), (value) => {
   autoPrompt.done = Math.max(0, value.current - 1);
   autoPrompt.active = 1;
 });
+const recordRows = computed(() => {
+  const logs = [
+    ...(Array.isArray(props.pipelineRun?.log) ? props.pipelineRun.log : []),
+    ...liveSliceLog.value,
+  ];
+  const seen = new Set();
+  const slices = [];
+  logs.forEach((item, index) => {
+    if (item?.node !== 'storyboard') return;
+    const text = String(item.text || '');
+    if (!/已写入/.test(text)) return;
+    const key = `${item.at || ''}|${text}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    slices.push({
+      id: `slice-${item.at || index}-${index}`,
+      at: jobClock(item.at),
+      shotCode: '—',
+      action: '写入镜头',
+      result: '成功',
+      reason: text,
+    });
+  });
+  return [ ...slices.reverse(), ...autoRecords.value ];
+});
 const recordPageRows = computed(() => {
   const size = recordPageSize.value;
-  return autoRecords.value.slice((recordPage.value - 1) * size, recordPage.value * size);
+  return recordRows.value.slice((recordPage.value - 1) * size, recordPage.value * size);
 });
-watch(autoRecords, (rows) => {
+watch(recordRows, (rows) => {
   const max = Math.max(1, Math.ceil(rows.length / recordPageSize.value));
   if (recordPage.value > max) recordPage.value = max;
 }, { deep: true });
@@ -1539,6 +1565,38 @@ async function load() {
   await loadPackages(projectForm.source_novel_id);
   if (step.value === 3) await ensureScriptSnapshot();
 }
+async function refreshLiveShots() {
+  const id = projectKey();
+  if (!id) return;
+  const data = await request(`/projects/${id}`);
+  if (!data || !Array.isArray(data.shots)) return;
+  detail.value = detail.value ? { ...detail.value, shots: data.shots } : data;
+  const importId = scriptSnapshot.value?.id;
+  if (!importId) return;
+  const page = await request(`/projects/${id}/imports/${importId}/shots`, {
+    params: { page: scriptPage.value || 1, pageSize: scriptPageSize.value },
+  });
+  scriptShotRows.value = Array.isArray(page?.list) ? page.list : scriptShotRows.value;
+  scriptShotTotal.value = Number(page?.total) || 0;
+  shotTotals[String(importId)] = scriptShotTotal.value;
+}
+async function pullSliceLog(noteId) {
+  if (!noteId || !projectKey()) return;
+  const row = await request(`/projects/${projectKey()}/full-auto/${noteId}`);
+  liveSliceLog.value = Array.isArray(row?.log) ? row.log : [];
+}
+function watchLiveShots(noteId) {
+  const timer = setInterval(() => {
+    refreshLiveShots().catch(() => {});
+    if (noteId) pullSliceLog(noteId).catch(() => {});
+  }, 2500);
+  return () => clearInterval(timer);
+}
+watch(() => props.pipelineRun?.message, () => {
+  const run = props.pipelineRun;
+  if (run?.status !== 'running' || run.current_node !== 'storyboard') return;
+  refreshLiveShots().catch(() => {});
+});
 function openScriptCard(key) {
   loadScriptSnapshot(key);
 }
@@ -2128,11 +2186,18 @@ async function runSemiAuto(item) {
     });
     ElMessage.info('剧本已写入，正在拆分分镜…');
     await finishFlowNote(note?.id, 'running', '正在拆分分镜', [ 'script' ], 'storyboard');
-    const outline = await request(`/projects/${projectKey()}/imports/${item.id}/draft/shot-outline`, {
-      method: 'post',
-      timeout: 7200000,
-      data: { replace },
-    });
+    const stopWatch = watchLiveShots(note?.id);
+    let outline;
+    try {
+      outline = await request(`/projects/${projectKey()}/imports/${item.id}/draft/shot-outline`, {
+        method: 'post',
+        timeout: 7200000,
+        data: { replace },
+      });
+    } finally {
+      stopWatch();
+      if (note?.id) await pullSliceLog(note.id).catch(() => {});
+    }
     selectedImportKey.value = String(item.id);
     if (outline?.project && Array.isArray(outline.shots)) {
       detail.value = outline;
@@ -2235,6 +2300,9 @@ async function generateShotOutline(item) {
     return;
   }
   outliningId.value = item.id;
+  const note = await openFlowNote('storyboard', item.id, '正在拆分分镜');
+  await finishFlowNote(note?.id, 'running', '正在拆分分镜', [ 'script' ], 'storyboard');
+  const stopWatch = watchLiveShots(note?.id);
   ElMessage.info('正在按剧本拆分分镜并落库（5—15 秒/段）…');
   try {
     const data = await request(`/projects/${projectKey()}/imports/${item.id}/draft/shot-outline`, {
@@ -2255,17 +2323,23 @@ async function generateShotOutline(item) {
     if (!count) {
       const total = (detail.value?.shots || []).length;
       const created = Number(data?.created) || 0;
-      ElMessage.error(created > 0
+      const message = created > 0
         ? `后端称已创建 ${created} 条，但当前快照 ${importId} 下仍看不到（项目共 ${total} 条）。请刷新页面。`
-        : '拆分未写入镜头。请确认已重启后端；若刚升级，刷新后再点一次「拆分分镜」。');
+        : '拆分未写入镜头。请确认已重启后端；若刚升级，刷新后再点一次「拆分分镜」。';
+      await finishFlowNote(note?.id, 'failed', message);
+      ElMessage.error(message);
       return;
     }
+    await finishFlowNote(note?.id, 'success', `已落库 ${count} 段分镜`);
     ElMessage.success(`已落库 ${count} 段分镜（镜头ID 已生成），刷新后仍会保留；请逐行点「生成分镜提示词」`);
     await nextTick();
     document.getElementById('script-shot-table')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch (err) {
+    await finishFlowNote(note?.id, 'failed', err.message || '拆分分镜失败');
     ElMessage.error(err.message);
   } finally {
+    stopWatch();
+    if (note?.id) await pullSliceLog(note.id).catch(() => {});
     outliningId.value = null;
     unlockJob(token);
   }

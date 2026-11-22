@@ -1,6 +1,6 @@
 'use strict';
 
-/** 只按字数给下限，不设上限。与剧本/分镜技能使用同一档。 */
+/** 只给镜头条数下限，不设上限。场次不使用这档。 */
 function minStoryUnits(charCount) {
   const n = Math.max(0, Number(charCount) || 0);
   if (n < 800) return 1;

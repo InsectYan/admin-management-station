@@ -36,6 +36,23 @@ class VoiceLibraryController extends Controller {
     }
   }
 
+  async rename() {
+    try {
+      const body = this.ctx.request.body || {};
+      ok(this.ctx, await this.ctx.service.voiceLibrary.rename(body.id, body.name));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async remove() {
+    try {
+      ok(this.ctx, await this.ctx.service.voiceLibrary.remove(this.ctx.query.id));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async file() {
     try {
       const voice = await this.ctx.service.voiceLibrary.requireVoice(this.ctx.query.id);

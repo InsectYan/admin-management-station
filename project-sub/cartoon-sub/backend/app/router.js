@@ -120,6 +120,8 @@ module.exports = app => {
   router.post('/api/projects/:id/assets/generate', controller.fullAuto.generateAssets);
   router.post('/api/projects/:id/assets/profiles', controller.fullAuto.profileAssets);
   router.get('/api/voice-library', controller.voiceLibrary.index);
+  router.put('/api/voice-library', controller.voiceLibrary.rename);
+  router.delete('/api/voice-library', controller.voiceLibrary.remove);
   router.post('/api/voice-library/extract', controller.voiceLibrary.extract);
   router.get('/api/voice-library/file', controller.voiceLibrary.file);
   router.post('/api/projects/:id/voice/suggest', controller.skillSuggest.suggestVoice);

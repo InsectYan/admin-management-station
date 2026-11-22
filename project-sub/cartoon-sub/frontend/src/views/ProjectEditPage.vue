@@ -49,33 +49,6 @@
             </div>
             <p v-if="job" class="cartoon-module__hint">导出{{ jobLabel }}<span v-if="job.error_message">：{{ job.error_message }}</span></p>
             <el-progress v-if="job && (job.status === 'queued' || job.status === 'running')" :percentage="job.progress || 0" />
-            <div v-if="latest" class="cartoon-edit-result">
-              <VideoWithRate :src="fileUrl(latest.id)" controls />
-            </div>
-            <section v-if="store.exports.length" class="cartoon-edit-finals">
-              <h3 class="cartoon-module__title">已导出成片</h3>
-              <p class="cartoon-module__hint">每次导出都留在这张表里，并记下所属项目。点记录编号可预览这一条成片。</p>
-              <el-table :data="store.exports" row-key="id" size="small">
-                <el-table-column label="成品" width="90">
-                  <template #default="{ row }">#{{ row.id }}</template>
-                </el-table-column>
-                <el-table-column label="记录" width="110">
-                  <template #default="{ row }">
-                    <el-button link type="primary" @click="openFinal(row)">#{{ row.job_id }}</el-button>
-                  </template>
-                </el-table-column>
-                <el-table-column label="项目" min-width="140">
-                  <template #default="{ row }">{{ row.project_name || store.project?.name || '当前项目' }}</template>
-                </el-table-column>
-                <el-table-column label="尺寸" width="130">
-                  <template #default="{ row }">{{ row.width && row.height ? `${row.width}×${row.height}` : '—' }}</template>
-                </el-table-column>
-                <el-table-column label="时长" width="90">
-                  <template #default="{ row }">{{ row.duration_ms ? `${Math.round(row.duration_ms / 1000)} 秒` : '—' }}</template>
-                </el-table-column>
-                <el-table-column label="时间" min-width="180" prop="created_at" />
-              </el-table>
-            </section>
           </template>
         </div>
       </el-tab-pane>
@@ -99,6 +72,28 @@
           </div>
         </section>
       </el-tab-pane>
+      <el-tab-pane label="导出视频" name="exported">
+        <section class="cartoon-edit-imports">
+          <h3 class="cartoon-module__title">导出的视频</h3>
+          <p class="cartoon-module__hint">每次导出的成片都留在这里，并记下所属项目。点「查看」可预览这一条成片。</p>
+          <p v-if="job && (job.status === 'queued' || job.status === 'running')" class="cartoon-module__hint">导出{{ jobLabel }}</p>
+          <el-progress v-if="job && (job.status === 'queued' || job.status === 'running')" :percentage="job.progress || 0" />
+          <div class="cartoon-edit-import-scroll">
+            <el-empty v-if="!store.exports.length" description="还没有导出的成片" />
+            <div v-else class="cartoon-edit-import-grid">
+              <article v-for="item in store.exports" :key="item.id" class="cartoon-edit-import">
+                <video :src="fileUrl(item.id)" controls muted playsinline></video>
+                <p>{{ item.title || '成片' }} · #{{ item.id }}</p>
+                <p class="cartoon-module__hint">{{ exportMeta(item) }}</p>
+                <p class="cartoon-module__hint">{{ item.project_name || store.project?.name || '当前项目' }} · {{ exportWhen(item.created_at) }}</p>
+                <div>
+                  <el-button link type="primary" @click="openFinal(item)">查看</el-button>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+      </el-tab-pane>
     </el-tabs>
   </PageShell>
 </template>
@@ -114,7 +109,6 @@ import ClipInspector from '../components/edit/ClipInspector.vue';
 import { useEditTimelineStore } from '../stores/editTimeline.js';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
-import VideoWithRate from '../components/VideoWithRate.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -138,12 +132,23 @@ const canvasKey = computed(() => {
   return '';
 });
 const canExport = computed(() => store.edit && store.tools.ffmpeg && !store.dirty && store.clips.length && !exporting.value);
-const latest = computed(() => store.exports[0] || null);
 const importedVideos = computed(() => (store.videos || []).filter(item => item.local));
 const jobLabel = computed(() => ({ queued: '排队', running: '进行中', success: '完成', failed: '失败' }[job.value?.status] || ''));
 
 function fileUrl(id) {
   return `${resolveApiBase()}/outputs/${id}/file`;
+}
+function exportMeta(item) {
+  const parts = [];
+  if (item.duration_ms) parts.push(`${Math.round(item.duration_ms / 1000)} 秒`);
+  if (item.width && item.height) parts.push(`${item.width}×${item.height}`);
+  return parts.join(' · ') || '成片';
+}
+function exportWhen(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value || '';
+  const pad = number => String(number).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 function importUrl(item) {
   return `${resolveApiBase()}/projects/${projectId.value}/edit/imports/${item.name}/file`;
@@ -322,6 +327,7 @@ async function startExport() {
         exporting.value = false;
         if (job.value.status === 'success') {
           ElMessage.success('成片已导出');
+          composeTab.value = 'exported';
           await reload();
         } else {
           ElMessage.error(job.value.error_message || '导出失败');
@@ -381,8 +387,6 @@ onUnmounted(stopPoll);
   gap: 16px;
 }
 .cartoon-edit-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
-.cartoon-edit-result { display: block; max-width: 420px; margin-top: 12px; }
-.cartoon-edit-result :deep(video) { display: block; width: 100%; }
 .cartoon-edit-file { display: none; }
 .cartoon-edit-imports {
   height: 100%;

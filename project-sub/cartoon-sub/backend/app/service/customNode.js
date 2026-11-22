@@ -5,8 +5,6 @@ const { customCatalog } = require('../lib/pipelineDefaults');
 const { invokeSkill } = require('../lib/agentProxy');
 const { productionInput } = require('../lib/productionInput');
 const { settleScript } = require('../lib/scriptGate');
-const { minStoryUnits } = require('../lib/storyCoverage');
-
 const PANEL_FIELD = {
   conflict: 'conflict',
   twist: 'twist',
@@ -96,7 +94,7 @@ class CustomNodeService extends Service {
     });
     const output = result.output || {};
     const source = String(chapter.body || '');
-    const settled = settleScript(output.script_data, source, minStoryUnits(source.length));
+    const settled = settleScript(output.script_data, source, 0);
     if (settled.issues.length) {
       this.ctx.throw(502, `剧本没有定稿。${settled.issues.slice(0, 4).join('；')}。这一稿没有保存，请再生成一次`);
     }
