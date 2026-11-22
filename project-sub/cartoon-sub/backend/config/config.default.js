@@ -47,6 +47,11 @@ module.exports = appInfo => {
     },
   };
   config.bodyParser = { jsonLimit: '96mb', formLimit: '96mb' };
+  config.multipart = {
+    mode: 'file',
+    fileSize: '512mb',
+    whitelist: [ '.mp4', '.webm', '.mov', '.mkv' ],
+  };
   config.main = {
     baseUrl: process.env.MAIN_API_ORIGIN || 'http://127.0.0.1:5200',
   };

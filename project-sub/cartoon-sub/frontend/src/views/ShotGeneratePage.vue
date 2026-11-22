@@ -148,7 +148,16 @@
             </figure>
           </div>
         </el-form-item>
-        <el-form-item v-for="slot in slots" :key="slot.id" :label="slot.label">
+        <el-form-item v-if="media === 'video' && linkedVoices.length && !audioSlots.length" label="人物音色">
+          <p class="cartoon-module__hint">已选人物里有音色，但这套工作流没有音色入口，生成时不会写入音频。</p>
+        </el-form-item>
+        <el-form-item v-for="slot in audioSlots" :key="slot.id" :label="slot.label">
+          <el-select v-model="voicePicks[slot.id]" clearable filterable placeholder="选择要插入的人物音色" style="width: 100%">
+            <el-option v-for="item in voicedCharacters" :key="item.id" :label="item.name" :value="item.id" />
+          </el-select>
+          <p class="cartoon-module__hint">{{ slot.spec }} 不选时，按已关联人物里设过音色的顺序写入。</p>
+        </el-form-item>
+        <el-form-item v-for="slot in pictureSlots" :key="slot.id" :label="slot.label">
           <div class="cartoon-image-field">
             <el-upload
               :key="`${workflowId}-${slot.id}`"
@@ -177,6 +186,35 @@
           <el-form-item :label="imageFrame === 'end' ? '尾帧提示词' : '首帧提示词'">
             <el-input v-model="framePrompt" type="textarea" :rows="8" />
           </el-form-item>
+          <el-form-item label="关联资产">
+            <el-select v-model="assetIds" multiple filterable :disabled="readOnly" placeholder="可多选角色、场景、道具" style="width: 100%">
+              <el-option-group v-for="group in assetGroups" :key="`frame-${group.kind}`" :label="group.label">
+                <el-option v-for="item in group.items" :key="item.id" :label="item.name" :value="item.id" />
+              </el-option-group>
+            </el-select>
+            <div v-if="assetMarks.length" class="cartoon-asset-marks">
+              <span
+                v-for="item in assetMarks"
+                :key="`frame-${item.asset_id || 'x'}-${item.name}`"
+                class="cartoon-asset-mark"
+                :class="item.state === 'have' ? 'is-have' : 'is-miss'"
+              >{{ item.name }}</span>
+            </div>
+            <p class="cartoon-module__hint">绿色是已经关联的资产。红色是当前剧情或提示词里还没有关联上的，没有资产记录的名字也不能选。打开时默认选中这一镜已经配套的资产。</p>
+            <div v-if="linkedSheets.length" class="cartoon-linked-sheets">
+              <figure v-for="(item, index) in linkedSheets" :key="`frame-sheet-${item.key}`">
+                <el-image
+                  :src="item.url"
+                  fit="cover"
+                  :preview-src-list="linkedPreview"
+                  :initial-index="index"
+                  preview-teleported
+                  hide-on-click-modal
+                />
+                <figcaption>{{ kindLabel(item.kind) }} · {{ item.name }}</figcaption>
+              </figure>
+            </div>
+          </el-form-item>
           <el-form-item label="工作流">
             <el-select v-model="frameWorkflowId" filterable placeholder="选择生图工作流" style="width: 100%">
               <el-option-group label="文生图">
@@ -186,7 +224,7 @@
                 <el-option v-for="item in frameEditWorkflows" :key="`frame-edit-${item.id}`" :label="workflowLabel(item)" :value="item.id" />
               </el-option-group>
             </el-select>
-            <p v-if="frameWorkflowIsEdit" class="cartoon-module__hint">图生图会带上这一帧提示词里点名的人物和场景设定图。</p>
+            <p v-if="frameWorkflowIsEdit" class="cartoon-module__hint">图生图按上面选中的资产送设定图，顺序和选择一致。{{ frameRefCapText }}</p>
             <p v-else-if="frameWorkflowId" class="cartoon-module__hint">文生图只按提示词生成，不使用参考图。</p>
           </el-form-item>
           <el-form-item label="宽高">
@@ -313,6 +351,12 @@ const frameWorkflow = computed(() => imageWorkflows.value.find(item => item.id =
 const frameWorkflowIsEdit = computed(() => String(frameWorkflow.value?.name || '').includes('图生图'));
 const selected = computed(() => choices.value.find(item => item.id === workflowId.value) || null);
 const slots = computed(() => selected.value?.images || []);
+const pictureSlots = computed(() => slots.value.filter(slot => slot.role !== 'audio'));
+const audioSlots = computed(() => slots.value.filter(slot => slot.role === 'audio'));
+const voicePicks = reactive({});
+const voicedCharacters = computed(() => projectAssets.value.filter(item => (
+  item.kind === 'character' && !item.disabled && String(item.voice_key || '').trim()
+)));
 const needsRefmod = computed(() => String(selected.value?.name || '').includes('[RefMod]'));
 const visualAssets = computed(() => projectAssets.value.filter(item => [ 'character', 'scene', 'prop' ].includes(item.kind) && !item.disabled));
 const assetGroups = computed(() => [
@@ -320,6 +364,9 @@ const assetGroups = computed(() => [
   { kind: 'scene', label: '场景', items: visualAssets.value.filter(item => item.kind === 'scene') },
   { kind: 'prop', label: '道具', items: visualAssets.value.filter(item => item.kind === 'prop') },
 ].filter(group => group.items.length));
+const linkedVoices = computed(() => selectedAssets.value.filter(item => (
+  item.kind === 'character' && String(item.voice_key || '').trim()
+)));
 const selectedAssets = computed(() => assetIds.value
   .map(id => visualAssets.value.find(item => item.id === id))
   .filter(Boolean));
@@ -1053,35 +1100,34 @@ function frameRefCap(workflow) {
   if (expanded) return Number(expanded.limit);
   return slots.reduce((sum, slot) => sum + (Number(slot.limit) > 0 ? Number(slot.limit) : 1), 0);
 }
+function frameAssetLabel(asset) {
+  const kind = asset.kind === 'scene' ? '场景' : (asset.kind === 'prop' ? '道具' : '人物');
+  return `${kind}「${asset.name}」`;
+}
 const frameRefAssets = computed(() => {
   if (!frameWorkflowIsEdit.value) return [];
   const cap = frameRefCap(frameWorkflow.value);
   if (!cap) return [];
-  const text = String(framePrompt.value || '');
-  const named = projectAssets.value
-    .filter(asset => !asset.disabled && (asset.kind === 'character' || asset.kind === 'scene') && asset.name && asset.reference_path && text.includes(asset.name))
-    .sort((a, b) => String(b.name).length - String(a.name).length)
-    .filter((asset, index, list) => !list.slice(0, index).some(kept => String(kept.name).includes(asset.name)));
-  const sceneLabel = String(shot.value?.scene_label || '').trim();
-  const scenes = named.filter(asset => asset.kind === 'scene');
-  const scene = scenes.find(asset => sceneLabel && asset.name === sceneLabel)
-    || scenes[0]
-    || projectAssets.value.find(asset => !asset.disabled && asset.kind === 'scene' && sceneLabel && asset.name === sceneLabel && asset.reference_path)
-    || null;
-  const characters = named.filter(asset => asset.kind === 'character');
-  const characterCap = scene && cap > 1 ? cap - 1 : cap;
-  const picked = characters.slice(0, characterCap);
-  if (scene && picked.length < cap && !picked.some(asset => asset.id === scene.id)) picked.push(scene);
-  return picked.map(asset => ({
-    id: asset.id,
-    label: `${asset.kind === 'scene' ? '场景' : '人物'}「${asset.name}」`,
-    url: `${resolveApiBase()}${asset.reference_path}`,
-  }));
+  return selectedAssets.value
+    .filter(asset => String(asset.reference_path || '').trim())
+    .slice(0, cap)
+    .map(asset => ({
+      id: asset.id,
+      label: frameAssetLabel(asset),
+      url: `${resolveApiBase()}${asset.reference_path}`,
+    }));
+});
+const frameRefCapText = computed(() => {
+  const cap = frameRefCap(frameWorkflow.value);
+  if (!cap) return '';
+  const ready = selectedAssets.value.filter(asset => String(asset.reference_path || '').trim()).length;
+  if (ready > cap) return `这一条最多 ${cap} 张，多出来的不会送。`;
+  return `这一条最多 ${cap} 张。没有设定图的资产不会送。`;
 });
 const frameSubmitPreview = computed(() => {
   const text = String(framePrompt.value || '').trim();
   const entries = frameRefAssets.value.map(item => {
-    const matched = String(item.label || '').match(/^(人物|角色|场景)「([^」]+)」/);
+    const matched = String(item.label || '').match(/^(人物|角色|场景|道具)「([^」]+)」/);
     if (!matched) return null;
     const asset = projectAssets.value.find(row => row.name === matched[2] && (matched[1] === '场景' ? row.kind === 'scene' : row.kind === 'character'));
     return {
@@ -1268,6 +1314,9 @@ async function generate() {
         workflow_id: workflowId.value,
         stage_notes: stagePayload(),
         asset_ids: assetIds.value,
+        voice_inserts: audioSlots.value
+          .filter(slot => voicePicks[slot.id])
+          .map(slot => ({ slot_id: slot.id, asset_id: voicePicks[slot.id] })),
         refmod_files: refmodFilesPayload(),
         duration_sec: media.value === 'video' ? Number(durationSec.value) : undefined,
         seed: nextSeed,

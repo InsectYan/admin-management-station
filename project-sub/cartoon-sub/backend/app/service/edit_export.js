@@ -87,9 +87,24 @@ class EditExportService extends Service {
     });
     if (!clips.length) this.ctx.throw(400, '时间线上没有视频');
     const rows = await this.ctx.service.edit.videoOutputs(edit.project_id);
+    const imports = await this.ctx.service.edit.listImports(edit.project_id);
     const byId = new Map(rows.map(item => [ item.output.id, item ]));
+    const byImport = new Map(imports.map(item => [ item.name, item ]));
     const root = outputRoot(this.app);
-    return clips.map(clip => {
+    const pieces = [];
+    for (const clip of clips) {
+      const token = String(clip.text || '').startsWith('import:') ? String(clip.text).slice(7) : '';
+      if (token) {
+        const found = await this.ctx.service.edit.importFile(edit.project_id, token);
+        const imported = byImport.get(token);
+        if (!found || !imported || imported.missing) this.ctx.throw(400, '有片段的导入视频已经不在，不能导出');
+        if (!imported.duration_ms) this.ctx.throw(400, '有片段还没有时长，请重新打开剪辑页');
+        if (clip.trim_in_ms + clip.duration_ms > imported.duration_ms + 50) {
+          this.ctx.throw(400, '有片段的裁剪超出素材时长');
+        }
+        pieces.push({ clip, absolute: found.absolute });
+        continue;
+      }
       const source = byId.get(clip.source_output_id);
       const absolute = source ? resolveInside(root, source.output.file_path) : null;
       if (!source || !absolute || !fs.existsSync(absolute)) this.ctx.throw(400, '有片段的素材缺失，不能导出');
@@ -97,8 +112,9 @@ class EditExportService extends Service {
       if (clip.trim_in_ms + clip.duration_ms > source.output.duration_ms + 50) {
         this.ctx.throw(400, '有片段的裁剪超出素材时长');
       }
-      return { clip, absolute };
-    });
+      pieces.push({ clip, absolute });
+    }
+    return pieces;
   }
 
   async run(jobId) {

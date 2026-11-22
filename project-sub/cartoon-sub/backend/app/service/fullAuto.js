@@ -38,7 +38,7 @@ const NODE_LABEL = {
   video: '正在生成镜头',
 };
 const VIDEO_KINDS = [ 'video', 'i2v', 't2v', 'refmod' ];
-const WAIT_LIMIT_MS = 40 * 60 * 1000;
+const WAIT_LIMIT_MS = 2 * 60 * 60 * 1000;
 
 function sleep(ms, signal) {
   return new Promise((resolve, reject) => {
@@ -1108,6 +1108,19 @@ class FullAutoService extends Service {
     return Boolean(a && a === b);
   }
 
+  async taskChainIndex(projectId, shot, prev, startedAt, nth) {
+    const step = Number.isInteger(nth) && nth >= 0 ? nth : 0;
+    const ownPrior = startedAt
+      ? ((await this.videoShotCounts(projectId, [ shot.id ], { before: startedAt })).get(Number(shot.id)) || 0)
+      : 0;
+    const plantIndex = ownPrior + step;
+    if (!prev || !this.sharesScene(shot, prev)) return { plantIndex, tailIndex: plantIndex };
+    const prevPrior = startedAt
+      ? ((await this.videoShotCounts(projectId, [ prev.id ], { before: startedAt })).get(Number(prev.id)) || 0)
+      : 0;
+    return { plantIndex, tailIndex: prevPrior + step };
+  }
+
   async renderSheet(run, prompt) {
     if (!Number(run.asset_workflow_id)) throw new Error('还没有设定图，无法继续出图');
     const task = await this.ctx.model.Task.create({
@@ -1238,7 +1251,7 @@ class FullAutoService extends Service {
     if (dir && fs.existsSync(dir)) {
       const names = await fs.promises.readdir(dir);
       await Promise.all(names
-        .filter(name => name === 'manual.png' || name === 'end.png' || /^b\d+-/.test(name))
+        .filter(name => name === 'manual.png' || name === 'end.png')
         .map(name => fs.promises.unlink(path.join(dir, name)).catch(() => {})));
     }
     if (shot.manual_frame_path) await shot.update({ manual_frame_path: '' });
@@ -1308,9 +1321,12 @@ class FullAutoService extends Service {
             const haveNow = (await this.videoShotCounts(run.project_id, [ shot.id ], countOptions)).get(Number(shot.id)) || 0;
             if (haveNow >= want) break;
             guard += 1;
+            const prevShot = await this.previousShot(shot);
+            const chain = await this.taskChainIndex(run.project_id, shot, prevShot, startedAt, haveNow);
             await this.mark(run, 'video', 'running', `正在生成镜头 ${code} 第 ${haveNow + 1}/${want} 条（${index + 1}/${shots.length}）`);
             await this.shoot(run, shot, endSlot, same, scene, {
-              batchIndex: haveNow,
+              batchIndex: chain.plantIndex,
+              tailIndex: chain.tailIndex,
               wantEnd,
               startSlot,
             });
@@ -1372,8 +1388,9 @@ class FullAutoService extends Service {
     const code = shot.shot_code || shot.id;
     const wantEnd = options.wantEnd !== false;
     const batchIndex = Number.isInteger(options.batchIndex) ? options.batchIndex : 0;
+    const tailIndex = Number.isInteger(options.tailIndex) ? options.tailIndex : batchIndex;
     const startHeld = await this.ensureStartFrame(run, shot, sameScene, scene, videoText, frameStart, frameEnd, negative, {
-      batchIndex,
+      batchIndex: tailIndex,
       chain: sameScene,
     });
     const endHeld = wantEnd
@@ -1403,6 +1420,7 @@ class FullAutoService extends Service {
         ephemeral_refmod_id: packId,
         generate_end: wantEnd,
         chain_batch: batchIndex,
+        chain_tail: tailIndex,
         frame_tasks: {
           start_task_id: startHeld.taskId || null,
           end_task_id: endHeld?.taskId || null,
@@ -1769,6 +1787,23 @@ class FullAutoService extends Service {
   }
 
   async awaitTask(run, task) {
+    const { startMediaWatch } = require('../lib/executionTrace');
+    const watch = await startMediaWatch(this.ctx, task);
+    const started = Date.now();
+    try {
+      const fresh = await this.awaitTaskBody(run, task);
+      const state = !fresh
+        ? 'error'
+        : (fresh.status === 'success' ? 'ok' : (fresh.status === 'cancelled' ? 'skip' : 'error'));
+      await watch.close(state, fresh?.error_message || '', Date.now() - started);
+      return fresh;
+    } catch (err) {
+      await watch.close(err?.stop ? 'skip' : 'error', err?.message || '失败', Date.now() - started);
+      throw err;
+    }
+  }
+
+  async awaitTaskBody(run, task) {
     if (!task?.id) throw new Error('没有拿到生成任务');
     const deadline = Date.now() + WAIT_LIMIT_MS;
     let current = task;

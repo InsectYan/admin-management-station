@@ -468,13 +468,20 @@ class GenerateService extends Service {
       durationSec = seconds;
     }
     if (useRefs) await this.assertRefmodWorkflow(workflowOverride);
+    if (videoKind && workflowOverride) {
+      const voiceChoice = await this.choiceById(workflowOverride);
+      const voices = await this.voicesFromAssets(projectId, assetIds, voiceChoice, rawImages, payload.voice_inserts);
+      if (voices.length) rawImages = rawImages.concat(voices);
+    }
     if (payload.generate_end === false && workflowOverride) {
       const chosen = await this.choiceById(workflowOverride);
       const endIds = new Set((chosen.images || []).filter(slot => slot.role === 'end').map(slot => slot.id));
       rawImages = rawImages.filter(item => !endIds.has(item.slot_id || item.id));
     }
+    const plantBatch = chainBatchOf(payload.chain_batch);
+    const readBatch = payload.chain_tail == null ? plantBatch : chainBatchOf(payload.chain_tail);
     const images = await this.attachFrames(freshShot, workflowOverride, rawImages, {
-      chainBatch: chainBatchOf(payload.chain_batch),
+      chainBatch: readBatch,
     });
 
     const profileRow = project
@@ -516,7 +523,7 @@ class GenerateService extends Service {
       negative: payload.negative_zh != null ? String(payload.negative_zh) : '',
       signal: stop.signal,
       refmodPicks: picks,
-      chainBatch: chainBatchOf(payload.chain_batch),
+      chainBatch: plantBatch,
       chainEnd: payload.generate_end !== false,
     }).then(saved => {
       finish(this.app, claim.row, null, saved);
@@ -1250,6 +1257,72 @@ class GenerateService extends Service {
       else visit(slot);
     });
     return entries;
+  }
+
+  async voicesFromAssets(projectId, assetIds, choice, existing, inserts) {
+    const slots = (choice?.images || []).filter(slot => slot.role === 'audio');
+    if (!slots.length) return [];
+    const taken = new Set((existing || []).map(item => item.slot_id || item.id).filter(Boolean));
+    const open = slots.filter(slot => !taken.has(slot.id));
+    if (!open.length) return [];
+    const requested = [ ...new Set((assetIds || []).map(id => Number(id)).filter(id => id > 0)) ];
+    const pinned = (Array.isArray(inserts) ? inserts : [])
+      .map(item => ({ slot_id: String(item?.slot_id || item?.id || ''), asset_id: Number(item?.asset_id) }))
+      .filter(item => item.slot_id && item.asset_id > 0);
+    const ids = [ ...new Set([ ...pinned.map(item => item.asset_id), ...requested ]) ];
+    if (!ids.length) return [];
+    const rows = await this.ctx.model.Asset.findAll({
+      where: { project_id: projectId, id: ids, kind: 'character', disabled: false },
+    });
+    const byId = new Map(rows.map(row => [ row.id, row ]));
+    let catalog;
+    try {
+      catalog = await this.ctx.service.voiceLibrary.catalog();
+    } catch (err) {
+      this.ctx.logger.warn('[cartoon] 音色库没有打开 %s', err.message);
+      return [];
+    }
+    const byKey = new Map(catalog.rows.map(item => [ item.voice_key, item ]));
+    const used = new Set();
+    const files = [];
+    const pushVoice = async (slot, asset) => {
+      if (!slot || !asset || used.has(asset.id)) return false;
+      const key = String(asset.voice_key || '').trim();
+      const item = key ? byKey.get(key) : null;
+      if (!item) return false;
+      let voice;
+      try {
+        voice = await this.ctx.service.voiceLibrary.requireVoice(item.id);
+      } catch (err) {
+        this.ctx.logger.warn('[cartoon] 人物音色读不到 %s', err.message);
+        return false;
+      }
+      const ext = path.extname(voice.absolute) || '.m4a';
+      files.push({
+        id: slot.id,
+        slot_id: slot.id,
+        filename: `voice-${files.length + 1}${ext}`,
+        data_base64: fs.readFileSync(voice.absolute).toString('base64'),
+        label: `人物「${asset.name}」音色`,
+      });
+      used.add(asset.id);
+      return true;
+    };
+    for (const slot of open) {
+      const pin = pinned.find(item => item.slot_id === slot.id);
+      if (pin) await pushVoice(slot, byId.get(pin.asset_id));
+    }
+    const rest = open.filter(slot => !files.some(file => file.slot_id === slot.id));
+    let cursor = 0;
+    const queued = requested.map(id => byId.get(id)).filter(asset => asset && String(asset.voice_key || '').trim());
+    for (const slot of rest) {
+      while (cursor < queued.length) {
+        const asset = queued[cursor];
+        cursor += 1;
+        if (await pushVoice(slot, asset)) break;
+      }
+    }
+    return files;
   }
 
   async imagesFromAssets(projectId, assetIds, choice) {

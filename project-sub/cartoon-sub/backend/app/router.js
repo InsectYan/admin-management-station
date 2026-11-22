@@ -11,6 +11,10 @@ module.exports = app => {
   router.post('/api/internal/ops/tasks/:id/retry', controller.opsInternal.retry);
   router.post('/api/internal/ops/tasks/:id/cancel', controller.opsInternal.cancel);
   router.get('/api/meta', controller.project.meta);
+  router.get('/api/enums', controller.enumCatalog.index);
+  router.get('/api/enums/:key', controller.enumCatalog.show);
+  router.post('/api/enums/:key', controller.enumCatalog.create);
+  router.put('/api/enums/:key/:id', controller.enumCatalog.update);
   router.get('/api/novel-catalog', controller.project.novels);
   router.get('/api/novel-catalog/:novelId/chapters', controller.project.chapters);
   router.get('/api/novel-catalog/:novelId/packages', controller.project.packages);
@@ -164,6 +168,10 @@ module.exports = app => {
   router.get('/api/projects/:id/edit', controller.edit.show);
   router.put('/api/projects/:id/edit', controller.edit.save);
   router.post('/api/projects/:id/edit/seed', controller.edit.seed);
+  router.post('/api/projects/:id/edit/open', controller.edit.open);
+  router.post('/api/projects/:id/edit/imports', controller.edit.importVideo);
+  router.delete('/api/projects/:id/edit/imports/:token', controller.edit.removeImport);
+  router.get('/api/projects/:id/edit/imports/:token/file', controller.edit.importFile);
   router.post('/api/projects/:id/edit/export', controller.edit.startExport);
   router.get('/api/edit-jobs/:id', controller.edit.job);
   router.post('/api/outputs/batch-delete', controller.project.removeOutputs);

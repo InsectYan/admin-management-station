@@ -19,7 +19,7 @@
           </el-form-item>
           <el-form-item v-if="supportsAv(detail.project.content_type)" label="专题">
             <el-select v-model="projectForm.topics" multiple clearable placeholder="可不选" style="width: 100%">
-              <el-option v-for="item in TOPIC_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+              <el-option v-for="item in meta.topic_options" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
             <p class="cartoon-module__hint">可多选。选了的专题都会在常规提示词之后各走一次收口。AV 仍先写常规稿，双方都写明满二十一岁才套亲密子模版。健身只改动作路径。</p>
           </el-form-item>
@@ -637,7 +637,7 @@
       </template>
     </el-dialog>
     <el-dialog v-model="allResetOpen" class="cartoon-dialog" title="重置全自动" width="480px" append-to-body :close-on-click-modal="false">
-      <p class="cartoon-module__hint">会重写当前快照里每一条镜头的提示词，已经写好的也会覆盖。然后按下面的次数提交满血 H3 首尾帧 [RefMod]。有指定首帧就用指定首帧，否则用上镜尾帧。已经有的视频会保留。</p>
+      <p class="cartoon-module__hint">会重写当前快照里每一条镜头的提示词，已经写好的也会覆盖。然后按下面的次数提交满血 H3 首尾帧 [RefMod]。有指定首帧就用指定首帧，否则用上镜尾帧。已经有的视频会保留。这一轮新视频接在已有尾帧后面，下一镜用上一镜这一轮新尾帧，也就是全部尾帧的最后几条。</p>
       <el-form label-position="top" @submit.prevent>
         <el-form-item label="每个镜头的生成次数">
           <el-input-number v-model="allResetCount" :min="1" :max="8" :step="1" :precision="0" controls-position="right" />
@@ -653,7 +653,7 @@
       </template>
     </el-dialog>
     <el-dialog v-model="videoResetOpen" class="cartoon-dialog" title="重新生成视频" width="480px" append-to-body :close-on-click-modal="false">
-      <p class="cartoon-module__hint">会给当前快照里每一条镜头按次数再提交满血 H3 首尾帧 [RefMod]。有指定首帧就用指定首帧，否则用上镜尾帧。已经有的视频会保留。</p>
+      <p class="cartoon-module__hint">会给当前快照里每一条镜头按次数再提交满血 H3 首尾帧 [RefMod]。有指定首帧就用指定首帧，否则用上镜尾帧。已经有的视频会保留。这一轮新视频接在已有尾帧后面，下一镜用上一镜这一轮新尾帧，也就是全部尾帧的最后几条。</p>
       <el-form label-position="top" @submit.prevent>
         <el-form-item label="每个镜头的生成次数">
           <el-input-number v-model="videoResetCount" :min="1" :max="8" :step="1" :precision="0" controls-position="right" />
@@ -714,7 +714,8 @@
         </el-form-item>
         <el-form-item label="每个镜头的视频条数">
           <el-input-number v-model="fullAutoVideoCount" :min="1" :max="8" :step="1" :precision="0" controls-position="right" />
-          <p class="cartoon-module__hint">每个镜头这一轮生成这么多条视频，默认 1 条，最多 8 条。没有指定首帧时，从已有视频的下一条开始接上一镜同序号尾帧。尾帧不够的那一条再单独生成首帧，不占用指定首帧。</p>
+          <p v-if="fullAutoFresh" class="cartoon-module__hint">每个镜头这一轮新生成这么多条，接在已有视频后面。下一镜用上一镜这一轮新尾帧，也就是全部尾帧的最后几条。没有对应尾帧时再单独生成首帧。</p>
+          <p v-else class="cartoon-module__hint">每个镜头这一轮生成这么多条视频，默认 1 条，最多 8 条。没有指定首帧时，从已有视频的下一条开始接上一镜同序号尾帧。尾帧不够的那一条再单独生成首帧，不占用指定首帧。</p>
         </el-form-item>
         <el-form-item label="是否生成尾帧">
           <el-checkbox v-model="fullAutoGenerateEnd">生成尾帧</el-checkbox>
@@ -863,7 +864,7 @@ watch(step, (value, prev) => {
 const detail = ref(null);
 const novels = ref([]);
 const chapters = ref([]);
-const meta = reactive({ visual_styles: [], shot_sizes: [ '中景' ], camera_moves: [ '固定' ] });
+const meta = reactive({ visual_styles: [], shot_sizes: [ '中景' ], camera_moves: [ '固定' ], topic_options: TOPIC_OPTIONS });
 const projectForm = reactive({ name: '', source_novel_id: '', visual_style: '', topics: [] });
 const chapterId = ref('');
 const pullingAll = ref(false);
@@ -2119,7 +2120,7 @@ async function runSemiAuto(item) {
     ElMessage.info('正在生成剧本…');
     const data = await request(`/projects/${projectKey()}/imports/${item.id}/draft/script`, {
       method: 'post',
-      timeout: 1800000,
+      timeout: 7200000,
     });
     await request(`/projects/${projectKey()}/imports/${item.id}/draft/script/apply`, {
       method: 'post',
@@ -2129,7 +2130,7 @@ async function runSemiAuto(item) {
     await finishFlowNote(note?.id, 'running', '正在拆分分镜', [ 'script' ], 'storyboard');
     const outline = await request(`/projects/${projectKey()}/imports/${item.id}/draft/shot-outline`, {
       method: 'post',
-      timeout: 1800000,
+      timeout: 7200000,
       data: { replace },
     });
     selectedImportKey.value = String(item.id);
@@ -2197,7 +2198,7 @@ async function generateScript(item) {
   try {
     const data = await request(`/projects/${projectKey()}/imports/${item.id}/draft/script`, {
       method: 'post',
-      timeout: 1800000,
+      timeout: 7200000,
     });
     await request(`/projects/${projectKey()}/imports/${item.id}/draft/script/apply`, {
       method: 'post',
@@ -2238,7 +2239,7 @@ async function generateShotOutline(item) {
   try {
     const data = await request(`/projects/${projectKey()}/imports/${item.id}/draft/shot-outline`, {
       method: 'post',
-      timeout: 1800000,
+      timeout: 7200000,
       data: { replace },
     });
     selectedImportKey.value = String(item.id);
@@ -2304,7 +2305,7 @@ async function expandOutlineRow(row) {
   try {
     await request(`/projects/${projectKey()}/imports/${item.id}/draft/shot-expand`, {
       method: 'post',
-      timeout: 1800000,
+      timeout: 7200000,
       signal,
       data: {
         shot_id: row.id,
@@ -2379,7 +2380,7 @@ async function runPromptShot(row, item, signal, fresh = false) {
   try {
     await request(`/projects/${projectKey()}/imports/${current.importId}/draft/shot-expand`, {
       method: 'post',
-      timeout: 1800000,
+      timeout: 7200000,
       signal,
       data: {
         shot_id: row.id,
@@ -2540,17 +2541,17 @@ function continuingBatch(liveTasks) {
     if (String(shot.id) === String(current.id)) return { done, total: board.length };
     const task = latest.get(String(shot.id));
     const at = new Date(task?.created_at || 0).getTime();
-    if (!task || task.status !== 'success' || !liveAt || !at || at > liveAt || liveAt - at > 40 * 60 * 1000) return null;
+    if (!task || task.status !== 'success' || !liveAt || !at || at > liveAt || liveAt - at > 2 * 60 * 60 * 1000) return null;
     done += 1;
   }
   return null;
 }
-async function startServerVideo(shotIds, videoCount = 1, generateEnd = true) {
+async function startServerVideo(shotIds, videoCount = 1, generateEnd = true, fresh = false) {
   const count = Math.min(8, Math.max(1, Math.round(Number(videoCount) || 1)));
   try {
     const job = await request(`/projects/${projectKey()}/auto-jobs`, {
       method: 'post',
-      data: { shot_ids: shotIds, video_count: count, generate_end: generateEnd !== false },
+      data: { shot_ids: shotIds, video_count: count, generate_end: generateEnd !== false, fresh: fresh === true },
     });
     applyAutoJob(job);
     armServerPoll();
@@ -2608,7 +2609,7 @@ async function confirmAllReset() {
   const outcome = await runAuto('prompt', null, true, { quiet: true });
   if (!outcome || outcome.stopped) return;
   if (outcome.failed) ElMessage.warning(`有 ${outcome.failed} 条提示词没写成，视频仍会按次数提交`);
-  await startServerVideo(shots.map(row => row.id), count, allResetGenerateEnd.value);
+  await startServerVideo(shots.map(row => row.id), count, allResetGenerateEnd.value, true);
 }
 async function confirmVideoReset() {
   const shots = boardShots.value;
@@ -2622,7 +2623,7 @@ async function confirmVideoReset() {
     return;
   }
   videoResetOpen.value = false;
-  await startServerVideo(shots.map(row => row.id), count, videoResetGenerateEnd.value);
+  await startServerVideo(shots.map(row => row.id), count, videoResetGenerateEnd.value, true);
 }
 async function resetAuto(mode) {
   if (autoRunning.value || flowBusy.value) return;
@@ -2667,7 +2668,7 @@ async function runAuto(mode, selectedIds, fresh = false, options = {}) {
     }
   }
   if (mode === 'video') {
-    await startServerVideo(shots.map(row => row.id), 1, options.generateEnd !== false);
+    await startServerVideo(shots.map(row => row.id), 1, options.generateEnd !== false, fresh);
     return;
   }
   const jobToken = lockJob();
@@ -2748,7 +2749,7 @@ async function runAuto(mode, selectedIds, fresh = false, options = {}) {
     }
     if (mode === 'all' && !stopped && !signal.aborted) {
       if (failed && !options.quiet) ElMessage.warning(`有 ${failed} 条提示词没写成，视频仍会按指定首帧或上镜尾帧提交`);
-      handedOff = Boolean(await startServerVideo(shots.map(row => row.id), 1, options.generateEnd !== false));
+      handedOff = Boolean(await startServerVideo(shots.map(row => row.id), 1, options.generateEnd !== false, fresh));
     } else if (!options.quiet && !stopped && !signal.aborted) {
       const parts = [ `成功 ${succeeded}` ];
       if (failed) parts.push(`失败 ${failed}`);
@@ -2904,6 +2905,7 @@ onMounted(async () => {
     meta.visual_styles = metaRes.visual_styles || [];
     meta.shot_sizes = metaRes.shot_sizes || meta.shot_sizes;
     meta.camera_moves = metaRes.camera_moves || meta.camera_moves;
+    if (metaRes.topic_options?.length) meta.topic_options = metaRes.topic_options;
   }
   await load();
   await Promise.all([

@@ -23,6 +23,7 @@ const { topicsOf } = require('../lib/topics');
 const { assetFactText, namedAssets } = require('../lib/assetProfile');
 const { chapterParagraphs, resolveExcerpt, matchExcerpt } = require('../lib/sourceExcerpt');
 const { begin, finish } = require('../lib/activeRuns');
+const { openRun, closeRun, noteStep } = require('../lib/executionTrace');
 
 function outputOf(result) {
   return result?.output || {};
@@ -122,6 +123,12 @@ function clipText(text, max = 6000) {
   return value.length > max ? `${value.slice(0, max)}…` : value;
 }
 
+function clipSpan(text, head = 1200, tail = 1800) {
+  const value = String(text || '').trim();
+  if (value.length <= head + tail) return value;
+  return `${value.slice(0, head)}……${value.slice(value.length - tail)}`;
+}
+
 function skillRaw(result) {
   const steps = Array.isArray(result?.output?.steps) ? result.output.steps : [];
   return steps.map(item => String(item?.rawText || '').trim()).filter(Boolean).join('\n\n');
@@ -160,6 +167,14 @@ function tracePacket(shot, extra = {}) {
     wardrobe_state: shot.wardrobe_state || '',
   };
   if (shot.asset_facts) packet.asset_facts = shot.asset_facts;
+  if (shot.prev_shot) {
+    packet.prev_shot = {
+      shot_code: shot.prev_shot.shot_code || '',
+      scene_label: shot.prev_shot.scene_label || '',
+      same_scene: Boolean(shot.prev_shot.same_scene),
+      has_prompt: Boolean(shot.prev_shot.positive_zh),
+    };
+  }
   if (extra.positive_zh) packet.positive_zh = extra.positive_zh;
   if (extra.prompt_part) packet.prompt_part = extra.prompt_part;
   return clipText(JSON.stringify(packet, null, 2));
@@ -195,7 +210,10 @@ function coveredPlaceNames(script, description) {
 }
 
 function skillTimeout(ctx) {
-  return Number(ctx.app.config.agentPlatform?.timeoutMs) || 960000;
+  const floor = 2 * 60 * 60 * 1000;
+  const configured = Number(ctx.app.config.agentPlatform?.timeoutMs);
+  if (Number.isFinite(configured) && configured >= floor) return configured;
+  return floor;
 }
 
 function lockIssues(script, body) {
@@ -217,9 +235,14 @@ function styleWithoutBody(styleCtx) {
 
 class DraftService extends Service {
   async callSkill(spec) {
+    const payload = { ...(spec.payload || {}) };
+    if (this.executionRunId) payload.trace_run_id = this.executionRunId;
+    const title = spec.traceTitle || this.traceTitle || '';
+    if (title) payload.trace_title = title;
+    this.traceTitle = '';
     const started = Date.now();
     try {
-      const result = await invokeSkill(this.ctx, spec);
+      const result = await invokeSkill(this.ctx, { ...spec, payload });
       this.traceElapsed = Date.now() - started;
       this.traceErrorJson = '';
       this.traceResult = result;
@@ -259,6 +282,16 @@ class DraftService extends Service {
       });
     } catch (err) {
       this.ctx.logger.warn('[cartoon] 提示词记录没有写下 %s', err.message);
+    }
+    if (this.executionRunId && (!skill || state === 'skip')) {
+      await noteStep(this.ctx, this.executionRunId, {
+        node_key: String(title || 'note').slice(0, 80),
+        title: String(title || '记录').slice(0, 80),
+        skill_name: skill || '',
+        status: state,
+        log_text: state === 'skip' ? '已跳过' : (state === 'error' ? '已中断' : '已写回'),
+        elapsed_ms: elapsed,
+      });
     }
   }
 
@@ -329,6 +362,42 @@ class DraftService extends Service {
     return assetFactText(namedAssets(await this.characterCards(projectId), text));
   }
 
+  async previousShotContext(projectId, importId, shot) {
+    const order = Number(shot?.sort_order);
+    if (!Number.isFinite(order)) return null;
+    const { Op } = this.app.Sequelize;
+    const prev = await this.ctx.model.Shot.findOne({
+      where: {
+        project_id: projectId,
+        import_id: importId,
+        sort_order: { [Op.lt]: order },
+      },
+      order: [[ 'sort_order', 'DESC' ], [ 'id', 'DESC' ]],
+    });
+    if (!prev) return null;
+    const prompt = await this.ctx.model.Prompt.findOne({ where: { shot_id: prev.id } });
+    const prevScene = Number(prev.scene_index);
+    const currentScene = Number(shot.scene_index);
+    const sameScene = prevScene > 0 && currentScene > 0
+      ? prevScene === currentScene
+      : Boolean(prev.scene_label) && prev.scene_label === shot.scene_label;
+    const context = {
+      shot_code: prev.shot_code || '',
+      scene_index: prevScene > 0 ? prevScene : null,
+      scene_label: prev.scene_label || '',
+      same_scene: sameScene,
+      description: clipSpan(prev.description),
+      dialogue: clipText(prev.dialogue, 1200),
+      duration_sec: prev.duration_ms ? Math.round(prev.duration_ms / 1000) : null,
+      wardrobe_state: String(prev.wardrobe_state || '').trim(),
+    };
+    const positive = clipSpan(prompt?.positive_zh, 800, 1600);
+    const frameEnd = clipText(prompt?.frame_end_zh, 1200);
+    if (positive) context.positive_zh = positive;
+    if (frameEnd) context.frame_end_zh = frameEnd;
+    return context;
+  }
+
   async ensureShotExcerpt(shot, chapter) {
     const saved = String(shot?.source_excerpt || '').trim();
     if (saved) return saved;
@@ -346,7 +415,6 @@ class DraftService extends Service {
 
   async composeScript(projectId, importId, signal) {
     const { project, chapter } = await this.load(projectId, importId);
-    const styleCtx = await this.styleContext(project, chapter);
     const bodyLen = String(chapter.body || '').length;
     const minScenes = minStoryUnits(bodyLen);
     const scriptResult = await invokeSkill(this.ctx, {
@@ -356,7 +424,6 @@ class DraftService extends Service {
       signal,
       payload: {
         chapter_title: chapter.chapter_title || '',
-        ...styleCtx,
         ...productionInput(project),
         body: chapter.body,
         min_scenes: minScenes,
@@ -385,8 +452,6 @@ class DraftService extends Service {
     });
     return {
       script_data: named,
-      is_xianxia: styleCtx.is_xianxia,
-      visual_style_label: styleCtx.visual_style_label,
       persisted: true,
     };
   }
@@ -447,40 +512,91 @@ class DraftService extends Service {
       this.ctx.throw(400, `剧本还不能交给分镜。${settled.issues.slice(0, 4).join('；')}`);
     }
     const styleCtx = await this.styleContext(project, chapter);
+    const spans = sceneSpans(settled.script, chapter.body);
     const minShots = Math.max(settled.script.scenes.length, spanBeats(settled.script, chapter.body), 1);
-    const boardResult = await invokeSkill(this.ctx, {
-      skill: 'cartoon-storyboard-skill',
-      action: 'draft',
-      timeoutMs: skillTimeout(this.ctx),
-      signal,
-      payload: {
-        script_data: settled.script,
-        outline_only: true,
-        ...styleWithoutBody(styleCtx),
-        body: '',
-        scene_spans: sceneSpans(settled.script, chapter.body),
-        ...productionInput(project),
-        min_shots: minShots,
-        asset_facts: await this.projectFactText(project.id),
-      },
-    });
-    const boardOutput = outputOf(boardResult);
-    const rawShots = boardOutput.shots;
-    if (!Array.isArray(rawShots) || !rawShots.length) this.ctx.throw(502, '没有返回镜头大纲');
-    const outline = rawShots.map((item, index) => ({
-      index,
-      scene_index: Number.isInteger(Number(item.scene_index)) && Number(item.scene_index) > 0 ? Number(item.scene_index) : undefined,
-      coverage: String(item.description || item.coverage || item.summary || '').trim(),
-      duration_sec: fitDurationSec(item.duration_sec, item.dialogue, 10),
-      shot_size: serializeShotSizes(item.shot_sizes != null ? item.shot_sizes : item.shot_size),
-      camera_move: serializeCameraMoves(item.camera_moves != null ? item.camera_moves : item.camera_move),
-      dialogue: String(item.dialogue || '').trim(),
-      source_indexes: item.source_indexes,
-      wardrobe_state: wardrobeText(item.wardrobe_state),
-    })).filter(item => item.coverage);
+    const stylePayload = styleWithoutBody(styleCtx);
+    const source = productionInput(project);
+    const outline = [];
+    const shotOmissions = [];
+    let previous = null;
+    for (const span of spans) {
+      if (signal?.aborted) throw stopError();
+      const sceneIndex = span.scene_index;
+      const scene = settled.script.scenes[sceneIndex - 1];
+      const sceneText = [
+        scene?.title,
+        scene?.summary,
+        scene?.wardrobe,
+        ...(span.paragraphs || []).map(item => item.text),
+      ].filter(Boolean).join('\n');
+      const beat = Math.max(1, Math.ceil(((span.paragraphs || []).length || 1) / 4));
+      this.ctx.logger.info('[cartoon] shot-outline scene %s/%s', sceneIndex, spans.length);
+      let boardResult;
+      try {
+        boardResult = await invokeSkill(this.ctx, {
+          skill: 'cartoon-storyboard-skill',
+          action: 'draft',
+          timeoutMs: skillTimeout(this.ctx),
+          signal,
+          payload: {
+            script_data: {
+              logline: settled.script.logline || '',
+              summary: settled.script.summary || '',
+              characters: settled.script.characters || [],
+              places: settled.script.places || [],
+              scenes: [ scene ],
+            },
+            outline_only: true,
+            scene_index: sceneIndex,
+            ...stylePayload,
+            body: '',
+            scene_spans: [ span ],
+            ...source,
+            min_shots: beat,
+            asset_facts: await this.shotFactText(project.id, sceneText),
+            prev_shot: previous,
+          },
+        });
+      } catch (err) {
+        if (signal?.aborted || err?.status === 499 || err?.message === '已停止') throw err;
+        const wrapped = new Error(`第${sceneIndex}场镜头没有生成。${err.message || ''}`.trim());
+        wrapped.status = err.status || 502;
+        throw wrapped;
+      }
+      const boardOutput = outputOf(boardResult);
+      const sceneShots = (Array.isArray(boardOutput.shots) ? boardOutput.shots : []).map(item => ({
+        scene_index: sceneIndex,
+        coverage: String(item.description || item.coverage || item.summary || '').trim(),
+        duration_sec: fitDurationSec(item.duration_sec, item.dialogue, 10),
+        shot_size: serializeShotSizes(item.shot_sizes != null ? item.shot_sizes : item.shot_size),
+        camera_move: serializeCameraMoves(item.camera_moves != null ? item.camera_moves : item.camera_move),
+        dialogue: String(item.dialogue || '').trim(),
+        source_indexes: item.source_indexes,
+        wardrobe_state: wardrobeText(item.wardrobe_state),
+      })).filter(item => item.coverage);
+      if (!sceneShots.length) this.ctx.throw(502, `第${sceneIndex}场没有返回镜头大纲`);
+      sceneShots.forEach(item => {
+        item.index = outline.length;
+        outline.push(item);
+      });
+      normalizeOmissions(boardOutput.omissions).forEach(item => {
+        shotOmissions.push({
+          target: item.target || `第${sceneIndex}场`,
+          reason: item.reason,
+        });
+      });
+      const last = sceneShots[sceneShots.length - 1];
+      previous = {
+        scene_index: sceneIndex,
+        scene_label: sceneTitle(settled.script, { scene_index: sceneIndex }),
+        description: clipSpan(last.coverage, 800, 1200),
+        dialogue: clipText(last.dialogue, 800),
+        duration_sec: last.duration_sec,
+        same_scene: false,
+      };
+    }
     if (!outline.length) this.ctx.throw(502, '没有有效镜头大纲');
     const locked = settled.script;
-    const shotOmissions = normalizeOmissions(boardOutput.omissions);
     const missingScenes = uncoveredScenes(locked.scenes, outline.map(item => ({
       description: item.coverage,
       scene_index: item.scene_index,
@@ -630,13 +746,27 @@ class DraftService extends Service {
     };
     const seedFacts = await this.shotFactText(project.id, [ seedShot.description, seedShot.dialogue ].join('\n'));
     seedShot.asset_facts = seedFacts;
+    const prevShot = await this.previousShotContext(project.id, chapter.id, existing);
+    if (prevShot) seedShot.prev_shot = prevShot;
     const ensureRunning = () => {
       if (stop.stopped()) throw stopError();
     };
+    this.executionRunId = await openRun(this.ctx, {
+      app_key: 'cartoon',
+      skill_name: 'cartoon-storyboard-skill',
+      action: 'expand_one',
+      flow_key: 'prompt',
+      title: '提示词',
+      target_label: String(existing.shot_code || ''),
+    });
+    this.executionStarted = Date.now();
+    this.executionStatus = 'ok';
+    this.executionError = '';
     let boardResult;
     try {
       ensureRunning();
       try {
+        this.traceTitle = '单段扩写';
         boardResult = await this.callSkill({
           skill: 'cartoon-storyboard-skill',
           action: 'draft',
@@ -646,6 +776,7 @@ class DraftService extends Service {
             script_data: settledScript.script,
             expand_one: true,
             seed_shot: seedShot,
+            prev_shot: seedShot.prev_shot || null,
             asset_facts: seedFacts,
             ...styleWithoutBody(styleCtx),
             ...productionInput(project),
@@ -684,6 +815,7 @@ class DraftService extends Service {
       scene_label: existing.scene_label || '',
       wardrobe_state: wardrobeText(expanded?.wardrobe_state) || seedShot.wardrobe_state || '',
     };
+    if (seedShot.prev_shot) shot.prev_shot = seedShot.prev_shot;
     if (!shot.description) {
       await this.rememberTrace(
         existing, 'video', '单段扩写', 'cartoon-storyboard-skill',
@@ -725,6 +857,7 @@ class DraftService extends Service {
       const input = tracePacket(current, { prompt_part: part, positive_zh: current.positive_zh });
       let result;
       try {
+        this.traceTitle = partTitle[part] || part;
         result = await this.callSkill({
           skill: 'cartoon-prompt-skill',
           action: 'draft',
@@ -827,6 +960,7 @@ class DraftService extends Service {
       if (!positive || !selectedTopics.includes(closer.key)) continue;
       try {
         ensureRunning();
+        this.traceTitle = closer.title;
         const closed = await this.callSkill({
           skill: closer.skill,
           action: 'draft',
@@ -984,6 +1118,8 @@ class DraftService extends Service {
       finish(this.app, claim.row, null, result);
       return result;
     } catch (err) {
+      this.executionStatus = 'error';
+      this.executionError = String(err?.message || '失败').slice(0, 300);
       if (!this.failureNoted) {
         await this.rememberTrace(
           existing, 'video', '生成中断', '',
@@ -995,6 +1131,12 @@ class DraftService extends Service {
       finish(this.app, claim.row, err);
       throw err;
     } finally {
+      await closeRun(this.ctx, this.executionRunId, {
+        status: this.executionStatus || 'ok',
+        error_text: this.executionError || '',
+        elapsed_ms: Math.max(0, Date.now() - (this.executionStarted || Date.now())),
+      });
+      this.executionRunId = 0;
       stop.release();
     }
   }

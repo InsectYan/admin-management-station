@@ -232,7 +232,7 @@
           </el-form-item>
           <el-form-item v-if="supportsAv(detail.project.content_type)" label="专题">
             <el-select v-model="editForm.topics" multiple clearable placeholder="可不选" style="width: 100%">
-              <el-option v-for="item in TOPIC_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+              <el-option v-for="item in topicOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </el-form-item>
         </div>
@@ -334,7 +334,11 @@ const editForm = reactive({
   creative_intent: '',
   summary: '',
 });
-const topicTags = computed(() => TOPIC_OPTIONS.filter(item => topicsOfProject(detail.value?.project).includes(item.value)));
+const topicOptions = ref(TOPIC_OPTIONS);
+const topicTags = computed(() => topicsOfProject(detail.value?.project).map(value => {
+  const hit = topicOptions.value.find(item => item.value === value);
+  return hit || { value, label: value };
+}));
 const genreChildren = computed(() => {
   const hit = novelEnums.genres.find(item => item.id === editForm.genre_category_id);
   return hit?.children || [];
@@ -645,6 +649,7 @@ onMounted(async () => {
       booting.value = false;
       const meta = await request('/meta').catch(() => ({ visual_styles: [] }));
       styles.value = meta.visual_styles || [];
+      if (meta.topic_options?.length) topicOptions.value = meta.topic_options;
       await load();
     });
   } finally {

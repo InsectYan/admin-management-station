@@ -1,11 +1,30 @@
 'use strict';
 
 const fs = require('fs');
+const path = require('path');
 const Service = require('egg').Service;
-const { outputRoot, resolveInside } = require('../lib/mediaPaths');
+const { outputRoot, tmpEditRoot, resolveInside } = require('../lib/mediaPaths');
 const { inspect, probeFile } = require('../lib/mediaTools');
+const { streamFile } = require('../lib/streamFile');
 
 const TRACK_KINDS = [ 'video', 'audio', 'subtitle' ];
+const IMPORT_EXT = { '.mp4': '.mp4', '.webm': '.webm', '.mov': '.mov', '.mkv': '.mkv' };
+
+function importToken(value) {
+  const token = String(value || '');
+  return /^i[a-z0-9]{8,40}$/.test(token) ? token : '';
+}
+
+function tokenFromMarker(value) {
+  const text = String(value || '');
+  if (!text.startsWith('import:')) return '';
+  return importToken(text.slice(7));
+}
+
+function displayName(filename) {
+  const base = path.basename(String(filename || '导入视频')).replace(/[\\/:*?"<>|\r\n]/g, '').trim();
+  return (base || '导入视频').slice(0, 80);
+}
 
 function iso(value) {
   if (!value) return null;
@@ -77,6 +96,136 @@ class EditService extends Service {
     }
   }
 
+  importDir(projectId) {
+    return path.join(tmpEditRoot(this.app), 'imports', String(projectId));
+  }
+
+  async listImports(projectId) {
+    const dir = this.importDir(projectId);
+    if (!fs.existsSync(dir)) return [];
+    const names = await fs.promises.readdir(dir);
+    const rows = [];
+    for (const name of names) {
+      if (!name.endsWith('.json')) continue;
+      const token = importToken(name.slice(0, -5));
+      if (!token) continue;
+      const meta = await this.readImport(projectId, token);
+      if (meta) rows.push(meta);
+    }
+    return rows.sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+  }
+
+  async readImport(projectId, token) {
+    const safe = importToken(token);
+    if (!safe) return null;
+    const dir = this.importDir(projectId);
+    const notePath = path.join(dir, `${safe}.json`);
+    if (!fs.existsSync(notePath)) return null;
+    let note;
+    try {
+      note = JSON.parse(await fs.promises.readFile(notePath, 'utf8'));
+    } catch {
+      return null;
+    }
+    const ext = IMPORT_EXT[note.ext] || '';
+    if (!ext) return null;
+    const absolute = path.join(dir, `${safe}${ext}`);
+    return {
+      id: `import:${safe}`,
+      local: true,
+      name: safe,
+      shot_id: null,
+      import_id: null,
+      sort_order: null,
+      description: note.original || '导入视频',
+      duration_ms: Number(note.duration_ms) || 0,
+      width: note.width || null,
+      height: note.height || null,
+      missing: !fs.existsSync(absolute),
+      created_at: note.created_at || '',
+    };
+  }
+
+  async importFile(projectId, token) {
+    const meta = await this.readImport(projectId, token);
+    if (!meta || meta.missing) return null;
+    const dir = this.importDir(projectId);
+    const names = await fs.promises.readdir(dir);
+    const file = names.find(name => name.startsWith(`${importToken(token)}.`) && !name.endsWith('.json'));
+    if (!file) return null;
+    const absolute = path.join(dir, file);
+    if (!resolveInside(dir, file) || !fs.existsSync(absolute)) return null;
+    return { meta, absolute };
+  }
+
+  async saveImport(projectId, file) {
+    await this.projectOrThrow(projectId);
+    const ext = IMPORT_EXT[path.extname(file?.filename || '').toLowerCase()];
+    if (!ext) this.ctx.throw(400, '只接受 mp4、webm、mov、mkv');
+    if (!file?.filepath || !fs.existsSync(file.filepath)) this.ctx.throw(400, '没有收到视频文件');
+    const info = await probeFile(this.app, file.filepath);
+    const token = `i${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    const dir = this.importDir(projectId);
+    await fs.promises.mkdir(dir, { recursive: true });
+    const target = path.join(dir, `${token}${ext}`);
+    await fs.promises.copyFile(file.filepath, target);
+    const note = {
+      original: displayName(file.filename),
+      ext,
+      duration_ms: info.durationMs,
+      width: info.width,
+      height: info.height,
+      created_at: new Date().toISOString(),
+    };
+    await fs.promises.writeFile(path.join(dir, `${token}.json`), JSON.stringify(note));
+    return this.readImport(projectId, token);
+  }
+
+  async removeImport(projectId, token) {
+    await this.projectOrThrow(projectId);
+    const safe = importToken(token);
+    if (!safe) this.ctx.throw(400, '导入视频不存在');
+    const dir = this.importDir(projectId);
+    if (!fs.existsSync(dir)) this.ctx.throw(404, '导入视频不存在');
+    const names = await fs.promises.readdir(dir);
+    const victims = names.filter(name => name === `${safe}.json` || name.startsWith(`${safe}.`));
+    if (!victims.length) this.ctx.throw(404, '导入视频不存在');
+    await Promise.all(victims.map(name => fs.promises.unlink(path.join(dir, name)).catch(() => {})));
+    return { id: `import:${safe}` };
+  }
+
+  async sendImport(projectId, token) {
+    await this.projectOrThrow(projectId);
+    const found = await this.importFile(projectId, token);
+    if (!found) this.ctx.throw(404, '导入视频不存在');
+    streamFile(this.ctx, found.absolute);
+  }
+
+  async openDraft(projectId) {
+    const project = await this.projectOrThrow(projectId);
+    const existing = await this.ctx.model.Edit.findOne({ where: { project_id: project.id } });
+    if (!existing) {
+      const trx = await this.ctx.model.transaction();
+      try {
+        const edit = await this.ctx.model.Edit.create({
+          project_id: project.id,
+          title: `${project.name} 成片`,
+          width: 720,
+          height: 1280,
+          fps: 24,
+          duration_ms: 0,
+          status: 'draft',
+        }, { transaction: trx });
+        await this.ensureTracks(edit, trx);
+        await trx.commit();
+      } catch (err) {
+        await trx.rollback();
+        throw err;
+      }
+    }
+    return this.presentProject(project.id);
+  }
+
   presentVideo(item) {
     const root = outputRoot(this.app);
     const absolute = resolveInside(root, item.output.file_path);
@@ -108,8 +257,9 @@ class EditService extends Service {
     return { tracks, clips };
   }
 
-  presentEdit(edit, graph, videoRows) {
+  presentEdit(edit, graph, videoRows, importRows = []) {
     const byOutput = new Map(videoRows.map(item => [ item.output.id, item ]));
+    const byImport = new Map(importRows.map(item => [ item.name, item ]));
     const root = outputRoot(this.app);
     return {
       id: edit.id,
@@ -127,12 +277,30 @@ class EditService extends Service {
         volume: Number(track.volume),
         muted: track.muted,
         clips: graph.clips.filter(clip => clip.track_id === track.id).map(clip => {
+          const token = track.kind === 'video' ? tokenFromMarker(clip.text) : '';
+          const imported = token ? byImport.get(token) : null;
+          if (imported || token) {
+            return {
+              id: clip.id,
+              sort_order: clip.sort_order,
+              source_output_id: null,
+              source_import: token,
+              start_ms: clip.start_ms,
+              duration_ms: clip.duration_ms,
+              trim_in_ms: clip.trim_in_ms,
+              text: '',
+              missing: !imported || imported.missing,
+              source_duration_ms: imported?.duration_ms ?? null,
+              shot_description: imported?.description || '导入视频',
+            };
+          }
           const source = clip.source_output_id ? byOutput.get(clip.source_output_id) : null;
           const absolute = source ? resolveInside(root, source.output.file_path) : null;
           return {
             id: clip.id,
             sort_order: clip.sort_order,
             source_output_id: clip.source_output_id,
+            source_import: '',
             start_ms: clip.start_ms,
             duration_ms: clip.duration_ms,
             trim_in_ms: clip.trim_in_ms,
@@ -157,6 +325,7 @@ class EditService extends Service {
     }
     const videoRows = await this.videoOutputs(project.id);
     await this.probeMissing(videoRows);
+    const localVideos = await this.listImports(project.id);
     const visibleRows = importId
       ? videoRows.filter(item => Number(item.shot?.import_id) === importId)
       : videoRows;
@@ -170,7 +339,7 @@ class EditService extends Service {
     let exports = [];
     if (edit) {
       const graph = await this.loadGraph(edit);
-      presented = this.presentEdit(edit, graph, videoRows);
+      presented = this.presentEdit(edit, graph, videoRows, localVideos);
       try {
         await this.ctx.model.EditJob.update(
           { project_id: edit.project_id },
@@ -210,7 +379,7 @@ class EditService extends Service {
       videos: visibleRows.map(item => this.presentVideo(item)).sort((a, b) => {
         const order = (a.sort_order ?? 0) - (b.sort_order ?? 0);
         return order || b.id - a.id;
-      }),
+      }).concat(localVideos),
       imports: chapters.filter(item => !item.deleted_at).map(item => ({
         id: item.id,
         chapter_title: item.chapter_title || '',
@@ -352,18 +521,34 @@ class EditService extends Service {
       this.ctx.throw(409, '时间线已在其他地方保存，请刷新后再改');
     }
     const videoRows = await this.videoOutputs(project.id);
+    const localVideos = await this.listImports(project.id);
     const byOutput = new Map(videoRows.map(item => [ item.output.id, item ]));
+    const byImport = new Map(localVideos.map(item => [ item.name, item ]));
     const tracks = this.normalizeTracks(body);
     const video = tracks.find(track => track.kind === 'video');
     const videoClips = video.clips.map((clip, index) => {
+      const durationMs = Math.round(Number(clip.duration_ms));
+      const trimIn = Math.round(Number(clip.trim_in_ms || 0));
+      if (!Number.isFinite(durationMs) || durationMs <= 0) this.ctx.throw(400, '片段时长必须大于 0');
+      if (!Number.isFinite(trimIn) || trimIn < 0) this.ctx.throw(400, '入点无效');
+      const token = importToken(clip.source_import);
+      if (token) {
+        const imported = byImport.get(token);
+        if (!imported || imported.missing) this.ctx.throw(400, '导入的视频已经不在');
+        if (!imported.duration_ms) this.ctx.throw(400, '素材没有时长');
+        if (trimIn + durationMs > imported.duration_ms + 50) this.ctx.throw(400, '裁剪超出素材时长');
+        return {
+          sort_order: index,
+          source_output_id: null,
+          duration_ms: durationMs,
+          trim_in_ms: trimIn,
+          text: `import:${token}`,
+        };
+      }
       const sourceId = Number(clip.source_output_id);
       const source = byOutput.get(sourceId);
       if (!source) this.ctx.throw(400, '视频片段要绑定本项目的成功视频');
-      const durationMs = Math.round(Number(clip.duration_ms));
-      const trimIn = Math.round(Number(clip.trim_in_ms || 0));
       if (!source.output.duration_ms) this.ctx.throw(400, '素材没有时长');
-      if (!Number.isFinite(durationMs) || durationMs <= 0) this.ctx.throw(400, '片段时长必须大于 0');
-      if (!Number.isFinite(trimIn) || trimIn < 0) this.ctx.throw(400, '入点无效');
       if (trimIn + durationMs > source.output.duration_ms + 50) this.ctx.throw(400, '裁剪超出素材时长');
       return {
         sort_order: index,

@@ -113,7 +113,7 @@ const displayName = computed(() => cachedUser.value?.username || '已登录');
 const adminMenus = [
   { key: '/users', icon: User, label: '用户管理' },
   { key: '/roles', icon: Document, label: '角色管理' },
-  { key: '/audit', icon: Document, label: '审计日志' },
+  { key: '/audit', icon: Document, label: '日志' },
   { key: '/members', icon: User, label: '项目成员' },
 ];
 

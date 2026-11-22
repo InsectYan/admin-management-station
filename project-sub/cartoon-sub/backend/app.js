@@ -12,6 +12,12 @@ module.exports = app => {
     await syncSchemaOnStartup(app);
     try {
       const ctx = app.createAnonymousContext();
+      await ctx.service.enumCatalog.ensure();
+    } catch (err) {
+      app.logger.warn('[cartoon] 枚举目录未装载：%s', err.message);
+    }
+    try {
+      const ctx = app.createAnonymousContext();
       await ctx.service.editExport.failInterrupted();
     } catch (err) {
       app.logger.warn('[cartoon] 清理导出任务失败：%s', err.message);

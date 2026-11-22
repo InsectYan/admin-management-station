@@ -6,6 +6,15 @@ function isLoader(classType) {
   return classType === 'LoadImage' || classType === 'LoadImageMask';
 }
 
+function audioInputKey(node) {
+  if (!/LoadAudio|AudioLoad/i.test(String(node?.class_type || ''))) return '';
+  const inputs = node?.inputs || {};
+  if (typeof inputs.audio_file === 'string') return 'audio_file';
+  if (typeof inputs.audio === 'string') return 'audio';
+  if (typeof inputs.file === 'string') return 'file';
+  return '';
+}
+
 function promptKeysOf(node) {
   const inputs = node?.inputs || {};
   return PROMPT_KEYS.filter(key => typeof inputs[key] === 'string');
@@ -120,6 +129,22 @@ function describeCallInputs(apiJson) {
 
   const images = [];
   Object.entries(graph).forEach(([ nodeId, node ]) => {
+    const audioKey = audioInputKey(node);
+    if (audioKey) {
+      images.push({
+        id: `${nodeId}.${audioKey}`,
+        node_id: nodeId,
+        key: audioKey,
+        role: 'audio',
+        width: null,
+        height: null,
+        megapixels: null,
+        expand: '',
+        limit: 1,
+        optional: true,
+      });
+      return;
+    }
     if (node?.class_type === 'LoadVideo' && typeof node.inputs?.file === 'string') {
       images.push({
         id: `${nodeId}.file`,
@@ -169,14 +194,19 @@ function describeCallInputs(apiJson) {
     else if (slot.role === 'reference') slot.label = `参考图${suffix}`;
     else if (slot.role === 'mask') slot.label = `蒙版${suffix}`;
     else if (slot.role === 'video') slot.label = `视频${suffix}`;
+    else if (slot.role === 'audio') {
+      slot.label = `音色${suffix}`;
+      slot.optional = true;
+      slot.spec = '写入人物资产里选中的音色。可以不传。';
+    }
     else slot.label = `图片${suffix}`;
     if (slot.role === 'video') slot.spec = '上传 mp4、webm 或 mov。模型从视频里抽 16 帧反推。';
-    else if (slot.role !== 'end') slot.spec = slot.limit > 1
+    else if (slot.role !== 'end' && slot.role !== 'audio') slot.spec = slot.limit > 1
       ? `最多 ${slot.limit} 张，按选择顺序作为参考图`
       : specOf(slot);
   });
   images.sort((a, b) => {
-    const order = { start: 0, end: 1, reference: 2, image: 3, mask: 4 };
+    const order = { start: 0, end: 1, reference: 2, image: 3, mask: 4, video: 5, audio: 6 };
     return (order[a.role] ?? 9) - (order[b.role] ?? 9) || Number(a.node_id) - Number(b.node_id);
   });
   return { positive: findPositive(graph), negative: findNegative(graph), images };
@@ -320,11 +350,30 @@ function withCallFields(fields, apiJson) {
       });
     }
   }
+  if (!next.some(field => field?.key === 'negative_prompt' || /负向/.test(String(field?.label || '')))) {
+    const found = Object.entries(apiJson || {}).find(([, node]) => (
+      /^MiniMaxH3/.test(String(node?.class_type || '')) && typeof node?.inputs?.prompt === 'string'
+    ));
+    if (found) {
+      const [ nodeId, node ] = found;
+      const field = {
+        id: `${nodeId}.negative_prompt`,
+        node_id: nodeId,
+        class_type: node.class_type,
+        key: 'negative_prompt',
+        type: 'text',
+        label: '负向提示词',
+        value: typeof node.inputs.negative_prompt === 'string' ? node.inputs.negative_prompt : '',
+      };
+      const positiveIndex = next.findIndex(item => item.node_id === nodeId && (item.key === 'prompt' || item.label === '正向提示词'));
+      next.splice(positiveIndex >= 0 ? positiveIndex + 1 : 0, 0, field);
+    }
+  }
   const imageFields = call.images.map(slot => ({
     id: slot.id,
     node_id: slot.node_id,
     key: slot.key,
-    type: slot.role === 'video' ? 'video' : 'image',
+    type: slot.role === 'video' ? 'video' : (slot.role === 'audio' ? 'audio' : 'image'),
     label: slot.label,
     value: '',
     spec: slot.spec,
@@ -344,6 +393,36 @@ function withCallFields(fields, apiJson) {
   const durationAt = next.findIndex(field => field.type === 'duration');
   next.splice(durationAt >= 0 ? durationAt + 1 : 0, 0, ...rates, ...imageFields);
   return next;
+}
+
+function writeMiniMaxNegative(graph, negative) {
+  const text = String(negative || '').trim();
+  if (!text) return graph;
+  Object.values(graph || {}).forEach(node => {
+    if (!/^MiniMaxH3/.test(String(node?.class_type || ''))) return;
+    const inputs = node?.inputs;
+    if (!inputs || typeof inputs.prompt !== 'string') return;
+    if (typeof inputs.negative_prompt !== 'string' || !inputs.negative_prompt.trim()) {
+      inputs.negative_prompt = text;
+    }
+  });
+  return graph;
+}
+
+function foldMiniMaxNegative(graph) {
+  Object.values(graph || {}).forEach(node => {
+    if (!/^MiniMaxH3/.test(String(node?.class_type || ''))) return;
+    const inputs = node?.inputs;
+    if (!inputs || typeof inputs.negative_prompt !== 'string') return;
+    const negative = inputs.negative_prompt.trim();
+    delete inputs.negative_prompt;
+    if (!negative || typeof inputs.prompt !== 'string') return;
+    const line = `避免：${negative}`;
+    const body = inputs.prompt.trim();
+    if (body === line || body.endsWith(`\n${line}`)) return;
+    inputs.prompt = body ? `${body}\n\n${line}` : line;
+  });
+  return graph;
 }
 
 function nextNodeId(graph) {
@@ -386,5 +465,7 @@ module.exports = {
   applyCallInputs,
   applySeed,
   withCallFields,
+  writeMiniMaxNegative,
+  foldMiniMaxNegative,
   expandReferenceImages,
 };

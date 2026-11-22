@@ -32,6 +32,9 @@ module.exports = app => {
   router.post('/api/users/:id/reset-password', adminAuth, controller.user.resetPassword);
   router.post('/api/users/:id/mfa/disable', adminAuth, controller.user.disableMfa);
   router.get('/api/audit-logs', adminAuth, controller.audit.index);
+  router.get('/api/executions', adminAuth, controller.execution.index);
+  router.get('/api/executions/skills', adminAuth, controller.execution.skills);
+  router.get('/api/executions/:id', adminAuth, controller.execution.show);
   router.get('/api/project-members', adminAuth, controller.projectMember.index);
   router.post('/api/project-members', adminAuth, controller.projectMember.create);
   router.delete('/api/project-members/:id', adminAuth, controller.projectMember.destroy);

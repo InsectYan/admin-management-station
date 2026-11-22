@@ -19,6 +19,7 @@ module.exports = app => {
     skipped_count: { type: INTEGER, allowNull: false, defaultValue: 0 },
     video_count: { type: INTEGER, allowNull: false, defaultValue: 1 },
     generate_end: { type: BOOLEAN, allowNull: false, defaultValue: true },
+    fresh: { type: BOOLEAN, allowNull: false, defaultValue: false },
     fail_count: { type: INTEGER, allowNull: false, defaultValue: 0 },
     import_id: { type: INTEGER, allowNull: true },
     frame_workflow_id: { type: INTEGER, allowNull: false, defaultValue: 0 },

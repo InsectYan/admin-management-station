@@ -144,6 +144,26 @@ const TYPES = [
 
 const LEGACY_KEYS = [ 'conflict', 'twist', 'rhythm', 'branches', 'product_note', 'selling_points', 'comparison' ];
 
+function applyContentTypes(rows) {
+  for (const item of rows || []) {
+    const id = String(item.code || '').trim();
+    if (!id) continue;
+    const current = TYPES.find(type => type.id === id);
+    if (current) {
+      if (item.name) current.label = item.name;
+      if (item.bind) current.bind = item.bind;
+      continue;
+    }
+    TYPES.push({
+      id,
+      label: item.name || id,
+      bind: item.bind || 'local',
+      copy: false,
+      panel: [],
+    });
+  }
+}
+
 function contentType(id) {
   return TYPES.find(item => item.id === id) || null;
 }
@@ -235,6 +255,7 @@ function normalizePanel(type, payload) {
 
 module.exports = {
   TYPES,
+  applyContentTypes,
   LEGACY_KEYS,
   contentType,
   contentTypeIds,

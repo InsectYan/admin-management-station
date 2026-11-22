@@ -22,7 +22,7 @@
       </el-tab-pane>
       <el-tab-pane label="预览" name="preview">
         <div class="precheck-module">
-          <p class="precheck-module__hint">填写正向提示词，需要图片的工作流先上传图片。每次生成都会留下一条产物，可以删除。</p>
+          <p class="precheck-module__hint">填写正向提示词和负向提示词。需要图片的工作流先上传图片。每次生成都会留下一条产物，可以删除。</p>
           <WorkflowPreview :workflow-id="row.id" :api-json="row.api_json" :refmod="refmod" />
         </div>
       </el-tab-pane>

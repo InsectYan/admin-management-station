@@ -38,7 +38,7 @@ function toApiError(payload = {}, fallbackMessage = '请求失败') {
   return error;
 }
 
-const LOCAL_AI_TIMEOUT_MS = 16 * 60 * 1000;
+const LOCAL_AI_TIMEOUT_MS = 2 * 60 * 60 * 1000;
 const LOCAL_AI_PATH = /\/draft\/(script|shot-outline|shot-expand)(?:\/|$)|\/assets\/(suggest|match)(?:\/|$)|\/voice\/suggest(?:\/|$)|\/review-findings\/suggest(?:\/|$)|\/nodes\/[^/]+\/run(?:\/|$)|\/subtitles\/build(?:\/|$)/;
 
 api.interceptors.request.use((config) => {

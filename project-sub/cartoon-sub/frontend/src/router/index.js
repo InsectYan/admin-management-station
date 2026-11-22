@@ -21,6 +21,8 @@ export function createAppRouter(basename) {
           { path: 'skills/templates/:id', component: () => import('../views/TemplateDetailPage.vue') },
           { path: 'skills/tracks', component: () => import('../views/VoiceTrackPage.vue') },
           { path: 'skills/prompts', component: () => import('../views/SkillPromptsPage.vue') },
+          { path: 'skills/enums', component: () => import('../views/EnumListPage.vue') },
+          { path: 'skills/enums/:key', component: () => import('../views/EnumDetailPage.vue') },
           { path: 'skills/prompts/reverse', component: () => import('../views/CaptionPage.vue') },
           { path: 'pipelines', redirect: '/pipelines/config' },
           { path: 'pipelines/config/:contentType?', component: () => import('../views/PipelinePage.vue') },

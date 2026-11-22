@@ -27,11 +27,12 @@ function platformBase(ctx) {
 }
 
 function resolveInvokeTimeout(ctx, timeoutMs) {
+  const floor = 2 * 60 * 60 * 1000;
   const explicit = Number(timeoutMs);
-  if (Number.isFinite(explicit) && explicit > 0) return explicit;
+  if (Number.isFinite(explicit) && explicit > 0) return Math.max(explicit, floor);
   const configured = Number(ctx.app.config.agentPlatform?.timeoutMs);
-  if (Number.isFinite(configured) && configured > 0) return configured;
-  return 960000;
+  if (Number.isFinite(configured) && configured > 0) return Math.max(configured, floor);
+  return floor;
 }
 
 function linkSignals(signals) {
@@ -87,10 +88,16 @@ async function invokeSkill(ctx, { skill, action, payload, timeoutMs, signal }) {
   try {
     let res;
     try {
+      const body = { action, ...(payload || {}) };
+      const headers = { 'content-type': 'application/json', 'x-trace-app': 'cartoon' };
+      if (body.trace_run_id) headers['x-trace-run-id'] = String(body.trace_run_id);
+      if (body.trace_title) headers['x-trace-title'] = encodeURIComponent(String(body.trace_title));
+      delete body.trace_run_id;
+      delete body.trace_title;
       res = await fetch(url, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action, ...payload }),
+        headers,
+        body: JSON.stringify(body),
         signal: linkSignals([ AbortSignal.timeout(waitMs), signal ]),
         dispatcher,
       });

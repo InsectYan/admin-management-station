@@ -38,8 +38,13 @@ export const TOPIC_OPTIONS = [
 
 export function topicsOfProject(project) {
   const raw = project?.topics;
-  if (Array.isArray(raw) && raw.length) {
-    return TOPIC_OPTIONS.map(item => item.value).filter(value => raw.includes(value));
+  if (Array.isArray(raw)) {
+    const list = [];
+    raw.forEach(item => {
+      const key = String(item || '').trim();
+      if (key && !list.includes(key)) list.push(key);
+    });
+    if (list.length) return list;
   }
   return project?.av_mode ? [ 'av' ] : [];
 }

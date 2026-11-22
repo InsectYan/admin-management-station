@@ -2,28 +2,39 @@
   <section class="cartoon-edit-board cartoon-module">
     <h3 class="cartoon-module__title">视频轨</h3>
     <div ref="scroller" class="cartoon-edit-scroll" @pointerdown="onSeekDown">
-      <div class="cartoon-edit-ruler" :style="{ width: `${trackWidth}px` }">
-        <span
-          v-for="mark in marks"
-          :key="mark"
-          class="cartoon-edit-mark"
-          :style="{ left: `${mark * pxPerMs}px` }"
-        >{{ mark / 1000 }}s</span>
-      </div>
-      <div class="cartoon-edit-track" :style="{ width: `${trackWidth}px` }">
-        <div
-          v-for="(clip, index) in store.clips"
-          :key="clip.id"
-          class="cartoon-edit-clip"
-          :class="{ 'is-selected': clip.id === store.selectedClipId, 'is-missing': clip.missing }"
-          :style="{ left: `${clip.start_ms * pxPerMs}px`, width: `${Math.max(clip.duration_ms * pxPerMs, 28)}px` }"
-          @pointerdown.stop="onClipDown($event, clip, index)"
-        >
-          <button type="button" class="cartoon-edit-handle" aria-label="调整入点" @pointerdown.stop="onTrimDown($event, clip, 'in')" />
-          <span class="cartoon-edit-clip-label">{{ clip.shot_description || `片段 ${index + 1}` }}</span>
-          <button type="button" class="cartoon-edit-handle is-out" aria-label="调整出点" @pointerdown.stop="onTrimDown($event, clip, 'out')" />
+      <div class="cartoon-edit-sheet" :style="{ width: `${trackWidth}px` }">
+        <div class="cartoon-edit-ruler">
+          <span
+            v-for="mark in marks"
+            :key="mark"
+            class="cartoon-edit-mark"
+            :style="{ left: `${gutter + mark * pxPerMs}px` }"
+          >{{ mark / 1000 }}s</span>
         </div>
-        <div class="cartoon-edit-playhead" :style="{ left: `${store.playheadMs * pxPerMs}px` }" />
+        <div class="cartoon-edit-track">
+          <div
+            v-for="(clip, index) in store.clips"
+            :key="clip.id"
+            class="cartoon-edit-clip"
+            :class="{ 'is-selected': clip.id === store.selectedClipId, 'is-missing': clip.missing }"
+            :style="{ left: `${gutter + clip.start_ms * pxPerMs}px`, width: `${Math.max(clip.duration_ms * pxPerMs, 28)}px` }"
+            @pointerdown.stop="onClipDown($event, clip, index)"
+          >
+            <button type="button" class="cartoon-edit-handle" aria-label="调整入点" @pointerdown.stop="onTrimDown($event, clip, 'in')" />
+            <span class="cartoon-edit-clip-label">{{ clip.shot_description || `片段 ${index + 1}` }}</span>
+            <button type="button" class="cartoon-edit-handle is-out" aria-label="调整出点" @pointerdown.stop="onTrimDown($event, clip, 'out')" />
+          </div>
+        </div>
+        <div
+          class="cartoon-edit-playhead"
+          :style="{ left: `${gutter + store.playheadMs * pxPerMs}px` }"
+          role="slider"
+          aria-label="拖动播放头"
+          @pointerdown.stop="onPlayheadDown"
+        >
+          <span class="cartoon-edit-playhead-line" />
+          <span class="cartoon-edit-playhead-knob" />
+        </div>
       </div>
     </div>
   </section>
@@ -36,9 +47,10 @@ import { useEditTimelineStore } from '../../stores/editTimeline.js';
 const store = useEditTimelineStore();
 const scroller = ref(null);
 const pxPerMs = 0.08;
+const gutter = 16;
 let drag = null;
 
-const trackWidth = computed(() => Math.max((store.edit?.duration_ms || 0) * pxPerMs + 80, 480));
+const trackWidth = computed(() => Math.max((store.edit?.duration_ms || 0) * pxPerMs + gutter + 80, 480));
 const marks = computed(() => {
   const step = 1000;
   const list = [];
@@ -47,20 +59,26 @@ const marks = computed(() => {
   return list;
 });
 
-function onSeekDown(event) {
-  if (event.target.closest('.cartoon-edit-clip')) return;
-  const seekAt = clientX => {
-    const rect = scroller.value.getBoundingClientRect();
-    store.seek((clientX - rect.left + scroller.value.scrollLeft) / pxPerMs);
-  };
-  seekAt(event.clientX);
-  const move = ev => seekAt(ev.clientX);
+function seekFromClientX(clientX) {
+  const rect = scroller.value.getBoundingClientRect();
+  store.seek((clientX - rect.left + scroller.value.scrollLeft - gutter) / pxPerMs);
+}
+function trackPointer(event, onClientX) {
+  onClientX(event.clientX);
+  const move = ev => onClientX(ev.clientX);
   const up = () => {
     window.removeEventListener('pointermove', move);
     window.removeEventListener('pointerup', up);
   };
   window.addEventListener('pointermove', move);
   window.addEventListener('pointerup', up);
+}
+function onSeekDown(event) {
+  if (event.target.closest('.cartoon-edit-clip, .cartoon-edit-playhead')) return;
+  trackPointer(event, seekFromClientX);
+}
+function onPlayheadDown(event) {
+  trackPointer(event, seekFromClientX);
 }
 function onClipDown(event, clip, index) {
   store.selectClip(clip.id);
@@ -111,7 +129,7 @@ function onMove(event) {
     return;
   }
   const rect = scroller.value.getBoundingClientRect();
-  const ms = (event.clientX - rect.left + scroller.value.scrollLeft) / pxPerMs;
+  const ms = (event.clientX - rect.left + scroller.value.scrollLeft - gutter) / pxPerMs;
   let to = store.clips.findIndex(clip => ms < clip.start_ms + clip.duration_ms / 2);
   if (to < 0) to = store.clips.length - 1;
   if (to !== drag.last) {
@@ -131,8 +149,12 @@ onBeforeUnmount(onUp);
 <style scoped>
 .cartoon-edit-scroll {
   overflow-x: auto;
-  padding-bottom: 8px;
+  padding-bottom: 4px;
   cursor: text;
+}
+.cartoon-edit-sheet {
+  position: relative;
+  padding-bottom: 16px;
 }
 .cartoon-edit-ruler { position: relative; height: 22px; }
 .cartoon-edit-mark {
@@ -185,8 +207,32 @@ onBeforeUnmount(onUp);
   position: absolute;
   top: 0;
   bottom: 0;
+  z-index: 4;
+  width: 28px;
+  transform: translateX(-50%);
+  cursor: ew-resize;
+  touch-action: none;
+}
+.cartoon-edit-playhead-line {
+  position: absolute;
+  top: 0;
+  bottom: 12px;
+  left: 50%;
   width: 2px;
+  transform: translateX(-50%);
   background: #e36a3a;
+  pointer-events: none;
+}
+.cartoon-edit-playhead-knob {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 12px solid #e36a3a;
   pointer-events: none;
 }
 </style>

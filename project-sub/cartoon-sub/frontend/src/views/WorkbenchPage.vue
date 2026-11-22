@@ -69,8 +69,12 @@
           <el-table-column label="三视图" min-width="160">
             <template #default="{ row }">{{ [ row.front_path, row.side_path, row.back_path ].filter(Boolean).join(' / ') }}</template>
           </el-table-column>
-          <el-table-column prop="reference_path" label="参考图" />
-          <el-table-column prop="voice_key" label="音色" />
+          <el-table-column label="参考图" width="88">
+            <template #default="{ row }"><span @click.stop><AssetThumb :path="row.reference_path" /></span></template>
+          </el-table-column>
+          <el-table-column label="音色" min-width="160" show-overflow-tooltip>
+            <template #default="{ row }">{{ voiceLabel(row.voice_key) }}</template>
+          </el-table-column>
           <el-table-column label="状态" width="90">
             <template #default="{ row }">{{ row.disabled ? '已停用' : '使用中' }}</template>
           </el-table-column>
@@ -133,6 +137,9 @@
               <el-form-item label="背面图"><AssetImageField v-model="assetForm.back_path" :project-id="projectId" /></el-form-item>
               <el-form-item class="is-wide" label="参考图">
                 <AssetImageField v-model="assetForm.reference_path" :project-id="projectId" />
+              </el-form-item>
+              <el-form-item class="is-wide" label="音色">
+                <CharacterVoiceField v-model="assetForm.voice_key" />
               </el-form-item>
               <el-form-item label="表情"><el-input v-model="assetForm.expression_note" /></el-form-item>
               <el-form-item label="服装"><el-input v-model="assetForm.costume_note" /></el-form-item>
@@ -457,6 +464,8 @@ import VideoWithRate from '../components/VideoWithRate.vue';
 import ExportSpecs from '../components/ExportSpecs.vue';
 import RefModPacks from '../components/RefModPacks.vue';
 import AssetImageField from '../components/AssetImageField.vue';
+import AssetThumb from '../components/AssetThumb.vue';
+import CharacterVoiceField from '../components/CharacterVoiceField.vue';
 import RegionLoad from '../components/RegionLoad.vue';
 import LoadMask from '../components/LoadMask.vue';
 import FullAutoPage from './FullAutoPage.vue';
@@ -638,8 +647,10 @@ function applySpeakerFilter() {
 }
 function voiceLabel(key) {
   if (!key) return '—';
+  const library = voiceRows.value.find(item => item.voice_key === key);
+  if (library) return library.folder ? `${library.folder} / ${library.name}` : library.name;
   const asset = assets.value.find(item => item.kind === 'voice' && item.voice_key === key);
-  return asset?.name || key;
+  return asset?.name || '已选音色';
 }
 function shotById(id) {
   return shots.value.find(item => String(item.id) === String(id));
@@ -1038,8 +1049,8 @@ async function applyAssets() {
     ElMessage.success('绑定已写入');
   });
 }
-async function loadVoiceLibrary() {
-  voiceLoading.value = true;
+async function loadVoiceLibrary(quiet = false) {
+  if (!quiet) voiceLoading.value = true;
   try {
     const data = await request('/voice-library');
     voiceRows.value = data?.rows || [];
@@ -1051,7 +1062,7 @@ async function loadVoiceLibrary() {
     voiceSkipped.value = [];
     ElMessage.error(err.message || '音色库没有打开');
   } finally {
-    voiceLoading.value = false;
+    if (!quiet) voiceLoading.value = false;
   }
 }
 async function loadAudioBoard() {
@@ -1424,6 +1435,7 @@ function refreshWorkbench() {
 watch(node, (value) => {
   persistNode(value);
   if (value === 'voice' && !voiceRows.value.length) loadVoiceLibrary();
+  if (value === 'assets' && !voiceRows.value.length) loadVoiceLibrary(true);
   refreshWorkbench();
 });
 watch(navTarget, (value) => {
@@ -1447,6 +1459,7 @@ watch(() => route.params.taskId, () => {
 });
 onMounted(() => {
   if (node.value === 'voice') loadVoiceLibrary();
+  if (node.value === 'assets') loadVoiceLibrary(true);
   load(true).catch((err) => {
     error.value = err.message || '打不开工作台';
     ElMessage.error(error.value);

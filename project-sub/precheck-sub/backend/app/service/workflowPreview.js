@@ -11,7 +11,7 @@ const execFileAsync = promisify(execFile);
 const { parseApiWorkflow } = require('../lib/workflowParse');
 const { buildSupplies } = require('../lib/supplyCatalog');
 const { listPreviewFields, applyPreviewValues, collectMedia, collectText, resolveImageSeeds, pinBatchSize, applyQwen21OutputSize, isVideoWorkflow } = require('../lib/workflowPreview');
-const { describeCallInputs, applyCallInputs, applySeed, withCallFields, expandReferenceImages } = require('../lib/workflowInputs');
+const { describeCallInputs, applyCallInputs, applySeed, withCallFields, writeMiniMaxNegative, foldMiniMaxNegative, expandReferenceImages } = require('../lib/workflowInputs');
 const { applyRefmod } = require('../lib/refmodApply');
 const { applyDualSample } = require('../lib/dualSample');
 
@@ -264,16 +264,26 @@ class WorkflowPreviewService extends Service {
     const encoded = raw.includes(marker) ? raw.slice(raw.indexOf(marker) + marker.length) : raw;
     const bytes = Buffer.from(encoded, 'base64');
     const video = kind === 'video';
+    const audio = kind === 'audio';
     if (!bytes.length) {
-      const error = new Error(video ? '视频是空的' : '图片是空的');
+      const error = new Error(video ? '视频是空的' : (audio ? '音频是空的' : '图片是空的'));
       error.status = 400;
       throw error;
     }
-    const limit = video ? 64 * 1024 * 1024 : 12 * 1024 * 1024;
+    const limit = video || audio ? 64 * 1024 * 1024 : 12 * 1024 * 1024;
     if (bytes.length > limit) {
-      const error = new Error(video ? '视频超过 64MB' : '图片超过 12MB');
+      const error = new Error(video ? '视频超过 64MB' : (audio ? '音频超过 64MB' : '图片超过 12MB'));
       error.status = 400;
       throw error;
+    }
+    if (audio) {
+      const ext = String(file.filename || '').toLowerCase().match(/\.(mp3|wav|flac|m4a|ogg|aac|wma)$/);
+      if (!ext) {
+        const error = new Error('请上传 mp3、wav、flac、m4a、ogg、aac 或 wma');
+        error.status = 400;
+        throw error;
+      }
+      return { bytes, ext: ext[0] };
     }
     if (video) {
       const ext = String(file.filename || '').toLowerCase().match(/\.(mp4|webm|mov)$/);
@@ -334,13 +344,13 @@ class WorkflowPreviewService extends Service {
           uploaded.push(await this.uploadImage({
             filename: item.filename || file.filename,
             data_base64: item.data_base64 || item.data,
-          }, `slot-${slot.node_id}`, slot.role === 'video' ? 'video' : 'image'));
+          }, `slot-${slot.node_id}`, slot.role === 'video' ? 'video' : (slot.role === 'audio' ? 'audio' : 'image')));
         }
         names[slot.id] = uploaded[0];
         if (uploaded.length > 1) extras[slot.id] = uploaded.slice(1);
         continue;
       }
-      if (slot.role === 'end') continue;
+      if (slot.role === 'end' || slot.role === 'audio') continue;
       const base = String(existing || '').split(/[/\\]/).pop();
       const placeholder = !base || [ 'reference.png', 'start.png', 'first.png', 'last.png', 'example.png', 'reference.mp4' ].includes(base);
       if (!placeholder) continue;
@@ -370,6 +380,8 @@ class WorkflowPreviewService extends Service {
     const resolved = await this.imageNames(source, payload.images || []);
     let graph = applySeed(applyCallInputs(source, { positive, negative, imageNames: resolved.names }), payload.seed);
     graph = expandReferenceImages(graph, describeCallInputs(source).images, resolved.extras);
+    writeMiniMaxNegative(graph, negative);
+    foldMiniMaxNegative(graph);
     applyQwen21OutputSize(graph);
     graph = applyDualSample(graph, { enabled: row.dual_sample, scale: row.dual_scale });
     const seconds = Number(payload.duration_sec);
@@ -472,6 +484,7 @@ class WorkflowPreviewService extends Service {
         describeCallInputs(source).images,
         resolved.extras,
       );
+      foldMiniMaxNegative(graph);
       applyQwen21OutputSize(graph);
       graph = applyDualSample(graph, dual);
       if (seed != null) {

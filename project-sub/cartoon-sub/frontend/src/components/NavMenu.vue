@@ -39,6 +39,7 @@
         <el-menu-item index="/skills/templates">模板</el-menu-item>
         <el-menu-item index="/skills/tracks">音轨</el-menu-item>
         <el-menu-item index="/skills/prompts">提示词</el-menu-item>
+        <el-menu-item index="/skills/enums">枚举管理</el-menu-item>
       </el-sub-menu>
       <el-sub-menu index="pipelines" popper-class="cartoon-pipeline-popper">
         <template #title>
@@ -108,6 +109,7 @@
       <el-menu-item index="/skills/templates">模板</el-menu-item>
       <el-menu-item index="/skills/tracks">音轨</el-menu-item>
       <el-menu-item index="/skills/prompts">提示词</el-menu-item>
+      <el-menu-item index="/skills/enums">枚举管理</el-menu-item>
     </el-sub-menu>
     <el-sub-menu index="pipelines" popper-class="cartoon-pipeline-popper">
       <template #title>
@@ -163,6 +165,7 @@ const active = computed(() => {
   if (path.startsWith('/projects')) return '/projects';
   if (path.startsWith('/pipelines/map')) return '/pipelines/map';
   if (path.startsWith('/pipelines')) return '/pipelines/config';
+  if (path.startsWith('/skills/enums')) return '/skills/enums';
   if (path.startsWith('/skills/tracks')) return '/skills/tracks';
   if (path.startsWith('/skills/prompts')) return '/skills/prompts';
   if (path.startsWith('/skills') || path.startsWith('/templates')) return '/skills/templates';

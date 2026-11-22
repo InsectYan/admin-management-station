@@ -1,6 +1,8 @@
 <template>
   <PageShell :title="store.project?.name ? `${store.project.name} · 剪辑` : '剪辑成片'" :loading="!loaded">
     <template #extra>
+      <el-button :disabled="!canMake()" :loading="importing" @click="pickImport">导入视频</el-button>
+      <input ref="importInput" class="cartoon-edit-file" type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.mkv" @change="onImportFile" />
       <el-button v-if="route.name !== 'workbench'" @click="router.push(`/projects/${projectId}`)">返回详情</el-button>
       <el-button :disabled="!canMake() || !store.past.length" @click="store.undo()">撤销</el-button>
       <el-button :disabled="!canMake() || !store.future.length" @click="store.redo()">重做</el-button>
@@ -8,70 +10,96 @@
       <el-button type="primary" plain :disabled="!canMake() || !canExport" :loading="exporting" @click="startExport">导出成片</el-button>
     </template>
 
-    <el-alert
-      v-if="loaded && !store.tools.ffmpeg"
-      class="cartoon-edit-alert"
-      type="warning"
-      show-icon
-      :closable="false"
-      title="本机没有 ffmpeg，只能预览"
-    />
-    <p v-else-if="store.dirty" class="cartoon-module__hint">先保存，再导出。字幕和背景音乐这一期不会烧进成片。</p>
+    <el-tabs v-if="loaded" v-model="composeTab" class="cartoon-edit-tabs">
+      <el-tab-pane label="预览" name="preview">
+        <div class="cartoon-edit-preview">
+          <el-alert
+            v-if="!store.tools.ffmpeg"
+            class="cartoon-edit-alert"
+            type="warning"
+            show-icon
+            :closable="false"
+            title="本机没有 ffmpeg，只能预览"
+          />
+          <p v-else-if="store.dirty" class="cartoon-module__hint">先保存，再导出。字幕和背景音乐这一期不会烧进成片。</p>
 
-    <section v-if="loaded && !store.edit" class="cartoon-module">
-      <el-empty description="还没有成片时间线" />
-      <p class="cartoon-module__hint">先在分镜上生成视频，再按镜序排进时间线。</p>
-      <el-button type="primary" :disabled="!canMake()" :loading="seeding" @click="seed(false)">从产物排列</el-button>
-    </section>
+          <section v-if="!store.edit" class="cartoon-module">
+            <el-empty description="还没有成片时间线" />
+            <p class="cartoon-module__hint">先在分镜上生成视频，再按镜序排进时间线。</p>
+            <el-button type="primary" :disabled="!canMake()" :loading="seeding" @click="seed(false)">从产物排列</el-button>
+          </section>
 
-    <template v-else-if="store.edit">
-      <div class="cartoon-edit-layout">
-        <PreviewStage />
-        <ClipInspector
-          :imports="composeImports"
-          :import-id="composeImportId"
-          :busy="seeding"
-          @snapshot="applySnapshot"
-        />
-      </div>
-      <TimelineBoard />
-      <div class="cartoon-edit-toolbar">
-        <el-button :disabled="!canMake()" :loading="seeding" @click="seed(true)">重新从产物排列</el-button>
-        <el-radio-group :model-value="canvasKey" @change="onCanvas">
-          <el-radio-button value="portrait">竖版 720×1280</el-radio-button>
-          <el-radio-button value="landscape">横版 1280×720</el-radio-button>
-        </el-radio-group>
-      </div>
-      <p v-if="job" class="cartoon-module__hint">导出{{ jobLabel }}<span v-if="job.error_message">：{{ job.error_message }}</span></p>
-      <el-progress v-if="job && (job.status === 'queued' || job.status === 'running')" :percentage="job.progress || 0" />
-      <div v-if="latest" class="cartoon-edit-result">
-        <VideoWithRate :src="fileUrl(latest.id)" controls />
-      </div>
-      <section v-if="store.exports.length" class="cartoon-edit-finals">
-        <h3 class="cartoon-module__title">已导出成片</h3>
-        <p class="cartoon-module__hint">每次导出都留在这张表里，并记下所属项目。点记录编号可预览这一条成片。</p>
-        <el-table :data="store.exports" row-key="id" size="small">
-          <el-table-column label="成品" width="90">
-            <template #default="{ row }">#{{ row.id }}</template>
-          </el-table-column>
-          <el-table-column label="记录" width="110">
-            <template #default="{ row }">
-              <el-button link type="primary" @click="openFinal(row)">#{{ row.job_id }}</el-button>
-            </template>
-          </el-table-column>
-          <el-table-column label="项目" min-width="140">
-            <template #default="{ row }">{{ row.project_name || store.project?.name || '当前项目' }}</template>
-          </el-table-column>
-          <el-table-column label="尺寸" width="130">
-            <template #default="{ row }">{{ row.width && row.height ? `${row.width}×${row.height}` : '—' }}</template>
-          </el-table-column>
-          <el-table-column label="时长" width="90">
-            <template #default="{ row }">{{ row.duration_ms ? `${Math.round(row.duration_ms / 1000)} 秒` : '—' }}</template>
-          </el-table-column>
-          <el-table-column label="时间" min-width="180" prop="created_at" />
-        </el-table>
-      </section>
-    </template>
+          <template v-else>
+            <div class="cartoon-edit-layout">
+              <PreviewStage />
+              <ClipInspector
+                :imports="composeImports"
+                :import-id="composeImportId"
+                :busy="seeding"
+                @snapshot="applySnapshot"
+              />
+            </div>
+            <TimelineBoard />
+            <div class="cartoon-edit-toolbar">
+              <el-button :disabled="!canMake()" :loading="seeding" @click="seed(true)">重新从产物排列</el-button>
+              <el-radio-group :model-value="canvasKey" @change="onCanvas">
+                <el-radio-button value="portrait">竖版 720×1280</el-radio-button>
+                <el-radio-button value="landscape">横版 1280×720</el-radio-button>
+              </el-radio-group>
+            </div>
+            <p v-if="job" class="cartoon-module__hint">导出{{ jobLabel }}<span v-if="job.error_message">：{{ job.error_message }}</span></p>
+            <el-progress v-if="job && (job.status === 'queued' || job.status === 'running')" :percentage="job.progress || 0" />
+            <div v-if="latest" class="cartoon-edit-result">
+              <VideoWithRate :src="fileUrl(latest.id)" controls />
+            </div>
+            <section v-if="store.exports.length" class="cartoon-edit-finals">
+              <h3 class="cartoon-module__title">已导出成片</h3>
+              <p class="cartoon-module__hint">每次导出都留在这张表里，并记下所属项目。点记录编号可预览这一条成片。</p>
+              <el-table :data="store.exports" row-key="id" size="small">
+                <el-table-column label="成品" width="90">
+                  <template #default="{ row }">#{{ row.id }}</template>
+                </el-table-column>
+                <el-table-column label="记录" width="110">
+                  <template #default="{ row }">
+                    <el-button link type="primary" @click="openFinal(row)">#{{ row.job_id }}</el-button>
+                  </template>
+                </el-table-column>
+                <el-table-column label="项目" min-width="140">
+                  <template #default="{ row }">{{ row.project_name || store.project?.name || '当前项目' }}</template>
+                </el-table-column>
+                <el-table-column label="尺寸" width="130">
+                  <template #default="{ row }">{{ row.width && row.height ? `${row.width}×${row.height}` : '—' }}</template>
+                </el-table-column>
+                <el-table-column label="时长" width="90">
+                  <template #default="{ row }">{{ row.duration_ms ? `${Math.round(row.duration_ms / 1000)} 秒` : '—' }}</template>
+                </el-table-column>
+                <el-table-column label="时间" min-width="180" prop="created_at" />
+              </el-table>
+            </section>
+          </template>
+        </div>
+      </el-tab-pane>
+      <el-tab-pane label="本地视频" name="local">
+        <section class="cartoon-edit-imports">
+          <h3 class="cartoon-module__title">导入的视频</h3>
+          <p class="cartoon-module__hint">这些视频只放在本机临时目录，不写入数据库。可以删除。它们会出现在「绑定的视频」里，选中后当前片段改用这条；点「加入剪辑」会在时间线末尾再加一段。保存后才会写进时间线。</p>
+          <div class="cartoon-edit-import-scroll">
+            <el-empty v-if="!importedVideos.length" description="还没有导入的视频" />
+            <div v-else class="cartoon-edit-import-grid">
+              <article v-for="item in importedVideos" :key="item.id" class="cartoon-edit-import">
+                <video :src="importUrl(item)" controls muted playsinline></video>
+                <p>{{ item.description || '导入视频' }}</p>
+                <p class="cartoon-module__hint">{{ item.duration_ms ? `${Math.round(item.duration_ms / 1000)} 秒` : '没有时长' }}</p>
+                <div>
+                  <el-button link type="primary" :disabled="!canMake() || item.missing || !item.duration_ms" @click="addImport(item)">加入剪辑</el-button>
+                  <el-button link type="danger" :disabled="!canMake()" @click="removeImport(item)">删除</el-button>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+      </el-tab-pane>
+    </el-tabs>
   </PageShell>
 </template>
 
@@ -96,6 +124,9 @@ const loaded = ref(false);
 const saving = ref(false);
 const seeding = ref(false);
 const exporting = ref(false);
+const importing = ref(false);
+const composeTab = ref('preview');
+const importInput = ref(null);
 const job = ref(null);
 const composeImports = ref([]);
 const composeImportId = ref('');
@@ -108,10 +139,67 @@ const canvasKey = computed(() => {
 });
 const canExport = computed(() => store.edit && store.tools.ffmpeg && !store.dirty && store.clips.length && !exporting.value);
 const latest = computed(() => store.exports[0] || null);
+const importedVideos = computed(() => (store.videos || []).filter(item => item.local));
 const jobLabel = computed(() => ({ queued: '排队', running: '进行中', success: '完成', failed: '失败' }[job.value?.status] || ''));
 
 function fileUrl(id) {
   return `${resolveApiBase()}/outputs/${id}/file`;
+}
+function importUrl(item) {
+  return `${resolveApiBase()}/projects/${projectId.value}/edit/imports/${item.name}/file`;
+}
+function pickImport() {
+  importInput.value?.click();
+}
+async function onImportFile(event) {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
+  const body = new FormData();
+  body.append('file', file, file.name);
+  importing.value = true;
+  try {
+    const item = await request(`/projects/${projectId.value}/edit/imports`, {
+      method: 'post',
+      data: body,
+      timeout: 10 * 60 * 1000,
+    });
+    store.videos = [ ...store.videos.filter(row => row.id !== item.id), item ];
+    ElMessage.success('已导入。可以在绑定的视频里选用，或点加入剪辑');
+  } catch (err) {
+    ElMessage.error(err.message || '没有导入');
+  } finally {
+    importing.value = false;
+  }
+}
+async function addImport(item) {
+  try {
+    if (!store.edit) {
+      const payload = await request(`/projects/${projectId.value}/edit/open`, { method: 'post' });
+      takePayload(payload);
+    }
+    if (!store.appendVideo(item)) {
+      ElMessage.error('这条视频没有时长，不能加入时间线');
+      return;
+    }
+    ElMessage.success('已加入时间线，保存后写入');
+  } catch (err) {
+    ElMessage.error(err.message || '没有加入');
+  }
+}
+async function removeImport(item) {
+  try {
+    await ElMessageBox.confirm('删除这条导入视频？时间线上还用着它的片段会缺素材。', '删除导入视频', { type: 'warning' });
+  } catch {
+    return;
+  }
+  try {
+    await request(`/projects/${projectId.value}/edit/imports/${item.name}`, { method: 'delete' });
+    store.forgetImport(item.name);
+    ElMessage.success('已删除');
+  } catch (err) {
+    ElMessage.error(err.message || '没有删除');
+  }
 }
 function openFinal(row) {
   router.replace({ query: { node: 'preview', final: String(row.id) } });
@@ -148,7 +236,8 @@ async function save() {
           volume: track.volume,
           muted: track.muted,
           clips: track.clips.map(clip => ({
-            source_output_id: clip.source_output_id,
+            source_output_id: clip.source_import ? null : clip.source_output_id,
+            source_import: clip.source_import || '',
             start_ms: clip.start_ms,
             duration_ms: clip.duration_ms,
             trim_in_ms: clip.trim_in_ms,
@@ -264,6 +353,27 @@ onUnmounted(stopPoll);
 </script>
 
 <style scoped>
+.cartoon-edit-tabs {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.cartoon-edit-tabs :deep(.el-tabs__header) { flex: none; margin-bottom: 12px; }
+.cartoon-edit-tabs :deep(.el-tabs__content) {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.cartoon-edit-tabs :deep(.el-tab-pane) {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.cartoon-edit-preview {
+  min-height: 0;
+  overflow: auto;
+}
 .cartoon-edit-alert { margin-bottom: 12px; }
 .cartoon-edit-layout {
   display: grid;
@@ -273,6 +383,23 @@ onUnmounted(stopPoll);
 .cartoon-edit-toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
 .cartoon-edit-result { display: block; max-width: 420px; margin-top: 12px; }
 .cartoon-edit-result :deep(video) { display: block; width: 100%; }
+.cartoon-edit-file { display: none; }
+.cartoon-edit-imports {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.cartoon-edit-import-scroll {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.cartoon-edit-import-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; align-content: start; }
+.cartoon-edit-import { padding: 10px; border: 1px solid rgba(47, 138, 91, 0.16); border-radius: 12px; background: #f7fbf8; }
+.cartoon-edit-import video { display: block; width: 100%; max-height: 160px; background: #111; border-radius: 8px; }
+.cartoon-edit-import p { margin: 8px 0 0; }
 @media (max-width: 960px) {
   .cartoon-edit-layout { grid-template-columns: 1fr; }
 }

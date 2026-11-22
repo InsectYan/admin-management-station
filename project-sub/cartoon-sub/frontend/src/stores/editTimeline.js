@@ -168,6 +168,50 @@ export const useEditTimelineStore = defineStore('editTimeline', {
       Object.assign(clip, patch);
       this.touch();
     },
+    removeClip(id) {
+      const clips = this.videoTrack?.clips;
+      if (!clips || !this.edit) return;
+      const index = clips.findIndex(item => item.id === id);
+      if (index < 0) return;
+      this.begin();
+      clips.splice(index, 1);
+      this.touch();
+      this.end();
+      const next = this.clips[Math.min(index, this.clips.length - 1)] || null;
+      this.selectedClipId = next?.id ?? null;
+      this.seek(next ? next.start_ms : 0);
+    },
+    appendVideo(item) {
+      const track = this.videoTrack;
+      if (!track || !this.edit || !item?.duration_ms) return null;
+      this.begin();
+      const clip = {
+        id: -Date.now(),
+        sort_order: track.clips.length,
+        source_output_id: item.local ? null : item.id,
+        source_import: item.local ? item.name : '',
+        start_ms: 0,
+        duration_ms: item.duration_ms,
+        trim_in_ms: 0,
+        text: '',
+        missing: Boolean(item.missing),
+        source_duration_ms: item.duration_ms,
+        shot_description: item.description || '',
+      };
+      track.clips.push(clip);
+      this.touch();
+      this.end();
+      this.selectedClipId = clip.id;
+      this.seek(clip.start_ms);
+      return clip.id;
+    },
+    forgetImport(token) {
+      this.videos = (this.videos || []).filter(item => item.name !== token);
+      const clips = this.videoTrack?.clips || [];
+      clips.forEach(clip => {
+        if (clip.source_import === token) clip.missing = true;
+      });
+    },
     setCanvas(width, height) {
       if (!this.edit) return;
       if (this.edit.width === width && this.edit.height === height) return;

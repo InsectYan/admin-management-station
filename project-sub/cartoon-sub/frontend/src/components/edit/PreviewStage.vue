@@ -28,10 +28,12 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
+import { useRoute } from 'vue-router';
 import { useEditTimelineStore } from '../../stores/editTimeline.js';
 import { resolveApiBase } from '../../services/apiConfig.js';
 import PlaybackRate from '../PlaybackRate.vue';
 
+const route = useRoute();
 const store = useEditTimelineStore();
 const { playheadMs, playing, seekSerial } = storeToRefs(store);
 const videoRef = ref(null);
@@ -57,6 +59,15 @@ function clock(ms) {
 function fileUrl(id) {
   return `${resolveApiBase()}/outputs/${id}/file`;
 }
+function mediaKey(target) {
+  return target?.source_import ? `import:${target.source_import}` : String(target?.source_output_id || '');
+}
+function mediaUrl(target) {
+  if (target?.source_import) {
+    return `${resolveApiBase()}/projects/${route.params.id}/edit/imports/${target.source_import}/file`;
+  }
+  return fileUrl(target.source_output_id);
+}
 function applyRate() {
   const video = videoRef.value;
   if (video) video.playbackRate = speed.value;
@@ -64,16 +75,16 @@ function applyRate() {
 async function syncTo(target, offsetMs) {
   const video = videoRef.value;
   if (!video) return;
-  if (!target || target.missing || !target.source_output_id) {
+  if (!target || target.missing || (!target.source_output_id && !target.source_import)) {
     video.pause();
     return;
   }
   const at = Math.max(0, (target.trim_in_ms + offsetMs) / 1000);
   lock = true;
   try {
-    if (video.dataset.outputId !== String(target.source_output_id)) {
-      video.dataset.outputId = String(target.source_output_id);
-      video.src = fileUrl(target.source_output_id);
+    if (video.dataset.outputId !== mediaKey(target)) {
+      video.dataset.outputId = mediaKey(target);
+      video.src = mediaUrl(target);
       await new Promise((resolve, reject) => {
         const ok = () => { cleanup(); resolve(); };
         const bad = () => { cleanup(); reject(new Error('load')); };
@@ -108,7 +119,7 @@ watch(playing, value => {
       store.playing = false;
       return;
     }
-    if (video.dataset.outputId !== String(clip.value.source_output_id)) {
+    if (video.dataset.outputId !== mediaKey(clip.value)) {
       syncTo(clip.value, playheadMs.value - clip.value.start_ms);
       return;
     }

@@ -5,7 +5,18 @@ const TOPIC_OPTIONS = [
   { value: 'fitness', label: '健身' },
 ];
 
-const TOPIC_VALUES = new Set(TOPIC_OPTIONS.map(item => item.value));
+function topicValues() {
+  return new Set(TOPIC_OPTIONS.map(item => item.value));
+}
+
+function applyTopicOptions(rows) {
+  const next = (rows || []).map(item => ({
+    value: String(item.code || '').trim(),
+    label: String(item.name || item.code || '').trim(),
+  })).filter(item => item.value);
+  if (!next.length) return;
+  TOPIC_OPTIONS.splice(0, TOPIC_OPTIONS.length, ...next);
+}
 
 function topicAllowed(contentTypeId) {
   return contentTypeId === 'ai_comic' || contentTypeId === 'ai_short';
@@ -27,7 +38,7 @@ function topicList(value) {
   const list = [];
   raw.forEach(item => {
     const key = String(item || '').trim();
-    if (!TOPIC_VALUES.has(key) || seen.has(key)) return;
+    if (!topicValues().has(key) || seen.has(key)) return;
     seen.add(key);
     list.push(key);
   });
@@ -57,6 +68,7 @@ function topicPatch(contentTypeId, payload, existing) {
 
 module.exports = {
   TOPIC_OPTIONS,
+  applyTopicOptions,
   topicList,
   topicsOf,
   topicPatch,

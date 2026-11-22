@@ -21,7 +21,21 @@
     <el-empty v-if="!rows.length" :description="emptyText" />
     <el-table v-else :data="rows">
       <template v-for="(column, index) in page.columns" :key="column.prop">
-        <el-table-column v-if="column.switch" :label="column.label" width="120">
+        <el-table-column v-if="column.prop === 'reference_path'" label="参考图" width="88">
+          <template #default="{ row }"><span @click.stop><AssetThumb :path="row.reference_path" /></span></template>
+        </el-table-column>
+        <el-table-column v-else-if="column.prop === 'voice_key'" label="音色" min-width="180">
+          <template #default="{ row }">
+            <span>{{ voiceName(row.voice_key) }}</span>
+            <el-button
+              v-if="row.kind === 'character' && row.project_id && row.source !== 'library'"
+              link
+              type="primary"
+              @click="openVoiceEdit(row)"
+            >选择</el-button>
+          </template>
+        </el-table-column>
+        <el-table-column v-else-if="column.switch" :label="column.label" width="120">
           <template #default="{ row }">
             <el-switch :model-value="!!row.is_public" :before-change="() => onPublicSwitch(row)" />
           </template>
@@ -41,6 +55,14 @@
         </template>
       </el-table-column>
     </el-table>
+
+    <el-drawer v-model="voiceEditOpen" title="选择音色" size="520px" append-to-body>
+      <p class="cartoon-module__hint">{{ voiceEditRow?.name || '人物' }} 的音色。保存后，生成视频时如果工作流有音色入口，会把这条音色写进去。</p>
+      <CharacterVoiceField v-model="voiceEditKey" />
+      <div class="cartoon-entry-actions">
+        <el-button type="primary" :loading="voiceSaving" @click="saveVoice">保存</el-button>
+      </div>
+    </el-drawer>
 
     <el-drawer v-model="drawerOpen" title="公共资产登记" size="640px" append-to-body>
       <p class="cartoon-module__hint">角色和场景默认作为公共资产。关闭公共标识后，需要绑定到一个已有项目。</p>
@@ -101,6 +123,8 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
+import AssetThumb from '../components/AssetThumb.vue';
+import CharacterVoiceField from '../components/CharacterVoiceField.vue';
 import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { request } from '../services/apiConfig.js';
 
@@ -111,6 +135,11 @@ const projectFilter = ref(null);
 const drawerOpen = ref(false);
 const saving = ref(false);
 const bindOpen = ref(false);
+const voiceCatalog = ref([]);
+const voiceEditOpen = ref(false);
+const voiceEditRow = ref(null);
+const voiceEditKey = ref('');
+const voiceSaving = ref(false);
 const bindProjectId = ref(null);
 let bindResolver = null;
 const shared = reactive({
@@ -267,6 +296,56 @@ async function askProject(currentId) {
     bindResolver = resolve;
   });
 }
+function voiceName(key) {
+  if (!key) return '—';
+  const item = voiceCatalog.value.find(row => row.voice_key === key);
+  if (!item) return '已选音色';
+  return item.folder ? `${item.folder} / ${item.name}` : item.name;
+}
+function openVoiceEdit(row) {
+  voiceEditRow.value = row;
+  voiceEditKey.value = row.voice_key || '';
+  voiceEditOpen.value = true;
+}
+async function saveVoice() {
+  const row = voiceEditRow.value;
+  if (!row?.project_id || !row.id) return;
+  voiceSaving.value = true;
+  try {
+    await request(`/projects/${row.project_id}/assets/${row.id}`, {
+      method: 'put',
+      data: {
+        name: row.name,
+        kind: row.kind || 'character',
+        description: row.description || '',
+        reference_path: row.reference_path || '',
+        character_id: row.character_id || '',
+        voice_key: voiceEditKey.value || '',
+        speech_rate: row.speech_rate || '',
+        emotion: row.emotion || '',
+        consistency_note: row.consistency_note || '',
+        scene_type: row.scene_type || '',
+        front_path: row.front_path || '',
+        side_path: row.side_path || '',
+        back_path: row.back_path || '',
+        expression_note: row.expression_note || '',
+        costume_note: row.costume_note || '',
+        lora_ref: row.lora_ref || '',
+        angle_paths: row.angle_paths || '',
+        prop_category: row.prop_category || '',
+        voice_lang: row.voice_lang || '',
+        speaker_name: row.speaker_name || '',
+      },
+    });
+    voiceEditOpen.value = false;
+    ElMessage.success('音色已保存');
+    await load();
+  } catch (err) {
+    ElMessage.error(err.message || '音色没有保存');
+  } finally {
+    voiceSaving.value = false;
+  }
+}
 function defaultKind() {
   return kindByRoute[route.params.kind] || 'character';
 }
@@ -370,6 +449,13 @@ async function load() {
         } catch (err) {
           projects.value = [];
           ElMessage.error(err.message);
+        }
+        try {
+          const voices = await request('/voice-library');
+          voiceCatalog.value = voices?.rows || [];
+        } catch (err) {
+          voiceCatalog.value = [];
+          ElMessage.error(err.message || '音色库没有打开');
         }
       }
       const projectId = route.name === 'assets' ? (Number(projectFilter.value) || null) : null;

@@ -17,7 +17,7 @@
     <el-empty v-if="!clip" description="点时间线上的一段" />
     <el-form v-else label-position="top">
       <el-form-item label="绑定的视频">
-        <el-select :model-value="clip.source_output_id" @change="onSource">
+        <el-select :model-value="boundValue" @change="onSource">
           <el-option
             v-for="item in store.videos"
             :key="item.id"
@@ -34,6 +34,8 @@
       </el-form-item>
       <p v-if="clip.missing" class="cartoon-module__hint">素材文件不在磁盘上，预览和导出都会停在这里。</p>
       <p v-else class="cartoon-module__hint">源时长 {{ seconds(clip.source_duration_ms || 0) }} 秒。出点不能超过源片。</p>
+      <el-button type="danger" plain :disabled="!canMake()" @click="removeClip">删除这段</el-button>
+      <p class="cartoon-module__hint">从时间线去掉这一段，后面的片段会往前接上。点保存后写入。可以撤销。</p>
     </el-form>
   </section>
 </template>
@@ -41,6 +43,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useEditTimelineStore } from '../../stores/editTimeline.js';
+import { canMake } from '../../lib/appAccess.js';
 
 defineProps({
   imports: { type: Array, default: () => [] },
@@ -54,11 +57,13 @@ function snapshotLabel(item) {
   return title || `快照 #${item.id}`;
 }
 const clip = computed(() => store.clips.find(item => item.id === store.selectedClipId) || null);
+const boundValue = computed(() => (clip.value?.source_import ? `import:${clip.value.source_import}` : clip.value?.source_output_id));
 
 function seconds(ms) {
   return Math.round(Number(ms || 0) / 100) / 10;
 }
 function optionLabel(item) {
+  if (item.local) return `${item.description || '导入视频'} · 导入`;
   const name = item.description || `分镜 ${item.shot_id || item.id}`;
   return `${name} · #${item.id}`;
 }
@@ -79,7 +84,8 @@ function onSource(id) {
   const source = store.videos.find(item => item.id === id);
   const duration = source?.duration_ms || clip.value.duration_ms;
   commit({
-    source_output_id: id,
+    source_output_id: source?.local ? null : id,
+    source_import: source?.local ? source.name : '',
     trim_in_ms: 0,
     duration_ms: duration,
     missing: Boolean(source?.missing),
@@ -95,6 +101,10 @@ function onTrimIn(value) {
 function onDuration(value) {
   const max = clip.value.source_duration_ms;
   commit(limit(clip.value.trim_in_ms, Number(value) * 1000, max));
+}
+function removeClip() {
+  if (!clip.value || !canMake()) return;
+  store.removeClip(clip.value.id);
 }
 </script>
 

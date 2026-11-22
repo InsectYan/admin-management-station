@@ -43,3 +43,24 @@ export async function fetchAuditLogs(query = {}) {
   const qs = params.toString();
   return unwrap(await request(`/audit-logs${qs ? `?${qs}` : ''}`));
 }
+
+function queryString(query = {}) {
+  const params = new URLSearchParams();
+  Object.entries(query).forEach(([ key, value ]) => {
+    if (value !== undefined && value !== null && value !== '') params.set(key, String(value));
+  });
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
+}
+
+export async function fetchExecutions(query = {}) {
+  return unwrap(await request(`/executions${queryString(query)}`));
+}
+
+export async function fetchExecutionSkills() {
+  return unwrap(await request('/executions/skills'));
+}
+
+export async function fetchExecution(id) {
+  return unwrap(await request(`/executions/${id}`));
+}

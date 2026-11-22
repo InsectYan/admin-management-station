@@ -254,6 +254,39 @@ function detectXianxia(input = {}) {
   return XIANXIA_TEXT_RE.test(text);
 }
 
+function applyVisualStyles(rows) {
+  const next = (rows || []).map(item => {
+    const name = String(item.name || item.code || '').trim();
+    const note = String(item.note || '').trim();
+    const code = String(item.code || '').trim();
+    if (!code) return null;
+    return {
+      value: code,
+      name,
+      note,
+      label: note ? `${name}【${note}】` : name,
+      group: String(item.group_name || '').trim(),
+      prompt: String(item.prompt || '').trim() || (note ? `${name}风格：${note}` : name),
+    };
+  }).filter(Boolean);
+  if (!next.length) return;
+  VISUAL_STYLES.splice(0, VISUAL_STYLES.length, ...next);
+}
+
+function applyNamedList(target, rows) {
+  const next = (rows || []).map(item => String(item.name || item.code || '').trim()).filter(Boolean);
+  if (!next.length) return;
+  target.splice(0, target.length, ...next);
+}
+
+function applyShotSizes(rows) {
+  applyNamedList(SHOT_SIZES, rows);
+}
+
+function applyCameraMoves(rows) {
+  applyNamedList(CAMERA_MOVES, rows);
+}
+
 function assertEnum(value, options, label) {
   const text = String(value || '').trim();
   if (!text) return '';
@@ -372,6 +405,9 @@ module.exports = {
   styleOf,
   stylePromptOf,
   styleLabelOf,
+  applyVisualStyles,
+  applyShotSizes,
+  applyCameraMoves,
   detectXianxia,
   assertEnum,
   normalizeOneShotSize,
@@ -393,10 +429,12 @@ module.exports = {
       })),
       shot_sizes: SHOT_SIZES,
       camera_moves: CAMERA_MOVES,
-      topic_options: [
-        { value: 'av', label: 'AV' },
-        { value: 'fitness', label: '健身' },
-      ],
+      topic_options: require('./topics').TOPIC_OPTIONS.map(item => ({ value: item.value, label: item.label })),
+      content_types: require('./contentCatalog').TYPES.map(item => ({
+        id: item.id,
+        label: item.label,
+        bind: item.bind,
+      })),
     };
   },
 };

@@ -39,7 +39,7 @@
             <el-option v-for="pack in scenePacks" :key="pack.id" :label="`${pack.name}（${pack.image_count} 张）`" :value="pack.id" />
           </el-option-group>
         </el-select>
-        <p class="precheck-preview-hint">按选择顺序对应 &lt;Picture 1&gt;、&lt;Picture 2&gt;。人物和场景可以一起选。也可以不选包，直接上传最多 9 张参考图。总共不超过 9 张。首尾帧工作流不使用这个包。</p>
+        <p class="precheck-preview-hint precheck-preview-hint-picture">按选择顺序对应 &lt;Picture 1&gt;、&lt;Picture 2&gt;。人物和场景可以一起选。也可以不选包，直接上传最多 9 张参考图。总共不超过 9 张。首尾帧工作流不使用这个包。</p>
         <el-upload
           v-model:file-list="refFileList"
           class="precheck-image-upload"
@@ -58,7 +58,7 @@
       <template v-for="field in fields" :key="field.id">
       <el-form-item
         :label="field.label"
-        :class="{ 'precheck-preview-duration': field.type === 'duration' || field.type === 'image' || field.type === 'video' || (batchable && isSeedField(field)) }"
+        :class="{ 'precheck-preview-duration': field.type === 'duration' || field.type === 'image' || field.type === 'video' || (batchable && isSeedField(field)) || promptRow(field) }"
       >
         <template v-if="field.type === 'duration'">
           <el-input-number
@@ -124,7 +124,7 @@
           <span v-for="(code, index) in shownSeeds" :key="`${code}-${index}`" class="precheck-preview-seed">{{ shownSeeds.length > 1 ? `第 ${index + 1} ${batchUnit} ` : '' }}{{ code }}</span>
         </div>
       </el-form-item>
-      <el-form-item v-if="batchable && field.id === primarySeedId" class="precheck-preview-duration" label="批次">
+      <el-form-item v-if="batchable && field.id === primarySeedId" label="批次">
         <el-input-number
           v-model="batchCount"
           :min="1"
@@ -207,6 +207,7 @@
           <p>
             <span v-if="productTitle(item)">{{ productTitle(item) }} · </span>{{ runLabel(item) }}
           </p>
+          <el-button link type="primary" @click="openSnapshot(item)">快照</el-button>
         </div>
         <el-progress
           v-if="item.status === 'running'"
@@ -228,15 +229,49 @@
         <div v-if="item.status === 'success' && item.media_kind !== 'text'" class="precheck-preview-media">
           <MediaFileList :items="[mediaItem(item)]" :show-name="false" @remove="removeRun" />
         </div>
+        <div v-if="item.status === 'success' && item.media_kind === 'video' && item.zip_name" class="precheck-preview-pack">
+          <span v-if="item.frame_count">{{ item.frame_count }} 帧</span>
+          <el-button type="primary" plain size="small" @click="downloadFrames(item)">下载帧压缩包</el-button>
+        </div>
       </el-card>
     </div>
     </div>
-    <ol v-if="framePacks.length" class="precheck-frame-packs">
-      <li v-for="item in framePacks" :key="item.id">
-        <span>{{ runLabel(item) }}<template v-if="item.frame_count"> · {{ item.frame_count }} 帧</template></span>
-        <el-button type="primary" plain size="small" @click="downloadFrames(item)">下载帧压缩包</el-button>
-      </li>
-    </ol>
+    <el-dialog v-model="snapshotOpen" :title="snapshotTitle" width="760px" append-to-body destroy-on-close>
+      <el-tabs v-model="snapshotTab">
+        <el-tab-pane label="本次实际选项" name="options">
+          <p v-if="!snapshotOptions.length" class="precheck-preview-hint">这次生成没有提示词以外的选项。</p>
+          <ul v-else class="precheck-preview-options precheck-snapshot-list">
+            <li v-for="(item, index) in snapshotOptions" :key="`${item.label}-${index}`" :class="{ 'is-media': item.images && item.images.length }">
+              <span>{{ item.label }}</span>
+              <p v-if="item.text">{{ item.text }}</p>
+              <div v-if="item.images && item.images.length" class="precheck-preview-refs">
+                <template v-for="image in item.images" :key="image.file">
+                  <video v-if="image.kind === 'video'" :src="optionSrc(image, snapshotRun)" muted controls playsinline />
+                  <el-image
+                    v-else
+                    :src="optionSrc(image, snapshotRun)"
+                    :preview-src-list="imagePreviewList(item, snapshotRun)"
+                    :initial-index="imagePreviewIndex(item, image, snapshotRun)"
+                    fit="contain"
+                    preview-teleported
+                  />
+                </template>
+              </div>
+            </li>
+          </ul>
+        </el-tab-pane>
+        <el-tab-pane label="本次实际提示词" name="prompts">
+          <p v-if="snapshotProduct" class="precheck-preview-hint">产物 {{ snapshotProduct }}</p>
+          <p v-if="!snapshotPrompts.length" class="precheck-preview-hint">这次生成没有文本提示词。</p>
+          <ul v-else class="precheck-snapshot-list">
+            <li v-for="item in snapshotPrompts" :key="item.label">
+              <span>{{ item.label }}</span>
+              <p>{{ item.text }}</p>
+            </li>
+          </ul>
+        </el-tab-pane>
+      </el-tabs>
+    </el-dialog>
   </div>
 </template>
 
@@ -281,6 +316,9 @@ const stopping = ref(false);
 const clearing = ref(false);
 const notice = ref('');
 const fillingBack = ref(false);
+const snapshotOpen = ref(false);
+const snapshotTab = ref('options');
+const snapshotRun = ref(null);
 const preview = ref(null);
 const runs = ref([]);
 const styles = ref([]);
@@ -317,7 +355,14 @@ const usedOptions = computed(() => {
   return source.filter(item => !hiddenOption(item));
 });
 const usedTitle = computed(() => productTitle(focusRun.value));
-const framePacks = computed(() => runs.value.filter(item => item.status === 'success' && item.media_kind === 'video' && item.zip_name));
+const snapshotRows = computed(() => shownRows(snapshotRun.value));
+const snapshotOptions = computed(() => snapshotRows.value.options);
+const snapshotPrompts = computed(() => snapshotRows.value.prompts);
+const snapshotProduct = computed(() => productTitle(snapshotRun.value));
+const snapshotTitle = computed(() => {
+  const name = snapshotProduct.value || runLabel(snapshotRun.value);
+  return name ? `${name} · 快照` : '快照';
+});
 const mediaCardCount = computed(() => runs.value.filter(item => item.media_kind !== 'text').length);
 const hasRunning = computed(() => runs.value.some(item => item.status === 'running'));
 const canClear = computed(() => runs.value.some(item => item.status !== 'running'));
@@ -334,6 +379,11 @@ let timer = null;
 
 function isSeedField(field) {
   return field?.key === 'seed' || field?.key === 'noise_seed';
+}
+function promptRow(field) {
+  if (!videoWorkflow(props.apiJson) || field?.type !== 'text') return false;
+  const label = String(field.label || '');
+  return label === '正向提示词' || label === '负向提示词';
 }
 function videoWorkflow(graph) {
   return Object.values(graph || {}).some(node => {
@@ -566,18 +616,23 @@ function mediaPath(item) {
     : `/workflows/drafts/${draftKey()}/file`;
   return `${resolveApiBase()}${base}?run=${encodeURIComponent(item?.id || '')}&t=${encodeURIComponent(stamp)}`;
 }
-function optionSrc(image) {
-  if (!image?.file || !focusRun.value?.id) return '';
+function optionSrc(image, run = focusRun.value) {
+  if (!image?.file || !run?.id) return '';
   const base = props.workflowId
     ? `/workflows/${props.workflowId}/preview/option`
     : `/workflows/drafts/${draftKey()}/option`;
-  return `${resolveApiBase()}${base}?run=${encodeURIComponent(focusRun.value.id)}&file=${encodeURIComponent(image.file)}`;
+  return `${resolveApiBase()}${base}?run=${encodeURIComponent(run.id)}&file=${encodeURIComponent(image.file)}`;
 }
-function imagePreviewList(item) {
-  return (item?.images || []).filter(image => image.kind !== 'video').map(optionSrc);
+function imagePreviewList(item, run = focusRun.value) {
+  return (item?.images || []).filter(image => image.kind !== 'video').map(image => optionSrc(image, run));
 }
-function imagePreviewIndex(item, image) {
-  return Math.max(0, imagePreviewList(item).indexOf(optionSrc(image)));
+function imagePreviewIndex(item, image, run = focusRun.value) {
+  return Math.max(0, imagePreviewList(item, run).indexOf(optionSrc(image, run)));
+}
+function openSnapshot(item) {
+  snapshotRun.value = item;
+  snapshotTab.value = 'options';
+  snapshotOpen.value = true;
 }
 function mediaItem(item) {
   return {
@@ -632,6 +687,7 @@ function productTitle(item) {
   return `${item.output_name}${item.seed ?? ''}`;
 }
 function runLabel(item) {
+  if (!item) return '';
   const status = { queued: '排队', running: '生成中', success: '成功', failed: '失败', cancelled: '已停止' }[item.status] || item.status;
   const when = item.created_at ? item.created_at.replace('T', ' ').slice(0, 16) : '';
   return [ status, when ].filter(Boolean).join(' · ');
@@ -1011,6 +1067,7 @@ onUnmounted(stop);
   border-color: rgba(47, 138, 91, 0.16);
 }
 .precheck-preview-hint { margin: 6px 0 0; color: #5c6b62; font-size: 13px; }
+.precheck-preview-hint-picture { width: 100%; }
 .precheck-preview-relation {
   display: grid;
   gap: 6px;
@@ -1038,10 +1095,25 @@ onUnmounted(stop);
 @container (min-width: 1280px) {
   .precheck-preview-list:not(.is-single) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
-.precheck-preview-card { min-width: 0; margin: 0; }
+.precheck-preview-card { min-width: 0; margin: 0; height: 100%; display: flex; flex-direction: column; }
+.precheck-preview-card :deep(.el-card__body) { flex: 1; display: flex; flex-direction: column; }
+.precheck-preview-pack {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+  color: #5c6b62;
+  font-size: 12px;
+}
 .precheck-preview-card-text { grid-column: 1 / -1; }
-.precheck-preview-card__head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
-.precheck-preview-card__head p { margin: 0; }
+.precheck-preview-card__head { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.precheck-preview-card__head p { margin: 0; min-width: 0; }
+.precheck-snapshot-list { margin: 0; padding: 0; list-style: none; }
+.precheck-snapshot-list li + li { margin-top: 12px; }
+.precheck-snapshot-list span { color: #5c6b62; font-size: 12px; }
+.precheck-snapshot-list p { margin: 4px 0 0; white-space: pre-wrap; word-break: break-word; }
 .precheck-preview-error { margin: 0; color: #b54747; }
 .precheck-preview-status { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; line-height: 12px }
 .precheck-preview-media { margin-top: 8px; }
@@ -1059,8 +1131,6 @@ onUnmounted(stop);
 .precheck-preview-progress { max-width: 420px; margin-top: 12px; }
 .precheck-preview-submitted { margin: 8px 0 0; padding-left: 18px; color: #5c6b62; font-size: 13px; }
 .precheck-preview-note { color: #5c6b62; }
-.precheck-frame-packs { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
-.precheck-frame-packs li { display: flex; align-items: center; gap: 12px; color: #243028; font-size: 13px; }
 @media (max-width: 800px) {
   .precheck-preview-form { grid-template-columns: 1fr; }
 }

@@ -5,7 +5,7 @@ const { promptCoveredMs, fitDurationSec } = require('../lib/promptDuration');
 
 const OPEN = [ 'pending', 'running' ];
 const VIDEO_KINDS = [ 'video', 'i2v', 't2v', 'refmod' ];
-const WAIT_LIMIT_MS = 40 * 60 * 1000;
+const WAIT_LIMIT_MS = 2 * 60 * 60 * 1000;
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -215,7 +215,7 @@ class AutoJobService extends Service {
     }
   }
 
-  async start(projectId, shotIds, videoCountValue, generateEnd) {
+  async start(projectId, shotIds, videoCountValue, generateEnd, fresh) {
     const project = await this.ctx.model.Project.findByPk(projectId);
     if (!project) this.ctx.throw(404, '项目不存在');
     const ids = [ ...new Set((Array.isArray(shotIds) ? shotIds : []).map(id => Number(id)).filter(id => id > 0)) ];
@@ -236,6 +236,7 @@ class AutoJobService extends Service {
     const byId = new Map(shots.map(shot => [ shot.id, shot ]));
     const ordered = ids.map(id => byId.get(id));
     if (ordered.some(shot => !shot)) this.ctx.throw(400, '有镜头不在当前项目里');
+    ordered.sort((a, b) => (Number(a.sort_order) - Number(b.sort_order)) || (Number(a.id) - Number(b.id)));
     const plan = await this.mediaPlan(project, generateEnd !== false);
     const job = await this.ctx.model.AutoJob.create({
       project_id: project.id,
@@ -250,6 +251,7 @@ class AutoJobService extends Service {
       asset_height: plan.assetSize.height,
       video_count: perShot,
       generate_end: generateEnd !== false,
+      fresh: fresh === true || fresh === 1 || fresh === '1' || fresh === 'true',
     });
     await this.ctx.model.AutoJobItem.bulkCreate(ordered.map((shot, index) => ({
       job_id: job.id,
@@ -335,6 +337,24 @@ class AutoJobService extends Service {
   }
 
   async waitForTask(job, task) {
+    const { startMediaWatch } = require('../lib/executionTrace');
+    const watch = await startMediaWatch(this.ctx, task);
+    const started = Date.now();
+    try {
+      const result = await this.waitForTaskBody(job, task);
+      const fresh = result?.task;
+      const state = result?.stopped
+        ? 'skip'
+        : (!fresh ? 'error' : (fresh.status === 'success' ? 'ok' : (fresh.status === 'cancelled' ? 'skip' : 'error')));
+      await watch.close(state, fresh?.error_message || '', Date.now() - started);
+      return result;
+    } catch (err) {
+      await watch.close('error', err?.message || '失败', Date.now() - started);
+      throw err;
+    }
+  }
+
+  async waitForTaskBody(job, task) {
     const deadline = Date.now() + WAIT_LIMIT_MS;
     while (await this.stillRunning(job)) {
       const fresh = await this.ctx.model.Task.findByPk(task.id);
@@ -434,8 +454,13 @@ class AutoJobService extends Service {
             reason: perShot > 1 ? `正在生成第 ${nth + 1}/${perShot} 条的首帧和视频` : '正在生成首帧和视频',
           });
           job.signal_key = `job:${job.id}`;
+          const startedAt = job.created_at || job.createdAt || null;
+          const chain = job.fresh
+            ? await this.ctx.service.fullAuto.taskChainIndex(job.project_id, shot, prev, startedAt, nth)
+            : { plantIndex: nth, tailIndex: nth };
           await this.ctx.service.fullAuto.shoot(job, shot, endSlot, same, scene, {
-            batchIndex: nth,
+            batchIndex: chain.plantIndex,
+            tailIndex: chain.tailIndex,
             wantEnd,
           });
           lastTaskId = this.lastTracked(job);

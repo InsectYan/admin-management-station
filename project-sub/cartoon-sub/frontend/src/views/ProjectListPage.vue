@@ -43,7 +43,7 @@
         </el-form-item>
         <el-form-item label="内容类型">
           <el-select v-model="form.content_type" style="width: 100%" @change="onType">
-            <el-option v-for="item in CONTENT_TYPES" :key="item.id" :label="item.label" :value="item.id" />
+            <el-option v-for="item in contentTypes" :key="item.id" :label="item.label" :value="item.id" />
           </el-select>
         </el-form-item>
         <el-form-item v-if="!isLocalType(form.content_type)" label="来源小说">
@@ -54,7 +54,7 @@
         </el-form-item>
         <el-form-item v-if="supportsAv(form.content_type)" label="专题">
           <el-select v-model="form.topics" multiple clearable placeholder="可不选" style="width: 100%">
-            <el-option v-for="item in TOPIC_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+            <el-option v-for="item in topicOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
           <p class="cartoon-module__hint">可多选。选了的专题都会在常规提示词之后各走一次收口。AV 仍要求双方写明满二十一岁才写亲密内容。</p>
         </el-form-item>
@@ -82,13 +82,15 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import PageShell from '../components/PageShell.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
-import { CONTENT_TYPES, isLocalType, isOptionalType, supportsAv, TOPIC_OPTIONS, typeLabel } from '../lib/contentTypes.js';
+import { CONTENT_TYPES, isLocalType as localTypeOf, isOptionalType as optionalTypeOf, supportsAv, TOPIC_OPTIONS, typeLabel as labelOf } from '../lib/contentTypes.js';
 import { groupVisualStyles, styleDisplayLabel } from '../utils/visualStyles.js';
 
 const router = useRouter();
 const rows = ref([]);
 const novels = ref([]);
 const styles = ref([]);
+const contentTypes = ref(CONTENT_TYPES);
+const topicOptions = ref(TOPIC_OPTIONS);
 const styleGroups = computed(() => groupVisualStyles(styles.value));
 const selectedStyleNote = computed(() => {
   const hit = styles.value.find(item => item.value === form.visual_style);
@@ -107,6 +109,17 @@ const opsHref = computed(() => {
   return `http://${window.location.hostname}:5103${path}`;
 });
 
+function isLocalType(value) {
+  const hit = contentTypes.value.find(item => item.id === value);
+  return hit ? hit.bind === 'local' : localTypeOf(value);
+}
+function isOptionalType(value) {
+  const hit = contentTypes.value.find(item => item.id === value);
+  return hit ? hit.bind === 'optional' : optionalTypeOf(value);
+}
+function typeLabel(value) {
+  return contentTypes.value.find(item => item.id === value)?.label || labelOf(value);
+}
 function styleLabel(value) {
   return styleDisplayLabel(styles.value, value);
 }
@@ -127,6 +140,8 @@ async function load() {
     rows.value = projects || [];
     novels.value = catalog || [];
     styles.value = meta.visual_styles || [];
+    if (meta.content_types?.length) contentTypes.value = meta.content_types;
+    if (meta.topic_options?.length) topicOptions.value = meta.topic_options;
     if (dash) Object.assign(summary, dash);
   } catch (err) {
     rows.value = [];
