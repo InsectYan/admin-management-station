@@ -3132,7 +3132,7 @@ onUnmounted(() => {
   column-gap: 24px;
   row-gap: 0;
 }
-.cartoon-coverage { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.cartoon-coverage { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .cartoon-coverage__tag { cursor: pointer; }
 .cartoon-snap-table { width: 100%; }
 .cartoon-snap-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
