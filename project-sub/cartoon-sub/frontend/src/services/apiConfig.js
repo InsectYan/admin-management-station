@@ -2,6 +2,7 @@ import axios from 'axios';
 import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper';
 import { getAccessToken, redirectToLogin } from '../lib/amsAuth.js';
 import { rewriteLoopbackHost } from '../lib/amsAuth.js';
+import { getLlmMaxTokens, getLlmProfileId } from '../utils/llmProfileSession.js';
 
 function normalize(base) { return String(base || '').replace(/\/$/, ''); }
 
@@ -44,6 +45,10 @@ const LOCAL_AI_PATH = /\/draft\/(script|shot-outline|shot-expand)(?:\/|$)|\/asse
 api.interceptors.request.use((config) => {
   const token = getAccessToken();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  const profile = getLlmProfileId();
+  const maxTokens = getLlmMaxTokens();
+  if (profile) config.headers['x-llm-profile'] = profile;
+  if (maxTokens) config.headers['x-llm-max-tokens'] = String(maxTokens);
   const url = String(config.url || '');
   if (LOCAL_AI_PATH.test(url) && (Number(config.timeout) || 0) < LOCAL_AI_TIMEOUT_MS) {
     config.timeout = LOCAL_AI_TIMEOUT_MS;

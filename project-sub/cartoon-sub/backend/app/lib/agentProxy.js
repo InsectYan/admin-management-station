@@ -75,10 +75,28 @@ function wrapAgentError(err, { skill, action, status, message, errorCode }) {
   return wrapped;
 }
 
+function llmSessionFields(ctx) {
+  const session = ctx.state?.llmSession || {};
+  const profile = String(session.llm_profile || '').trim().slice(0, 80);
+  const maxTokens = Number(session.max_tokens);
+  const fields = {};
+  if (profile) fields.llm_profile = profile;
+  if (Number.isFinite(maxTokens) && maxTokens > 0) fields.max_tokens = Math.min(Math.round(maxTokens), 131072);
+  return fields;
+}
+
 async function invokeSkill(ctx, { skill, action, payload, timeoutMs, signal }) {
   const url = `${platformBase(ctx)}/api/skills/${skill}/invoke`;
   const waitMs = resolveInvokeTimeout(ctx, timeoutMs);
-  ctx.logger.info('[cartoon] agent POST %s action=%s timeoutMs=%s', url, action, waitMs);
+  const session = llmSessionFields(ctx);
+  ctx.logger.info(
+    '[cartoon] agent POST %s action=%s timeoutMs=%s profile=%s maxTokens=%s',
+    url,
+    action,
+    waitMs,
+    session.llm_profile || '',
+    session.max_tokens || 0,
+  );
   // undici 默认 300 秒收不到响应头就断开，短于技能超时，长调用会变成笼统的 fetch failed
   const dispatcher = new Agent({
     headersTimeout: waitMs + 30000,
@@ -88,7 +106,7 @@ async function invokeSkill(ctx, { skill, action, payload, timeoutMs, signal }) {
   try {
     let res;
     try {
-      const body = { action, ...(payload || {}) };
+      const body = { action, ...(payload || {}), ...session };
       const headers = { 'content-type': 'application/json', 'x-trace-app': 'cartoon' };
       if (body.trace_run_id) headers['x-trace-run-id'] = String(body.trace_run_id);
       if (body.trace_title) headers['x-trace-title'] = encodeURIComponent(String(body.trace_title));

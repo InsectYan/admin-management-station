@@ -4,7 +4,7 @@ const { presentError } = require('../app/lib/httpError');
 module.exports = appInfo => {
   const config = {};
   config.keys = appInfo.name + '_cartoon_sub';
-  config.middleware = [ 'apiError', 'sessionAuth', 'roleGate' ];
+  config.middleware = [ 'apiError', 'llmSession', 'sessionAuth', 'roleGate' ];
   config.onerror = {
     all(err, ctx) {
       const body = presentError(err);
@@ -22,7 +22,7 @@ module.exports = appInfo => {
   config.cors = {
     origin: '*',
     allowMethods: 'GET,HEAD,PUT,POST,DELETE,PATCH,OPTIONS',
-    allowHeaders: 'Content-Type,Authorization,X-Requested-With',
+    allowHeaders: 'Content-Type,Authorization,X-Requested-With,x-llm-profile,x-llm-max-tokens',
   };
   config.sequelize = {
     dialect: 'postgres',

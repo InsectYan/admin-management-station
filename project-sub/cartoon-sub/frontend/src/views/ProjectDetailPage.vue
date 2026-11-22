@@ -803,6 +803,7 @@ import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { autoRunMark, rememberAutoRun } from '../lib/autoRunMark.js';
 import ClampText from '../components/ClampText.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
+import { clearLlmPin, pinLlmSession } from '../utils/llmProfileSession.js';
 import { canMake } from '../lib/appAccess.js';
 import { isLocalType, supportsAv, TOPIC_OPTIONS, topicsOfProject } from '../lib/contentTypes.js';
 import { uncoveredScenes } from '../utils/sceneCoverage.js';
@@ -2174,6 +2175,7 @@ async function runSemiAuto(item) {
   }
   autoModeId.value = item.id;
   const note = await openFlowNote('storyboard', item.id, '正在生成剧本');
+  if (note) pinLlmSession(note);
   try {
     ElMessage.info('正在生成剧本…');
     const data = await request(`/projects/${projectKey()}/imports/${item.id}/draft/script`, {
@@ -2221,6 +2223,7 @@ async function runSemiAuto(item) {
     await finishFlowNote(note?.id, 'failed', err.message || '到分镜失败');
     ElMessage.error(err.message);
   } finally {
+    clearLlmPin();
     autoModeId.value = null;
     unlockJob(token);
   }
@@ -2301,6 +2304,7 @@ async function generateShotOutline(item) {
   }
   outliningId.value = item.id;
   const note = await openFlowNote('storyboard', item.id, '正在拆分分镜');
+  if (note) pinLlmSession(note);
   await finishFlowNote(note?.id, 'running', '正在拆分分镜', [ 'script' ], 'storyboard');
   const stopWatch = watchLiveShots(note?.id);
   ElMessage.info('正在按剧本拆分分镜并落库（5—15 秒/段）…');
@@ -2339,6 +2343,7 @@ async function generateShotOutline(item) {
     ElMessage.error(err.message);
   } finally {
     stopWatch();
+    clearLlmPin();
     if (note?.id) await pullSliceLog(note.id).catch(() => {});
     outliningId.value = null;
     unlockJob(token);
@@ -2788,6 +2793,7 @@ async function runAuto(mode, selectedIds, fresh = false, options = {}) {
         mode === 'prompt' ? '正在生成提示词' : '正在生成提示词和视频',
       );
       noteId = note?.id || 0;
+      if (note) pinLlmSession(note);
     }
     for (const item of queue) {
       if (token !== runMark.token || signal.aborted) break;
@@ -2833,6 +2839,7 @@ async function runAuto(mode, selectedIds, fresh = false, options = {}) {
       else ElMessage.success('执行结束');
     }
   } finally {
+    clearLlmPin();
     if (noteId) {
       const status = stopped || signal.aborted ? 'stopped' : (failed ? 'failed' : 'success');
       const message = handedOff

@@ -218,6 +218,33 @@ class FullAutoService extends Service {
     map.delete(key);
   }
 
+  llmColumns() {
+    const session = this.ctx.state?.llmSession || {};
+    const profile = String(session.llm_profile || '').trim().slice(0, 80);
+    const maxTokens = Number(session.max_tokens);
+    return {
+      llm_profile: profile,
+      max_tokens: Number.isFinite(maxTokens) && maxTokens > 0 ? Math.min(Math.round(maxTokens), 131072) : 0,
+    };
+  }
+
+  bindRunLlm(run) {
+    const profile = String(run?.llm_profile || '').trim();
+    const maxTokens = Number(run?.max_tokens);
+    const session = {};
+    if (profile) session.llm_profile = profile;
+    if (Number.isFinite(maxTokens) && maxTokens > 0) session.max_tokens = maxTokens;
+    this.ctx.state.llmSession = session;
+  }
+
+  modelLine(run) {
+    const profile = String(run?.llm_profile || '').trim();
+    const maxTokens = Number(run?.max_tokens) || 0;
+    if (!profile && !maxTokens) return '';
+    const tokenText = maxTokens ? `，最大 token ${maxTokens}` : '';
+    return `本次模型：${profile || '技能默认'}${tokenText}`;
+  }
+
   summary(run) {
     return {
       id: run.id,
@@ -240,6 +267,8 @@ class FullAutoService extends Service {
       source: 'run',
       nodes: parseJson(run.nodes, {}),
       log: parseJson(run.log, []),
+      llm_profile: run.llm_profile || '',
+      max_tokens: Number(run.max_tokens) || 0,
       created_at: run.created_at,
       updated_at: run.updated_at,
     };
@@ -331,6 +360,8 @@ class FullAutoService extends Service {
       run_kind: 'video',
       source: 'job',
       faults: this.faultLines(items),
+      llm_profile: job.llm_profile || '',
+      max_tokens: Number(job.max_tokens) || 0,
       created_at: job.created_at,
       updated_at: job.updated_at,
     };
@@ -352,11 +383,14 @@ class FullAutoService extends Service {
         task_id: item.task_id,
       })),
       faults: this.faultLines(items),
-      log: items.map(item => ({
-        at: item.updated_at,
-        node: 'submit',
-        text: `${item.shot_code || item.shot_id} ${item.reason || item.status}`,
-      })),
+      log: [
+        ...(this.modelLine(job) ? [{ at: job.created_at, node: 'submit', text: this.modelLine(job) }] : []),
+        ...items.map(item => ({
+          at: item.updated_at,
+          node: 'submit',
+          text: `${item.shot_code || item.shot_id} ${item.reason || item.status}`,
+        })),
+      ],
     };
   }
 
@@ -385,8 +419,11 @@ class FullAutoService extends Service {
       video_workflow_id: 0,
       scope: 'note',
       run_kind: kind,
+      ...this.llmColumns(),
     });
     await this.pushLog(run, keys[0], payload.message || '已发起');
+    const modelText = this.modelLine(run);
+    if (modelText) await this.pushLog(run, keys[0], modelText);
     return this.detail(run);
   }
 
@@ -495,6 +532,7 @@ class FullAutoService extends Service {
       run_kind: 'full',
       video_count: videoCount(payload.video_count),
       generate_end: generateEnd,
+      ...this.llmColumns(),
     });
     const runId = run.id;
     setImmediate(() => {
@@ -542,6 +580,7 @@ class FullAutoService extends Service {
       fresh: false,
       scope: payload.reset ? 'assets-reset' : 'assets',
       run_kind: 'assets',
+      ...this.llmColumns(),
     });
     const runId = run.id;
     setImmediate(() => {
@@ -584,6 +623,7 @@ class FullAutoService extends Service {
       fresh: false,
       scope: 'profiles',
       run_kind: 'profiles',
+      ...this.llmColumns(),
     });
     const runId = run.id;
     setImmediate(() => {
@@ -892,6 +932,11 @@ class FullAutoService extends Service {
     if (!run || run.status !== 'running' || run.scope === 'note') {
       busy.delete(runId);
       return;
+    }
+    this.bindRunLlm(run);
+    const modelText = this.modelLine(run);
+    if (modelText && !parseJson(run.log, []).some(line => String(line?.text || '').startsWith('本次模型'))) {
+      await this.pushLog(run, run.current_node || 'script', modelText);
     }
     try {
       if (run.scope === 'profiles') {

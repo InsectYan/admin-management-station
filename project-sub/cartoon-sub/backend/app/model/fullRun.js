@@ -34,6 +34,8 @@ module.exports = app => {
     generate_end: { type: BOOLEAN, allowNull: false, defaultValue: true },
     fail_count: { type: INTEGER, allowNull: false, defaultValue: 0 },
     temp_refmod_id: { type: INTEGER, allowNull: true },
+    llm_profile: { type: STRING(80), allowNull: false, defaultValue: '' },
+    max_tokens: { type: INTEGER, allowNull: false, defaultValue: 0 },
   }, {
     tableName: 'cartoon_full_runs',
     underscored: true,

@@ -252,6 +252,7 @@ class AutoJobService extends Service {
       video_count: perShot,
       generate_end: generateEnd !== false,
       fresh: fresh === true || fresh === 1 || fresh === '1' || fresh === 'true',
+      ...this.ctx.service.fullAuto.llmColumns(),
     });
     await this.ctx.model.AutoJobItem.bulkCreate(ordered.map((shot, index) => ({
       job_id: job.id,
@@ -402,6 +403,7 @@ class AutoJobService extends Service {
   async walk(jobId) {
     const job = await this.ctx.model.AutoJob.findByPk(jobId);
     if (!job || job.status !== 'running') return;
+    this.ctx.service.fullAuto.bindRunLlm(job);
     const items = await this.itemsOf(job.id);
     for (let index = 0; index < items.length; index += 1) {
       const item = items[index];

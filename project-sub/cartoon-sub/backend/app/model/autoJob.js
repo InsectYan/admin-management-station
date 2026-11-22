@@ -31,6 +31,8 @@ module.exports = app => {
     asset_height: { type: INTEGER, allowNull: false, defaultValue: 1024 },
     task_ids: { type: TEXT, allowNull: false, defaultValue: '[]' },
     temp_refmod_id: { type: INTEGER, allowNull: true },
+    llm_profile: { type: STRING(80), allowNull: false, defaultValue: '' },
+    max_tokens: { type: INTEGER, allowNull: false, defaultValue: 0 },
   }, {
     tableName: 'cartoon_auto_jobs',
     underscored: true,

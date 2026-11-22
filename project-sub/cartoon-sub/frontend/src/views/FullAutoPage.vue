@@ -11,6 +11,7 @@
       <p v-if="run" class="cartoon-module__hint">
         {{ run.message || '等待执行' }}
         <template v-if="run.video_total"> · 镜头 {{ run.video_done }}/{{ run.video_total }}</template>
+        · {{ modelText(run) }}
       </p>
       <p v-if="run?.run_kind === 'full'" class="cartoon-module__hint">
         资产图：{{ run.asset_workflow_name || '—' }} · 首尾帧：{{ run.frame_workflow_name || '—' }} · 视频：{{ run.video_workflow_name || '—' }}
@@ -76,6 +77,9 @@
         <el-table-column prop="id" label="编号" width="80" />
         <el-table-column label="类型" width="140">
           <template #default="{ row }">{{ kindLabel(row.run_kind) }}</template>
+        </el-table-column>
+        <el-table-column label="模型" min-width="200">
+          <template #default="{ row }">{{ modelText(row) }}</template>
         </el-table-column>
         <el-table-column prop="chapter_title" label="章节" min-width="160" />
         <el-table-column label="状态" width="100">
@@ -288,6 +292,13 @@ function tagType(value) {
   if (value === 'failed') return 'danger';
   if (value === 'running') return 'warning';
   return 'info';
+}
+function modelText(row) {
+  const profile = String(row?.llm_profile || '').trim();
+  const tokens = Number(row?.max_tokens) || 0;
+  if (!profile && !tokens) return '未记录（当时为技能默认 qwen3.6）';
+  const tokenText = tokens ? ` · 最大 token ${tokens}` : '';
+  return `${profile || '技能默认'}${tokenText}`;
 }
 function kindLabel(kind) {
   return kindNames[kind] || '全流程';
