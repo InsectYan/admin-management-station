@@ -18,6 +18,22 @@ alwaysApply: false
 - 已有 `DataTablePanel` 的页面可以继续用。新做或重排表格时按上面的 flex 方案，不要再把分页器做成随整页滚走。
 - **样式隔离**：类名 `{app_key}-*` 前缀；禁止裸 `html/body/.el-*`；见 **`subapp-style-isolation.mdc`**。
 
+## 状态色
+
+文案按语义取色，三种不要混用：
+
+- **异常、失败**：error。`el-tag` / `el-alert` / `el-button` 用 `danger`，文字用 `#f56c6c`。任务里出现过异常、单条失败被跳过，也算异常，不用 warning。
+- **提示、说明**：主题色。无 `type` 的标签、`type="primary"`、`type="info"`，以及页面里的说明文字（`*-module__hint`、`*-action-bar__hint`），用主题绿 `#2f8a5b`。不要写成灰色 info。
+- **警告**：warning。只用于需要留意、但还不是失败的情况。`type="warning"`，文字 `#e6a23c`。
+
+成功完成仍用 `success`。覆盖 `.el-tag` 时必须分别写出 `warning` 和 `danger`，不能让默认主题色盖住这两种。
+
+```vue
+<el-tag type="danger">有异常</el-tag>
+<p class="cartoon-module__hint">按类型查看记录。</p>
+<el-tag type="warning">上游已变</el-tag>
+```
+
 ## 状态与服务
 
 - 全局状态：**Pinia**（`stores/`）。

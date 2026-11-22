@@ -160,5 +160,5 @@
 
 .novel-action-bar__hint {
   font-size: 13px;
-  color: var(--novel-color-text-muted, #8a968e);
+  color: var(--novel-color-primary, #2f8a5b);
 }

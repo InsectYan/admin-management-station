@@ -368,7 +368,7 @@ onMounted(load);
 .precheck-workflow-models .precheck-module__hint { margin: 0 0 8px; }
 .precheck-workflow-actions { margin-top: 12px; }
 .precheck-workflow-check { margin-top: 16px; }
-.precheck-module__hint { margin: 0 0 12px; color: #5c6b62; }
+.precheck-module__hint { margin: 0 0 12px; color: #2f8a5b; }
 @media (max-width: 900px) {
   .precheck-workflow-form { grid-template-columns: 1fr; }
 }

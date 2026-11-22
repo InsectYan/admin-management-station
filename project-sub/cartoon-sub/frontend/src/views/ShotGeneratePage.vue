@@ -66,7 +66,7 @@
           <el-input-number v-model="durationSec" :min="0.5" :max="60" :step="0.5" :precision="1" />
           <p class="cartoon-module__hint">有视频提示词时，时长取时间轴结尾。提交时再按工作流帧率对齐。生图不用填。</p>
         </el-form-item>
-        <p v-if="contractError" class="cartoon-module__hint">{{ contractError }}</p>
+        <p v-if="contractError" class="cartoon-module__hint is-error">{{ contractError }}</p>
         </el-tab-pane>
         <el-tab-pane label="图片" name="image" :lazy="false">
         <el-form-item label="关联资产">

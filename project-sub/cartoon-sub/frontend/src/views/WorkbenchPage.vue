@@ -1,7 +1,7 @@
 <template>
   <div v-if="!project" class="cartoon-workbench cartoon-workbench--boot">
     <LoadMask :loading="entryLoading" />
-    <p v-if="error && !entryLoading" class="cartoon-module__hint">{{ error }}</p>
+    <p v-if="error && !entryLoading" class="cartoon-module__hint is-error">{{ error }}</p>
   </div>
   <div v-else class="cartoon-workbench">
     <aside class="cartoon-workbench__nav">
@@ -29,7 +29,7 @@
       </div>
       <section v-if="customNodes.length || episode?.warning" class="cartoon-module cartoon-workbench__note">
         <h3 class="cartoon-module__title">专项检查</h3>
-        <p v-if="episode?.warning" class="cartoon-module__hint">{{ episode.warning }}</p>
+        <p v-if="episode?.warning" class="cartoon-module__hint is-warning">{{ episode.warning }}</p>
         <div class="cartoon-toolbar">
           <el-button v-for="item in customNodes" :key="item.node_key" @click="runCustom(item)">运行{{ item.title }}</el-button>
         </div>
@@ -85,7 +85,7 @@
             </template>
           </el-table-column>
         </el-table>
-        <p v-if="staleShots.length" class="cartoon-module__hint">资产已更新，这些镜头已经出过画面，不会自动重跑：{{ staleShots.map(item => item.shot_code || item.id).join('、') }}</p>
+        <p v-if="staleShots.length" class="cartoon-module__hint is-warning">资产已更新，这些镜头已经出过画面，不会自动重跑：{{ staleShots.map(item => item.shot_code || item.id).join('、') }}</p>
           </el-tab-pane>
           <el-tab-pane label="镜头绑定" name="bind">
         <div class="cartoon-toolbar">
@@ -211,7 +211,7 @@
         </div>
         <template v-if="voiceMode === 'dub'">
         <p class="cartoon-module__hint">先在音色库里试听并选定一条，再勾选对白。点「用这个音色配音」后，勾选的对白就把这条音色记成关联音色，同一镜头里没勾选的对白保持原样。试听播放的是样本，不是这句台词的成片。AI 把多句写进一条时，用「拆分」或「新增对白」拆开。</p>
-        <p v-if="voiceSkipped.length" class="cartoon-module__hint">这些分组的文件名过长，读不到：{{ voiceSkipped.join('、') }}</p>
+        <p v-if="voiceSkipped.length" class="cartoon-module__hint is-error">这些分组的文件名过长，读不到：{{ voiceSkipped.join('、') }}</p>
         <div class="cartoon-voice">
           <div class="cartoon-voice__library">
             <div class="cartoon-toolbar">
@@ -474,6 +474,7 @@ import RegionLoad from '../components/RegionLoad.vue';
 import LoadMask from '../components/LoadMask.vue';
 import FullAutoPage from './FullAutoPage.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
+import { createPulseGate } from '../lib/dataPulse.js';
 import { isLocalType, typeLabel } from '../lib/contentTypes.js';
 import { styleDisplayLabel } from '../utils/visualStyles.js';
 import { PAGE_SIZES, PAGER_LAYOUT } from '../lib/pager.js';
@@ -1445,9 +1446,17 @@ watch(node, (value) => {
 watch(navTarget, (value) => {
   if (value) refreshWorkbench();
 });
+const takeWorkbenchPulse = createPulseGate();
+watch(() => pipeline.value?.data_seq, (seq) => {
+  const kind = pipeline.value?.data_kind;
+  const assetsOpen = node.value === 'assets' && (kind === 'profile' || kind === 'asset');
+  const previewOpen = (node.value === 'preview' || node.value === 'generate') && kind === 'video';
+  if (!assetsOpen && !previewOpen) return;
+  takeWorkbenchPulse(seq, kind, () => refreshWorkbench());
+});
 watch(() => pipeline.value?.updated_at, () => {
   if (pipeline.value?.status !== 'running') return;
-  if ([ 'assets', 'preview', 'voice', 'storyboard' ].includes(node.value) || pipeline.value?.current_node === 'storyboard') refreshWorkbench();
+  if (node.value === 'voice') refreshWorkbench();
 });
 watch(() => pipeline.value?.status, (status, prev) => {
   if (prev === 'running' && status && status !== 'running' && node.value === 'assets') refreshWorkbench();

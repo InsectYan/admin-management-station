@@ -245,13 +245,23 @@ class FullAutoService extends Service {
     return `本次模型：${profile || '技能默认'}${tokenText}`;
   }
 
+  hadFault(nodes) {
+    return Object.values(nodes || {}).some(node => node?.status === 'failed' || (Array.isArray(node?.failures) && node.failures.length));
+  }
+
+  presentStatus(status, faulted) {
+    if ((status === 'success' || status === 'done') && faulted) return 'exception';
+    return status;
+  }
+
   summary(run) {
+    const nodes = parseJson(run.nodes, {});
     return {
       id: run.id,
       project_id: run.project_id,
       import_id: run.import_id,
       chapter_title: run.chapter_title || '',
-      status: run.status,
+      status: this.presentStatus(run.status, this.hadFault(nodes)),
       current_node: run.current_node,
       message: run.message || '',
       error_message: run.error_message || '',
@@ -265,10 +275,12 @@ class FullAutoService extends Service {
       video_total: run.video_total || 0,
       run_kind: this.kindOf(run),
       source: 'run',
-      nodes: parseJson(run.nodes, {}),
+      nodes,
       log: parseJson(run.log, []),
       llm_profile: run.llm_profile || '',
       max_tokens: Number(run.max_tokens) || 0,
+      data_kind: run.data_kind || '',
+      data_seq: Number(run.data_seq) || 0,
       created_at: run.created_at,
       updated_at: run.updated_at,
     };
@@ -345,7 +357,8 @@ class FullAutoService extends Service {
   }
 
   jobSummary(job, items = []) {
-    const status = job.status === 'done' ? 'success' : job.status;
+    const faults = this.faultLines(items);
+    const status = this.presentStatus(job.status === 'done' ? 'success' : job.status, faults.length > 0);
     return {
       id: job.id,
       project_id: job.project_id,
@@ -359,9 +372,11 @@ class FullAutoService extends Service {
       video_total: job.total || 0,
       run_kind: 'video',
       source: 'job',
-      faults: this.faultLines(items),
+      faults,
       llm_profile: job.llm_profile || '',
       max_tokens: Number(job.max_tokens) || 0,
+      data_kind: job.data_kind || '',
+      data_seq: Number(job.data_seq) || 0,
       created_at: job.created_at,
       updated_at: job.updated_at,
     };
@@ -372,7 +387,7 @@ class FullAutoService extends Service {
     if (!job) this.ctx.throw(404, '这条视频任务不存在');
     const items = await this.ctx.service.autoJob.itemsOf(job.id);
     return {
-      ...this.jobSummary(job),
+      ...this.jobSummary(job, items),
       items: items.map(item => ({
         id: item.id,
         shot_id: item.shot_id,
@@ -707,6 +722,7 @@ class FullAutoService extends Service {
         throw new Error(`「${title}」没有返回资产描述`);
       }
       await this.applyProfiles(run, title, characters, scenes);
+      await this.pulse(run, 'profile');
       } catch (err) {
         if (isStop(err)) throw err;
         const message = err?.message || '失败';
@@ -817,6 +833,15 @@ class FullAutoService extends Service {
     return fresh.status === 'running';
   }
 
+  async pulse(run, kind) {
+    const { isDataKind } = require('../lib/dataPulse');
+    if (!run || !isDataKind(kind) || !run.constructor?.rawAttributes?.data_seq) return;
+    const seq = Number(run.data_seq || 0) + 1;
+    await run.update({ data_kind: kind, data_seq: seq });
+    run.data_kind = kind;
+    run.data_seq = seq;
+  }
+
   async pushLog(run, node, text) {
     if (!run?.constructor?.rawAttributes?.log) return;
     const log = parseJson(run.log, []);
@@ -847,6 +872,7 @@ class FullAutoService extends Service {
     run.nodes = raw;
     run.current_node = key;
     run.message = note;
+    if (key === 'storyboard') await this.pulse(run, 'storyboard');
   }
 
   async mark(run, key, status, note) {
@@ -953,7 +979,7 @@ class FullAutoService extends Service {
             const message = err?.message || '失败';
             await this.noteFailure(run, 'assets', message);
             await this.mark(run, 'assets', 'failed', message);
-            await run.update({ status: 'success', current_node: 'done', message: '资产描述已走完，有章节失败已跳过', error_message: '' });
+            await run.update({ status: 'exception', current_node: 'done', message: '资产描述已走完，有章节失败已跳过', error_message: '' });
             await this.pushLog(run, 'assets', `资产描述失败：${message}。已跳过并结束这一轮。`);
           }
         }
@@ -977,12 +1003,12 @@ class FullAutoService extends Service {
       if (await this.alive(run)) {
         const assetRun = run.scope === 'assets' || run.scope === 'assets-reset';
         const nodes = parseJson(run.nodes, {});
-        const hadFault = Object.values(nodes).some(node => node?.status === 'failed' || (Array.isArray(node?.failures) && node.failures.length));
+        const hadFault = this.hadFault(nodes);
         const done = assetRun
           ? (run.scope === 'assets-reset' ? '设定图已重绘' : '资产已生成')
           : '全流程已完成';
         const message = hadFault ? `${done}，有单条失败已跳过` : done;
-        await run.update({ status: 'success', current_node: 'done', message, error_message: '' });
+        await run.update({ status: hadFault ? 'exception' : 'success', current_node: 'done', message, error_message: '' });
         await this.pushLog(run, assetRun ? 'assets' : 'video', message);
       }
     } finally {
@@ -1009,6 +1035,7 @@ class FullAutoService extends Service {
     const scenes = chapter?.script_data?.scenes;
     if (!Array.isArray(scenes) || !scenes.length) throw new Error('剧本没有场次');
     await this.pushLog(run, 'script', `剧本已写入，${scenes.length} 场`);
+    await this.pulse(run, 'script');
   }
 
   sheetPlan(chapter) {
@@ -1163,6 +1190,7 @@ class FullAutoService extends Service {
     await asset.update(patch);
     await this.copySheetToRefmod(run, asset, file, Boolean(options.reset));
     await this.pushLog(run, options.quiet ? 'video' : 'assets', `${item.kind === 'scene' ? '场景' : '人物'}「${item.name}」已生成一张设定总图`);
+    await this.pulse(run, 'asset');
   }
 
   sceneLabel(script, shot) {
@@ -1258,7 +1286,10 @@ class FullAutoService extends Service {
   async fillShotPrompt(run, shot, options = {}) {
     const code = shot.shot_code || shot.id;
     const existing = await this.ctx.model.Prompt.findOne({ where: { shot_id: shot.id } });
-    if (!options.force && this.promptReady(existing)) {
+    const writtenAt = new Date(existing?.updated_at || existing?.updatedAt || 0).getTime();
+    const startedAt = new Date(run?.created_at || run?.createdAt || 0).getTime();
+    const writtenThisRun = options.force && this.promptReady(existing) && writtenAt && startedAt && writtenAt >= startedAt;
+    if (this.promptReady(existing) && (!options.force || writtenThisRun)) {
       if (!options.quiet) await this.pushLog(run, 'prompts', `${code} 已有提示词`);
       return existing;
     }
@@ -1269,6 +1300,7 @@ class FullAutoService extends Service {
     const saved = await this.ctx.model.Prompt.findOne({ where: { shot_id: shot.id } });
     if (this.promptReady(saved)) {
       await this.pushLog(run, 'prompts', `${code} 已写入视频、首帧、尾帧提示词`);
+      await this.pulse(run, 'prompt');
       return saved;
     }
     throw new Error(`${code} 没有写全提示词`);
@@ -1280,6 +1312,7 @@ class FullAutoService extends Service {
       { where: { project_id: run.project_id, import_id: run.import_id } },
     );
     await this.pushLog(run, 'workflow', `每镜使用 ${run.video_workflow_name}`);
+    await this.pulse(run, 'workflow');
   }
 
   async videoShotCounts(projectId, shotIds, options = {}) {
@@ -1420,6 +1453,7 @@ class FullAutoService extends Service {
         await run.update({ done_shot_ids: raw, video_done: done.size });
         run.done_shot_ids = raw;
         await this.pushLog(run, 'video', want > 1 ? `${code} 已生成 ${want} 条视频` : `${code} 视频已生成`);
+        await this.pulse(run, 'video');
       } catch (err) {
         if (isStop(err) || !await this.alive(run)) throw err;
         const message = err?.message || '失败';

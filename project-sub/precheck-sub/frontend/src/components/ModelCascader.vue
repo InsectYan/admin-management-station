@@ -87,5 +87,5 @@ onMounted(() => {
 .precheck-model-cascader { position: relative; z-index: 2; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
 .precheck-model-cascader:focus-within { z-index: 30; }
 .precheck-model-cascader :deep(.el-cascader) { flex: 1 1 240px; }
-.precheck-model-cascader__hint { flex: 1 0 100%; margin: 0; color: #8a5a12; font-size: 12px; }
+.precheck-model-cascader__hint { flex: 1 0 100%; margin: 0; color: #2f8a5b; font-size: 12px; }
 </style>

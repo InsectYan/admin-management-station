@@ -32,7 +32,7 @@
       <el-form-item label="片段时长（秒）">
         <el-input-number :model-value="seconds(clip.duration_ms)" :min="0.2" :step="0.1" :precision="1" @change="onDuration" />
       </el-form-item>
-      <p v-if="clip.missing" class="cartoon-module__hint">素材文件不在磁盘上，预览和导出都会停在这里。</p>
+      <p v-if="clip.missing" class="cartoon-module__hint is-error">素材文件不在磁盘上，预览和导出都会停在这里。</p>
       <p v-else class="cartoon-module__hint">源时长 {{ seconds(clip.source_duration_ms || 0) }} 秒。出点不能超过源片。</p>
       <el-button type="danger" plain :disabled="!canMake()" @click="removeClip">删除这段</el-button>
       <p class="cartoon-module__hint">从时间线去掉这一段，后面的片段会往前接上。点保存后写入。可以撤销。</p>

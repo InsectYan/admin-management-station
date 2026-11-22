@@ -86,6 +86,8 @@ class AutoJobService extends Service {
       success_count: job.success_count,
       failed_count: job.failed_count,
       skipped_count: job.skipped_count,
+      data_kind: job.data_kind || '',
+      data_seq: Number(job.data_seq) || 0,
       items: items.map(item => ({
         id: item.id,
         sort_order: item.sort_order,
@@ -477,6 +479,7 @@ class AutoJobService extends Service {
           task_id: lastTaskId,
         });
         item.status = 'success';
+        await this.ctx.service.fullAuto.pulse(job, 'video');
       } catch (err) {
         if (stopped(err)) {
           await this.finishStopped(job, item, null);

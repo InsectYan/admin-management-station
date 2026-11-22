@@ -47,7 +47,7 @@
                 <el-radio-button value="landscape">横版 1280×720</el-radio-button>
               </el-radio-group>
             </div>
-            <p v-if="job" class="cartoon-module__hint">导出{{ jobLabel }}<span v-if="job.error_message">：{{ job.error_message }}</span></p>
+            <p v-if="job" class="cartoon-module__hint" :class="{ 'is-error': job.error_message }">导出{{ jobLabel }}<span v-if="job.error_message">：{{ job.error_message }}</span></p>
             <el-progress v-if="job && (job.status === 'queued' || job.status === 'running')" :percentage="job.progress || 0" />
           </template>
         </div>

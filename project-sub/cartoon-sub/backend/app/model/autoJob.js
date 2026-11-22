@@ -33,6 +33,8 @@ module.exports = app => {
     temp_refmod_id: { type: INTEGER, allowNull: true },
     llm_profile: { type: STRING(80), allowNull: false, defaultValue: '' },
     max_tokens: { type: INTEGER, allowNull: false, defaultValue: 0 },
+    data_kind: { type: STRING(32), allowNull: false, defaultValue: '' },
+    data_seq: { type: INTEGER, allowNull: false, defaultValue: 0 },
   }, {
     tableName: 'cartoon_auto_jobs',
     underscored: true,

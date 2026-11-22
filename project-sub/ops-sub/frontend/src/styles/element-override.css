@@ -288,10 +288,11 @@
   background: var(--el-tag-bg-color);
 }
 
-.ops-sub-root .el-tag--info {
-  --el-tag-bg-color: rgba(109, 138, 130, 0.14);
-  --el-tag-border-color: rgba(109, 138, 130, 0.28);
-  --el-tag-text-color: var(--ops-color-moon);
+.ops-sub-root .el-tag--info,
+.ops-sub-root .el-tag--primary {
+  --el-tag-bg-color: var(--ops-color-primary-muted);
+  --el-tag-border-color: rgba(47, 138, 91, 0.18);
+  --el-tag-text-color: var(--ops-color-primary);
   background: var(--el-tag-bg-color);
   color: var(--el-tag-text-color);
 }

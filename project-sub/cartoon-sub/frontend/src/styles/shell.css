@@ -127,8 +127,14 @@
 }
 .cartoon-module__hint {
   margin: 0 0 12px;
-  color: var(--cartoon-color-muted);
+  color: var(--cartoon-color-primary);
   font-size: 13px;
+}
+.cartoon-module__hint.is-warning {
+  color: var(--el-color-warning, #e6a23c);
+}
+.cartoon-module__hint.is-error {
+  color: var(--el-color-danger, #f56c6c);
 }
 
 .cartoon-steps {
@@ -327,8 +333,33 @@
 .cartoon-sub-root .el-tag {
   --el-tag-bg-color: rgba(47, 138, 91, 0.1);
   --el-tag-border-color: rgba(47, 138, 91, 0.18);
-  --el-tag-text-color: #2f8a5b;
+  --el-tag-text-color: var(--cartoon-color-primary);
   border-radius: 6px;
+}
+.cartoon-sub-root .el-tag.el-tag--primary,
+.cartoon-sub-root .el-tag.el-tag--info {
+  --el-tag-bg-color: rgba(47, 138, 91, 0.1);
+  --el-tag-border-color: rgba(47, 138, 91, 0.18);
+  --el-tag-text-color: var(--cartoon-color-primary);
+  background-color: rgba(47, 138, 91, 0.1);
+  border-color: rgba(47, 138, 91, 0.18);
+  color: var(--cartoon-color-primary);
+}
+.cartoon-sub-root .el-tag.el-tag--success {
+  --el-tag-bg-color: rgba(47, 138, 91, 0.14);
+  --el-tag-border-color: rgba(47, 138, 91, 0.32);
+  --el-tag-text-color: #1f7a45;
+  background-color: rgba(47, 138, 91, 0.14);
+  border-color: rgba(47, 138, 91, 0.32);
+  color: #1f7a45;
+}
+.cartoon-sub-root .el-tag.el-tag--warning {
+  --el-tag-bg-color: #fdf6ec;
+  --el-tag-border-color: #f3d19e;
+  --el-tag-text-color: #e6a23c;
+  background-color: #fdf6ec;
+  border-color: #f3d19e;
+  color: #e6a23c;
 }
 .cartoon-sub-root .el-tag.el-tag--danger {
   --el-tag-bg-color: #fef0f0;
@@ -337,6 +368,15 @@
   background-color: #fef0f0;
   border-color: #fde2e2;
   color: #f56c6c;
+}
+.cartoon-sub-root .el-alert.el-alert--info {
+  --el-alert-bg-color: rgba(47, 138, 91, 0.1);
+  background-color: rgba(47, 138, 91, 0.1);
+}
+.cartoon-sub-root .el-alert.el-alert--info .el-alert__title,
+.cartoon-sub-root .el-alert.el-alert--info .el-alert__description,
+.cartoon-sub-root .el-alert.el-alert--info .el-alert__icon {
+  color: var(--cartoon-color-primary);
 }
 .cartoon-sub-root .el-dialog {
   border-radius: 10px;

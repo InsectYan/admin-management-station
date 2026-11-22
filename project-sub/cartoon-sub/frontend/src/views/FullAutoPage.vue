@@ -82,7 +82,7 @@
           <template #default="{ row }">{{ modelText(row) }}</template>
         </el-table-column>
         <el-table-column prop="chapter_title" label="章节" min-width="160" />
-        <el-table-column label="状态" width="100">
+        <el-table-column label="状态" width="110">
           <template #default="{ row }">
             <el-tag :type="tagType(row.status)" size="small">{{ statusText(row.status) }}</el-tag>
           </template>
@@ -208,6 +208,7 @@ const statusNames = {
   pending: '未开始',
   running: '正在执行',
   success: '已完成',
+  exception: '有异常',
   failed: '失败',
   skipped: '跳过',
   stopped: '已停止',
@@ -289,9 +290,13 @@ function statusText(value) {
 }
 function tagType(value) {
   if (value === 'success' || value === 'done') return 'success';
+  if (value === 'exception') return 'danger';
   if (value === 'failed') return 'danger';
-  if (value === 'running') return 'warning';
+  if (value === 'running') return 'primary';
   return 'info';
+}
+function settled(status) {
+  return status === 'success' || status === 'done' || status === 'exception';
 }
 function modelText(row) {
   const profile = String(row?.llm_profile || '').trim();
@@ -361,7 +366,7 @@ function nodeTitle(key) {
 function paintStatus(nodeId, current) {
   if (!current) return 'wait';
   if (current.source === 'job') {
-    const done = current.status === 'success' || current.status === 'done';
+    const done = settled(current.status);
     const failed = current.status === 'failed';
     const stopped = current.status === 'stopped';
     const running = current.status === 'running';
@@ -376,7 +381,7 @@ function paintStatus(nodeId, current) {
     return 'wait';
   }
   if (nodeId === 'start') return 'ok';
-  if (nodeId === 'end') return current.status === 'success' || current.status === 'done' ? 'ok' : 'wait';
+  if (nodeId === 'end') return settled(current.status) ? 'ok' : 'wait';
   const state = current.nodes?.[nodeId]?.status;
   if (state === 'success') return 'ok';
   if (state === 'failed') return 'error';

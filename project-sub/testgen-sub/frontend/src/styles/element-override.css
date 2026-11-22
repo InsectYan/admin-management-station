@@ -1,4 +1,4 @@
-﻿/* Element Plus 覆写 — 祖先限定 .testgen-sub-root；浮层在 standalone 下单独限定 */
+/* Element Plus 覆写 — 祖先限定 .testgen-sub-root；浮层在 standalone 下单独限定 */
 
 .testgen-sub-root .el-button {
   --el-button-bg-color: var(--testgen-color-glass);
@@ -275,10 +275,11 @@
   background: var(--el-tag-bg-color);
 }
 
-.testgen-sub-root .el-tag--info {
-  --el-tag-bg-color: rgba(109, 138, 130, 0.14);
-  --el-tag-border-color: rgba(109, 138, 130, 0.28);
-  --el-tag-text-color: var(--testgen-color-moon);
+.testgen-sub-root .el-tag--info,
+.testgen-sub-root .el-tag--primary {
+  --el-tag-bg-color: var(--testgen-color-primary-muted);
+  --el-tag-border-color: rgba(47, 138, 91, 0.18);
+  --el-tag-text-color: var(--testgen-color-primary);
   background: var(--el-tag-bg-color);
   color: var(--el-tag-text-color);
 }

@@ -231,5 +231,5 @@
 
 .ops-action-bar__hint {
   font-size: 13px;
-  color: var(--ops-color-text-muted, #8a968e);
+  color: var(--ops-color-primary, #2f8a5b);
 }

@@ -77,5 +77,5 @@ onMounted(async () => {
 .precheck-workflow-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0 0 12px; }
 .precheck-workflow-facts dt { color: #5c6b62; font-size: 12px; }
 .precheck-workflow-facts dd { margin: 4px 0 0; }
-.precheck-module__hint { margin: 0 0 12px; color: #5c6b62; }
+.precheck-module__hint { margin: 0 0 12px; color: #2f8a5b; }
 </style>

@@ -29,6 +29,14 @@ alwaysApply: true
 
 审查子应用 PR 或代码时，按上述清单逐项核对；不符合须修正后再合并。
 
+## 状态色
+
+界面按语义取色，详见 `vue-element-plus.mdc`：
+
+- 异常、失败：error（`danger`，`#f56c6c`）
+- 提示、说明：主题色（`primary` / `info`，`#2f8a5b`）
+- 警告：warning（`#e6a23c`）
+
 ## 基本原则
 
 - **最小改动**：只修改与当前任务直接相关的内容。

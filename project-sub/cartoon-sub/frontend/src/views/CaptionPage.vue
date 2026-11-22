@@ -27,7 +27,7 @@
               <el-select v-model="workflowId" filterable placeholder="选择反推工作流" style="width: 100%">
                 <el-option v-for="item in workflows" :key="item.id" :label="workflowLabel(item)" :value="item.id" />
               </el-select>
-              <p v-if="workflowsError" class="cartoon-module__hint">{{ workflowsError }}</p>
+              <p v-if="workflowsError" class="cartoon-module__hint is-error">{{ workflowsError }}</p>
               <p class="cartoon-module__hint">图片和视频要各自选对应的工作流。一键执行只跑提示词还空着、且和当前工作流类型一致的卡片。</p>
             </el-form-item>
             <div class="caption-relation">

@@ -810,6 +810,7 @@ import { uncoveredScenes } from '../utils/sceneCoverage.js';
 import { framePromptText, hasPromptSet } from '../lib/framePrompt.js';
 import { PAGE_SIZES, PAGER_LAYOUT } from '../lib/pager.js';
 import { fitDurationSec, promptCoveredMs } from '../lib/promptDuration.js';
+import { createPulseGate } from '../lib/dataPulse.js';
 
 const props = defineProps({
   forcedStep: { type: Number, default: 0 },
@@ -1593,10 +1594,32 @@ function watchLiveShots(noteId) {
   }, 2500);
   return () => clearInterval(timer);
 }
-watch(() => props.pipelineRun?.message, () => {
-  const run = props.pipelineRun;
-  if (run?.status !== 'running' || run.current_node !== 'storyboard') return;
-  refreshLiveShots().catch(() => {});
+const takeRunPulse = createPulseGate();
+const takeJobPulse = createPulseGate();
+async function refreshForPulse(kind) {
+  const runImport = props.pipelineRun?.import_id;
+  if (kind === 'script') {
+    await load();
+    const key = runImport || scriptSnapshot.value?.id || selectedImportKey.value;
+    if (key) await loadScriptSnapshot(key);
+    return;
+  }
+  if (kind === 'storyboard') {
+    await refreshLiveShots();
+    if (scriptSnapshot.value?.id) await loadScriptShots(scriptPage.value);
+    return;
+  }
+  if (kind === 'prompt' || kind === 'workflow') {
+    await load();
+    if (scriptSnapshot.value?.id) await loadScriptShots(scriptPage.value);
+    return;
+  }
+  if (kind === 'profile' || kind === 'asset' || kind === 'video') {
+    await load();
+  }
+}
+watch(() => props.pipelineRun?.data_seq, (seq) => {
+  takeRunPulse(seq, props.pipelineRun?.data_kind, refreshForPulse);
 });
 function openScriptCard(key) {
   loadScriptSnapshot(key);
@@ -2940,6 +2963,7 @@ async function syncServerRuns() {
     runMark.prompt.active = promptRuns.length;
     if (jobRunning) {
       applyAutoJob(job);
+      takeJobPulse(job?.data_seq, job?.data_kind, refreshForPulse);
     } else if (!runMark.controller) {
       if (job && (!autoRecords.value.length || String(autoRecords.value[0]?.id || '').startsWith('job-'))) {
         autoRecords.value = jobRecords(job);
