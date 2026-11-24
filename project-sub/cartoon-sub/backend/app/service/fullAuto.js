@@ -1493,6 +1493,7 @@ class FullAutoService extends Service {
     const wantEnd = options.wantEnd !== false;
     const batchIndex = Number.isInteger(options.batchIndex) ? options.batchIndex : 0;
     const tailIndex = Number.isInteger(options.tailIndex) ? options.tailIndex : batchIndex;
+    const startSlot = options.startSlot || await this.frameSlot(run.video_workflow_id, 'start');
     const startHeld = await this.ensureStartFrame(run, shot, sameScene, scene, videoText, frameStart, frameEnd, negative, {
       batchIndex: tailIndex,
       chain: sameScene,
@@ -1502,7 +1503,12 @@ class FullAutoService extends Service {
       : null;
     if (!startHeld?.bytes) throw new Error(`${code} 首帧没有生成`);
     if (wantEnd && !endHeld?.bytes) throw new Error(`${code} 尾帧没有生成`);
-    if (startHeld.ephemeral && !options.startSlot) throw new Error(`${code} 首帧没有入口`);
+    if (startHeld.ephemeral && !startSlot) {
+      await this.pushLog(run, 'video', `${code} 已按首帧提示词补了首帧，这条工作流没有首帧入口，视频继续`);
+    }
+    if (startHeld.ephemeral && !startSlot) {
+      await this.pushLog(run, 'video', `${code} 已按首帧提示词补了首帧，这条工作流没有首帧入口，视频继续`);
+    }
     await this.mark(run, 'video', 'running', `正在生成镜头 ${code}`);
     const packId = await this.stageShotPack(run, shot);
     try {
@@ -1530,9 +1536,9 @@ class FullAutoService extends Service {
           end_task_id: endHeld?.taskId || null,
         },
         images: [
-          ...(startHeld.ephemeral ? [{
-            id: options.startSlot.id,
-            slot_id: options.startSlot.id,
+          ...(startHeld.ephemeral && startSlot ? [{
+            id: startSlot.id,
+            slot_id: startSlot.id,
             filename: 'first.png',
             data_base64: startHeld.bytes.toString('base64'),
             label: '首帧',
@@ -1609,6 +1615,13 @@ class FullAutoService extends Service {
     });
   }
 
+  async frameSlot(workflowId, role) {
+    const id = Number(workflowId) || 0;
+    if (!id) return null;
+    const choice = await this.ctx.service.generate.choiceById(id);
+    return (choice?.images || []).find(slot => slot.role === role) || null;
+  }
+
   async ensureStartFrame(run, shot, sameScene, scene, videoText, frameStart, frameEnd, negative, options = {}) {
     const fresh = await shot.reload();
     const code = shot.shot_code || shot.id;
@@ -1626,7 +1639,7 @@ class FullAutoService extends Service {
         await this.pushLog(run, 'video', `${code} 使用第 ${batchIndex + 1} 条上镜尾帧`);
         return { bytes: fs.readFileSync(planted), taskId: null, ephemeral: false };
       }
-      await this.pushLog(run, 'video', `${code} 没有第 ${batchIndex + 1} 条上镜尾帧，生成这一条的首帧`);
+      await this.pushLog(run, 'video', `${code} 没有第 ${batchIndex + 1} 条上镜尾帧，按首帧提示词补这一条的首帧`);
       const rendered = await this.renderFrame(run, shot, 'start', videoText, frameStart, frameEnd, negative);
       return { ...rendered, ephemeral: true };
     }
@@ -1635,7 +1648,7 @@ class FullAutoService extends Service {
       await this.pushLog(run, 'video', `${code} 没有指定首帧，使用上镜尾帧`);
       return { bytes: fs.readFileSync(carried), taskId: null, ephemeral: false };
     }
-    await this.pushLog(run, 'video', `${code} 没有指定首帧和上镜尾帧，生成首帧`);
+    await this.pushLog(run, 'video', `${code} 没有指定首帧和上镜尾帧，按首帧提示词补首帧`);
     const rendered = await this.renderFrame(run, shot, 'start', videoText, frameStart, frameEnd, negative);
     await this.ctx.service.project.saveManualFrame(run.project_id, shot.id, {
       filename: 'manual.png',
@@ -1657,7 +1670,7 @@ class FullAutoService extends Service {
         return { bytes: fs.readFileSync(existing), taskId: null };
       }
     }
-    await this.pushLog(run, 'video', `${code} 生成尾帧`);
+    await this.pushLog(run, 'video', `${code} 按尾帧提示词生成尾帧`);
     const rendered = await this.renderFrame(run, shot, 'end', videoText, frameStart, frameEnd, negative);
     const absolute = resolveInside(outputRoot(this.app), relative);
     if (!absolute) throw new Error(`${code} 尾帧路径无效`);
@@ -1678,7 +1691,8 @@ class FullAutoService extends Service {
 
   async renderFrame(run, shot, target, videoText, frameStart, frameEnd, negative) {
     const choice = await this.ctx.service.generate.choiceById(run.frame_workflow_id);
-    const frameText = target === 'end' ? frameEnd : frameStart;
+    const dedicated = String((target === 'end' ? frameEnd : frameStart) || '').trim();
+    const frameText = dedicated || String(videoText || '').trim();
     const images = await this.frameReferenceImages(run, shot, choice, target, frameText);
     const project = await this.ctx.model.Project.findByPk(run.project_id);
     const chapter = await this.ctx.model.Import.findByPk(run.import_id);
@@ -1686,11 +1700,15 @@ class FullAutoService extends Service {
     const lead = this.frameStyleLead(style, frameText);
     const code = shot.shot_code || shot.id;
     const label = target === 'end' ? '尾帧' : '首帧';
+    if (!dedicated && frameText) {
+      await this.pushLog(run, 'video', `${code} 没有${label}提示词，改用视频提示词补${label}`);
+    }
     if (lead) await this.pushLog(run, 'video', `${code} ${label}带上项目风格「${style?.visual_style_label || '未命名'}」`);
     let task = await this.ctx.service.generate.start(run.project_id, shot.id, {
       positive_zh: videoText,
-      frame_start_zh: frameStart,
-      frame_end_zh: frameEnd,
+      frame_start_zh: target === 'start' ? frameText : frameStart,
+      frame_end_zh: target === 'end' ? frameText : frameEnd,
+      preserve_frame_prompt: !dedicated,
       negative_zh: negative,
       workflow_id: run.frame_workflow_id,
       frame_target: target,

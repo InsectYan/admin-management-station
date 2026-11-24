@@ -447,11 +447,13 @@ class GenerateService extends Service {
     if (videoKind) shotPatch.positive_zh = text;
     else if (payload.positive_zh != null) shotPatch.positive_zh = String(payload.positive_zh);
     if (payload.negative_zh != null) shotPatch.negative_zh = String(payload.negative_zh);
-    if (!videoKind || payload.frame_start_zh != null) {
-      shotPatch.frame_start_zh = !videoKind && frameTarget === 'start' ? text : String(payload.frame_start_zh ?? '');
-    }
-    if (!videoKind || payload.frame_end_zh != null) {
-      shotPatch.frame_end_zh = !videoKind && frameTarget === 'end' ? text : String(payload.frame_end_zh ?? '');
+    if (!payload.preserve_frame_prompt) {
+      if (!videoKind || payload.frame_start_zh != null) {
+        shotPatch.frame_start_zh = !videoKind && frameTarget === 'start' ? text : String(payload.frame_start_zh ?? '');
+      }
+      if (!videoKind || payload.frame_end_zh != null) {
+        shotPatch.frame_end_zh = !videoKind && frameTarget === 'end' ? text : String(payload.frame_end_zh ?? '');
+      }
     }
     if (payload.shot_sizes != null) shotPatch.shot_sizes = payload.shot_sizes;
     if (payload.camera_moves != null) shotPatch.camera_moves = payload.camera_moves;
@@ -570,7 +572,7 @@ class GenerateService extends Service {
     const chosen = await this.choiceById(workflowId);
     const start = (chosen.images || []).find(slot => slot.role === 'start');
     if (!start) return list;
-    const uploaded = list.find(item => (item.slot_id || item.id) === start.id && (item.data_base64 || item.data));
+    const uploaded = list.find(item => String(item.slot_id || item.id) === String(start.id) && (item.data_base64 || item.data));
     if (uploaded) {
       if (uploaded.persist !== false) await this.ctx.service.project.saveManualFrame(shot.project_id, shot.id, uploaded);
       return list;

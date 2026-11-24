@@ -197,4 +197,29 @@ async function listMediaProfiles(ctx) {
   return [];
 }
 
-module.exports = { invokeSkill, listMediaProfiles };
+async function recordPromptMemory(ctx, snapshot) {
+  const text = JSON.stringify(snapshot);
+  let lastError = null;
+  for (const base of agentBases(ctx)) {
+    try {
+      const res = await fetch(`${base}/api/memory/cartoon-prompt-memory/append`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text, section: '生成提示词' }),
+        signal: AbortSignal.timeout(15000),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        lastError = new Error(body.error || body.message || `记忆返回 ${res.status}`);
+        continue;
+      }
+      return true;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  ctx.logger.warn('[cartoon] 生成提示词记忆没有写下 %s', lastError?.message || '没有可用的 Agent');
+  return false;
+}
+
+module.exports = { invokeSkill, listMediaProfiles, recordPromptMemory };

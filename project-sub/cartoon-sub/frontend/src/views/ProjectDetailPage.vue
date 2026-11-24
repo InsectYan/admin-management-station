@@ -317,7 +317,6 @@
                     link
                     type="primary"
                     :disabled="!canMake() || flowBusy"
-                    :loading="expandingKey === String(row.id)"
                     @click="expandOutlineRow(row)"
                   >生成分镜提示词</el-button>
                   <el-button link type="danger" :disabled="!canMake()" @click="removeShot(row)">删除</el-button>
@@ -733,6 +732,28 @@
         <el-button type="primary" :loading="fullAutoStarting" :disabled="!fullAutoReady" @click="submitFullAuto">开始</el-button>
       </template>
     </el-dialog>
+    <el-dialog v-model="promptFormOpen" class="cartoon-dialog" title="生成分镜提示词" width="920px" append-to-body destroy-on-close>
+      <div class="cartoon-prompt-tabs" role="tablist">
+        <button
+          v-for="item in promptFormParts"
+          :key="item.key"
+          type="button"
+          role="tab"
+          :class="{ 'is-active': promptFormPart === item.key }"
+          :aria-selected="promptFormPart === item.key"
+          @mousedown.prevent
+          @click="switchPromptFormPart(item.key)"
+        >{{ item.label }}</button>
+      </div>
+      <PromptDraftForm
+        v-if="promptFormShot"
+        :project-id="projectKey()"
+        :import-id="promptFormImportId"
+        :shot-id="promptFormShot.id"
+        :part="promptFormPart"
+        @saved="load"
+      />
+    </el-dialog>
     <el-dialog v-model="promoteVisible" title="提升到叙事工作台" width="520px">
       <p class="cartoon-module__hint">镜头对白是拆分进生产稿的句子，可以已经和小说不一样。原句必须是钉扎章节里的一整句，改后才是要写回小说的新句子。应用发生在叙事工作台，这里的生产稿不会被改回去。</p>
       <el-form label-position="top">
@@ -811,6 +832,7 @@ import RegionLoad from '../components/RegionLoad.vue';
 import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { autoRunMark, rememberAutoRun } from '../lib/autoRunMark.js';
 import ClampText from '../components/ClampText.vue';
+import PromptDraftForm from '../components/PromptDraftForm.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { clearLlmPin, pinLlmSession } from '../utils/llmProfileSession.js';
 import { canMake } from '../lib/appAccess.js';
@@ -932,6 +954,15 @@ const draftingId = ref(null);
 const autoModeId = ref(null);
 const outliningId = ref(null);
 const expandingKey = ref('');
+const promptFormOpen = ref(false);
+const promptFormShot = ref(null);
+const promptFormImportId = ref('');
+const promptFormPart = ref('positive');
+const promptFormParts = [
+  { key: 'positive', label: '视频提示词' },
+  { key: 'frame_start', label: '首帧提示词' },
+  { key: 'frame_end', label: '尾帧提示词' },
+];
 const selectedImportKey = ref('');
 const chapterBodyOpen = ref(false);
 const chapterBodyTitle = ref('');
@@ -2414,44 +2445,33 @@ async function clearScriptShots(item) {
     ElMessage.error(err.message);
   }
 }
-async function expandOutlineRow(row) {
+function expandOutlineRow(row) {
   const item = selectedScriptImport.value;
   if (!item || !row?.description?.trim()) {
     ElMessage.warning('请先填写本段涵盖的剧本内容');
     return;
   }
-  const token = lockJob();
   if (!projectKey()) {
     ElMessage.error('项目编号丢了');
     return;
   }
-  expandingKey.value = String(row.id);
-  ElMessage.info(`正在生成 ${row.shot_code || row.id} 的分镜提示词…`);
-  const signal = ensureController().signal;
+  promptFormShot.value = row;
+  promptFormImportId.value = item.id;
+  promptFormPart.value = 'positive';
+  promptFormOpen.value = true;
+}
+async function switchPromptFormPart(part) {
+  if (promptFormPart.value === part) return;
   try {
-    await request(`/projects/${projectKey()}/imports/${item.id}/draft/shot-expand`, {
-      method: 'post',
-      timeout: 7200000,
-      signal,
-      data: {
-        shot_id: row.id,
-        coverage: row.description,
-        duration_sec: shotDurationSeed(row),
-        shot_sizes: ensureShotSizes(row),
-        shot_size: ensureShotSizes(row).join(','),
-        camera_moves: cameraMovesOf(row),
-        camera_move: cameraMovesOf(row).join(','),
-        dialogue: row.dialogue,
-      },
+    await ElMessageBox.confirm('切换会重置已经编辑的数据，是否切换？', '切换提示词', {
+      type: 'warning',
+      confirmButtonText: '切换',
+      cancelButtonText: '取消',
     });
-    await load();
-    ElMessage.success(`${row.shot_code || row.id} 已更新；可到「镜头」页查看，不会自动跳转`);
-  } catch (err) {
-    if (!isStop(err)) ElMessage.error(err.message);
-  } finally {
-    expandingKey.value = '';
-    unlockJob(token);
+  } catch {
+    return;
   }
+  promptFormPart.value = part;
 }
 function rollSeed() {
   const digits = 8 + Math.floor(Math.random() * 3);
@@ -3229,4 +3249,20 @@ onUnmounted(() => {
 .cartoon-status-tag {
   margin: 0 4px 4px;
 }
+.cartoon-prompt-tabs {
+  display: flex;
+  width: fit-content;
+  margin-bottom: 12px;
+  border: 1px solid rgba(47, 138, 91, 0.35);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.cartoon-prompt-tabs button {
+  border: 0;
+  background: transparent;
+  padding: 6px 14px;
+  color: #1f3d2c;
+  cursor: pointer;
+}
+.cartoon-prompt-tabs button.is-active { background: #2f8a5b; color: #fff; }
 </style>

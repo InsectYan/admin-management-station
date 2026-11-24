@@ -445,6 +445,7 @@ class AutoJobService extends Service {
         const same = Boolean(prev) && this.ctx.service.fullAuto.sharesScene(shot, prev);
         const videoChoice = await this.ctx.service.generate.choiceById(job.video_workflow_id);
         const endSlot = (videoChoice?.images || []).find(slot => slot.role === 'end') || null;
+        const startSlot = (videoChoice?.images || []).find(slot => slot.role === 'start') || null;
         const perShot = Math.max(1, Math.min(8, Math.round(Number(job.video_count) || 1)));
         const wantEnd = job.generate_end !== false;
         let lastTaskId = null;
@@ -466,6 +467,7 @@ class AutoJobService extends Service {
             batchIndex: chain.plantIndex,
             tailIndex: chain.tailIndex,
             wantEnd,
+            startSlot,
           });
           lastTaskId = this.lastTracked(job);
           await item.update({

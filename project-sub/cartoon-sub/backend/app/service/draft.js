@@ -1,7 +1,7 @@
 'use strict';
 
 const Service = require('egg').Service;
-const { invokeSkill } = require('../lib/agentProxy');
+const { invokeSkill, recordPromptMemory } = require('../lib/agentProxy');
 const { clientAbort, stopError } = require('../lib/clientAbort');
 const { productionInput } = require('../lib/productionInput');
 const {
@@ -19,7 +19,7 @@ const { settleScript } = require('../lib/scriptGate');
 const { normalizeScript, placeTag } = require('../lib/rosterNames');
 const { uniquePrompt } = require('../lib/promptText');
 const { promptCoveredMs, fitDurationSec } = require('../lib/promptDuration');
-const { topicsOf } = require('../lib/topics');
+const { topicsOf, TOPIC_OPTIONS } = require('../lib/topics');
 const { assetFactText, namedAssets } = require('../lib/assetProfile');
 const { chapterParagraphs, resolveExcerpt, matchExcerpt } = require('../lib/sourceExcerpt');
 const { begin, finish } = require('../lib/activeRuns');
@@ -241,6 +241,90 @@ function styleWithoutBody(styleCtx) {
   const copy = { ...styleCtx };
   delete copy.body;
   return copy;
+}
+
+const PROMPT_FORM_FIELDS = [
+  { key: 'description', label: '涵盖内容', hint: '这一镜要拍的剧情。提示词按这段来写。', rows: 4 },
+  { key: 'dialogue', label: '对白', hint: '这一镜里要说的原句。', rows: 3 },
+  { key: 'duration_sec', label: '时长', hint: '秒。动作按 5 到 15 秒，对白可以补到 30 秒。', rows: 1 },
+  { key: 'shot_sizes', label: '景别', hint: '这一镜会用到的景别，多个用顿号分开。', rows: 1 },
+  { key: 'camera_moves', label: '运镜', hint: '这一镜的运镜，按先后写，多个用顿号分开。', rows: 1 },
+  { key: 'source_excerpt', label: '原文', hint: '这一镜对应的章节原文。', rows: 4 },
+  { key: 'scene_label', label: '场次', hint: '这一镜的地点和时间。', rows: 1 },
+  { key: 'wardrobe_state', label: '服装', hint: '这一镜结束时还穿着什么。', rows: 2 },
+  { key: 'visual_style_label', label: '画面风格', hint: '项目选定的风格名称。只用于这次生成，不改项目设置。', rows: 1 },
+  { key: 'visual_style_prompt', label: '风格说明', hint: '写进提示词的风格句子。只用于这次生成，不改项目设置。', rows: 3 },
+  { key: 'genre', label: '题材', hint: '来源小说的题材。', rows: 1 },
+  { key: 'genre_subcategory', label: '题材细分', hint: '来源小说的细分题材。', rows: 1 },
+  { key: 'asset_facts', label: '人物卡', hint: '这一镜出场人物的年龄、性别和定性。', rows: 4 },
+  { key: 'prev_shot', label: '上一镜', hint: '上一镜的剧情和对白，用来接上，不要重演。', rows: 4 },
+  { key: 'content_type', label: '内容类型', hint: '项目类型。只用于这次生成。', rows: 1 },
+  { key: 'av_mode', label: '成人模式', hint: '填「是」或「否」。为是时才按成人内容写部位。', rows: 1 },
+  { key: 'topics', label: '内容标签', hint: '例如 AV、健身。留空则这次不走对应收口。', rows: 1 },
+];
+
+function topicLabel(value) {
+  const hit = TOPIC_OPTIONS.find(item => item.value === value);
+  return hit?.label || value;
+}
+
+function topicsFromField(text) {
+  const tokens = String(text || '').split(/[,，、\s]+/).map(item => item.trim()).filter(Boolean);
+  const values = [];
+  tokens.forEach(token => {
+    const hit = TOPIC_OPTIONS.find(item => item.value === token || item.label === token);
+    if (hit && !values.includes(hit.value)) values.push(hit.value);
+  });
+  return values;
+}
+
+function avFromField(text) {
+  const value = String(text || '').trim();
+  return value === '是' || value === 'true' || value === '1';
+}
+
+function prevShotText(prev) {
+  if (!prev) return '';
+  const lines = [];
+  if (prev.shot_code) lines.push(`镜头 ${prev.shot_code}`);
+  if (prev.scene_label) lines.push(`场次 ${prev.scene_label}`);
+  lines.push(`同场 ${prev.same_scene ? '是' : '否'}`);
+  if (prev.description) lines.push(`剧情 ${prev.description}`);
+  if (prev.dialogue) lines.push(`对白 ${prev.dialogue}`);
+  return lines.join('\n');
+}
+
+function fieldMap(fields) {
+  const map = {};
+  (Array.isArray(fields) ? fields : []).forEach(item => {
+    if (item?.key) map[item.key] = String(item.value ?? '');
+  });
+  return map;
+}
+
+function overlayFields(base, incoming) {
+  const map = fieldMap(base);
+  if (incoming && typeof incoming === 'object' && !Array.isArray(incoming)) {
+    Object.keys(incoming).forEach(key => {
+      map[key] = String(incoming[key] ?? '');
+    });
+  }
+  return PROMPT_FORM_FIELDS.map(item => ({ ...item, value: map[item.key] || '' }));
+}
+
+function readScoreValue(value) {
+  const score = Number(value);
+  if (!Number.isInteger(score) || score < 1 || score > 10) return null;
+  return score;
+}
+
+function readScoreText(text) {
+  const raw = String(text || '');
+  const matched = raw.match(/评分\s*[:：]\s*(\d{1,2})/);
+  if (!matched) return { score: null, score_note: '' };
+  const score = readScoreValue(Number(matched[1]));
+  const reason = raw.match(/理由\s*[:：]\s*([^。\n]+)/);
+  return { score, score_note: reason ? reason[1].trim() : '' };
 }
 
 class DraftService extends Service {
@@ -1196,6 +1280,325 @@ class DraftService extends Service {
       this.executionRunId = 0;
       stop.release();
     }
+  }
+
+  async promptForm(projectId, importId, shotId) {
+    const loaded = await this.loadPromptForm(projectId, importId, shotId);
+    return {
+      shot_id: loaded.shot.id,
+      shot_code: loaded.shot.shot_code || '',
+      fields: loaded.fields,
+      prompts: loaded.prompts,
+    };
+  }
+
+  async submitPromptForm(projectId, importId, shotId, payload = {}) {
+    const loaded = await this.loadPromptForm(projectId, importId, shotId);
+    const action = payload.action === 'adjust' ? 'adjust' : 'generate';
+    const part = [ 'positive', 'frame_start', 'frame_end', 'all' ].includes(payload.part) ? payload.part : 'all';
+    const fields = overlayFields(loaded.fields, payload.fields);
+    const requirement = String(payload.requirement || '').trim();
+    const claim = begin(this.app, { projectId: loaded.project.id, kind: 'prompt-form', targetId: loaded.shot.id });
+    if (claim.joined) return claim.done;
+    const stop = {
+      signal: claim.signal,
+      stopped() { return claim.signal.aborted; },
+      release() {},
+    };
+    try {
+      if (action === 'adjust') {
+        const prompts = await this.saveFormPrompts(loaded.shot.id, payload.prompts);
+        const score = readScoreValue(payload.score);
+        const scoreNote = String(payload.score_note || '').trim();
+        const recorded = await this.recordPromptSnapshot(loaded, {
+          op: '手动调整',
+          part,
+          requirement,
+          fields,
+          prompts,
+          score,
+          score_note: scoreNote,
+        });
+        const result = { prompts, score, score_note: scoreNote, memory_recorded: recorded };
+        finish(this.app, claim.row, null, result);
+        return result;
+      }
+      const generated = await this.generatePromptForm(loaded, fields, requirement, part, stop);
+      const recorded = await this.recordPromptSnapshot(loaded, {
+        op: '生成',
+        part,
+        requirement,
+        fields,
+        prompts: generated.prompts,
+        score: generated.score,
+        score_note: generated.score_note,
+      });
+      const result = { ...generated, memory_recorded: recorded };
+      finish(this.app, claim.row, null, result);
+      return result;
+    } catch (err) {
+      finish(this.app, claim.row, err);
+      throw err;
+    } finally {
+      stop.release();
+    }
+  }
+
+  async loadPromptForm(projectId, importId, shotId) {
+    const { project, chapter } = await this.load(projectId, importId);
+    const shot = await this.ctx.model.Shot.findOne({
+      where: { id: shotId, project_id: project.id, import_id: chapter.id },
+    });
+    if (!shot) this.ctx.throw(404, '镜头不存在');
+    const style = await this.styleContext(project, chapter);
+    const excerpt = await this.ensureShotExcerpt(shot, chapter);
+    const facts = await this.shotFactText(project.id, [ shot.description, shot.dialogue, excerpt ].filter(Boolean).join('\n'));
+    const prev = await this.previousShotContext(project.id, chapter.id, shot);
+    const prompt = await this.ctx.model.Prompt.findOne({ where: { shot_id: shot.id } });
+    const values = {
+      description: String(shot.description || '').trim(),
+      dialogue: String(shot.dialogue || '').trim(),
+      duration_sec: shot.duration_ms ? String(Math.round(shot.duration_ms / 1000)) : '',
+      shot_sizes: serializeShotSizes(normalizeShotSizes(shot.shot_size)),
+      camera_moves: serializeCameraMoves(normalizeCameraMoves(shot.camera_move)),
+      source_excerpt: excerpt,
+      scene_label: String(shot.scene_label || '').trim(),
+      wardrobe_state: String(shot.wardrobe_state || '').trim(),
+      visual_style_label: String(style.visual_style_label || '').trim(),
+      visual_style_prompt: String(style.visual_style_prompt || '').trim(),
+      genre: String(style.genre || '').trim(),
+      genre_subcategory: String(style.genre_subcategory || '').trim(),
+      asset_facts: facts,
+      prev_shot: prevShotText(prev),
+      content_type: String(project.content_type || '').trim(),
+      av_mode: project.av_mode ? '是' : '否',
+      topics: topicsOf(project).map(topicLabel).filter(Boolean).join('、'),
+    };
+    return {
+      project,
+      chapter,
+      shot,
+      style,
+      prev,
+      fields: PROMPT_FORM_FIELDS.map(item => ({ ...item, value: values[item.key] || '' })),
+      prompts: {
+        positive_zh: String(prompt?.positive_zh || '').trim(),
+        frame_start_zh: String(prompt?.frame_start_zh || '').trim(),
+        frame_end_zh: String(prompt?.frame_end_zh || '').trim(),
+        negative_zh: String(prompt?.negative_zh || '').trim(),
+      },
+    };
+  }
+
+  async saveFormPrompts(shotId, incoming) {
+    const current = await this.ctx.model.Prompt.findOne({ where: { shot_id: shotId } });
+    const next = {
+      positive_zh: String(current?.positive_zh || '').trim(),
+      frame_start_zh: String(current?.frame_start_zh || '').trim(),
+      frame_end_zh: String(current?.frame_end_zh || '').trim(),
+      negative_zh: String(current?.negative_zh || '').trim(),
+    };
+    [ 'positive_zh', 'frame_start_zh', 'frame_end_zh', 'negative_zh' ].forEach(key => {
+      if (incoming && Object.prototype.hasOwnProperty.call(incoming, key)) {
+        next[key] = String(incoming[key] || '').trim();
+      }
+    });
+    if (current) await current.update(next);
+    else await this.ctx.model.Prompt.create({ shot_id: shotId, ...next });
+    return next;
+  }
+
+  async recordPromptSnapshot(loaded, snapshot) {
+    return recordPromptMemory(this.ctx, {
+      op: snapshot.op,
+      at: new Date().toISOString(),
+      project_id: loaded.project.id,
+      import_id: loaded.chapter.id,
+      shot_id: loaded.shot.id,
+      shot_code: loaded.shot.shot_code || '',
+      part: snapshot.part,
+      requirement: snapshot.requirement || '',
+      fields: fieldMap(snapshot.fields),
+      prompts: snapshot.prompts || {},
+      score: snapshot.score,
+      score_note: snapshot.score_note || '',
+    });
+  }
+
+  async generatePromptForm(loaded, fields, requirement, part, stop) {
+    const map = fieldMap(fields);
+    const coverage = String(map.description || '').trim();
+    if (!coverage) this.ctx.throw(400, '需要镜头涵盖的剧本内容');
+    const sizes = normalizeShotSizes(map.shot_sizes);
+    const moves = normalizeCameraMoves(map.camera_moves);
+    const durationSec = fitDurationSec(map.duration_sec, map.dialogue, 10);
+    const shot = {
+      description: coverage,
+      duration_sec: durationSec,
+      shot_size: serializeShotSizes(sizes),
+      shot_sizes: sizes,
+      camera_move: serializeCameraMoves(moves),
+      camera_moves: moves,
+      dialogue: String(map.dialogue || '').trim(),
+      source_excerpt: String(map.source_excerpt || '').trim(),
+      scene_label: String(map.scene_label || '').trim(),
+      wardrobe_state: String(map.wardrobe_state || '').trim(),
+      asset_facts: String(map.asset_facts || '').trim(),
+      positive_zh: loaded.prompts.positive_zh,
+    };
+    const prevText = String(map.prev_shot || '').trim();
+    if (prevText && loaded.prev && prevText === prevShotText(loaded.prev)) shot.prev_shot = loaded.prev;
+    else if (prevText) shot.prev_shot = { ...(loaded.prev || {}), description: prevText };
+    const topics = topicsFromField(map.topics);
+    const style = {
+      ...styleWithoutBody(loaded.style),
+      visual_style_label: String(map.visual_style_label || '').trim(),
+      visual_style_prompt: String(map.visual_style_prompt || '').trim(),
+      genre: String(map.genre || '').trim(),
+      genre_subcategory: String(map.genre_subcategory || '').trim(),
+    };
+    const promptPayload = {
+      requirement,
+      standalone_note: '这是单独生成。提示词写完后，reply 只写一行：评分：N。理由：一句话。N 是 1 到 10 的整数，看提示词有没有对准入参、对白有没有漏、时长里能不能做完。',
+      asset_facts: shot.asset_facts,
+      ...style,
+      body: '',
+      ...productionInput(loaded.project),
+      content_type: String(map.content_type || loaded.project.content_type || '').trim(),
+      av_mode: avFromField(map.av_mode),
+      topics,
+    };
+    const parts = part === 'all' ? [ 'positive', 'frame_start', 'frame_end' ] : [ part ];
+    const prompts = { ...loaded.prompts };
+    const written = {};
+    const replies = [];
+    const gaps = [];
+    const halted = err => err?.status === 499 || err?.message === '已停止' || stop.stopped();
+    const requestPart = async (name, current) => {
+      if (stop.stopped()) throw stopError();
+      this.traceTitle = { positive: '视频提示词', frame_start: '首帧提示词', frame_end: '尾帧提示词' }[name] || name;
+      const result = await this.callSkill({
+        skill: 'cartoon-prompt-skill',
+        action: 'draft',
+        timeoutMs: skillTimeout(this.ctx),
+        signal: stop.signal,
+        payload: { ...promptPayload, prompt_part: name, shots: [ current ] },
+      });
+      const output = outputOf(result);
+      const row = (output.prompts || [])[0] || {};
+      row.reply = String(output.reply || output.summary || '').replace(/\s+/g, ' ').trim();
+      return row;
+    };
+    if (parts.includes('positive')) {
+      let video = {};
+      try {
+        video = await requestPart('positive', shot);
+      } catch (err) {
+        if (halted(err)) throw err;
+        gaps.push(err?.message || '没有返回视频提示词');
+      }
+      replies.push(video.reply);
+      const positive = String(video.positive_zh || '').trim();
+      if (positive) {
+        prompts.positive_zh = picturePrompt(positive) || positive;
+        prompts.negative_zh = String(video.negative_zh || prompts.negative_zh || '').trim();
+        written.positive_zh = prompts.positive_zh;
+        written.negative_zh = prompts.negative_zh;
+        shot.positive_zh = prompts.positive_zh;
+        const selected = topics;
+        const closers = [
+          { key: 'av', skill: 'cartoon-av-prompt-skill', title: 'AV 收口' },
+          { key: 'fitness', skill: 'cartoon-fitness-prompt-skill', title: '健身收口' },
+        ];
+        for (const closer of closers) {
+          if (!selected.includes(closer.key)) continue;
+          try {
+            if (stop.stopped()) throw stopError();
+            const closed = await this.callSkill({
+              skill: closer.skill,
+              action: 'draft',
+              timeoutMs: skillTimeout(this.ctx),
+              signal: stop.signal,
+              payload: {
+                ...promptPayload,
+                prompt_part: 'positive',
+                av_mode: selected.includes('av'),
+                fitness: selected.includes('fitness'),
+                topics: selected,
+                shots: [{
+                  ...shot,
+                  positive_zh: prompts.positive_zh,
+                  draft_positive_zh: prompts.positive_zh,
+                  draft_negative_zh: prompts.negative_zh,
+                  roster_text: rosterText(loaded.chapter.script_data),
+                }],
+              },
+            });
+            const again = (outputOf(closed).prompts || [])[0] || {};
+            const closedPositive = picturePrompt(again.positive_zh) || String(again.positive_zh || '').trim();
+            if (closedPositive) {
+              prompts.positive_zh = closedPositive;
+              prompts.negative_zh = String(again.negative_zh || prompts.negative_zh || '').trim();
+              written.positive_zh = prompts.positive_zh;
+              written.negative_zh = prompts.negative_zh;
+              shot.positive_zh = closedPositive;
+            }
+          } catch (err) {
+            if (halted(err)) throw err;
+            this.ctx.logger.warn('[cartoon] 单独生成%s失败，沿用已写好的提示词 %s', closer.title, err.message);
+          }
+        }
+      } else {
+        gaps.push(video.reply ? `没有返回视频提示词。${video.reply.slice(0, 160)}` : '没有返回视频提示词');
+      }
+    }
+    for (const name of parts.filter(item => item !== 'positive')) {
+      let row = {};
+      try {
+        row = await requestPart(name, { ...shot, positive_zh: prompts.positive_zh });
+      } catch (err) {
+        if (halted(err)) throw err;
+        gaps.push(err?.message || '没有返回提示词');
+        continue;
+      }
+      replies.push(row.reply);
+      const field = name === 'frame_start' ? 'frame_start_zh' : 'frame_end_zh';
+      const text = String(row[field] || '').trim();
+      if (!text) {
+        gaps.push(row.reply ? `没有返回${name === 'frame_start' ? '首帧' : '尾帧'}提示词。${row.reply.slice(0, 160)}` : '没有返回提示词');
+        continue;
+      }
+      prompts[field] = picturePrompt(text) || text;
+      written[field] = prompts[field];
+    }
+    const asked = parts.map(name => (name === 'positive' ? 'positive_zh' : (name === 'frame_start' ? 'frame_start_zh' : 'frame_end_zh')));
+    if (!asked.some(key => written[key])) this.ctx.throw(502, gaps[0] || '没有返回提示词');
+    const saved = await this.saveFormPrompts(loaded.shot.id, written);
+    const shotPatch = {
+      description: shot.description,
+      dialogue: shot.dialogue,
+      scene_label: shot.scene_label,
+      shot_size: shot.shot_size,
+      camera_move: shot.camera_move,
+      duration_ms: durationSec * 1000,
+      source_excerpt: shot.source_excerpt,
+    };
+    if (shot.wardrobe_state) shotPatch.wardrobe_state = shot.wardrobe_state;
+    try {
+      await loaded.shot.update(shotPatch);
+    } catch (err) {
+      if (!shotPatch.wardrobe_state || !/wardrobe_state|source_excerpt/i.test(String(err.message || ''))) throw err;
+      delete shotPatch.wardrobe_state;
+      delete shotPatch.source_excerpt;
+      await loaded.shot.update(shotPatch);
+    }
+    const scored = readScoreText(replies.filter(Boolean).join('\n'));
+    return {
+      prompts: saved,
+      score: scored.score,
+      score_note: scored.score_note,
+      warning: gaps.filter(Boolean).join('；'),
+    };
   }
 
   /** @deprecated 兼容旧「一次三步」入口，改为只生成剧本 */

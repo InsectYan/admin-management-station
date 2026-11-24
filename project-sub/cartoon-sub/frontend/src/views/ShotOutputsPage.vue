@@ -105,7 +105,9 @@
                 <button type="button" :class="{ 'is-active': briefTab(task) === 'start' }" @click="setBriefTab(task, 'start')">首帧</button>
                 <button type="button" :class="{ 'is-active': briefTab(task) === 'end' }" @click="setBriefTab(task, 'end')">尾帧</button>
               </div>
+              <el-button class="cartoon-brief__reset" type="primary" plain :disabled="!canMake() || !shot?.import_id" @click="openPromptDialog(task)">重置提示词</el-button>
             </header>
+            <div class="cartoon-brief__main">
             <template v-if="panelOf(task)">
               <div v-if="panelPicture(task) || panelRefs(task).length" class="cartoon-brief__visual">
                 <figure v-if="panelPicture(task)" class="cartoon-brief__product">
@@ -202,6 +204,7 @@
               </div>
               <p class="cartoon-module__hint">{{ emptyBrief(task) }}</p>
             </div>
+            </div>
           </article>
           </div>
         </el-tab-pane>
@@ -210,6 +213,57 @@
         </el-tab-pane>
       </el-tabs>
     </section>
+    <el-dialog
+      v-model="promptDialogOpen"
+      class="cartoon-dialog cartoon-prompt-reset"
+      title="重置提示词"
+      width="70%"
+      append-to-body
+      destroy-on-close
+    >
+      <div class="cartoon-prompt-tabs" role="tablist">
+        <button
+          v-for="item in promptDialogParts"
+          :key="item.key"
+          type="button"
+          role="tab"
+          :class="{ 'is-active': promptDialogPart === item.key }"
+          :aria-selected="promptDialogPart === item.key"
+          @click="promptDialogPart = item.key"
+        >{{ item.label }}</button>
+      </div>
+      <div class="cartoon-prompt-reset__columns">
+        <section class="cartoon-prompt-reset__side">
+          <template v-if="dialogPanel">
+            <h4>提交的提示词</h4>
+            <pre>{{ dialogPanel.generation?.positive || '没有留下提交时的提示词' }}</pre>
+            <h4>负向提示词</h4>
+            <pre>{{ dialogPanel.generation?.negative || '无' }}</pre>
+          </template>
+          <p v-else class="cartoon-module__hint">{{ dialogEmpty }}</p>
+        </section>
+        <PromptDraftForm
+          v-if="promptDialogTask && shot?.import_id"
+          ref="promptDialogForm"
+          :project-id="projectId"
+          :import-id="shot.import_id"
+          :shot-id="shot.id"
+          :scope="promptDialogTask.id"
+          :part="promptDialogPart"
+          preserve-on-part
+          defer-save
+          contained
+          :show-generate="false"
+        />
+      </div>
+      <template #footer>
+        <div class="cartoon-prompt-reset__footer">
+          <el-button @click="promptDialogOpen = false">取消</el-button>
+          <el-button type="primary" :loading="promptDialogSaving" :disabled="promptDialogBusy" @click="confirmPromptDialog">确认</el-button>
+          <el-button type="primary" :loading="promptDialogGenerating" :disabled="promptDialogBusy" @click="generatePromptDialog">生成提示词</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </PageShell>
 </template>
 
@@ -220,6 +274,7 @@ import { useRoute, useRouter } from 'vue-router';
 import MediaFileList from '../components/MediaFileList.vue';
 import PageShell from '../components/PageShell.vue';
 import PromptTracePanel from '../components/PromptTracePanel.vue';
+import PromptDraftForm from '../components/PromptDraftForm.vue';
 import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
@@ -328,11 +383,61 @@ function dualText(panel) {
 function briefTab(task) {
   return briefTabs[task.id] || 'video';
 }
+function partOfTab(tab) {
+  if (tab === 'end') return 'frame_end';
+  if (tab === 'start') return 'frame_start';
+  return 'positive';
+}
 function setBriefTab(task, name) {
   briefTabs[task.id] = name;
 }
-function panelOf(task) {
-  const tab = briefTab(task);
+const promptDialogOpen = ref(false);
+const promptDialogTask = ref(null);
+const promptDialogPart = ref('positive');
+const promptDialogForm = ref(null);
+const promptDialogSaving = ref(false);
+const promptDialogGenerating = ref(false);
+const promptDialogParts = [
+  { key: 'positive', label: '视频提示词' },
+  { key: 'frame_start', label: '首帧提示词' },
+  { key: 'frame_end', label: '尾帧提示词' },
+];
+const promptDialogBusy = computed(() => promptDialogSaving.value || promptDialogGenerating.value);
+const dialogTab = computed(() => {
+  if (promptDialogPart.value === 'frame_end') return 'end';
+  if (promptDialogPart.value === 'frame_start') return 'start';
+  return 'video';
+});
+const dialogPanel = computed(() => (promptDialogTask.value ? panelFor(promptDialogTask.value, dialogTab.value) : null));
+const dialogEmpty = computed(() => {
+  if (dialogTab.value === 'video') return '这条记录没有视频。';
+  return dialogTab.value === 'end' ? '这条记录没有单独生成尾帧。' : '这条记录没有单独生成首帧。';
+});
+function openPromptDialog(task) {
+  promptDialogTask.value = task;
+  promptDialogPart.value = partOfTab(briefTab(task));
+  promptDialogOpen.value = true;
+}
+async function confirmPromptDialog() {
+  if (!promptDialogForm.value || promptDialogBusy.value) return;
+  promptDialogSaving.value = true;
+  try {
+    const ok = await promptDialogForm.value.confirm();
+    if (ok) promptDialogOpen.value = false;
+  } finally {
+    promptDialogSaving.value = false;
+  }
+}
+async function generatePromptDialog() {
+  if (!promptDialogForm.value || promptDialogBusy.value) return;
+  promptDialogGenerating.value = true;
+  try {
+    await promptDialogForm.value.generate();
+  } finally {
+    promptDialogGenerating.value = false;
+  }
+}
+function panelFor(task, tab) {
   if (tab === 'video') {
     if (!isVideoTask(task)) return null;
     return {
@@ -356,6 +461,9 @@ function panelOf(task) {
     operator_name: task.operator_name,
     error_message: task.error_message,
   };
+}
+function panelOf(task) {
+  return panelFor(task, briefTab(task));
 }
 function emptyBrief(task) {
   const tab = briefTab(task);
@@ -665,8 +773,46 @@ onUnmounted(stopPoll);
 .cartoon-device__frame video,
 .cartoon-device__frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .cartoon-brief { padding: 12px 0; border-top: 1px solid #e6ebe7; }
+.cartoon-brief__main { min-width: 0; }
 .cartoon-brief:first-child { border-top: 0; padding-top: 0; }
 .cartoon-brief__head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.cartoon-brief__reset { margin-left: auto; }
+.cartoon-prompt-tabs {
+  display: flex;
+  width: fit-content;
+  margin-bottom: 12px;
+  border: 1px solid rgba(47, 138, 91, 0.35);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.cartoon-prompt-tabs button {
+  border: 0;
+  background: transparent;
+  padding: 6px 14px;
+  color: #1f3d2c;
+  cursor: pointer;
+}
+.cartoon-prompt-tabs button.is-active { background: #2f8a5b; color: #fff; }
+.cartoon-prompt-reset__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.cartoon-prompt-reset__side { min-width: 0; max-height: 60vh; overflow: auto; }
+.cartoon-prompt-reset__side h4 { margin: 0 0 6px; font-size: 14px; }
+.cartoon-prompt-reset__side pre {
+  margin: 0 0 16px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  line-height: 1.5;
+}
+.cartoon-prompt-reset__footer { display: flex; justify-content: flex-end; gap: 8px; width: 100%; }
+:global(.cartoon-prompt-reset.el-dialog .el-dialog__body) {
+  max-height: calc(100vh - 180px);
+  overflow: auto;
+}
 .cartoon-brief__switch { display: inline-flex; border: 1px solid rgba(47, 138, 91, 0.35); border-radius: 6px; overflow: hidden; }
 .cartoon-brief__switch button {
   border: 0;
@@ -706,7 +852,7 @@ onUnmounted(stopPoll);
 .cartoon-brief__list dd { margin: 0; }
 .cartoon-brief__asset { margin-right: 8px; }
 .cartoon-brief__prompt {
-  max-height: 220px;
+  max-height: 520px;
   margin: 0;
   padding: 8px 10px;
   overflow: auto;

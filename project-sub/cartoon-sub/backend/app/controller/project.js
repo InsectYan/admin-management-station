@@ -343,6 +343,31 @@ class ProjectController extends Controller {
     }
   }
 
+  async promptForm() {
+    try {
+      ok(this.ctx, await this.ctx.service.draft.promptForm(
+        this.ctx.params.id,
+        this.ctx.params.importId,
+        this.ctx.params.shotId,
+      ));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
+  async submitPromptForm() {
+    try {
+      ok(this.ctx, await this.ctx.service.draft.submitPromptForm(
+        this.ctx.params.id,
+        this.ctx.params.importId,
+        this.ctx.params.shotId,
+        this.ctx.request.body || {},
+      ));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async draft() {
     try {
       ok(this.ctx, await this.ctx.service.draft.run(this.ctx.params.id, this.ctx.params.importId));

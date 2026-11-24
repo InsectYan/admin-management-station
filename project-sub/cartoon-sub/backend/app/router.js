@@ -88,6 +88,8 @@ module.exports = app => {
   router.post('/api/projects/:id/imports/:importId/draft/script/apply', controller.project.draftScriptApply);
   router.post('/api/projects/:id/imports/:importId/draft/shot-outline', controller.project.draftShotOutline);
   router.post('/api/projects/:id/imports/:importId/draft/shot-expand', controller.project.draftShotExpand);
+  router.get('/api/projects/:id/imports/:importId/shots/:shotId/prompt-form', controller.project.promptForm);
+  router.post('/api/projects/:id/imports/:importId/shots/:shotId/prompt-form', controller.project.submitPromptForm);
   router.post('/api/projects/:id/imports/:importId/draft', controller.project.draft);
   router.post('/api/projects/:id/nodes/:nodeKey/run', controller.customNode.run);
   router.post('/api/projects/:id/shots', controller.project.addShot);
