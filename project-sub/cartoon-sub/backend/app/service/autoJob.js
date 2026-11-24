@@ -5,7 +5,7 @@ const { promptCoveredMs, fitDurationSec } = require('../lib/promptDuration');
 
 const OPEN = [ 'pending', 'running' ];
 const VIDEO_KINDS = [ 'video', 'i2v', 't2v', 'refmod' ];
-const WAIT_LIMIT_MS = 2 * 60 * 60 * 1000;
+const WAIT_LIMIT_MS = 4 * 60 * 60 * 1000;
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));

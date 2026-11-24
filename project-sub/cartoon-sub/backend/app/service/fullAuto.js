@@ -38,6 +38,7 @@ const NODE_LABEL = {
 };
 const VIDEO_KINDS = [ 'video', 'i2v', 't2v', 'refmod' ];
 const WAIT_LIMIT_MS = 2 * 60 * 60 * 1000;
+const VIDEO_WAIT_LIMIT_MS = 4 * 60 * 60 * 1000;
 
 function sleep(ms, signal) {
   return new Promise((resolve, reject) => {
@@ -104,7 +105,7 @@ const ADULT_CN_RE = /二十[一二三四五六七八九]岁|[三四五六七八�
 const NUDE_LINE = '人物全裸，细节刻画清晰，禁止非全裸，禁止穿衣服，禁止半裸。';
 const SHEET_TAIL = {
   character: '纯白背景，画面上方人物高清正面特写，下方同一人物的正面、侧面、背面三视图，五官、发型、服装完全一致。',
-  scene: '同一场景的多视角，正面、左侧面、背面、俯视，建筑结构、光影和道具完全一致。',
+  scene: '同一场景的多视角，正面、左侧面、背面、俯视，建筑结构、光影和道具完全一致。画面里禁止出现人物、角色、人影、人脸、手脚和人体局部。',
 };
 
 function withSheetLayout(kind, description) {
@@ -1480,7 +1481,7 @@ class FullAutoService extends Service {
       const code = shot.shot_code || shot.id;
       await this.track(run, live.id);
       await this.pushLog(run, 'video', `${code} 继续等待已经提交的视频`);
-      const settled = await this.awaitTask(run, live);
+      const settled = await this.awaitTask(run, live, VIDEO_WAIT_LIMIT_MS);
       if (!settled || settled.status !== 'success') throw new Error(settled?.error_message || `${code} 视频没有生成`);
       return;
     }
@@ -1558,7 +1559,7 @@ class FullAutoService extends Service {
         if (task?.id) await this.cancelTask(task);
         throw Object.assign(new Error('已停止'), { stop: true });
       }
-      if ([ 'queued', 'running', 'saving' ].includes(task?.status)) task = await this.awaitTask(run, task);
+      if ([ 'queued', 'running', 'saving' ].includes(task?.status)) task = await this.awaitTask(run, task, VIDEO_WAIT_LIMIT_MS);
       if (!task || task.status !== 'success') throw new Error(task?.error_message || `${shot.shot_code || shot.id} 视频没有生成`);
     } finally {
       await this.dropTemp(run);
@@ -1908,12 +1909,12 @@ class FullAutoService extends Service {
     run.task_ids = raw;
   }
 
-  async awaitTask(run, task) {
+  async awaitTask(run, task, limitMs = WAIT_LIMIT_MS) {
     const { startMediaWatch } = require('../lib/executionTrace');
     const watch = await startMediaWatch(this.ctx, task);
     const started = Date.now();
     try {
-      const fresh = await this.awaitTaskBody(run, task);
+      const fresh = await this.awaitTaskBody(run, task, limitMs);
       const state = !fresh
         ? 'error'
         : (fresh.status === 'success' ? 'ok' : (fresh.status === 'cancelled' ? 'skip' : 'error'));
@@ -1925,9 +1926,10 @@ class FullAutoService extends Service {
     }
   }
 
-  async awaitTaskBody(run, task) {
+  async awaitTaskBody(run, task, limitMs = WAIT_LIMIT_MS) {
     if (!task?.id) throw new Error('没有拿到生成任务');
-    const deadline = Date.now() + WAIT_LIMIT_MS;
+    const waitMs = Number(limitMs) > 0 ? Number(limitMs) : WAIT_LIMIT_MS;
+    const deadline = Date.now() + waitMs;
     let current = task;
     while (await this.alive(run)) {
       const fresh = await this.ctx.model.Task.findByPk(current.id);

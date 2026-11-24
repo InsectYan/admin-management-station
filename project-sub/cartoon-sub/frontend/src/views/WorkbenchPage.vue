@@ -127,7 +127,7 @@
             </el-form-item>
             <el-form-item class="is-wide" label="描述">
               <el-input v-model="assetForm.description" type="textarea" :rows="6" placeholder="这段文字就是生图提示词" />
-              <p v-if="[ 'character', 'scene', 'prop' ].includes(assetForm.kind)" class="cartoon-module__hint">描述按项目画风生成，提交设定图时才会补上排布：角色是三视图，场景是多视角。</p>
+              <p v-if="[ 'character', 'scene', 'prop' ].includes(assetForm.kind)" class="cartoon-module__hint">描述按项目画风生成，提交设定图时才会补上排布：角色是三视图，场景是多视角且禁止出现人物。</p>
             </el-form-item>
             <template v-if="assetForm.kind === 'character'">
               <p class="cartoon-entry-label">角色</p>

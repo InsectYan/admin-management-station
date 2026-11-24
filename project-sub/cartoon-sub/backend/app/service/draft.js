@@ -1658,6 +1658,7 @@ function stripSheetLayout(text) {
   return String(text || '')
     .replace(/纯白背景[^。\n]{0,80}三视图[^。\n]*[。]?/g, '')
     .replace(/同一场景[^。\n]{0,80}(?:多视角|俯视)[^。\n]*[。]?/g, '')
+    .replace(/画面里禁止出现人物[^。\n]*[。]?/g, '')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
