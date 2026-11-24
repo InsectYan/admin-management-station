@@ -6,7 +6,33 @@ module.exports = app => {
     id: { type: INTEGER, primaryKey: true, autoIncrement: true },
     name: { type: STRING(200), allowNull: false },
     source_novel_id: { type: STRING(64), allowNull: true },
-    visual_style: { type: STRING(64), allowNull: false, defaultValue: '' },
+    visual_style: {
+      type: STRING(64),
+      allowNull: false,
+      defaultValue: '',
+      get() {
+        const { styleClassOf } = require('../lib/cartoonMeta');
+        const stored = String(this.getDataValue('visual_style') || '').trim();
+        return styleClassOf(stored) ? '' : stored;
+      },
+    },
+    style_layers: {
+      type: TEXT,
+      allowNull: false,
+      defaultValue: '{}',
+      get() {
+        const { readStyleLayers, styleClassOf } = require('../lib/cartoonMeta');
+        const layers = readStyleLayers(this.getDataValue('style_layers'));
+        const stored = String(this.getDataValue('visual_style') || '').trim();
+        const legacy = styleClassOf(stored);
+        if (legacy && !layers[legacy.classKey]) layers[legacy.classKey] = legacy.value;
+        return layers;
+      },
+      set(value) {
+        const { readStyleLayers } = require('../lib/cartoonMeta');
+        this.setDataValue('style_layers', JSON.stringify(readStyleLayers(value)));
+      },
+    },
     summary: { type: TEXT, allowNull: true },
     status: { type: STRING(32), allowNull: false, defaultValue: 'draft' },
     content_type: { type: STRING(32), allowNull: false, defaultValue: 'ai_comic' },

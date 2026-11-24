@@ -67,6 +67,7 @@
           </el-select>
           <p v-if="selectedStyleNote" class="cartoon-module__hint">{{ selectedStyleNote }}</p>
         </el-form-item>
+        <StyleClassFields v-model="form.style_layers" :classes="styleClasses" />
         <p class="cartoon-module__hint">{{ current.needs_package ? '创建后到项目里绑定故事包。' : '不会出现选择小说，也不会在叙事工作台新建作品。' }}</p>
       </el-form>
       <template #footer>
@@ -86,6 +87,7 @@ import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 import { CONTENT_TYPES } from '../lib/contentTypes.js';
+import StyleClassFields from '../components/StyleClassFields.vue';
 import { groupVisualStyles } from '../utils/visualStyles.js';
 
 const router = useRouter();
@@ -99,7 +101,8 @@ const preview = ref(null);
 const createVisible = ref(false);
 const current = ref(null);
 const saving = ref(false);
-const form = reactive({ name: '', visual_style: '' });
+const form = reactive({ name: '', visual_style: '', style_layers: {} });
+const styleClasses = ref([]);
 const styleGroups = computed(() => groupVisualStyles(styles.value));
 const selectedStyleNote = computed(() => {
   const hit = styles.value.find(item => item.value === form.visual_style);
@@ -121,6 +124,7 @@ function openCreate(item) {
   current.value = item;
   form.name = '';
   form.visual_style = styles.value[0]?.value || '';
+  form.style_layers = {};
   createVisible.value = true;
 }
 async function create() {
@@ -136,6 +140,7 @@ async function create() {
         template_id: current.value.id,
         name: form.name.trim(),
         visual_style: form.visual_style || '',
+        style_layers: form.style_layers || {},
       },
     });
     createVisible.value = false;
@@ -156,6 +161,7 @@ async function load() {
     ]);
     rows.value = templates || [];
     styles.value = meta.visual_styles || [];
+    styleClasses.value = meta.style_classes || [];
   });
 }
 onMounted(() => {

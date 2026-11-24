@@ -5,9 +5,7 @@ const { invokeSkill, recordPromptMemory } = require('../lib/agentProxy');
 const { clientAbort, stopError } = require('../lib/clientAbort');
 const { productionInput } = require('../lib/productionInput');
 const {
-  styleOf,
-  stylePromptOf,
-  styleLabelOf,
+  composeProjectStyle,
   detectXianxia,
   normalizeShotSizes,
   serializeShotSizes,
@@ -406,12 +404,13 @@ class DraftService extends Service {
         this.ctx.logger.warn('[cartoon] novel brief for draft %s', err.message);
       }
     }
-    const visualStyle = project.visual_style || '';
-    const hit = styleOf(visualStyle);
+    const composed = composeProjectStyle(project);
     const payload = {
-      visual_style: visualStyle,
-      visual_style_label: styleLabelOf(visualStyle) || hit?.label || '',
-      visual_style_prompt: stylePromptOf(visualStyle) || '',
+      visual_style: composed.visual_style,
+      visual_style_label: composed.visual_style_label,
+      visual_style_prompt: composed.visual_style_prompt,
+      style_ids: composed.style_ids,
+      style_layers: composed.style_layers,
       genre: novel?.genre || '',
       genre_subcategory: novel?.genre_subcategory || '',
       novel_type: novel?.novel_type || '',
@@ -1446,6 +1445,7 @@ class DraftService extends Service {
       asset_facts: String(map.asset_facts || '').trim(),
       positive_zh: loaded.prompts.positive_zh,
     };
+    if (requirement) shot.requirement = requirement;
     const prevText = String(map.prev_shot || '').trim();
     if (prevText && loaded.prev && prevText === prevShotText(loaded.prev)) shot.prev_shot = loaded.prev;
     else if (prevText) shot.prev_shot = { ...(loaded.prev || {}), description: prevText };
@@ -1621,6 +1621,46 @@ class DraftService extends Service {
     const draft = await this.suggestScript(projectId, importId);
     return this.applyScript(projectId, importId, draft);
   }
+
+  async describeAsset(projectId, payload = {}, options = {}) {
+    const project = await this.ctx.model.Project.findByPk(projectId);
+    if (!project) this.ctx.throw(404, '项目不存在');
+    const kind = [ 'character', 'scene', 'prop' ].includes(payload.kind) ? payload.kind : '';
+    const name = String(payload.name || '').trim();
+    if (!kind || !name) this.ctx.throw(400, '先写资产名称和类型');
+    const style = await this.styleContext(project);
+    const result = await invokeSkill(this.ctx, {
+      skill: 'cartoon-asset-desc-skill',
+      action: 'draft',
+      signal: options.signal || clientAbort(this.ctx),
+      payload: {
+        kind,
+        name,
+        notes: String(payload.notes || '').trim(),
+        costume_note: String(payload.costume_note || '').trim(),
+        visual_style: style.visual_style,
+        visual_style_label: style.visual_style_label,
+        visual_style_prompt: style.visual_style_prompt,
+        style_ids: style.style_ids || [],
+        genre: [ style.genre, style.genre_subcategory, style.novel_type ].filter(Boolean).join(' / '),
+        title: style.title,
+        av_nude: payload.av_nude === true,
+      },
+    });
+    const output = outputOf(result);
+    const description = stripSheetLayout(output.description || output.prompt || output.reply || '');
+    if (!description) this.ctx.throw(502, '没有生成资产描述');
+    return { description, kind };
+  }
+}
+
+function stripSheetLayout(text) {
+  return String(text || '')
+    .replace(/纯白背景[^。\n]{0,80}三视图[^。\n]*[。]?/g, '')
+    .replace(/同一场景[^。\n]{0,80}(?:多视角|俯视)[^。\n]*[。]?/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 module.exports = DraftService;

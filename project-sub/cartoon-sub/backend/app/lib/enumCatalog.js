@@ -14,6 +14,18 @@ const CATALOGS = [
     ],
   },
   {
+    key: 'style_class',
+    name: '风格类',
+    description: '叠在画面风格上的渲染滤镜。每一组是一个下拉框，组里是可选项。Midjourney 是第一组，以后新增一组就会多一个下拉框。',
+    fields: [
+      { key: 'code', label: '编码', required: true },
+      { key: 'name', label: '名称', required: true },
+      { key: 'group_name', label: '风格类', required: true },
+      { key: 'note', label: '说明', type: 'textarea' },
+      { key: 'prompt', label: '提示词', type: 'textarea' },
+    ],
+  },
+  {
     key: 'shot_size',
     name: '景别',
     description: '分镜主景别。一个镜头可以选多个，存的是这里的名称。',

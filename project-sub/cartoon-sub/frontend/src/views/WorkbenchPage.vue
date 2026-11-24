@@ -126,7 +126,8 @@
               </el-select>
             </el-form-item>
             <el-form-item class="is-wide" label="描述">
-              <el-input v-model="assetForm.description" type="textarea" :rows="2" />
+              <el-input v-model="assetForm.description" type="textarea" :rows="6" placeholder="这段文字就是生图提示词" />
+              <p v-if="[ 'character', 'scene', 'prop' ].includes(assetForm.kind)" class="cartoon-module__hint">描述按项目画风生成，提交设定图时才会补上排布：角色是三视图，场景是多视角。</p>
             </el-form-item>
             <template v-if="assetForm.kind === 'character'">
               <p class="cartoon-entry-label">角色</p>
@@ -189,12 +190,20 @@
               :asset-kind="assetForm.kind"
             />
           </el-form-item>
-          <div class="cartoon-entry-actions">
-            <el-button v-if="!editingAssetId" type="primary" @click="createAsset">创建</el-button>
-            <el-button v-else type="primary" @click="saveAsset">保存</el-button>
-          </div>
         </el-form>
         </RegionLoad>
+        <template #footer>
+          <div class="cartoon-drawer-footer__actions">
+            <el-button
+              v-if="[ 'character', 'scene', 'prop' ].includes(assetForm.kind)"
+              :disabled="!canMake() || !assetForm.name.trim()"
+              :loading="describing"
+              @click="describeAsset"
+            >生成描述</el-button>
+            <el-button v-if="!editingAssetId" type="primary" :disabled="!canMake()" @click="createAsset">创建</el-button>
+            <el-button v-else type="primary" :disabled="!canMake()" @click="saveAsset">保存</el-button>
+          </div>
+        </template>
         </el-drawer>
       </section>
       <section v-else-if="node === 'voice'" class="cartoon-module cartoon-voice-page">
@@ -416,7 +425,7 @@
     <aside class="cartoon-workbench__side">
       <h2>这一集</h2>
       <p>类型 · {{ typeName }}</p>
-      <p>画面 · {{ styleLabel || project.visual_style || '未选' }}</p>
+      <p>画面 · {{ styleLabel || '未选' }}</p>
       <p>钉扎 · {{ pinLabel || '未选择故事包' }}</p>
       <p>节点 · {{ nodeTitle }}</p>
     </aside>
@@ -474,9 +483,10 @@ import RegionLoad from '../components/RegionLoad.vue';
 import LoadMask from '../components/LoadMask.vue';
 import FullAutoPage from './FullAutoPage.vue';
 import { request, resolveApiBase } from '../services/apiConfig.js';
+import { canMake } from '../lib/appAccess.js';
 import { createPulseGate } from '../lib/dataPulse.js';
 import { isLocalType, typeLabel } from '../lib/contentTypes.js';
-import { styleDisplayLabel } from '../utils/visualStyles.js';
+import { composedStyleLabel } from '../utils/visualStyles.js';
 import { PAGE_SIZES, PAGER_LAYOUT } from '../lib/pager.js';
 
 const nodes = [
@@ -504,11 +514,13 @@ const bundle = ref(null);
 const episode = ref(null);
 const shots = ref([]);
 const styles = ref([]);
+const styleClasses = ref([]);
 const error = ref('');
 const sceneTypes = [ '室内', '室外', '城市', '自然', '古风', '品牌' ];
 const propCategories = [ '服饰', '器物', '食物', '文书', '交通', '其他' ];
 const editingAssetId = ref(null);
 const assetDrawerOpen = ref(false);
+const describing = ref(false);
 const assetTab = ref('list');
 const voiceRows = ref([]);
 const voiceSkipped = ref([]);
@@ -851,7 +863,7 @@ watch(previewShots, (rows) => {
 });
 const episodeTitle = computed(() => episode.value?.title || '第1集');
 const typeName = computed(() => typeLabel(project.value?.content_type));
-const styleLabel = computed(() => styleDisplayLabel(styles.value, project.value?.visual_style));
+const styleLabel = computed(() => composedStyleLabel(styles.value, styleClasses.value, project.value?.visual_style, project.value?.style_layers));
 const pinLabel = computed(() => {
   if (project.value?.package_version) return `故事包 v${project.value.package_version}`;
   if (project.value?.pin_mode === 'legacy') return '未钉扎';
@@ -1003,6 +1015,31 @@ async function createAsset() {
     ElMessage.success(created?.character_id ? `已新增，人物编号 ${created.character_id}` : '已新增');
   } catch (err) {
     ElMessage.error(err.message || '没有新增');
+  }
+}
+async function describeAsset() {
+  if (![ 'character', 'scene', 'prop' ].includes(assetForm.kind)) return;
+  if (!assetForm.name.trim()) {
+    ElMessage.warning('先写名称');
+    return;
+  }
+  describing.value = true;
+  try {
+    const data = await request(`/projects/${projectKey()}/assets/describe`, {
+      method: 'post',
+      data: {
+        kind: assetForm.kind,
+        name: assetForm.name.trim(),
+        notes: [ assetForm.description, assetForm.consistency_note, assetForm.costume_note ].filter(Boolean).join('\n'),
+        costume_note: assetForm.costume_note,
+      },
+    });
+    assetForm.description = data?.description || '';
+    ElMessage.success('已写入描述');
+  } catch (err) {
+    ElMessage.error(err.message || '没有生成描述');
+  } finally {
+    describing.value = false;
   }
 }
 async function saveAsset() {
@@ -1405,6 +1442,7 @@ async function load(mask = false) {
     ]);
     customNodes.value = (pipe.nodes || []).filter(item => item.kind === 'custom' && item.enabled);
     styles.value = meta.visual_styles || [];
+    styleClasses.value = meta.style_classes || [];
   } catch {
     customNodes.value = [];
   }

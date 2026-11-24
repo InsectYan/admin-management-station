@@ -14,7 +14,7 @@ const { usageSummary } = require('../lib/usageSummary');
 const { cardLine } = require('../lib/assetProfile');
 const { promptCoveredMs, fitDurationSec } = require('../lib/promptDuration');
 const { collapseFrameStyle, referenceUseLine, withReferenceUse } = require('../lib/framePrompt');
-const { styleLabelOf, stylePromptOf } = require('../lib/cartoonMeta');
+const { composeProjectStyle } = require('../lib/cartoonMeta');
 
 function snap32(value) {
   const n = Number(value);
@@ -324,8 +324,6 @@ class GenerateService extends Service {
       release() {},
     };
     try {
-    const missingPanel = await this.ctx.service.project.missingPanelLabels(projectId);
-    if (missingPanel.length) this.ctx.throw(400, `面板还没填完：${missingPanel.join('、')}`);
     const requestedIds = (Array.isArray(payload.asset_ids) ? payload.asset_ids : [])
       .map(id => Number(id))
       .filter(id => id > 0);
@@ -421,9 +419,10 @@ class GenerateService extends Service {
       }
     }
     const project = await this.ctx.model.Project.findByPk(projectId);
+    const composedStyle = composeProjectStyle(project);
     if (!videoKind) {
       positive = withReferenceUse(
-        collapseFrameStyle(positive, styleLabelOf(project?.visual_style), stylePromptOf(project?.visual_style)),
+        collapseFrameStyle(positive, composedStyle.visual_style_label, composedStyle.visual_style_prompt),
         referenceUseLine(frameEntries),
       );
     }

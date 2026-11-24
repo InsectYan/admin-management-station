@@ -226,10 +226,13 @@
         <div class="cartoon-edit-grid">
           <el-form-item label="项目名称"><el-input v-model="editForm.name" /></el-form-item>
           <el-form-item label="画面风格">
-            <el-select v-model="editForm.visual_style" filterable style="width: 100%">
-              <el-option v-for="item in styles" :key="item.value" :label="item.label" :value="item.value" />
+            <el-select v-model="editForm.visual_style" filterable clearable placeholder="选择画风" style="width: 100%">
+              <el-option-group v-for="group in styleGroups" :key="group.label" :label="group.label">
+                <el-option v-for="item in group.options" :key="item.value" :label="item.label" :value="item.value" />
+              </el-option-group>
             </el-select>
           </el-form-item>
+          <StyleClassFields v-model="editForm.style_layers" :classes="styleClasses" />
           <el-form-item v-if="supportsAv(detail.project.content_type)" label="专题">
             <el-select v-model="editForm.topics" multiple clearable placeholder="可不选" style="width: 100%">
               <el-option v-for="item in topicOptions" :key="item.value" :label="item.label" :value="item.value" />
@@ -293,6 +296,8 @@ import ExportSpecs from '../components/ExportSpecs.vue';
 import ReviewBox from '../components/ReviewBox.vue';
 import RegionLoad from '../components/RegionLoad.vue';
 import ClampText from '../components/ClampText.vue';
+import StyleClassFields from '../components/StyleClassFields.vue';
+import { composedStyleLabel, groupVisualStyles } from '../utils/visualStyles.js';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 import { hasPanel, isLocalType, supportsAv, TOPIC_OPTIONS, topicsOfProject } from '../lib/contentTypes.js';
@@ -314,6 +319,8 @@ const tabs = computed(() => [
 const tab = ref(Number(route.query.tab) === 6 ? 5 : (Number(route.query.tab) || 1));
 const detail = ref(null);
 const styles = ref([]);
+const styleClasses = ref([]);
+const styleGroups = computed(() => groupVisualStyles(styles.value));
 const novelBrief = ref(null);
 const novelLoading = ref(false);
 const shellMembers = ref([]);
@@ -325,6 +332,7 @@ const novelEnums = reactive({ genres: [], themes: [], audiences: [], lengths: []
 const editForm = reactive({
   name: '',
   visual_style: '',
+  style_layers: {},
   topics: [],
   genre_category_id: null,
   genre_subcategory_id: null,
@@ -346,10 +354,12 @@ const genreChildren = computed(() => {
 
 const tabTitle = computed(() => tabs.value.find(item => item.step === tab.value)?.title || '概览');
 const mark = computed(() => (detail.value?.project?.name || '漫').trim().slice(0, 1));
-const styleLabel = computed(() => {
-  const hit = styles.value.find(item => item.value === detail.value?.project?.visual_style);
-  return hit?.label || hit?.name || '';
-});
+const styleLabel = computed(() => composedStyleLabel(
+  styles.value,
+  styleClasses.value,
+  detail.value?.project?.visual_style,
+  detail.value?.project?.style_layers,
+));
 const styleFactEl = ref(null);
 const styleFactOverflow = ref(false);
 let styleFactObserver;
@@ -520,6 +530,7 @@ async function openEdit() {
   if (!project) return;
   editForm.name = project.name || '';
   editForm.visual_style = project.visual_style || '';
+  editForm.style_layers = { ...(project.style_layers || {}) };
   editForm.topics = topicsOfProject(project);
   const novel = novelBrief.value;
   editForm.genre_category_id = novel?.genre_category_id || null;
@@ -552,6 +563,7 @@ async function saveEdit() {
       data: {
         name: editForm.name,
         visual_style: editForm.visual_style || '',
+        style_layers: editForm.style_layers || {},
         topics: supportsAv(project.content_type) ? editForm.topics : [],
       },
     });
@@ -649,6 +661,7 @@ onMounted(async () => {
       booting.value = false;
       const meta = await request('/meta').catch(() => ({ visual_styles: [] }));
       styles.value = meta.visual_styles || [];
+      styleClasses.value = meta.style_classes || [];
       if (meta.topic_options?.length) topicOptions.value = meta.topic_options;
       await load();
     });

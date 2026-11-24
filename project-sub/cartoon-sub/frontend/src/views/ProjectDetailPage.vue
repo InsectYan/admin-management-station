@@ -24,10 +24,13 @@
             <p class="cartoon-module__hint">可多选。选了的专题都会在常规提示词之后各走一次收口。AV 仍先写常规稿，双方都写明满二十一岁才套亲密子模版。健身只改动作路径。</p>
           </el-form-item>
           <el-form-item label="画面风格">
-            <el-select v-model="projectForm.visual_style" filterable placeholder="选择风格" style="width: 100%">
-              <el-option v-for="item in meta.visual_styles" :key="item.value" :label="item.label" :value="item.value" />
+            <el-select v-model="projectForm.visual_style" filterable clearable placeholder="选择画风" style="width: 100%">
+              <el-option-group v-for="group in styleGroups" :key="group.label" :label="group.label">
+                <el-option v-for="item in group.options" :key="item.value" :label="item.label" :value="item.value" />
+              </el-option-group>
             </el-select>
           </el-form-item>
+          <StyleClassFields v-model="projectForm.style_layers" :classes="meta.style_classes" />
         </div>
         <el-button type="primary" :disabled="!canMake()" @click="saveProject">保存设定</el-button>
       </el-form>
@@ -833,6 +836,8 @@ import { useRegionLoad } from '../lib/useRegionLoad.js';
 import { autoRunMark, rememberAutoRun } from '../lib/autoRunMark.js';
 import ClampText from '../components/ClampText.vue';
 import PromptDraftForm from '../components/PromptDraftForm.vue';
+import StyleClassFields from '../components/StyleClassFields.vue';
+import { groupVisualStyles } from '../utils/visualStyles.js';
 import { request, resolveApiBase } from '../services/apiConfig.js';
 import { clearLlmPin, pinLlmSession } from '../utils/llmProfileSession.js';
 import { canMake } from '../lib/appAccess.js';
@@ -897,8 +902,9 @@ watch(step, (value, prev) => {
 const detail = ref(null);
 const novels = ref([]);
 const chapters = ref([]);
-const meta = reactive({ visual_styles: [], shot_sizes: [ '中景' ], camera_moves: [ '固定' ], topic_options: TOPIC_OPTIONS });
-const projectForm = reactive({ name: '', source_novel_id: '', visual_style: '', topics: [] });
+const meta = reactive({ visual_styles: [], style_classes: [], shot_sizes: [ '中景' ], camera_moves: [ '固定' ], topic_options: TOPIC_OPTIONS });
+const styleGroups = computed(() => groupVisualStyles(meta.visual_styles));
+const projectForm = reactive({ name: '', source_novel_id: '', visual_style: '', style_layers: {}, topics: [] });
 const chapterId = ref('');
 const pullingAll = ref(false);
 const packageDesk = ref(null);
@@ -1560,6 +1566,7 @@ function fillProject() {
   projectForm.name = project.name || '';
   projectForm.source_novel_id = project.source_novel_id ? String(project.source_novel_id) : '';
   projectForm.visual_style = project.visual_style || '';
+  projectForm.style_layers = { ...(project.style_layers || {}) };
   projectForm.topics = topicsOfProject(project);
 }
 async function loadChapters(novelId) {
@@ -1722,6 +1729,7 @@ async function saveProject() {
         name: projectForm.name,
         source_novel_id: isLocal.value ? null : (projectForm.source_novel_id || null),
         visual_style: projectForm.visual_style || '',
+        style_layers: projectForm.style_layers || {},
         topics: supportsAv(detail.value?.project?.content_type) ? projectForm.topics : [],
       },
     });
@@ -3052,6 +3060,7 @@ onMounted(async () => {
   novels.value = catalog || [];
   if (metaRes) {
     meta.visual_styles = metaRes.visual_styles || [];
+    meta.style_classes = metaRes.style_classes || [];
     meta.shot_sizes = metaRes.shot_sizes || meta.shot_sizes;
     meta.camera_moves = metaRes.camera_moves || meta.camera_moves;
     if (metaRes.topic_options?.length) meta.topic_options = metaRes.topic_options;

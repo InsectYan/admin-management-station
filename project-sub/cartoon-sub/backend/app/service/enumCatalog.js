@@ -2,7 +2,7 @@
 
 const Service = require('egg').Service;
 const { CATALOGS, catalogOf } = require('../lib/enumCatalog');
-const { VISUAL_STYLES, SHOT_SIZES, CAMERA_MOVES, applyVisualStyles, applyShotSizes, applyCameraMoves } = require('../lib/cartoonMeta');
+const { VISUAL_STYLES, STYLE_CLASSES, SHOT_SIZES, CAMERA_MOVES, applyVisualStyles, applyStyleClasses, applyShotSizes, applyCameraMoves } = require('../lib/cartoonMeta');
 const { TOPIC_OPTIONS, applyTopicOptions } = require('../lib/topics');
 const { TYPES, applyContentTypes } = require('../lib/contentCatalog');
 
@@ -32,6 +32,19 @@ function codeOf(value, label) {
 
 function tokens(value) {
   return String(value || '').split(/[,，]/).map(item => item.trim()).filter(Boolean);
+}
+
+function layerCodes(raw) {
+  let data = raw;
+  if (typeof raw === 'string') {
+    try {
+      data = JSON.parse(raw || '{}');
+    } catch {
+      data = {};
+    }
+  }
+  if (!data || typeof data !== 'object') return [];
+  return Object.values(data).map(item => String(item || '').trim()).filter(Boolean);
 }
 
 function topicValues(raw) {
@@ -82,6 +95,15 @@ class EnumCatalogService extends Service {
         prompt: item.prompt || '',
         sort_order: index,
       })),
+      style_class: STYLE_CLASSES.flatMap(group => group.options.map((item, index) => ({
+        catalog: 'style_class',
+        code: item.value,
+        name: item.name,
+        group_name: group.name,
+        note: item.note || '',
+        prompt: item.prompt || '',
+        sort_order: index,
+      }))),
       shot_size: SHOT_SIZES.map((name, index) => ({
         catalog: 'shot_size',
         code: name,
@@ -108,6 +130,23 @@ class EnumCatalogService extends Service {
         sort_order: index,
       })),
     };
+    const classCodes = STYLE_CLASSES.flatMap(group => group.options.map(item => item.value));
+    if (classCodes.length) {
+      await EnumItem.update(
+        { catalog: 'style_class' },
+        { where: { catalog: 'visual_style', code: classCodes } },
+      );
+    }
+    for (const group of STYLE_CLASSES) {
+      for (const option of group.options) {
+        const row = await EnumItem.findOne({ where: { catalog: 'style_class', code: option.value } });
+        if (!row) continue;
+        const name = String(row.name || '');
+        if (name.startsWith(group.name) && name !== option.name) {
+          await row.update({ name: option.name, group_name: group.name });
+        }
+      }
+    }
     for (const catalog of CATALOGS) {
       const count = await EnumItem.count({ where: { catalog: catalog.key } });
       if (count) continue;
@@ -130,6 +169,7 @@ class EnumCatalogService extends Service {
       grouped[catalog.key] = (await this.rowsOf(catalog.key)).map(present);
     }
     applyVisualStyles(grouped.visual_style);
+    applyStyleClasses(grouped.style_class);
     applyShotSizes(grouped.shot_size);
     applyCameraMoves(grouped.camera_move);
     applyTopicOptions(grouped.topic);
@@ -152,7 +192,7 @@ class EnumCatalogService extends Service {
 
   async usage() {
     const projects = await this.ctx.model.Project.findAll({
-      attributes: [ 'id', 'name', 'visual_style', 'content_type', 'topics', 'av_mode', 'deleted_at' ],
+      attributes: [ 'id', 'name', 'visual_style', 'style_layers', 'content_type', 'topics', 'av_mode', 'deleted_at' ],
       raw: true,
     });
     const shots = await this.ctx.model.Shot.findAll({
@@ -167,8 +207,8 @@ class EnumCatalogService extends Service {
 
   referencesFor(catalog, item, usage) {
     let hits = [];
-    if (catalog === 'visual_style') {
-      hits = usage.projects.filter(row => row.visual_style === item.code).map(row => row.name || `项目 ${row.id}`);
+    if (catalog === 'visual_style' || catalog === 'style_class') {
+      hits = usage.projects.filter(row => row.visual_style === item.code || layerCodes(row.style_layers).includes(item.code)).map(row => row.name || `项目 ${row.id}`);
     } else if (catalog === 'content_type') {
       hits = usage.projects.filter(row => row.content_type === item.code).map(row => row.name || `项目 ${row.id}`);
     } else if (catalog === 'topic') {

@@ -5,7 +5,7 @@ const path = require('path');
 const Service = require('egg').Service;
 const { outputRoot, resolveInside } = require('../lib/mediaPaths');
 const {
-  VISUAL_STYLES, assertEnum, assertShotSizes, serializeShotSizes, normalizeShotSizes,
+  assertEnum, assertShotSizes, serializeShotSizes, normalizeShotSizes, splitIncomingStyle,
   assertCameraMoves, serializeCameraMoves, normalizeCameraMoves,
 } = require('../lib/cartoonMeta');
 const { sameBody, keepsProductionText, withOverride } = require('../lib/rebasePlan');
@@ -528,7 +528,7 @@ class ProjectService extends Service {
     return this.ctx.model.Project.create({
       name: payload.name,
       source_novel_id: isLocal(contentTypeId) ? null : (payload.source_novel_id || null),
-      visual_style: assertEnum(payload.visual_style, VISUAL_STYLES, '画面风格'),
+      ...splitIncomingStyle(payload.visual_style, payload.style_layers),
       summary: payload.summary || '',
       status: 'draft',
       content_type: contentTypeId,
@@ -544,7 +544,7 @@ class ProjectService extends Service {
     const project = await this.ctx.model.Project.create({
       name,
       source_novel_id: null,
-      visual_style: assertEnum(payload.visual_style, VISUAL_STYLES, '画面风格'),
+      ...splitIncomingStyle(payload.visual_style, payload.style_layers),
       summary: draft.scene,
       status: 'draft',
       content_type: draft.content_type,
@@ -580,8 +580,10 @@ class ProjectService extends Service {
       if (isLocal(project.content_type) && payload.source_novel_id) this.ctx.throw(400, '这个类型不绑定小说');
       patch.source_novel_id = isLocal(project.content_type) ? null : (payload.source_novel_id || null);
     }
-    if (payload.visual_style !== undefined) {
-      patch.visual_style = assertEnum(payload.visual_style, VISUAL_STYLES, '画面风格');
+    if (payload.visual_style !== undefined || payload.style_layers !== undefined) {
+      const visual = payload.visual_style !== undefined ? payload.visual_style : project.getDataValue('visual_style');
+      const layers = payload.style_layers !== undefined ? payload.style_layers : project.style_layers;
+      Object.assign(patch, splitIncomingStyle(visual, layers));
     }
     if (payload.topics !== undefined || payload.av_mode !== undefined) {
       Object.assign(patch, topicPatch(project.content_type, payload, project));

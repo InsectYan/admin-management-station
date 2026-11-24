@@ -441,6 +441,14 @@ class ProjectController extends Controller {
     }
   }
 
+  async describeAsset() {
+    try {
+      ok(this.ctx, await this.ctx.service.draft.describeAsset(this.ctx.params.id, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async updateAsset() {
     try {
       ok(this.ctx, await this.ctx.service.project.updateAsset(this.ctx.params.id, this.ctx.params.assetId, this.ctx.request.body || {}));

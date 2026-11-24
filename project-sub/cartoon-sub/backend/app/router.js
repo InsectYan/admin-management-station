@@ -142,6 +142,7 @@ module.exports = app => {
   router.post('/api/batches/:id/pause', controller.batch.pause);
   router.post('/api/batches/:id/resume', controller.batch.resume);
   router.post('/api/batches/:id/cancel', controller.batch.cancel);
+  router.post('/api/projects/:id/assets/describe', controller.project.describeAsset);
   router.post('/api/projects/:id/assets', controller.project.addAsset);
   router.put('/api/projects/:id/shots/:shotId/assets', controller.project.saveShotAssets);
   router.put('/api/shots/:id', controller.project.updateShot);

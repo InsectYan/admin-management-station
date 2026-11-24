@@ -59,9 +59,11 @@
     <el-drawer v-model="voiceEditOpen" title="选择音色" size="520px" append-to-body>
       <p class="cartoon-module__hint">{{ voiceEditRow?.name || '人物' }} 的音色。保存后，生成视频时如果工作流有音色入口，会把这条音色写进去。</p>
       <CharacterVoiceField v-model="voiceEditKey" />
-      <div class="cartoon-entry-actions">
-        <el-button type="primary" :loading="voiceSaving" @click="saveVoice">保存</el-button>
-      </div>
+      <template #footer>
+        <div class="cartoon-drawer-footer__actions">
+          <el-button type="primary" :loading="voiceSaving" @click="saveVoice">保存</el-button>
+        </div>
+      </template>
     </el-drawer>
 
     <el-drawer v-model="drawerOpen" title="公共资产登记" size="640px" append-to-body>
@@ -92,10 +94,12 @@
             </div>
           </el-form-item>
         </div>
-        <div class="cartoon-entry-actions">
+      </el-form>
+      <template #footer>
+        <div class="cartoon-drawer-footer__actions">
           <el-button type="primary" :loading="saving" @click="createShared">登记</el-button>
         </div>
-      </el-form>
+      </template>
     </el-drawer>
 
     <el-dialog

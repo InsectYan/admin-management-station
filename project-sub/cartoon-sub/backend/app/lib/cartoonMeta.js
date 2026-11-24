@@ -38,9 +38,6 @@ const VISUAL_STYLES = [
   style('vector-illust', '矢量插画', '扁平化风格，色块清晰，线条简洁', 'CG/插画类（漫剧）', '扁平化设计，矢量图形，清晰边缘，色块分明，简洁渐变，极简主义，现代 UI 风格，高对比，几何形状构成。'),
   style('ink-wash-color', '钢笔淡彩', '钢笔线条勾勒，水彩填色，清新自然', 'CG/插画类（漫剧）', '钢笔线条勾勒轮廓，水彩上色，线条灵动，色彩透明，速写感，清新自然，手绘痕迹，文艺风格，留白。'),
 
-  // Midjourney
-  style('midjourney-cinematic', 'Midjourney半写实电影感', '高保真半写实，瓷面皮肤，柔光高调，浅景深', 'Midjourney', '高保真半写实 CG 电影感。骨相真实，脸形与皮肤往美型改写：无瑕瓷面，只有极淡皮下柔光，没有毛孔和血管；手的骨点正确但收圆，指节干净；偏大的简练杏形眼，眼尾一点胭脂，唇上一层釉；八头身，下颌收窄，颈线拉长。衣料用刺绣、珠链、金属扣按装饰规律排布。画面平滑，材质反差强但表面洁净如新。光源不可追溯，多处柔光眷顾主体。高光削平，黑位抬起并带色相，中间调高饱和。三分构图，主体撑满中三分之一。高调低对比，亮部大面积发白，阴影停在浅蓝灰，没有硬阴影，没有纯黑死块。白来自轮廓光、过曝背景和白色光尘。浅景深。色彩按区域分开，不整片泛黄或泛紫，不做旧。'),
-
   // 二次元类（漫剧）
   style('anime-jp-std', '日系动漫', '标准日式动画风格，赛璐珞上色，线条清晰', '二次元类（漫剧）', '标准日式动画风格，赛璐珞上色，清晰线条，典型动漫五官，明暗分界明显，色彩鲜艳，电视动画质感，2D 平面感。'),
   style('anime-cn-guoman', '国漫风', '如《哪吒》《白蛇》，融合中国元素', '二次元类（漫剧）', '中国动画电影风格，融合水墨与三维特效，东方奇幻元素，华丽法术特效，独特角色设计，史诗感。'),
@@ -198,6 +195,16 @@ const VISUAL_STYLES = [
 const SHOT_SIZES = [ '极远景', '远景', '全景', '中景', '近景', '特写', '大特写' ];
 const CAMERA_MOVES = [ '固定', '推', '急推', '拉', '急拉', '摇', '移', '跟', '升', '降', '甩', '震颤', '旋转' ];
 
+const STYLE_CLASSES = [
+  {
+    key: 'midjourney',
+    name: 'Midjourney',
+    options: [
+      style('midjourney-cinematic', '半写实电影感', '高保真半写实，瓷面皮肤，柔光高调，浅景深', 'Midjourney', '高保真半写实 CG 电影感。骨相真实，脸形与皮肤往美型改写：无瑕瓷面，只有极淡皮下柔光，没有毛孔和血管；手的骨点正确但收圆，指节干净；偏大的简练杏形眼，眼尾一点胭脂，唇上一层釉；八头身，下颌收窄，颈线拉长。衣料用刺绣、珠链、金属扣按装饰规律排布。画面平滑，材质反差强但表面洁净如新。光源不可追溯，多处柔光眷顾主体。高光削平，黑位抬起并带色相，中间调高饱和。三分构图，主体撑满中三分之一。高调低对比，亮部大面积发白，阴影停在浅蓝灰，没有硬阴影，没有纯黑死块。白来自轮廓光、过曝背景和白色光尘。浅景深。色彩按区域分开，不整片泛黄或泛紫，不做旧。'),
+    ],
+  },
+];
+
 const XIANXIA_STYLE_VALUES = new Set([
   '3d-guofeng-xuanhuan',
   '3d-neo-guofeng',
@@ -231,6 +238,123 @@ function styleLabelOf(value) {
   const hit = styleOf(value);
   if (!hit) return String(value || '').trim();
   return hit.label;
+}
+
+function classKeyOf(groupName) {
+  const text = String(groupName || '').trim();
+  if (text === 'Midjourney' || text.toLowerCase() === 'midjourney') return 'midjourney';
+  const slug = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return slug || text;
+}
+
+function styleClassOptions() {
+  return STYLE_CLASSES.flatMap(item => item.options.map(option => ({
+    ...option,
+    classKey: item.key,
+    className: item.name,
+  })));
+}
+
+function styleClassOf(value) {
+  const key = String(value || '').trim();
+  if (!key) return null;
+  return styleClassOptions().find(item => item.value === key) || null;
+}
+
+function readStyleLayers(raw) {
+  let data = raw;
+  if (typeof raw === 'string') {
+    try {
+      data = JSON.parse(raw || '{}');
+    } catch {
+      data = {};
+    }
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return {};
+  const next = {};
+  Object.entries(data).forEach(([ key, value ]) => {
+    const code = String(value || '').trim();
+    if (code) next[String(key)] = code;
+  });
+  return next;
+}
+
+function assertStyleLayers(raw) {
+  const input = readStyleLayers(raw);
+  const next = {};
+  STYLE_CLASSES.forEach(item => {
+    const code = input[item.key] || '';
+    if (!code) return;
+    if (!item.options.some(option => option.value === code)) {
+      const err = new Error(`${item.name}不在可选范围内`);
+      err.status = 400;
+      throw err;
+    }
+    next[item.key] = code;
+  });
+  return next;
+}
+
+function splitIncomingStyle(visualStyle, layers) {
+  const nextLayers = assertStyleLayers(layers);
+  let visual = String(visualStyle || '').trim();
+  const hit = styleClassOf(visual);
+  if (hit) {
+    if (!nextLayers[hit.classKey]) nextLayers[hit.classKey] = hit.value;
+    visual = '';
+  } else {
+    visual = assertEnum(visual, VISUAL_STYLES, '画面风格');
+  }
+  return { visual_style: visual, style_layers: nextLayers };
+}
+
+function composeProjectStyle(project) {
+  const layers = readStyleLayers(project?.style_layers);
+  let visual = String(project?.visual_style || '').trim();
+  const legacy = styleClassOf(visual);
+  if (legacy && !layers[legacy.classKey]) layers[legacy.classKey] = legacy.value;
+  if (legacy) visual = '';
+  const art = styleOf(visual);
+  const extras = [];
+  STYLE_CLASSES.forEach(item => {
+    const code = layers[item.key];
+    const option = item.options.find(row => row.value === code);
+    if (option) extras.push(option);
+  });
+  const ids = [ art?.value, ...extras.map(item => item.value) ].filter(Boolean);
+  return {
+    visual_style: art?.value || '',
+    visual_style_label: [ art?.label, ...extras.map(item => `${item.className || item.group}·${item.name}`) ].filter(Boolean).join(' + '),
+    visual_style_prompt: [ art?.prompt, ...extras.map(item => item.prompt) ].filter(Boolean).join('\n'),
+    style_ids: ids,
+    style_layers: STYLE_CLASSES.reduce((acc, item) => {
+      if (layers[item.key]) acc[item.key] = layers[item.key];
+      return acc;
+    }, {}),
+  };
+}
+
+function applyStyleClasses(rows) {
+  const groups = new Map();
+  (rows || []).forEach(item => {
+    const code = String(item.code || '').trim();
+    if (!code) return;
+    const groupName = String(item.group_name || '').trim() || '其他';
+    const key = classKeyOf(groupName);
+    if (!groups.has(key)) groups.set(key, { key, name: groupName === 'midjourney' ? 'Midjourney' : groupName, options: [] });
+    const name = String(item.name || code).trim();
+    const note = String(item.note || '').trim();
+    groups.get(key).options.push({
+      value: code,
+      name,
+      note,
+      label: note ? `${name}【${note}】` : name,
+      group: groupName,
+      prompt: String(item.prompt || '').trim() || name,
+    });
+  });
+  if (!groups.size) return;
+  STYLE_CLASSES.splice(0, STYLE_CLASSES.length, ...groups.values());
 }
 
 function detectXianxia(input = {}) {
@@ -402,13 +526,20 @@ function assertCameraMoves(value, label = '运镜') {
 
 module.exports = {
   VISUAL_STYLES,
+  STYLE_CLASSES,
   SHOT_SIZES,
   CAMERA_MOVES,
   XIANXIA_STYLE_VALUES,
   styleOf,
   stylePromptOf,
   styleLabelOf,
+  styleClassOf,
+  readStyleLayers,
+  assertStyleLayers,
+  splitIncomingStyle,
+  composeProjectStyle,
   applyVisualStyles,
+  applyStyleClasses,
   applyShotSizes,
   applyCameraMoves,
   detectXianxia,
@@ -429,6 +560,17 @@ module.exports = {
         note: item.note,
         prompt: item.prompt,
         group: item.group,
+      })),
+      style_classes: STYLE_CLASSES.map(item => ({
+        key: item.key,
+        name: item.name,
+        options: item.options.map(option => ({
+          value: option.value,
+          label: option.label,
+          name: option.name,
+          note: option.note,
+          prompt: option.prompt,
+        })),
       })),
       shot_sizes: SHOT_SIZES,
       camera_moves: CAMERA_MOVES,

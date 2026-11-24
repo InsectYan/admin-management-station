@@ -429,3 +429,27 @@
   padding-top: 6px;
   padding-bottom: 6px;
 }
+
+.el-drawer.rtl,
+.el-drawer.ltr,
+.el-drawer.ttb,
+.el-drawer.btt {
+  display: flex;
+  flex-direction: column;
+}
+.el-drawer__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+.el-drawer__footer {
+  flex: none;
+  margin-top: auto;
+  border-top: 1px solid #e4efe8;
+  background: #fff;
+}
+.cartoon-drawer-footer__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

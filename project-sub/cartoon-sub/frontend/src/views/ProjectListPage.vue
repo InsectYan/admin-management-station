@@ -23,7 +23,7 @@
         </el-table-column>
         <el-table-column label="画面风格" width="600" class-name="cartoon-style-col" show-overflow-tooltip>
           <template #default="{ row }">
-            <span class="cartoon-style-text">{{ styleLabel(row.visual_style) }}</span>
+            <span class="cartoon-style-text">{{ projectStyleLabel(row) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100" />
@@ -66,6 +66,7 @@
           </el-select>
           <p v-if="selectedStyleNote" class="cartoon-module__hint">{{ selectedStyleNote }}</p>
         </el-form-item>
+        <StyleClassFields v-model="form.style_layers" :classes="styleClasses" />
       </el-form>
       <template #footer>
         <el-button @click="visible = false">取消</el-button>
@@ -83,12 +84,14 @@ import PageShell from '../components/PageShell.vue';
 import { request } from '../services/apiConfig.js';
 import { canMake } from '../lib/appAccess.js';
 import { CONTENT_TYPES, isLocalType as localTypeOf, isOptionalType as optionalTypeOf, supportsAv, TOPIC_OPTIONS, typeLabel as labelOf } from '../lib/contentTypes.js';
-import { groupVisualStyles, styleDisplayLabel } from '../utils/visualStyles.js';
+import StyleClassFields from '../components/StyleClassFields.vue';
+import { composedStyleLabel, groupVisualStyles } from '../utils/visualStyles.js';
 
 const router = useRouter();
 const rows = ref([]);
 const novels = ref([]);
 const styles = ref([]);
+const styleClasses = ref([]);
 const contentTypes = ref(CONTENT_TYPES);
 const topicOptions = ref(TOPIC_OPTIONS);
 const styleGroups = computed(() => groupVisualStyles(styles.value));
@@ -101,7 +104,7 @@ const loadError = ref('');
 const saving = ref(false);
 const visible = ref(false);
 const summary = reactive({ generating: 0, failed: 0, unpinned: 0, created_today: 0, success_rate_24h: null });
-const form = reactive({ name: '', content_type: 'ai_comic', source_novel_id: '', visual_style: '', topics: [] });
+const form = reactive({ name: '', content_type: 'ai_comic', source_novel_id: '', visual_style: '', style_layers: {}, topics: [] });
 const opsHref = computed(() => {
   const path = '/media/ops/overview';
   const port = window.location.port;
@@ -120,8 +123,8 @@ function isOptionalType(value) {
 function typeLabel(value) {
   return contentTypes.value.find(item => item.id === value)?.label || labelOf(value);
 }
-function styleLabel(value) {
-  return styleDisplayLabel(styles.value, value);
+function projectStyleLabel(row) {
+  return composedStyleLabel(styles.value, styleClasses.value, row?.visual_style, row?.style_layers) || '—';
 }
 function novelTitle(id) {
   if (!id) return '—';
@@ -140,6 +143,7 @@ async function load() {
     rows.value = projects || [];
     novels.value = catalog || [];
     styles.value = meta.visual_styles || [];
+    styleClasses.value = meta.style_classes || [];
     if (meta.content_types?.length) contentTypes.value = meta.content_types;
     if (meta.topic_options?.length) topicOptions.value = meta.topic_options;
     if (dash) Object.assign(summary, dash);
@@ -160,6 +164,7 @@ function openCreate() {
   form.content_type = 'ai_comic';
   form.source_novel_id = '';
   form.visual_style = styles.value[0]?.value || '';
+  form.style_layers = {};
   form.topics = [];
   visible.value = true;
 }
@@ -177,6 +182,7 @@ async function create() {
         content_type: form.content_type,
         source_novel_id: isLocalType(form.content_type) ? null : (form.source_novel_id || null),
         visual_style: form.visual_style || '',
+        style_layers: form.style_layers || {},
         topics: supportsAv(form.content_type) ? form.topics : [],
       },
     });

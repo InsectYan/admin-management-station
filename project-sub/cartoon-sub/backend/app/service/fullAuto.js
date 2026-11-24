@@ -88,11 +88,6 @@ function parseJson(raw, fallback) {
   }
 }
 
-function sheetPrompt(result) {
-  const output = result?.output || {};
-  return String(output.prompt || output.state?.prompt || '').trim();
-}
-
 function imageSize(width, height) {
   const w = Number(width);
   const h = Number(height);
@@ -107,6 +102,17 @@ function imageSize(width, height) {
 const UNDERAGE_RE = /十几岁|未成年|婴儿|幼童|小孩|孩童|少女|少年|(?<![二三四五六七八九])(?:十一|十二|十三|十四|十五|十六|十七|十八|十九|二十)岁|(?<![十廿])[一二三四五六七八九]岁/;
 const ADULT_CN_RE = /二十[一二三四五六七八九]岁|[三四五六七八九]十[一二三四五六七八九]?岁/;
 const NUDE_LINE = '人物全裸，细节刻画清晰，禁止非全裸，禁止穿衣服，禁止半裸。';
+const SHEET_TAIL = {
+  character: '纯白背景，画面上方人物高清正面特写，下方同一人物的正面、侧面、背面三视图，五官、发型、服装完全一致。',
+  scene: '同一场景的多视角，正面、左侧面、背面、俯视，建筑结构、光影和道具完全一致。',
+};
+
+function withSheetLayout(kind, description) {
+  const body = String(description || '').trim();
+  const tail = SHEET_TAIL[kind];
+  if (!body || !tail || body.includes(tail.slice(0, 10))) return body;
+  return `${body}\n${tail}`;
+}
 
 function adultAge(text) {
   const source = String(text || '');
@@ -1141,23 +1147,16 @@ class FullAutoService extends Service {
     if (!options.quiet) {
       await this.mark(run, 'assets', 'running', `正在生成${item.kind === 'scene' ? '场景' : '人物'}「${item.name}」`);
     }
-    const result = await invokeSkill(this.ctx, {
-      skill: 'cartoon-asset-sheet-skill',
-      action: 'draft',
-      signal: this.signal(this.signalKey(run)),
-      payload: {
-        kind: item.kind,
-        name: item.name,
-        look,
-        note,
-        visual_style_label: style?.visual_style_label || '',
-        visual_style_prompt: style?.visual_style_prompt || '',
-        sparse: Boolean(item.sparse),
-        av_nude: avNude,
-      },
-    });
-    let prompt = polishSheetPrompt(sheetPrompt(result));
-    if (!prompt) throw new Error(`没有返回「${item.name}」的设定图提示词`);
+    const written = await this.ctx.service.draft.describeAsset(run.project_id, {
+      kind: item.kind,
+      name: item.name,
+      notes: [ look, note, item.kind === 'character' ? asset?.costume_note : '' ].filter(Boolean).join('\n'),
+      costume_note: asset?.costume_note || '',
+      av_nude: avNude,
+    }, { signal: this.signal(this.signalKey(run)) });
+    const descriptionPrompt = polishSheetPrompt(written.description);
+    if (!descriptionPrompt) throw new Error(`没有返回「${item.name}」的设定图提示词`);
+    let prompt = withSheetLayout(item.kind, descriptionPrompt);
     if (item.kind === 'character') {
       const lead = this.frameStyleLead(style, prompt);
       if (lead) {
@@ -1175,19 +1174,20 @@ class FullAutoService extends Service {
       asset = await this.ctx.service.project.addAsset(run.project_id, {
         kind: item.kind,
         name: item.name,
-        description,
+        description: descriptionPrompt,
         consistency_note: prompt,
       });
+    } else {
+      const writtenNote = { description: descriptionPrompt };
+      if (options.reset || !String(asset.consistency_note || '').trim()) writtenNote.consistency_note = prompt;
+      await asset.update(writtenNote);
     }
     const file = await this.renderSheet(run, prompt);
     const saved = await this.ctx.service.project.saveAssetImage(run.project_id, {
       filename: 'sheet.png',
       data_base64: file.toString('base64'),
     });
-    const patch = { reference_path: saved.path };
-    if (description && !String(asset.description || '').trim()) patch.description = description;
-    if (options.reset || (prompt && !String(asset.consistency_note || '').trim())) patch.consistency_note = prompt;
-    await asset.update(patch);
+    await asset.update({ reference_path: saved.path });
     await this.copySheetToRefmod(run, asset, file, Boolean(options.reset));
     await this.pushLog(run, options.quiet ? 'video' : 'assets', `${item.kind === 'scene' ? '场景' : '人物'}「${item.name}」已生成一张设定总图`);
     await this.pulse(run, 'asset');
