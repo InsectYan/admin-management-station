@@ -1629,24 +1629,32 @@ class DraftService extends Service {
     const name = String(payload.name || '').trim();
     if (!kind || !name) this.ctx.throw(400, '先写资产名称和类型');
     const style = await this.styleContext(project);
-    const result = await invokeSkill(this.ctx, {
-      skill: 'cartoon-asset-desc-skill',
-      action: 'draft',
-      signal: options.signal || clientAbort(this.ctx),
-      payload: {
-        kind,
-        name,
-        notes: String(payload.notes || '').trim(),
-        costume_note: String(payload.costume_note || '').trim(),
-        visual_style: style.visual_style,
-        visual_style_label: style.visual_style_label,
-        visual_style_prompt: style.visual_style_prompt,
-        style_ids: style.style_ids || [],
-        genre: [ style.genre, style.genre_subcategory, style.novel_type ].filter(Boolean).join(' / '),
-        title: style.title,
-        av_nude: payload.av_nude === true,
-      },
-    });
+    const stop = options.signal
+      ? { signal: options.signal, release() {} }
+      : clientAbort(this.ctx);
+    let result;
+    try {
+      result = await invokeSkill(this.ctx, {
+        skill: 'cartoon-asset-desc-skill',
+        action: 'draft',
+        signal: stop.signal,
+        payload: {
+          kind,
+          name,
+          notes: String(payload.notes || '').trim(),
+          costume_note: String(payload.costume_note || '').trim(),
+          visual_style: style.visual_style,
+          visual_style_label: style.visual_style_label,
+          visual_style_prompt: style.visual_style_prompt,
+          style_ids: style.style_ids || [],
+          genre: [ style.genre, style.genre_subcategory, style.novel_type ].filter(Boolean).join(' / '),
+          title: style.title,
+          av_nude: payload.av_nude === true,
+        },
+      });
+    } finally {
+      stop.release();
+    }
     const output = outputOf(result);
     const description = stripSheetLayout(output.description || output.prompt || output.reply || '');
     if (!description) this.ctx.throw(502, '没有生成资产描述');

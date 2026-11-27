@@ -103,16 +103,33 @@ function imageSize(width, height) {
 const UNDERAGE_RE = /十几岁|未成年|婴儿|幼童|小孩|孩童|少女|少年|(?<![二三四五六七八九])(?:十一|十二|十三|十四|十五|十六|十七|十八|十九|二十)岁|(?<![十廿])[一二三四五六七八九]岁/;
 const ADULT_CN_RE = /二十[一二三四五六七八九]岁|[三四五六七八九]十[一二三四五六七八九]?岁/;
 const NUDE_LINE = '人物全裸，细节刻画清晰，禁止非全裸，禁止穿衣服，禁止半裸。';
-const SHEET_TAIL = {
-  character: '纯白背景，画面上方人物高清正面特写，下方同一人物的正面、侧面、背面三视图，五官、发型、服装完全一致。',
-  scene: '同一场景的多视角，正面、左侧面、背面、俯视，建筑结构、光影和道具完全一致。画面里禁止出现人物、角色、人影、人脸、手脚和人体局部。',
+const SHEET_SET = {
+  character: [
+    {
+      file: 'face.png',
+      note: '【人脸、面部细节参考图】',
+      pathField: 'front_path',
+      tail: '纯白背景，只画这一个人的正面头部特写，脸部占满画面，五官、瞳孔、嘴唇、皮肤和发型边缘清楚。不要全身，不要三视图，不要侧面和背面，不要拼贴。',
+    },
+    {
+      file: 'full.png',
+      note: '【全景人像参考图】',
+      pathField: 'reference_path',
+      tail: '纯白背景，只画这一个人的正面全身，从头到脚，服装完整，脸和特写是同一个人。不要头部特写，不要三视图，不要侧面和背面，不要拼贴。',
+    },
+  ],
+  scene: [
+    {
+      file: 'scene.png',
+      note: '【场景参考图】',
+      pathField: 'reference_path',
+      tail: '这一个场景的单张全景，空间、建筑、陈设和光影清楚。不要多视角，不要把正面、侧面、背面、俯视拼在一张图里。画面里禁止出现人物、角色、人影、人脸、手脚和人体局部。',
+    },
+  ],
 };
 
-function withSheetLayout(kind, description) {
-  const body = String(description || '').trim();
-  const tail = SHEET_TAIL[kind];
-  if (!body || !tail || body.includes(tail.slice(0, 10))) return body;
-  return `${body}\n${tail}`;
+function sheetVariants(kind) {
+  return SHEET_SET[kind] || [];
 }
 
 function adultAge(text) {
@@ -1157,40 +1174,62 @@ class FullAutoService extends Service {
     }, { signal: this.signal(this.signalKey(run)) });
     const descriptionPrompt = polishSheetPrompt(written.description);
     if (!descriptionPrompt) throw new Error(`没有返回「${item.name}」的设定图提示词`);
-    let prompt = withSheetLayout(item.kind, descriptionPrompt);
-    if (item.kind === 'character') {
-      const lead = this.frameStyleLead(style, prompt);
-      if (lead) {
-        prompt = `${lead}\n${prompt}`;
-        await this.pushLog(run, options.quiet ? 'video' : 'assets', `人物「${item.name}」设定图带上项目风格「${style?.visual_style_label || '未命名'}」`);
-      }
-      if (avNude && !prompt.includes('禁止非全裸')) {
-        prompt = `${prompt}\n${NUDE_LINE}`;
-        await this.pushLog(run, options.quiet ? 'video' : 'assets', `人物「${item.name}」设定图按全裸绘制`);
-      } else if (project?.av_mode && !avNude) {
-        await this.pushLog(run, options.quiet ? 'video' : 'assets', `人物「${item.name}」未确认满二十一岁，设定图不写全裸`);
-      }
+    const variants = sheetVariants(item.kind);
+    if (!variants.length) throw new Error(`「${item.name}」没有对应的参考图类型`);
+    const lead = item.kind === 'character' ? this.frameStyleLead(style, descriptionPrompt) : '';
+    if (lead) {
+      await this.pushLog(run, options.quiet ? 'video' : 'assets', `人物「${item.name}」参考图带上项目风格「${style?.visual_style_label || '未命名'}」`);
     }
+    if (item.kind === 'character' && avNude) {
+      await this.pushLog(run, options.quiet ? 'video' : 'assets', `人物「${item.name}」全身参考图按全裸绘制`);
+    } else if (item.kind === 'character' && project?.av_mode) {
+      await this.pushLog(run, options.quiet ? 'video' : 'assets', `人物「${item.name}」未确认满二十一岁，参考图不写全裸`);
+    }
+    const rendered = [];
+    for (const variant of variants) {
+      let prompt = `${descriptionPrompt}\n${variant.tail}`;
+      if (lead) prompt = `${lead}\n${prompt}`;
+      if (avNude && variant.file === 'full.png' && !prompt.includes('禁止非全裸')) prompt = `${prompt}\n${NUDE_LINE}`;
+      const bytes = await this.renderSheet(run, prompt);
+      rendered.push({ variant, bytes, prompt });
+    }
+    const noteText = rendered.map(item => item.prompt).join('\n\n');
     if (!asset) {
       asset = await this.ctx.service.project.addAsset(run.project_id, {
         kind: item.kind,
         name: item.name,
         description: descriptionPrompt,
-        consistency_note: prompt,
+        consistency_note: noteText,
       });
     } else {
       const writtenNote = { description: descriptionPrompt };
-      if (options.reset || !String(asset.consistency_note || '').trim()) writtenNote.consistency_note = prompt;
+      if (options.reset || !String(asset.consistency_note || '').trim()) writtenNote.consistency_note = noteText;
       await asset.update(writtenNote);
     }
-    const file = await this.renderSheet(run, prompt);
-    const saved = await this.ctx.service.project.saveAssetImage(run.project_id, {
-      filename: 'sheet.png',
-      data_base64: file.toString('base64'),
-    });
-    await asset.update({ reference_path: saved.path });
-    await this.copySheetToRefmod(run, asset, file, Boolean(options.reset));
-    await this.pushLog(run, options.quiet ? 'video' : 'assets', `${item.kind === 'scene' ? '场景' : '人物'}「${item.name}」已生成一张设定总图`);
+    const paths = {};
+    const packed = [];
+    for (const shot of rendered) {
+      const saved = await this.ctx.service.project.saveAssetImage(run.project_id, {
+        filename: shot.variant.file,
+        data_base64: shot.bytes.toString('base64'),
+      });
+      paths[shot.variant.pathField] = saved.path;
+      packed.push({
+        filename: shot.variant.file,
+        bytes: shot.bytes,
+        note: shot.variant.note,
+      });
+    }
+    if (item.kind === 'character') {
+      paths.side_path = '';
+      paths.back_path = '';
+    }
+    await asset.update(paths);
+    await this.ctx.service.refmod.storeSheets(run.project_id, asset, packed);
+    const done = item.kind === 'scene'
+      ? `场景「${item.name}」已生成一张全景，说明为【场景参考图】`
+      : `人物「${item.name}」已生成面部特写和全身全景，说明为【人脸、面部细节参考图】【全景人像参考图】`;
+    await this.pushLog(run, options.quiet ? 'video' : 'assets', done);
     await this.pulse(run, 'asset');
   }
 
@@ -1793,17 +1832,11 @@ class FullAutoService extends Service {
     const sceneFiles = [];
     for (const asset of assets) {
       if (asset.kind !== 'character' && asset.kind !== 'scene') continue;
-      const absolute = this.assetFile(run.project_id, asset.reference_path);
-      if (!absolute) continue;
-      const kindLabel = asset.kind === 'scene' ? '场景' : '人物';
-      const file = {
-        name: String(asset.name || '').trim(),
-        label: `${kindLabel}「${asset.name}」`,
-        bytes: fs.readFileSync(absolute),
-        ext: path.extname(absolute) || '.png',
-      };
-      if (asset.kind === 'scene') sceneFiles.push(file);
-      else characterFiles.push(file);
+      const refs = await this.assetRefFiles(run.project_id, asset);
+      refs.forEach(file => {
+        if (asset.kind === 'scene') sceneFiles.push(file);
+        else characterFiles.push(file);
+      });
     }
     const sceneLabel = String(shot.scene_label || '').trim();
     const namedCharacters = (focus
@@ -1843,18 +1876,11 @@ class FullAutoService extends Service {
     const sceneFiles = [];
     for (const asset of assets) {
       if (asset.kind !== 'character' && asset.kind !== 'scene') continue;
-      const absolute = this.assetFile(run.project_id, asset.reference_path);
-      if (!absolute) continue;
-      const file = {
-        name: String(asset.name || '').trim(),
-        bytes: fs.readFileSync(absolute),
-        ext: path.extname(absolute) || '.png',
-        note: asset.kind === 'scene'
-          ? `场景「${asset.name}」设定总图，只作为这一镜的场景参考`
-          : `人物「${asset.name}」设定总图`,
-      };
-      if (asset.kind === 'scene') sceneFiles.push(file);
-      else characterFiles.push(file);
+      const refs = await this.assetRefFiles(run.project_id, asset);
+      refs.forEach(file => {
+        if (asset.kind === 'scene') sceneFiles.push(file);
+        else characterFiles.push(file);
+      });
     }
     const sceneLabel = String(shot.scene_label || '').trim();
     const sceneFile = sceneFiles.find(file => sceneLabel && file.name === sceneLabel) || sceneFiles[0] || null;
@@ -1872,6 +1898,34 @@ class FullAutoService extends Service {
     await run.update({ temp_refmod_id: pack.id });
     run.temp_refmod_id = pack.id;
     return pack.id;
+  }
+
+  async assetRefFiles(projectId, asset) {
+    const name = String(asset?.name || '').trim();
+    const kindLabel = asset?.kind === 'scene' ? '场景' : '人物';
+    const fallback = asset?.kind === 'scene' ? '【场景参考图】' : '【全景人像参考图】';
+    const packed = await this.ctx.service.refmod.filesForAsset(projectId, asset.id);
+    const source = packed.length
+      ? packed
+      : (() => {
+        const absolute = this.assetFile(projectId, asset.reference_path);
+        if (!absolute) return [];
+        return [{
+          bytes: fs.readFileSync(absolute),
+          ext: path.extname(absolute) || '.png',
+          note: fallback,
+        }];
+      })();
+    return source.map(file => {
+      const note = file.note || fallback;
+      return {
+        name,
+        label: `${kindLabel}「${name}」${note}`,
+        bytes: file.bytes,
+        ext: file.ext || '.png',
+        note,
+      };
+    });
   }
 
   assetFile(projectId, referencePath) {

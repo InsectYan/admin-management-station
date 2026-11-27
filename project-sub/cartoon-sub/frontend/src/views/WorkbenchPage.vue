@@ -49,7 +49,7 @@
             <el-button type="danger" plain :disabled="!assets.length" @click="clearAssets">一键清除</el-button>
           </div>
         </div>
-        <p class="cartoon-module__hint">自动生成只补还没有设定图的人物和场景。重置会重画这一章剧本里的全部设定图。全流程不会重画已有设定图。新图写入参考图，并在 RefMod 没有图时复制一份；只有这里的重置会覆盖已有 RefMod。点一行打开编辑。</p>
+        <p class="cartoon-module__hint">自动生成只补还没有参考图的人物和场景。人物出面部特写和全身全景两张，场景出一张全景，都写入 RefMod，说明分别是【人脸、面部细节参考图】【全景人像参考图】【场景参考图】。重置会重画这一章的全部参考图并覆盖 RefMod。全流程不会重画已有图。点一行打开编辑。</p>
         <el-tabs v-model="assetTab" class="cartoon-asset-tabs">
           <el-tab-pane label="资产清单" name="list">
         <el-empty v-if="!assets.length" description="还没有资产" />
@@ -127,7 +127,7 @@
             </el-form-item>
             <el-form-item class="is-wide" label="描述">
               <el-input v-model="assetForm.description" type="textarea" :rows="6" placeholder="这段文字就是生图提示词" />
-              <p v-if="[ 'character', 'scene', 'prop' ].includes(assetForm.kind)" class="cartoon-module__hint">描述按项目画风生成，提交设定图时才会补上排布：角色是三视图，场景是多视角且禁止出现人物。</p>
+              <p v-if="[ 'character', 'scene', 'prop' ].includes(assetForm.kind)" class="cartoon-module__hint">描述按项目画风生成，不写多视角。人物会另出两张：面部特写【人脸、面部细节参考图】、全身全景【全景人像参考图】。场景只出一张全景【场景参考图】，画面里不出现人物。</p>
             </el-form-item>
             <template v-if="assetForm.kind === 'character'">
               <p class="cartoon-entry-label">角色</p>

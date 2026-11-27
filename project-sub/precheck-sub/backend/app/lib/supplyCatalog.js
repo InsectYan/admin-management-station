@@ -3,7 +3,7 @@
 const PACK_MODELS = 'E:\\AI Tools\\projects\\private-project\\ComfyUI.V7\\0.11.1\\ComfyUI\\models';
 const AITV_MODELS = 'E:\\AI Tools\\projects\\private-project\\ComfyUI.V7\\AI TV\\ComfyUI\\models';
 const H3_PACK = 'F:\\成套大模型-可直接用';
-const REMIX_PACK = '【35】MiniMax Remix Easy H3 + Qwen Image多角度 + RefMod创建工作流\\models';
+const PACK011_MODELS = 'F:\\成套大模型-可直接用\\ComfyUI模型\\0.11.1\\ComfyUI\\models';
 const PLUGIN_ROOT = 'E:\\AI Tools\\projects\\private-project\\ComfyUI.V7\\ComfyUI\\custom_nodes';
 
 const UI_ONLY = new Set([ 'Note', 'MarkdownNote', 'Reroute', 'PrimitiveNode', 'GetNode', 'SetNode' ]);
@@ -462,9 +462,9 @@ function qwen21File(name, folder, splitDir) {
 }
 
 function h3Pack(name, folder) {
-  const option = modelOption('', '本机成套包', name, folder, '', `${H3_PACK}\\${REMIX_PACK}\\${folder}\\${name}`);
+  const option = modelOption('', '本机成套包', name, folder, '', `${PACK011_MODELS}\\${folder}\\minimax\\${name}`);
   option.directory = `models/${folder}/minimax`;
-  option.place = `${PACK_MODELS}\\${folder}\\minimax`;
+  option.place = `${PACK011_MODELS}\\${folder}\\minimax`;
   return option;
 }
 

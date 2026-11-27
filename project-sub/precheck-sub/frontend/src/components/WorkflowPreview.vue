@@ -12,8 +12,17 @@
         </el-checkbox-group>
         <p v-else class="precheck-preview-hint">画风列表还没读到。风格提示词可以手动填写。</p>
       </el-form-item>
+      <el-form-item v-for="group in classes" :key="group.key" class="precheck-preview-duration" :label="group.name">
+        <el-checkbox-group
+          class="precheck-style-box"
+          :model-value="layerIds.filter(id => group.options.some(item => item.value === id))"
+          @change="ids => setLayer(group, ids)"
+        >
+          <el-checkbox v-for="item in group.options" :key="item.value" :value="item.value">{{ item.name }}</el-checkbox>
+        </el-checkbox-group>
+      </el-form-item>
       <el-form-item class="precheck-preview-duration" label="风格提示词">
-        <el-input v-model="stylePrompt" type="textarea" :rows="4" placeholder="勾选画风后，这里会填入该画风的描述。生成时拼在提示词前面。" />
+        <el-input v-model="stylePrompt" type="textarea" :rows="4" placeholder="勾选画风或 Midjourney 后，描述会填进这里。生成时拼在提示词前面。" />
       </el-form-item>
       <el-form-item class="precheck-preview-duration" label="产物名称">
         <el-input v-model="outputName" maxlength="80" placeholder="留空时使用「产物」。落库和下载名称是产物名称加种子" />
@@ -322,7 +331,9 @@ const snapshotRun = ref(null);
 const preview = ref(null);
 const runs = ref([]);
 const styles = ref([]);
+const classes = ref([]);
 const styleIds = ref([]);
+const layerIds = ref([]);
 const stylePrompt = ref('');
 const outputName = ref('');
 const styleGroups = computed(() => {
@@ -720,12 +731,32 @@ function follow(state) {
   if (timer) return;
   timer = setInterval(() => { refresh().catch(() => {}); }, 1000);
 }
+function classOptions() {
+  return classes.value.flatMap(group => group.options || []);
+}
+function setLayer(group, ids) {
+  const own = new Set((group.options || []).map(item => item.value));
+  const next = Array.isArray(ids) ? ids : [];
+  layerIds.value = [ ...layerIds.value.filter(id => !own.has(id)), ...next ];
+}
+function composeStylePrompt() {
+  const art = styles.value.filter(item => styleIds.value.includes(item.value));
+  const layers = classOptions().filter(item => layerIds.value.includes(item.value));
+  stylePrompt.value = [ ...art, ...layers ].map(item => String(item.prompt || '').trim()).filter(Boolean).join('\n\n');
+}
 async function loadStyles() {
   try {
-    const rows = await request('/visual-styles');
-    styles.value = Array.isArray(rows) ? rows : [];
+    const data = await request('/visual-styles');
+    if (Array.isArray(data)) {
+      styles.value = data;
+      classes.value = [];
+      return;
+    }
+    styles.value = Array.isArray(data?.styles) ? data.styles : [];
+    classes.value = Array.isArray(data?.classes) ? data.classes : [];
   } catch {
     styles.value = [];
+    classes.value = [];
   }
 }
 async function loadFields() {
@@ -866,6 +897,7 @@ async function fillBack() {
     const { options, prompts } = shownRows(run);
     const styleNames = String(options.find(item => item.label === '画风')?.text || '').split('、').map(item => item.trim()).filter(Boolean);
     styleIds.value = styleNames.map(name => styles.value.find(item => item.name === name)?.value).filter(item => item != null);
+    layerIds.value = styleNames.map(name => classOptions().find(item => item.name === name)?.value).filter(item => item != null);
     await nextTick();
     const styleText = String(stylePrompt.value || '').trim();
     const nameRow = options.find(item => item.label === '产物名称');
@@ -978,7 +1010,10 @@ async function generate() {
       seeds,
       style_prompt: stylePrompt.value,
       output_name: outputName.value,
-      style_names: styleIds.value.map(id => styles.value.find(item => item.value === id)?.name).filter(Boolean),
+      style_names: [
+        ...styleIds.value.map(id => styles.value.find(item => item.value === id)?.name),
+        ...layerIds.value.map(id => classOptions().find(item => item.value === id)?.name),
+      ].filter(Boolean),
       dual_sample: dualOn.value,
       dual_scale: dualFactor.value,
     };
@@ -1001,10 +1036,8 @@ async function generate() {
   }
 }
 
-watch(styleIds, ids => {
-  const picked = ids.map(id => styles.value.find(item => item.value === id)).filter(Boolean);
-  stylePrompt.value = picked.map(item => String(item.prompt || '').trim()).filter(Boolean).join('\n\n');
-});
+watch(styleIds, composeStylePrompt);
+watch(layerIds, composeStylePrompt);
 watch(seedFilled, filled => { if (filled) batchCount.value = 1; });
 watch(durationWatch, () => { if (loaded.value) syncFrames(); });
 watch(() => props.apiJson, () => { loadFields(); }, { immediate: true });

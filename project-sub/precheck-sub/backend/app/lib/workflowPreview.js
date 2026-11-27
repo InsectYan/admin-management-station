@@ -52,6 +52,20 @@ function fieldType(key, value) {
   return '';
 }
 
+function loraStem(node) {
+  const file = String(node?.inputs?.lora_name || '').split(/[\\/]/).pop();
+  return file.replace(/\.(safetensors|ckpt|pt|pth|bin|sft)$/i, '');
+}
+
+function fieldLabel(node, key, role) {
+  const loader = node.class_type === 'LoraLoader' || node.class_type === 'LoraLoaderModelOnly';
+  if (loader && (key === 'strength_model' || key === 'strength_clip')) {
+    const stem = loraStem(node);
+    if (stem) return key === 'strength_clip' ? `${stem} CLIP` : stem;
+  }
+  return role || LABEL[key] || `${node.class_type} ${key}`;
+}
+
 function isVideoWorkflow(graph) {
   return Object.values(graph || {}).some(node => {
     if (!node?.class_type) return false;
@@ -219,7 +233,7 @@ function listPreviewFields(apiJson) {
         class_type: node.class_type,
         key,
         type,
-        label: role || LABEL[key] || `${node.class_type} ${key}`,
+        label: fieldLabel(node, key, role),
         value,
       });
     });

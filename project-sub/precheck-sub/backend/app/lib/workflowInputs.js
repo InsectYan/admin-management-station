@@ -117,6 +117,11 @@ function describeCallInputs(apiJson) {
         if (Array.isArray(value) && /^ref_images\.ref_image_\d+$/.test(key)) mark(value, 'reference', 'h3-ref', 9);
       });
     }
+    if (node?.class_type === 'MiniMaxH3ImageConditioning') {
+      Object.entries(inputs).forEach(([ key, value ]) => {
+        if (Array.isArray(value) && /^images\.image_\d+$/.test(key)) mark(value, 'reference', 'h3-image', 16);
+      });
+    }
     if (node?.class_type === 'FluxKontextImageScale' && Array.isArray(inputs.image)) mark(inputs.image, 'reference');
     if (node?.class_type === 'MiniMaxH3AddGuide' && Array.isArray(inputs.image)) {
       const idx = Number(inputs.frame_idx);
@@ -201,6 +206,7 @@ function describeCallInputs(apiJson) {
     }
     else slot.label = `图片${suffix}`;
     if (slot.role === 'video') slot.spec = '上传 mp4、webm 或 mov。模型从视频里抽 16 帧反推。';
+    else if (slot.expand === 'h3-image') slot.spec = '最多 16 张。第 1 张是要改的图，后面按顺序作参考。提示词用 <Picture 1>、<Picture 2> 对应。';
     else if (slot.role !== 'end' && slot.role !== 'audio') slot.spec = slot.limit > 1
       ? `最多 ${slot.limit} 张，按选择顺序作为参考图`
       : specOf(slot);
@@ -452,6 +458,8 @@ function expandReferenceImages(graph, images, extras) {
           key = `images.image_${ordinal}`;
         } else if (slot.expand === 'h3-ref' && node.class_type === 'MiniMaxH3ReferenceToVideo') {
           key = `ref_images.ref_image_${ordinal - 1}`;
+        } else if (slot.expand === 'h3-image' && node.class_type === 'MiniMaxH3ImageConditioning' && ordinal <= 16) {
+          key = `images.image_${ordinal}`;
         }
         if (key && !inputs[key]) inputs[key] = [ loaderId, 0 ];
       });

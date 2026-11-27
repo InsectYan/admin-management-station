@@ -289,12 +289,46 @@ class RefmodService extends Service {
     return { ...this.present(await row.reload()), asset_name: asset.name, asset_kind: asset.kind };
   }
 
+  async filesForAsset(projectId, assetId) {
+    const row = await this.ctx.model.Refmod.findOne({
+      where: { project_id: projectId, asset_id: assetId },
+    });
+    if (!row) return [];
+    const notes = noteMap(row.image_notes);
+    const dir = path.join(outputRoot(this.app), 'refmods', String(projectId), String(row.id));
+    return fileNames(row.images).map(name => {
+      const filename = path.basename(String(name || ''));
+      const absolute = resolveInside(dir, filename);
+      if (!absolute || !fs.existsSync(absolute)) return null;
+      return {
+        filename,
+        bytes: fs.readFileSync(absolute),
+        ext: path.extname(filename) || '.png',
+        note: noteText(notes[filename]),
+      };
+    }).filter(Boolean);
+  }
+
+  async storeSheets(projectId, asset, images) {
+    const files = (Array.isArray(images) ? images : []).map(item => ({
+      filename: item.filename,
+      data_base64: Buffer.from(item.bytes).toString('base64'),
+      note: item.note,
+    }));
+    if (!files.length) this.ctx.throw(400, '没有可写入的参考图');
+    const existing = await this.ctx.model.Refmod.findOne({
+      where: { project_id: projectId, asset_id: asset.id },
+    });
+    if (!existing) return this.create(projectId, { asset_id: asset.id, images: files });
+    return this.update(projectId, existing.id, { remove: fileNames(existing.images), images: files });
+  }
+
   async storeSheet(projectId, asset, bytes, options = {}) {
     const reset = Boolean(options.reset);
     const file = {
       filename: 'sheet.png',
       data_base64: Buffer.from(bytes).toString('base64'),
-      note: '设定图',
+      note: options.note || '设定图',
     };
     const existing = await this.ctx.model.Refmod.findOne({
       where: { project_id: projectId, asset_id: asset.id },
@@ -410,7 +444,8 @@ class RefmodService extends Service {
 
   async imageFiles(projectId, ids, picks = null) {
     const files = [];
-    for (const id of ids || []) {
+    const list = Array.isArray(ids) ? ids : [];
+    for (const id of list) {
       const row = await this.owned(projectId, id);
       const images = chosenNames(fileNames(row.images), row.asset_id, picks);
       const notes = noteMap(row.image_notes);

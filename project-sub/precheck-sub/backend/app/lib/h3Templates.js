@@ -12,6 +12,11 @@ const LORA_DETAIL = 'minimax\\detailed_penis_H3_v1_阴茎.safetensors';
 const LORA_M3 = 'minimax\\M3_Unlocked_V3.1_BBB.safetensors';
 const UNET_REMIX = 'minimax\\FeiHou_MiniMax-H3_Remix_HSA_turbo_v0.8_int8_convrotHQ.safetensors';
 const CLIP_REMIX = 'minimax\\qwen3vl_32b_minimax_h3_int8_convrot_uncensored_FeiHou.safetensors';
+const PDD_FL2VA = 'minimax_h3_fl2va_pdd_acc_8step_comfyui.safetensors';
+const UNET_IMAGE = 'minimax\\minimax_h3_image_pruned_bf16.safetensors';
+const VAE_IMAGE = 'minimax\\minimax_h3_image_vae_fp16.safetensors';
+// 生图提示词扩展器。扩散模型读的是上面的 32B CLIP，不是这个 9B。
+const CLIP_IMAGE_PE = 'minimax\\qwen3.5_9b_bf16.safetensors';
 
 const PROMPT_T2V = '一只橘猫从窗台走过，阳光落在木地板上，镜头缓慢跟随，环境音是远处的鸟叫。';
 const PROMPT_FLF = '人物从门口走到窗边，动作连贯，光线从暖色变成傍晚的冷色，脚步声清晰。';
@@ -112,14 +117,33 @@ function h3Graph(options) {
     positiveOut = [ '24', 0 ];
   }
   nodes['8'] = { class_type: 'RandomNoise', inputs: { noise_seed: 1 } };
-  nodes['9'] = { class_type: 'KSamplerSelect', inputs: { sampler_name: 'res_multistep' } };
-  nodes['10'] = {
-    class_type: 'BasicScheduler',
-    inputs: { model: [ '6', 0 ], scheduler: 'simple', steps: options.steps, denoise: 1 },
-  };
+  let sampleModel = [ '6', 0 ];
+  let sigmaNode = [ '10', 0 ];
+  if (options.pdd) {
+    nodes['19'] = {
+      class_type: 'MiniMaxH3PDDAccApply',
+      inputs: {
+        model: [ '6', 0 ],
+        pdd_file: options.pdd,
+        nfe: '8',
+        lora_strength: 1,
+        head_strength: 1,
+        on_off_grid: 'error',
+      },
+    };
+    sampleModel = [ '19', 0 ];
+    sigmaNode = [ '19', 1 ];
+    nodes['9'] = { class_type: 'KSamplerSelect', inputs: { sampler_name: 'euler' } };
+  } else {
+    nodes['9'] = { class_type: 'KSamplerSelect', inputs: { sampler_name: 'res_multistep' } };
+    nodes['10'] = {
+      class_type: 'BasicScheduler',
+      inputs: { model: [ '6', 0 ], scheduler: 'simple', steps: options.steps, denoise: 1 },
+    };
+  }
   nodes['11'] = {
     class_type: 'BasicGuider',
-    inputs: { model: [ '6', 0 ], conditioning: positiveOut },
+    inputs: { model: sampleModel, conditioning: positiveOut },
   };
   nodes['12'] = {
     class_type: 'SamplerCustomAdvanced',
@@ -127,7 +151,7 @@ function h3Graph(options) {
       noise: [ '8', 0 ],
       guider: [ '11', 0 ],
       sampler: [ '9', 0 ],
-      sigmas: [ '10', 0 ],
+      sigmas: sigmaNode,
       latent_image: [ '7', 1 ],
     },
   };
@@ -141,6 +165,65 @@ function h3Graph(options) {
     class_type: 'SaveVideo',
     inputs: { video: [ '15', 0 ], filename_prefix: options.prefix, format: 'mp4' },
   };
+  return nodes;
+}
+
+const PROMPT_IMAGE = '一位年轻女性站在木窗边，暖色侧光落在头发上，背景是虚化的绿植，皮肤和衣服纹理清楚，真实照片。';
+const PROMPT_IMAGE_EDIT = '保持 <Picture 1> 里人物的脸、发型、服装和身体不变，改成站在木窗边，暖色侧光，背景是虚化的绿植。';
+
+function h3ImageGraph(options) {
+  const nodes = {
+    1: {
+      class_type: 'UNETLoader',
+      inputs: { unet_name: UNET_IMAGE, weight_dtype: 'default' },
+    },
+    2: {
+      class_type: 'CLIPLoader',
+      inputs: { clip_name: CLIP_BF16, type: 'minimax', device: 'default' },
+    },
+    3: {
+      class_type: 'VAELoader',
+      inputs: { vae_name: VAE_IMAGE },
+    },
+  };
+  let condId = '4';
+  if (options.edit) {
+    nodes['4'] = { class_type: 'LoadImage', inputs: { image: 'reference.png' } };
+    condId = '5';
+  }
+  nodes[condId] = {
+    class_type: 'MiniMaxH3ImageConditioning',
+    inputs: {
+      clip: [ '2', 0 ],
+      vae: [ '3', 0 ],
+      prompt: options.prompt,
+      width: options.width,
+      height: options.height,
+    },
+  };
+  if (options.edit) nodes[condId].inputs['images.image_1'] = [ '4', 0 ];
+  const zeroId = String(Number(condId) + 1);
+  const sampleId = String(Number(condId) + 2);
+  const decodeId = String(Number(condId) + 3);
+  const saveId = String(Number(condId) + 4);
+  nodes[zeroId] = { class_type: 'ConditioningZeroOut', inputs: { conditioning: [ condId, 0 ] } };
+  nodes[sampleId] = {
+    class_type: 'KSampler',
+    inputs: {
+      model: [ '1', 0 ],
+      positive: [ condId, 0 ],
+      negative: [ zeroId, 0 ],
+      latent_image: [ condId, 1 ],
+      seed: 1,
+      steps: 6,
+      cfg: 1,
+      sampler_name: 'euler',
+      scheduler: 'simple',
+      denoise: 1,
+    },
+  };
+  nodes[decodeId] = { class_type: 'VAEDecode', inputs: { samples: [ sampleId, 0 ], vae: [ '3', 0 ] } };
+  nodes[saveId] = { class_type: 'SaveImage', inputs: { images: [ decodeId, 0 ], filename_prefix: options.prefix } };
   return nodes;
 }
 
@@ -293,6 +376,58 @@ const H3_TEMPLATES = [
       prefix: 'video/h3-full-flf-refmod',
     }),
   },
+  {
+    name: '满血-h3-8步-文生视频[RefMod]',
+    category: 'text_to_video',
+    suggested_vram_gb: 64,
+    api_json: h3Graph({
+      unet: UNET_FULL,
+      clip: CLIP_BF16,
+      prompt: PROMPT_REFMOD,
+      pdd: PDD_FL2VA,
+      reference: true,
+      refmod: true,
+      prefix: 'video/h3-full-t2v-refmod-pdd8',
+    }),
+  },
+  {
+    name: '满血-h3-8步-首尾帧[RefMod]',
+    category: 'image_to_video',
+    suggested_vram_gb: 64,
+    api_json: h3Graph({
+      unet: UNET_FULL,
+      clip: CLIP_BF16,
+      prompt: PROMPT_REF_FLF,
+      pdd: PDD_FL2VA,
+      reference: true,
+      refmod: true,
+      guides: true,
+      prefix: 'video/h3-full-flf-refmod-pdd8',
+    }),
+  },
+  {
+    name: 'minimax-h3-文生图',
+    category: 'text_to_image',
+    suggested_vram_gb: 64,
+    api_json: h3ImageGraph({
+      prompt: PROMPT_IMAGE,
+      width: 2048,
+      height: 2048,
+      prefix: 'image/h3-image-t2i',
+    }),
+  },
+  {
+    name: 'minimax-h3-图生图',
+    category: 'image_edit',
+    suggested_vram_gb: 64,
+    api_json: h3ImageGraph({
+      edit: true,
+      prompt: PROMPT_IMAGE_EDIT,
+      width: 0,
+      height: 0,
+      prefix: 'image/h3-image-i2i',
+    }),
+  },
 ];
 
 module.exports = {
@@ -309,4 +444,7 @@ module.exports = {
   LORA,
   LORA_DETAIL,
   LORA_M3,
+  UNET_IMAGE,
+  VAE_IMAGE,
+  CLIP_IMAGE_PE,
 };

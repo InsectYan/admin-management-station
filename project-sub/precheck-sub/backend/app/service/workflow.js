@@ -68,18 +68,18 @@ class WorkflowService extends Service {
 
   async visualStyles() {
     const cache = this.app.visualStyleCache;
-    if (cache && Date.now() - cache.at < 60000) return cache.rows;
+    if (cache?.payload && Date.now() - cache.at < 60000) return cache.payload;
     const base = String(this.config.cartoonApi?.baseUrl || 'http://host.docker.internal:5205').replace(/\/$/, '');
-    let rows = [];
+    let body = {};
     try {
       const res = await fetch(`${base}/api/meta`, { signal: AbortSignal.timeout(8000) });
-      const body = await res.json();
-      rows = Array.isArray(body?.data?.visual_styles) ? body.data.visual_styles : [];
+      body = await res.json();
     } catch (err) {
-      if (cache?.rows) return cache.rows;
+      if (cache?.payload) return cache.payload;
       this.ctx.throw(502, `读不到画风：${err.message}`);
     }
-    const mapped = rows
+    const rows = Array.isArray(body?.data?.visual_styles) ? body.data.visual_styles : [];
+    const styles = rows
       .filter(item => item?.value && item.group !== '兼容旧项')
       .map(item => ({
         value: item.value,
@@ -88,8 +88,23 @@ class WorkflowService extends Service {
         prompt: item.prompt || '',
         group: item.group || '其他',
       }));
-    this.app.visualStyleCache = { at: Date.now(), rows: mapped };
-    return mapped;
+    const classes = (Array.isArray(body?.data?.style_classes) ? body.data.style_classes : [])
+      .map(item => ({
+        key: String(item.key || item.name || '').trim(),
+        name: String(item.name || item.key || '').trim(),
+        options: (Array.isArray(item.options) ? item.options : [])
+          .filter(option => option?.value)
+          .map(option => ({
+            value: option.value,
+            name: option.name || option.label || option.value,
+            note: option.note || '',
+            prompt: option.prompt || '',
+          })),
+      }))
+      .filter(item => item.key && item.name && item.options.length);
+    const payload = { styles, classes };
+    this.app.visualStyleCache = { at: Date.now(), payload };
+    return payload;
   }
 
   async create(payload) {

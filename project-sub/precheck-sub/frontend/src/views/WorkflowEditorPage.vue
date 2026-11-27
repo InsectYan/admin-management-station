@@ -187,12 +187,15 @@ function loraTargetsOf(apiJson) {
 const loraTargets = computed(() => loraTargetsOf(parseRawQuiet()));
 const loraStrength = ref({});
 function loraLabel(item) {
-  const same = loraTargets.value.length > 1;
-  const file = item.file || `节点 ${item.id}`;
-  return same ? `LoRA 强度（${file}）` : 'LoRA 强度';
+  const file = String(item.file || '').replace(/\.(safetensors|ckpt|pt|pth|bin|sft)$/i, '');
+  return file || `节点 ${item.id}`;
 }
 const slots = computed(() => modelSlots(parseRawQuiet()));
 function slotLabel(slot) {
+  if (slot.folder === 'loras') {
+    const file = String(slot.value || '').split(/[\\/]/).pop().replace(/\.(safetensors|ckpt|pt|pth|bin|sft)$/i, '');
+    if (file) return file;
+  }
   const title = FOLDER_LABEL[slot.folder] || slot.folder;
   const same = slots.value.filter(item => item.folder === slot.folder).length;
   return same > 1 ? `${title}（节点 ${slot.id}）` : title;

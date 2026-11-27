@@ -100,7 +100,7 @@ function defaultAgents(id) {
       asset: [ '镜头和未停用资产', '绑定建议' ],
       voice: [ '台词和已登记音色', '配音时间轴' ],
       review: [ '镜头和合规规则', '初审问题' ],
-      sheet: [ '人物或场景的外形', '一张设定总图的生图提示词' ],
+      sheet: [ '人物或场景的外形', '人物面部特写和全身全景、场景单张全景的生图提示词' ],
     }[spec.role] || [ '', '' ];
     return {
       role: spec.role,

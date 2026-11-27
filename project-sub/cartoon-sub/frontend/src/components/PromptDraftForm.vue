@@ -21,7 +21,8 @@
         <el-input :id="fieldId('requirement')" v-model="requirement" type="textarea" :rows="3" resize="vertical" />
       </div>
       <div v-if="showGenerate" class="prompt-draft__actions">
-        <el-button type="primary" :loading="generating" :disabled="loading" @click="generate">生成提示词</el-button>
+        <el-button type="primary" :loading="generating" :disabled="loading || confirming" @click="generate">生成提示词</el-button>
+        <el-button type="primary" :loading="confirming" :disabled="loading || generating" @click="confirmCurrent">确认</el-button>
       </div>
       <div v-for="box in boxes" :key="box.key" class="prompt-draft__field">
         <label :for="fieldId(box.key)">新提示词 · {{ box.label }}</label>
@@ -88,6 +89,7 @@ const score = ref(null);
 const scoreNote = ref('');
 const loading = ref(false);
 const generating = ref(false);
+const confirming = ref(false);
 const error = ref('');
 const warning = ref('');
 let recorded = '';
@@ -205,14 +207,34 @@ async function generate() {
   }
 }
 
+function promptsForPart(part) {
+  if (part === 'frame_start') return { frame_start_zh: prompts.value.frame_start_zh };
+  if (part === 'frame_end') return { frame_end_zh: prompts.value.frame_end_zh };
+  if (part === 'positive') return { positive_zh: prompts.value.positive_zh };
+  return { ...prompts.value };
+}
+
+function partName(part) {
+  return { positive: '视频提示词', frame_start: '首帧提示词', frame_end: '尾帧提示词' }[part] || '提示词';
+}
+
+async function writePrompts(part) {
+  const data = await request(formUrl(), {
+    method: 'post',
+    data: {
+      ...payload('adjust'),
+      part: part || 'all',
+      prompts: promptsForPart(part),
+    },
+  });
+  recorded = fingerprint();
+  return data;
+}
+
 async function confirm() {
-  if (loading.value || generating.value) return false;
+  if (loading.value || generating.value || confirming.value) return false;
   try {
-    const data = await request(formUrl(), {
-      method: 'post',
-      data: { ...payload('adjust'), part: 'all' },
-    });
-    recorded = fingerprint();
+    const data = await writePrompts('all');
     if (data?.memory_recorded === false) ElMessage.warning('提示词已经写回，生成记录没有记下');
     else ElMessage.success('已写回这条镜头的视频和首尾帧提示词');
     emit('saved');
@@ -220,6 +242,25 @@ async function confirm() {
   } catch (err) {
     ElMessage.error(err.message || '修改没有写回');
     return false;
+  }
+}
+
+async function confirmCurrent() {
+  if (loading.value || generating.value || confirming.value) return false;
+  confirming.value = true;
+  error.value = '';
+  try {
+    const data = await writePrompts(props.part || 'all');
+    const name = partName(props.part);
+    if (data?.memory_recorded === false) ElMessage.warning(`${name}已经写回，生成记录没有记下`);
+    else ElMessage.success(`已写回这条镜头的${name}`);
+    emit('saved');
+    return true;
+  } catch (err) {
+    ElMessage.error(err.message || '修改没有写回');
+    return false;
+  } finally {
+    confirming.value = false;
   }
 }
 

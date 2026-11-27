@@ -35,8 +35,19 @@ function resolveInvokeTimeout(ctx, timeoutMs) {
   return floor;
 }
 
+function asAbortSignal(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  if (value instanceof AbortSignal) return value;
+  if (value.signal instanceof AbortSignal) return value.signal;
+  return undefined;
+}
+
 function linkSignals(signals) {
-  const list = signals.filter(Boolean);
+  const list = [];
+  for (const item of signals) {
+    const signal = asAbortSignal(item);
+    if (signal && !list.includes(signal)) list.push(signal);
+  }
   if (!list.length) return undefined;
   if (list.length === 1) return list[0];
   if (typeof AbortSignal.any === 'function') return AbortSignal.any(list);

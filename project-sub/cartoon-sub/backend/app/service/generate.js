@@ -1059,6 +1059,8 @@ class GenerateService extends Service {
       return task.reload();
     }
     const runningBrief = parseBrief(task.generation_brief) || {};
+    const sent = briefFromSnapshot(submission);
+    if (sent.positive) runningBrief.positive = sent.positive;
     runningBrief.started_at = new Date().toISOString();
     runningBrief.dual_sample = graphUsesDual(submission);
     await task.update({
@@ -1244,12 +1246,13 @@ class GenerateService extends Service {
     const visit = file => {
       const label = String(file?.label || '').trim();
       if (!label || /帧$/.test(label)) return;
-      const matched = label.match(/^(人物|角色|场景)「([^」]+)」/);
+      const matched = label.match(/^(人物|角色|场景)「([^」]+)」\s*(.*)$/);
       if (!matched) return;
+      const extra = String(matched[3] || '').trim();
       entries.push({
         name: matched[2],
         scene: matched[1] === '场景',
-        note: label.includes('设定') ? label : `${matched[1]}「${matched[2]}」设定总图`,
+        note: extra || `${matched[1]}「${matched[2]}」设定总图`,
       });
     };
     (images || []).forEach(slot => {

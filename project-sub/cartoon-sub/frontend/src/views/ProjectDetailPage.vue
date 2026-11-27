@@ -685,7 +685,7 @@
       </div>
     </el-dialog>
     <el-dialog v-model="fullAutoOpen" class="cartoon-dialog" title="全流程" width="560px" append-to-body :close-on-click-modal="false">
-      <p class="cartoon-module__hint">这次会按顺序做到视频。人物和场景各出一张设定总图，视频固定用满血 H3 首尾帧 RefMod。</p>
+      <p class="cartoon-module__hint">这次会按顺序做到视频。人物出两张参考图：面部特写和全身全景。场景出一张全景，不再出多视角。视频固定用满血 H3 首尾帧 RefMod。</p>
       <el-checkbox v-model="fullAutoFresh">全新</el-checkbox>
       <p v-if="fullAutoFresh" class="cartoon-module__hint">勾选后会重新生成剧本、分镜、提示词、首尾帧和视频。已经有设定图的资产会保留，不会重画，也不会改已有说明。</p>
       <p v-else class="cartoon-module__hint">不勾选时，已经有的剧本、分镜、提示词和图片会跳过。每个镜头已有的视频少于下面的条数时，会补到这个条数。</p>
@@ -754,6 +754,7 @@
         :import-id="promptFormImportId"
         :shot-id="promptFormShot.id"
         :part="promptFormPart"
+        preserve-on-part
         @saved="load"
       />
     </el-dialog>
@@ -2468,17 +2469,7 @@ function expandOutlineRow(row) {
   promptFormPart.value = 'positive';
   promptFormOpen.value = true;
 }
-async function switchPromptFormPart(part) {
-  if (promptFormPart.value === part) return;
-  try {
-    await ElMessageBox.confirm('切换会重置已经编辑的数据，是否切换？', '切换提示词', {
-      type: 'warning',
-      confirmButtonText: '切换',
-      cancelButtonText: '取消',
-    });
-  } catch {
-    return;
-  }
+function switchPromptFormPart(part) {
   promptFormPart.value = part;
 }
 function rollSeed() {
