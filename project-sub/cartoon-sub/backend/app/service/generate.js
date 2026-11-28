@@ -15,6 +15,7 @@ const { cardLine } = require('../lib/assetProfile');
 const { promptCoveredMs, fitDurationSec } = require('../lib/promptDuration');
 const { collapseFrameStyle, referenceUseLine, withReferenceUse } = require('../lib/framePrompt');
 const { composeProjectStyle } = require('../lib/cartoonMeta');
+const { neighborWhere, neighborOrder } = require('../lib/shotList');
 
 function snap32(value) {
   const n = Number(value);
@@ -545,12 +546,9 @@ class GenerateService extends Service {
       where: {
         project_id: shot.project_id,
         import_id: shot.import_id || null,
-        [Op.or]: [
-          { sort_order: { [Op.lt]: shot.sort_order } },
-          { sort_order: shot.sort_order, id: { [Op.lt]: shot.id } },
-        ],
+        ...neighborWhere(Op, shot, 'before'),
       },
-      order: [[ 'sort_order', 'DESC' ], [ 'id', 'DESC' ]],
+      order: neighborOrder('before'),
     });
     if (!prev || sceneKey(prev) !== key) return { same: false, relative: '' };
     const batch = Number.isInteger(batchIndex) ? batchIndex : 0;
@@ -678,12 +676,9 @@ class GenerateService extends Service {
       where: {
         project_id: shot.project_id,
         import_id: shot.import_id || null,
-        [Op.or]: [
-          { sort_order: { [Op.gt]: shot.sort_order } },
-          { sort_order: shot.sort_order, id: { [Op.gt]: shot.id } },
-        ],
+        ...neighborWhere(Op, shot, 'after'),
       },
-      order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
+      order: neighborOrder('after'),
     });
     if (!next) return;
     const shotKey = sceneKey(shot);

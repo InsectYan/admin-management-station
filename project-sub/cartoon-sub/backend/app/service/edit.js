@@ -6,6 +6,7 @@ const Service = require('egg').Service;
 const { outputRoot, tmpEditRoot, resolveInside } = require('../lib/mediaPaths');
 const { inspect, probeFile } = require('../lib/mediaTools');
 const { streamFile } = require('../lib/streamFile');
+const { compareShots } = require('../lib/shotList');
 
 const TRACK_KINDS = [ 'video', 'audio', 'subtitle' ];
 const IMPORT_EXT = { '.mp4': '.mp4', '.webm': '.webm', '.mov': '.mov', '.mkv': '.mkv' };

@@ -34,7 +34,7 @@
           <el-button v-for="item in customNodes" :key="item.node_key" @click="runCustom(item)">运行{{ item.title }}</el-button>
         </div>
       </section>
-      <ProjectDetailPage v-if="scriptStep" :key="projectId" :forced-step="scriptStep" :nav-target="navTarget" :launch-shot-id="launchShotId" :pipeline-running="pipelineRunning" :pipeline-run="pipeline" />
+      <ProjectDetailPage v-if="scriptStep" :key="projectId" :forced-step="scriptStep" :nav-target="navTarget" :launch-shot-id="launchShotId" :pipeline-running="pipelineRunning" :pipeline-run="pipeline" @saved="load(false)" />
       <FullAutoPage v-else-if="node === 'pipeline'" />
       <section v-else-if="node === 'assets'" class="cartoon-module cartoon-asset-page">
         <div class="cartoon-asset-head">
@@ -426,6 +426,7 @@
       <h2>这一集</h2>
       <p>类型 · {{ typeName }}</p>
       <p>画面 · {{ styleLabel || '未选' }}</p>
+      <p :title="project?.era_note || ''">时代 · {{ eraLabel }}</p>
       <p>钉扎 · {{ pinLabel || '未选择故事包' }}</p>
       <p>节点 · {{ nodeTitle }}</p>
     </aside>
@@ -864,6 +865,11 @@ watch(previewShots, (rows) => {
 const episodeTitle = computed(() => episode.value?.title || '第1集');
 const typeName = computed(() => typeLabel(project.value?.content_type));
 const styleLabel = computed(() => composedStyleLabel(styles.value, styleClasses.value, project.value?.visual_style, project.value?.style_layers));
+const eraLabel = computed(() => {
+  const text = String(project.value?.era_note || '').replace(/\s+/g, ' ').trim();
+  if (!text) return '未填写';
+  return text.length > 36 ? `${text.slice(0, 36)}…` : text;
+});
 const pinLabel = computed(() => {
   if (project.value?.package_version) return `故事包 v${project.value.package_version}`;
   if (project.value?.pin_mode === 'legacy') return '未钉扎';

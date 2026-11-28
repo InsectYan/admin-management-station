@@ -6,6 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 const Service = require('egg').Service;
 const { presetList, presetOf } = require('../lib/exportPresets');
+const { listOrder } = require('../lib/shotList');
 const { complianceCheck } = require('../lib/complianceCheck');
 const { outputRoot, resolveInside } = require('../lib/mediaPaths');
 const { bins, run, inspect, probeFile } = require('../lib/mediaTools');

@@ -18,6 +18,7 @@ const { uniquePrompt } = require('../lib/promptText');
 const { promptCoveredMs, fitDurationSec } = require('../lib/promptDuration');
 const { topicPatch } = require('../lib/topics');
 const { chapterParagraphs, matchExcerpt } = require('../lib/sourceExcerpt');
+const { listOrder, neighborWhere, neighborOrder } = require('../lib/shotList');
 const {
   contentType,
   isLocal,
@@ -27,6 +28,10 @@ const {
   panelReady: fieldsReady,
   normalizePanel,
 } = require('../lib/contentCatalog');
+
+function clipEraNote(value) {
+  return String(value || '').trim().slice(0, 2000);
+}
 
 function presentPrompt(row) {
   if (!row) return null;
@@ -234,7 +239,7 @@ class ProjectService extends Service {
     await this.ensureShotCodes(id);
     const [ assets, shots ] = await Promise.all([
       this.ctx.model.Asset.findAll({ where: { project_id: id }, order: [[ 'id', 'ASC' ]] }),
-      this.ctx.model.Shot.findAll({ where: { project_id: id }, order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]] }),
+      this.ctx.model.Shot.findAll({ where: { project_id: id }, order: listOrder() }),
     ]);
     const shotIds = shots.map(item => item.id);
     const prompts = shotIds.length
@@ -460,7 +465,7 @@ class ProjectService extends Service {
       ? await this.ctx.model.Shot.findAll({
         where,
         attributes: [ 'description' ],
-        order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
+        order: listOrder(),
       })
       : [];
     const list = await Promise.all(shots.map(async shot => {
@@ -530,6 +535,7 @@ class ProjectService extends Service {
       source_novel_id: isLocal(contentTypeId) ? null : (payload.source_novel_id || null),
       ...splitIncomingStyle(payload.visual_style, payload.style_layers),
       summary: payload.summary || '',
+      era_note: clipEraNote(payload.era_note),
       status: 'draft',
       content_type: contentTypeId,
       pin_mode: pinModeOf(contentTypeId),
@@ -576,6 +582,7 @@ class ProjectService extends Service {
     const patch = {};
     if (payload.name != null) patch.name = String(payload.name).trim();
     if (payload.summary != null) patch.summary = payload.summary;
+    if (payload.era_note != null) patch.era_note = clipEraNote(payload.era_note);
     if (payload.source_novel_id !== undefined) {
       if (isLocal(project.content_type) && payload.source_novel_id) this.ctx.throw(400, '这个类型不绑定小说');
       patch.source_novel_id = isLocal(project.content_type) ? null : (payload.source_novel_id || null);
@@ -1239,6 +1246,8 @@ class ProjectService extends Service {
     }
     const episode = await this.ensureEpisode(projectId);
     const max = await this.ctx.model.Shot.max('sort_order', { where: { project_id: projectId } });
+    const afterShotId = Number(payload.after_shot_id) || 0;
+    const listAt = await this.insertListSlot(projectId, afterShotId || null);
     const durationSec = Number(payload.duration_sec);
     const durationMs = Number.isFinite(durationSec) && durationSec > 0
       ? Math.round(durationSec * 1000)
@@ -1248,6 +1257,7 @@ class ProjectService extends Service {
       import_id: importId,
       video_task_id: episode.id,
       sort_order: Number.isFinite(max) ? max + 1 : 0,
+      list_order: listAt,
       shot_code: payload.shot_code || await this.nextShotCode(projectId),
       shot_size: assertShotSizes(
         payload.shot_sizes != null ? payload.shot_sizes : (payload.shot_size || '中景'),
@@ -1269,6 +1279,53 @@ class ProjectService extends Service {
       });
     }
     return shot;
+  }
+
+  async shotsInList(projectId) {
+    return this.ctx.model.Shot.findAll({
+      where: { project_id: projectId },
+      order: listOrder(),
+    });
+  }
+
+  async writeListOrder(rows) {
+    for (let index = 0; index < rows.length; index += 1) {
+      if (Number(rows[index].list_order) !== index) await rows[index].update({ list_order: index });
+    }
+  }
+
+  /** 在选中镜头后面空出一个 list_order。不选则接到全片最后。不改镜头编号。 */
+  async insertListSlot(projectId, afterShotId) {
+    const rows = await this.shotsInList(projectId);
+    let index = rows.length;
+    if (afterShotId) {
+      const at = rows.findIndex(row => Number(row.id) === Number(afterShotId));
+      if (at < 0) this.ctx.throw(404, '选中的镜头不存在');
+      index = at + 1;
+    }
+    for (let i = 0; i < rows.length; i += 1) {
+      const next = i < index ? i : i + 1;
+      if (Number(rows[i].list_order) !== next) await rows[i].update({ list_order: next });
+    }
+    return index;
+  }
+
+  async moveShot(projectId, shotId, payload = {}) {
+    const project = await this.ctx.model.Project.findByPk(projectId);
+    if (!project || project.deleted_at) this.ctx.throw(404, '项目不存在');
+    const afterShotId = Number(payload.after_shot_id) || 0;
+    if (!afterShotId) this.ctx.throw(400, '请选择镜头');
+    if (Number(shotId) === afterShotId) this.ctx.throw(400, '不能排到自己后面');
+    const rows = await this.shotsInList(projectId);
+    const from = rows.findIndex(row => Number(row.id) === Number(shotId));
+    if (from < 0) this.ctx.throw(404, '镜头不存在');
+    const anchor = rows.findIndex(row => Number(row.id) === afterShotId);
+    if (anchor < 0) this.ctx.throw(404, '选中的镜头不存在');
+    const [ moving ] = rows.splice(from, 1);
+    const insertAt = rows.findIndex(row => Number(row.id) === afterShotId) + 1;
+    rows.splice(insertAt, 0, moving);
+    await this.writeListOrder(rows);
+    return { id: Number(shotId), list_order: insertAt };
   }
 
   assetFields(payload, kind, characterId) {
@@ -1451,10 +1508,20 @@ class ProjectService extends Service {
     if (!chapter) this.ctx.throw(404, '章节快照不存在');
     const workflow = await this.ctx.service.generate.choiceById(workflowId);
     if (workflow.media !== media) this.ctx.throw(400, '这个工作流和所选类型不一致');
-    const result = await this.ctx.model.Shot.update(
-      { workflow_id: workflowId },
-      { where: { project_id: projectId, import_id: importId } },
-    );
+    const column = media === 'image' ? 'image_workflow_id' : 'workflow_id';
+    const where = { project_id: projectId, import_id: importId };
+    const result = await this.ctx.model.Shot.update({ [column]: workflowId }, { where });
+    if (media === 'image') {
+      const imageIds = (await this.ctx.service.generate.choices())
+        .filter(item => item.media === 'image')
+        .map(item => item.id);
+      if (imageIds.length) {
+        await this.ctx.model.Shot.update(
+          { workflow_id: null },
+          { where: { ...where, workflow_id: imageIds } },
+        );
+      }
+    }
     const updated = Array.isArray(result) ? result[0] : result;
     if (!updated) this.ctx.throw(400, '这个快照还没有镜头');
     return { updated, workflow_id: workflowId, media };
@@ -1478,6 +1545,9 @@ class ProjectService extends Service {
     const shots = await this.ctx.model.Shot.findAll({
       where: { project_id: projectId, import_id: importId },
     });
+    const catalog = workflowId ? await this.ctx.service.generate.choices() : [];
+    const mediaOf = id => catalog.find(item => item.id === Number(id))?.media || '';
+    const column = workflowId ? (payload.media === 'image' ? 'image_workflow_id' : 'workflow_id') : '';
     let notes = 0;
     let workflows = 0;
     for (const shot of shots) {
@@ -1511,15 +1581,25 @@ class ProjectService extends Service {
         notes += 1;
       }
       if (workflowId) {
-        const hasWorkflow = Number(shot.workflow_id) > 0;
-        if ((mode === 'reset' || !hasWorkflow) && Number(shot.workflow_id) !== workflowId) {
-          patch.workflow_id = workflowId;
-          workflows += 1;
+        const current = Number(shot[column]) || 0;
+        const filled = column === 'workflow_id' ? mediaOf(current) === 'video' : current > 0;
+        let changed = false;
+        if ((mode === 'reset' || !filled) && current !== workflowId) {
+          if (column === 'workflow_id' && mediaOf(shot.workflow_id) === 'image' && !Number(shot.image_workflow_id)) {
+            patch.image_workflow_id = Number(shot.workflow_id);
+          }
+          patch[column] = workflowId;
+          changed = true;
         }
+        if (mode === 'reset' && column === 'image_workflow_id' && mediaOf(shot.workflow_id) === 'image') {
+          patch.workflow_id = null;
+          changed = true;
+        }
+        if (changed) workflows += 1;
       }
       if (Object.keys(patch).length) await shot.update(patch);
     }
-    return { shots: shots.length, notes, workflows, mode };
+    return { shots: shots.length, notes, workflows, mode, media: payload.media === 'image' ? 'image' : (workflowId ? 'video' : '') };
   }
 
   async ensureSceneDrafts(projectId, places) {
@@ -1874,7 +1954,7 @@ class ProjectService extends Service {
     const [ shots, chapters, cues ] = await Promise.all([
       this.ctx.model.Shot.findAll({
         where,
-        order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
+        order: listOrder(),
       }),
       this.ctx.model.Import.findAll({
         where: { project_id: project.id },
@@ -1975,12 +2055,9 @@ class ProjectService extends Service {
       where: {
         project_id: shot.project_id,
         import_id: shot.import_id || null,
-        [Op.or]: [
-          { sort_order: { [Op.lt]: shot.sort_order } },
-          { sort_order: shot.sort_order, id: { [Op.lt]: shot.id } },
-        ],
+        ...neighborWhere(Op, shot, 'before'),
       },
-      order: [[ 'sort_order', 'DESC' ], [ 'id', 'DESC' ]],
+      order: neighborOrder('before'),
     });
     if (!prev || sceneKeyOf(prev) !== key) return null;
     return prev;
@@ -2054,6 +2131,44 @@ class ProjectService extends Service {
     };
   }
 
+  async workflowColumns(payload, shot) {
+    const next = {
+      workflow_id: shot.workflow_id || null,
+      image_workflow_id: shot.image_workflow_id || null,
+    };
+    let wroteImage = false;
+    const take = async (raw, kind) => {
+      if (raw == null || raw === '') return;
+      const id = Number(raw);
+      if (!Number.isInteger(id) || id <= 0) {
+        if (kind === 'image') next.image_workflow_id = null;
+        else next.workflow_id = null;
+        return;
+      }
+      const chosen = await this.ctx.service.generate.choiceById(id);
+      if (kind === 'image' || chosen.media === 'image') {
+        if (chosen.media !== 'image') this.ctx.throw(400, '请选择生图工作流');
+        next.image_workflow_id = id;
+        wroteImage = true;
+        return;
+      }
+      if (chosen.media !== 'video') this.ctx.throw(400, '请选择生视频工作流');
+      next.workflow_id = id;
+    };
+    if (Object.prototype.hasOwnProperty.call(payload, 'image_workflow_id')) {
+      await take(payload.image_workflow_id, 'image');
+    }
+    if (Object.prototype.hasOwnProperty.call(payload, 'workflow_id')) {
+      await take(payload.workflow_id, 'video');
+    }
+    if (wroteImage && next.workflow_id) {
+      const rows = await this.ctx.service.generate.choices();
+      const current = rows.find(item => item.id === Number(next.workflow_id));
+      if (current?.media === 'image') next.workflow_id = null;
+    }
+    return next;
+  }
+
   async updateShot(id, payload) {
     const shot = await this.ctx.model.Shot.findByPk(id);
     if (!shot) this.ctx.throw(404, '分镜不存在');
@@ -2079,10 +2194,9 @@ class ProjectService extends Service {
     const nextCamera = payload.camera_moves != null || payload.camera_move != null
       ? assertCameraMoves(payload.camera_moves != null ? payload.camera_moves : payload.camera_move)
       : shot.camera_move;
-    const workflowId = Number(payload.workflow_id);
-    const nextWorkflow = payload.workflow_id != null
-      ? (Number.isInteger(workflowId) && workflowId > 0 ? workflowId : null)
-      : shot.workflow_id;
+    const workflowPatch = await this.workflowColumns(payload, shot);
+    const nextWorkflow = workflowPatch.workflow_id;
+    const nextImageWorkflow = workflowPatch.image_workflow_id;
     let dialogueLines;
     if (Array.isArray(payload.dialogue_lines)) {
       dialogueLines = payload.dialogue_lines.map(item => ({
@@ -2103,6 +2217,7 @@ class ProjectService extends Service {
       dialogue: nextDialogue,
       duration_ms: durationMs,
       workflow_id: nextWorkflow,
+      image_workflow_id: nextImageWorkflow,
       overridden_fields: withOverride(shot, {
         ...overridePayload,
         shot_size: nextShotSize,

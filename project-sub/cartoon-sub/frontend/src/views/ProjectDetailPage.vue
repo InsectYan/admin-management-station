@@ -32,6 +32,10 @@
           </el-form-item>
           <StyleClassFields v-model="projectForm.style_layers" :classes="meta.style_classes" />
         </div>
+        <el-form-item label="时代背景">
+          <el-input v-model="projectForm.era_note" type="textarea" :rows="4" maxlength="2000" show-word-limit placeholder="例如：现代中国都市，日常是当代便装和城市室内。不要汉服、铠甲、西式古堡和未来制服。" />
+          <p class="cartoon-module__hint">自动抽资产、生图、写提示词和生视频都会带上。画风只管怎么画。这里写年代、地域、日常穿着，以及不要出现的时代。正文已经写明的衣服和房间仍以正文为准。</p>
+        </el-form-item>
         <el-button type="primary" :disabled="!canMake()" @click="saveProject">保存设定</el-button>
       </el-form>
       <NovelBriefPanel v-if="!isLocal" :novel="novelBrief" :loading="novelLoading" />
@@ -122,10 +126,12 @@
           <el-table-column label="操作" width="460" fixed="right" class-name="cartoon-ops-cell">
             <template #default="{ row }">
               <div class="cartoon-snap__actions">
-                <el-button type="primary" :disabled="!canMake() || autoModeId === row.id || flowBusy" :loading="draftingId === row.id" @click="generateScript(row)">生成剧本</el-button>
+                <el-button type="primary" :disabled="!canMake() || autoModeId === row.id || flowBusy || scriptBusy(row.id)" :loading="scriptBusy(row.id)" @click="generateScript(row)">生成剧本</el-button>
+                <span v-if="paceText('script', row.id)" class="cartoon-pace">{{ paceText('script', row.id) }}</span>
+                <el-button v-if="scriptBusy(row.id) || outlineBusy(row.id)" type="danger" plain @click="stopWork">停止</el-button>
                 <el-button-group>
-                  <el-button :disabled="!canMake() || autoModeId === row.id || flowBusy" title="从剧本一直做到视频" @click="runFullAuto(row)">全流程</el-button>
-                  <el-button type="primary" :disabled="!canMake() || flowBusy" :loading="autoModeId === row.id" title="先生成剧本，再按剧本拆分分镜" @click="runSemiAuto(row)">到分镜</el-button>
+                  <el-button :disabled="!canMake() || autoModeId === row.id || flowBusy || scriptBusy(row.id) || outlineBusy(row.id)" title="从剧本一直做到视频" @click="runFullAuto(row)">全流程</el-button>
+                  <el-button type="primary" :disabled="!canMake() || flowBusy || scriptBusy(row.id) || outlineBusy(row.id)" :loading="autoModeId === row.id || scriptBusy(row.id) || outlineBusy(row.id)" title="先生成剧本，再按剧本拆分分镜" @click="runSemiAuto(row)">到分镜</el-button>
                 </el-button-group>
                 <el-button v-if="hasScript(row)" type="primary" plain @click="openScriptPage(row)">查看剧本</el-button>
                 <el-button type="danger" plain :disabled="!canMake()" @click="removeSnapshot(row)">删除快照</el-button>
@@ -172,16 +178,18 @@
               <el-button
                 type="primary"
                 plain
-                :disabled="!canMake() || flowBusy"
-                :loading="String(draftingId || '') === String(scriptSnapshot.id)"
+                :disabled="!canMake() || flowBusy || scriptBusy(scriptSnapshot.id)"
+                :loading="scriptBusy(scriptSnapshot.id)"
                 @click="generateScript(scriptSnapshot)"
               >重新生成剧本</el-button>
+              <span v-if="paceText('script', scriptSnapshot.id)" class="cartoon-pace">{{ paceText('script', scriptSnapshot.id) }}</span>
               <el-button
                 type="primary"
-                :disabled="!canMake() || flowBusy || !(scriptSnapshot.script_data?.scenes || []).length"
-                :loading="String(outliningId || '') === String(scriptSnapshot.id)"
+                :disabled="!canMake() || flowBusy || outlineBusy(scriptSnapshot.id) || !(scriptSnapshot.script_data?.scenes || []).length"
+                :loading="outlineBusy(scriptSnapshot.id)"
                 @click="generateShotOutline(scriptSnapshot)"
               >拆分分镜</el-button>
+              <span v-if="paceText('outline', scriptSnapshot.id)" class="cartoon-pace">{{ paceText('outline', scriptSnapshot.id) }}</span>
               <el-button
                 type="danger"
                 plain
@@ -226,6 +234,9 @@
                   </li>
                 </ul>
               </el-tab-pane>
+              <el-tab-pane label="剧本详情" name="script">
+                <CartoonMarkdown prose :source="activeScriptData.script_text || ''" empty-text="还没有剧本正文。点生成剧本后，这里显示按小说改好的剧本。" />
+              </el-tab-pane>
               <el-tab-pane label="原文" name="source">
                 <CartoonMarkdown prose :source="scriptSnapshot.body || ''" empty-text="还没有正文" />
               </el-tab-pane>
@@ -263,7 +274,12 @@
                 <p class="cartoon-module__hint">与「镜头」页同一批数据。按情节分场，一场里的连续动作可以拆成十几条镜头。同一场只有第一镜是新的首帧，后面的镜头用上一镜尾帧。场次列用来确认这些镜头属于第几场。</p>
                 <el-empty v-if="!scriptShotLoading && !scriptShotTotal" description="还没有分镜，请先点「拆分分镜」" />
                 <el-table v-else v-loading="scriptShotLoading" class="cartoon-shot-table" :data="scriptShotRows" style="margin-top: 8px" row-key="id">
-              <el-table-column label="镜头ID" width="120" prop="shot_code" fixed="left" />
+              <el-table-column label="镜头ID" width="168" fixed="left">
+                <template #default="{ row }">
+                  <span>{{ row.shot_code || row.id }}</span>
+                  <el-button link type="primary" :disabled="!canMake()" @click.stop="openShotMove(row)">排序</el-button>
+                </template>
+              </el-table-column>
               <el-table-column label="场次" width="200">
                 <template #default="{ row }">{{ sceneCell(row, activeScriptData) }}</template>
               </el-table-column>
@@ -319,7 +335,7 @@
                   <el-button
                     link
                     type="primary"
-                    :disabled="!canMake() || flowBusy"
+                    :disabled="!canMake() || flowBusy || promptBusy(row.id)"
                     @click="expandOutlineRow(row)"
                   >生成分镜提示词</el-button>
                   <el-button link type="danger" :disabled="!canMake()" @click="removeShot(row)">删除</el-button>
@@ -396,8 +412,9 @@
           <p v-if="!selectedBoard" class="cartoon-module__hint">先在左侧选择一条章节快照。</p>
           <div v-if="selectedBoard" class="cartoon-entry-actions">
             <el-button-group>
-              <el-button :disabled="autoRunning || flowBusy" @click="runAuto('prompt')">生成分镜提示词</el-button>
-              <el-button :disabled="autoRunning || flowBusy" @click="resetAuto('prompt')">重置</el-button>
+              <el-button :disabled="autoRunning || flowBusy || promptBusy()" :loading="promptBusy()" @click="runAuto('prompt')">生成分镜提示词</el-button>
+              <span v-if="paceText('prompt')" class="cartoon-pace">{{ paceText('prompt') }}</span>
+              <el-button :disabled="autoRunning || flowBusy || promptBusy()" @click="resetAuto('prompt')">重置</el-button>
             </el-button-group>
             <el-button-group>
               <el-button :disabled="autoRunning || flowBusy || runMark.videoLive" @click="openVideoAuto">自动生成视频</el-button>
@@ -409,9 +426,14 @@
             </el-button-group>
             <el-button type="danger" plain :disabled="!canStop" @click="stopWork">停止</el-button>
           </div>
-          <p v-if="selectedBoard" class="cartoon-module__hint">自动生成视频、全自动执行和对应重置都用满血 H3 首尾帧 [RefMod]。这一镜有指定首帧就用指定首帧，否则用上镜尾帧；都没有才生成首帧。勾选尾帧时按工作流生成尾帧并交给下一镜；不勾选则截取成片最后一帧交给下一镜。</p>
+          <p v-if="selectedBoard" class="cartoon-module__hint">自动生成视频按打开表单时回显的生视频工作流提交，不会改镜头上保存的生视频工作流。任务开始后再改镜头工作流，不会影响这一轮。全自动执行和对应重置仍用满血 H3 首尾帧 [RefMod]，同样不改镜头上的生视频工作流。这一镜有指定首帧就用指定首帧，否则用上镜尾帧；都没有才生成首帧。勾选尾帧时按工作流生成尾帧并交给下一镜；不勾选则截取成片最后一帧交给下一镜。</p>
           <el-table v-if="selectedBoard" class="cartoon-shot-table" :data="boardPageRows" style="margin-top: 12px">
-            <el-table-column label="镜头ID" width="120" prop="shot_code" fixed="left" />
+            <el-table-column label="镜头ID" width="168" fixed="left">
+              <template #default="{ row }">
+                <span>{{ row.shot_code || row.id }}</span>
+                <el-button link type="primary" :disabled="!canMake()" @click.stop="openShotMove(row)">排序</el-button>
+              </template>
+            </el-table-column>
             <el-table-column label="场次" width="200" fixed="left">
               <template #default="{ row }">{{ sceneCell(row, boardScript) }}</template>
             </el-table-column>
@@ -557,6 +579,11 @@
 
     <el-drawer v-model="shotCreateOpen" title="新增镜头" size="640px" append-to-body>
       <el-form label-position="top" class="cartoon-entry-form" @submit.prevent="addShot">
+        <el-form-item label="插在这个镜头后面">
+          <el-select v-model="shot.after_shot_id" clearable filterable placeholder="不选则放在最后" style="width: 100%">
+            <el-option v-for="row in boardShots" :key="row.id" :label="shotPickLabel(row)" :value="row.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="主景别">
           <el-select v-model="shot.shot_sizes" multiple collapse-tags style="width: 100%" placeholder="多选景别">
             <el-option v-for="item in meta.shot_sizes" :key="item" :label="item" :value="item" />
@@ -578,6 +605,16 @@
         </div>
       </template>
     </el-drawer>
+    <el-dialog v-model="shotMoveOpen" title="调整顺序" width="480px" append-to-body>
+      <p class="cartoon-module__hint">把 {{ shotMoveCode }} 放到所选镜头的下一个。镜头编号不变。</p>
+      <el-select v-model="shotMoveAfter" filterable placeholder="选择镜头" style="width: 100%">
+        <el-option v-for="row in shotMoveTargets" :key="row.id" :label="shotPickLabel(row)" :value="row.id" />
+      </el-select>
+      <template #footer>
+        <el-button @click="shotMoveOpen = false">取消</el-button>
+        <el-button type="primary" :disabled="!canMake() || !shotMoveAfter" @click="confirmShotMove">确定</el-button>
+      </template>
+    </el-dialog>
     <el-drawer v-model="generateOpen" :title="shotDrawerMode === 'edit' ? '编辑镜头' : '镜头详情'" size="640px" append-to-body>
       <RegionLoad pane>
       <ShotGeneratePage
@@ -603,7 +640,7 @@
             <p v-if="shotPanel?.jobLive" class="cartoon-module__hint">{{ shotPanel.jobNote }}</p>
             <div class="cartoon-drawer-footer__actions">
               <el-button v-if="shotPanel?.jobLive || shotPanel?.generating" type="danger" plain @click="stopWork">停止</el-button>
-              <el-button type="primary" :disabled="!canMake() || flowBusy" :loading="shotPanel?.generating" @click="shotPanel?.generate()">生成</el-button>
+              <el-button type="primary" :disabled="!canMake() || flowBusy || shotPanel?.jobLive || shotPanel?.generating" :loading="shotPanel?.generating || shotPanel?.jobLive" @click="shotPanel?.generate()">生成</el-button>
               <el-button @click="shotPanel?.openAssets()">查看资产</el-button>
               <el-button @click="openShotOutputs">查看产物</el-button>
             </div>
@@ -615,8 +652,13 @@
       </template>
     </el-drawer>
     <el-dialog v-model="videoAutoOpen" title="自动生成视频" width="480px" :close-on-click-modal="false">
-      <p class="cartoon-module__hint">本次只执行下拉框里勾选的镜头，并按镜头顺序排列。有指定首帧就用指定首帧，否则用上镜尾帧，都没有才生成首帧，然后提交满血 H3 首尾帧 [RefMod]。</p>
+      <p class="cartoon-module__hint">本次只执行下拉框里勾选的镜头，并按镜头顺序排列。有指定首帧就用指定首帧，否则用上镜尾帧，都没有才生成首帧。生视频工作流用下面回显的这一条。任务开始后，再改镜头上的工作流，不会影响这一轮。</p>
       <el-form label-position="top" @submit.prevent>
+        <el-form-item label="生视频工作流">
+          <el-select v-model="videoAutoWorkflowId" filterable placeholder="选择生视频工作流" style="width: 100%" :loading="videoAutoWorkflowLoading">
+            <el-option v-for="item in videoWorkflows" :key="item.id" :label="item.name" :value="item.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="镜头ID">
           <el-select
             v-model="videoAutoIds"
@@ -641,7 +683,7 @@
       <p class="cartoon-module__hint">{{ videoAutoHint }}</p>
       <template #footer>
         <el-button @click="videoAutoOpen = false">取消</el-button>
-        <el-button type="primary" :disabled="!videoAutoIds.length" @click="confirmVideoAuto">开始生成</el-button>
+        <el-button type="primary" :disabled="!videoAutoIds.length || !videoAutoWorkflowId" @click="confirmVideoAuto">开始生成</el-button>
       </template>
     </el-dialog>
     <el-dialog v-model="allResetOpen" class="cartoon-dialog" title="重置全自动" width="480px" append-to-body :close-on-click-modal="false">
@@ -736,6 +778,7 @@
       </template>
     </el-dialog>
     <el-dialog v-model="promptFormOpen" class="cartoon-dialog" title="生成分镜提示词" width="920px" append-to-body destroy-on-close>
+      <div class="cartoon-prompt-tabs-row">
       <div class="cartoon-prompt-tabs" role="tablist">
         <button
           v-for="item in promptFormParts"
@@ -747,6 +790,8 @@
           @mousedown.prevent
           @click="switchPromptFormPart(item.key)"
         >{{ item.label }}</button>
+      </div>
+      <span v-if="promptFormPace" class="cartoon-pace">{{ promptFormPace }}</span>
       </div>
       <PromptDraftForm
         v-if="promptFormShot"
@@ -781,7 +826,7 @@
     </el-dialog>
     <el-drawer v-model="scriptEditOpen" title="编辑概要" size="640px" append-to-body>
       <el-form label-position="top">
-        <p style="margin: 0 0 12px; color: #5c6b62; font-size: 13px">点保存时，镜头里空着的说明和工作流会按这里补上。点重置时，这一快照里的全部镜头改成当前说明；选了工作流就连工作流一起改。这次的类型和工作流选择不会留在概览上。</p>
+        <p style="margin: 0 0 12px; color: #5c6b62; font-size: 13px">点保存时，镜头里空着的说明会补上；生图、生视频各自只补空着的那一种工作流。点重置时，这一剧本下全部镜头的说明改成当前表单。选了生图就改每镜的生图工作流，选了生视频就改每镜的生视频工作流，两种互不影响。自动任务改自己的工作流，不会改镜头上的生视频工作流。</p>
         <el-form-item v-for="(person, index) in scriptDraft.characters" :key="`person-${person.name}-${index}`" :label="`角色说明·${person.name}`">
           <el-input v-model="person.stage_note" type="textarea" :rows="2" maxlength="500" placeholder="留空则使用该角色的资产说明。有需要再写这一章不一样的地方" />
         </el-form-item>
@@ -789,11 +834,11 @@
           <el-input v-model="place.stage_note" type="textarea" :rows="2" maxlength="500" placeholder="留空则使用该场景的资产说明。有需要再写这一章不一样的地方" />
         </el-form-item>
         <el-form-item label="生成类型">
-          <el-button :type="bulkMedia === 'image' ? 'primary' : 'default'" @click="bulkMedia = 'image'">图片</el-button>
-          <el-button :type="bulkMedia === 'video' ? 'primary' : 'default'" @click="bulkMedia = 'video'">视频</el-button>
+          <el-button :type="bulkMedia === 'image' ? 'primary' : 'default'" @click="bulkMedia = 'image'">生图</el-button>
+          <el-button :type="bulkMedia === 'video' ? 'primary' : 'default'" @click="bulkMedia = 'video'">生视频</el-button>
         </el-form-item>
         <el-form-item label="工作流">
-          <el-select v-model="bulkWorkflowId" clearable filterable placeholder="不选则不改镜头工作流" style="width: 100%">
+          <el-select v-model="bulkWorkflowId" clearable filterable :placeholder="bulkMedia === 'image' ? '不选则不改生图工作流' : '不选则不改生视频工作流'" style="width: 100%">
             <el-option v-for="item in bulkWorkflows" :key="item.id" :label="item.name" :value="item.id" />
           </el-select>
         </el-form-item>
@@ -849,6 +894,7 @@ import { PAGE_SIZES, PAGER_LAYOUT } from '../lib/pager.js';
 import { fitDurationSec, promptCoveredMs } from '../lib/promptDuration.js';
 import { createPulseGate } from '../lib/dataPulse.js';
 
+const emit = defineEmits([ 'saved' ]);
 const props = defineProps({
   forcedStep: { type: Number, default: 0 },
   navTarget: { type: String, default: '' },
@@ -905,7 +951,7 @@ const novels = ref([]);
 const chapters = ref([]);
 const meta = reactive({ visual_styles: [], style_classes: [], shot_sizes: [ '中景' ], camera_moves: [ '固定' ], topic_options: TOPIC_OPTIONS });
 const styleGroups = computed(() => groupVisualStyles(meta.visual_styles));
-const projectForm = reactive({ name: '', source_novel_id: '', visual_style: '', style_layers: {}, topics: [] });
+const projectForm = reactive({ name: '', source_novel_id: '', visual_style: '', style_layers: {}, topics: [], era_note: '' });
 const chapterId = ref('');
 const pullingAll = ref(false);
 const packageDesk = ref(null);
@@ -918,6 +964,10 @@ const promoteMatched = ref(false);
 const promoteShotId = ref(null);
 const shotDrawerMode = ref('detail');
 const shotCreateOpen = ref(false);
+const shotMoveOpen = ref(false);
+const shotMoveId = ref(null);
+const shotMoveImport = ref(null);
+const shotMoveAfter = ref(null);
 const shotPanel = ref(null);
 const pinRequired = computed(() => (detail.value?.project?.pin_mode || 'required') !== 'legacy');
 const isLocal = computed(() => isLocalType(detail.value?.project?.content_type));
@@ -949,6 +999,7 @@ const shot = reactive({
   positive_zh: '',
   frame_start_zh: '',
   frame_end_zh: '',
+  after_shot_id: null,
 });
 const scriptPageSize = ref(10);
 const boardPageSize = ref(10);
@@ -958,6 +1009,19 @@ const boardPage = ref(1);
 const novelBrief = ref(null);
 const novelLoading = ref(false);
 const draftingId = ref(null);
+const liveRuns = ref([]);
+function paceText(kind, targetId) {
+  const rows = liveRuns.value.filter(item => item.kind === kind && (targetId == null || String(item.target_id) === String(targetId)));
+  const row = rows.sort((a, b) => Number(b.started_at || 0) - Number(a.started_at || 0))[0];
+  if (!row) return '';
+  const speed = Number(row.chars_per_sec) || 0;
+  return speed > 0 ? `${speed} 字/秒` : '正在生成';
+}
+const promptFormPace = computed(() => {
+  const id = promptFormShot.value?.id;
+  if (!id) return '';
+  return paceText('prompt-form', id) || paceText('prompt', id);
+});
 const autoModeId = ref(null);
 const outliningId = ref(null);
 const expandingKey = ref('');
@@ -985,6 +1049,8 @@ const autoRunning = computed({
 const shotTab = ref('table');
 const videoAutoOpen = ref(false);
 const videoAutoGenerateEnd = ref(true);
+const videoAutoWorkflowId = ref(null);
+const videoAutoWorkflowLoading = ref(false);
 const videoAutoIds = ref([]);
 const videoAutoAll = ref(false);
 const videoAutoSome = ref(false);
@@ -997,7 +1063,7 @@ const recordPage = ref(1);
 const autoPrompt = runMark.prompt;
 const autoVideo = runMark.video;
 const manualJob = ref(false);
-const canStop = computed(() => autoRunning.value || runMark.videoLive || runMark.promptLive || Boolean(expandingKey.value) || manualJob.value || Boolean(shotPanel.value?.jobLive) || Boolean(shotPanel.value?.generating));
+const canStop = computed(() => autoRunning.value || runMark.videoLive || runMark.promptLive || Boolean(expandingKey.value) || manualJob.value || Boolean(shotPanel.value?.jobLive) || Boolean(shotPanel.value?.generating) || Boolean(draftingId.value) || Boolean(outliningId.value) || liveRuns.value.some(item => [ 'script', 'outline', 'prompt', 'prompt-form' ].includes(item.kind)));
 function onShotRunning(payload) {
   manualJob.value = Boolean(payload?.live);
 }
@@ -1226,11 +1292,24 @@ function productRatio(row, kind) {
   }
   return `${covered.size}/${shots.length}`;
 }
+function runLive(kind, targetId) {
+  return liveRuns.value.some(item => item.kind === kind && (targetId == null || String(item.target_id) === String(targetId)));
+}
+function scriptBusy(id) {
+  return String(draftingId.value || '') === String(id) || runLive('script', id);
+}
+function outlineBusy(id) {
+  return String(outliningId.value || '') === String(id) || runLive('outline', id);
+}
+function promptBusy(id) {
+  return runLive('prompt', id) || runLive('prompt-form', id);
+}
 function runningLabel(row) {
   const parts = [];
-  if (String(draftingId.value || '') === String(row.id)) parts.push('正在生成剧本');
+  if (scriptBusy(row.id)) parts.push('正在生成剧本');
   if (String(autoModeId.value || '') === String(row.id)) parts.push('正在到分镜');
-  if (String(outliningId.value || '') === String(row.id) && String(autoModeId.value || '') !== String(row.id)) parts.push('正在拆分分镜');
+  if (outlineBusy(row.id) && String(autoModeId.value || '') !== String(row.id)) parts.push('正在拆分分镜');
+  if (promptBusy() && shotsOf(row).some(shot => promptBusy(shot.id))) parts.push('正在生成提示词');
   const run = props.pipelineRun;
   if (run?.status === 'running' && String(run.import_id || '') === String(row.id)) parts.push(run.message || '全流程执行中');
   const shotIds = new Set(shotsOf(row).map(shot => String(shot.id)));
@@ -1295,6 +1374,7 @@ const bulkMedia = ref('video');
 const bulkWorkflowId = ref(null);
 const workflowChoices = ref([]);
 const bulkWorkflows = computed(() => workflowChoices.value.filter(item => item.media === bulkMedia.value));
+const videoWorkflows = computed(() => workflowChoices.value.filter(item => item.media === 'video'));
 watch(bulkMedia, () => { bulkWorkflowId.value = null; });
 const rosterKind = ref('character');
 const rosterForm = reactive({ name: '', detail: '' });
@@ -1569,6 +1649,7 @@ function fillProject() {
   projectForm.visual_style = project.visual_style || '';
   projectForm.style_layers = { ...(project.style_layers || {}) };
   projectForm.topics = topicsOfProject(project);
+  projectForm.era_note = project.era_note || '';
 }
 async function loadChapters(novelId) {
   chapters.value = [];
@@ -1732,9 +1813,11 @@ async function saveProject() {
         visual_style: projectForm.visual_style || '',
         style_layers: projectForm.style_layers || {},
         topics: supportsAv(detail.value?.project?.content_type) ? projectForm.topics : [],
+        era_note: projectForm.era_note || '',
       },
     });
     await load();
+    emit('saved');
     ElMessage.success('已保存');
   } catch (err) {
     ElMessage.error(err.message);
@@ -2005,15 +2088,16 @@ async function openScriptEdit() {
 function applyMessage(reset, applied) {
   const notes = Number(applied?.notes) || 0;
   const workflows = Number(applied?.workflows) || 0;
+  const label = applied?.media === 'image' ? '生图工作流' : '生视频工作流';
   if (reset) {
     const parts = [ `说明写入 ${notes} 条镜头` ];
-    if (workflows) parts.push(`工作流改了 ${workflows} 条`);
+    if (applied?.media) parts.push(workflows ? `${label}改了 ${workflows} 条` : `${label}没有需要改的镜头`);
     return `已重置。${parts.join('，')}`;
   }
   if (!notes && !workflows) return '已保存。镜头里已有内容的字段没有改动';
   const parts = [];
   if (notes) parts.push(`${notes} 条镜头补上了说明`);
-  if (workflows) parts.push(`${workflows} 条镜头补上了工作流`);
+  if (workflows) parts.push(`${workflows} 条镜头补上了${applied?.media ? label : '工作流'}`);
   return `已保存。${parts.join('，')}`;
 }
 async function saveScriptEdit(mode) {
@@ -2024,7 +2108,7 @@ async function saveScriptEdit(mode) {
   if (reset) {
     try {
       await ElMessageBox.confirm(
-        '这一快照里每个镜头的说明会改成当前表单。选了工作流的话，工作流也会一起改掉。',
+        '这一剧本下每个镜头的说明会改成当前表单。选了生图工作流，就改每镜的生图工作流；选了生视频工作流，就改每镜的生视频工作流。生图不会改生视频工作流。',
         '重置镜头',
         { type: 'warning', confirmButtonText: '重置', cancelButtonText: '取消' },
       );
@@ -2349,7 +2433,7 @@ async function generateScript(item) {
     return;
   }
   draftingId.value = item.id;
-  ElMessage.info('正在生成剧本并写入…');
+  ElMessage.info('正在把小说改成剧本，再拆场次…');
   try {
     const data = await request(`/projects/${projectKey()}/imports/${item.id}/draft/script`, {
       method: 'post',
@@ -2619,7 +2703,25 @@ function toggleVideoAutoAll(checked) {
   videoAutoSome.value = false;
   videoAutoIds.value = checked ? boardShots.value.map(row => row.id) : [];
 }
-function openVideoAuto() {
+function echoedVideoWorkflowId(shots) {
+  const saved = shots.map(row => Number(row.workflow_id) || 0).find(id => id > 0);
+  if (saved && videoWorkflows.value.some(item => item.id === saved)) return saved;
+  const fallback = videoWorkflows.value.find(item => /满血-h3-首尾帧/i.test(item.name) && /\[refmod\]/i.test(item.name));
+  return fallback?.id || videoWorkflows.value[0]?.id || null;
+}
+async function loadVideoWorkflows() {
+  if (workflowChoices.value.length) return;
+  videoAutoWorkflowLoading.value = true;
+  try {
+    const inputs = await request('/generate-inputs');
+    workflowChoices.value = inputs?.workflows || [];
+  } catch (err) {
+    ElMessage.error(err.message || '工作流没有加载出来');
+  } finally {
+    videoAutoWorkflowLoading.value = false;
+  }
+}
+async function openVideoAuto() {
   if (autoRunning.value) return;
   const shots = boardShots.value;
   if (!shots.length) {
@@ -2630,6 +2732,8 @@ function openVideoAuto() {
   videoAutoGenerateEnd.value = true;
   videoAutoAll.value = true;
   videoAutoSome.value = false;
+  await loadVideoWorkflows();
+  videoAutoWorkflowId.value = echoedVideoWorkflowId(shots);
   videoAutoOpen.value = true;
 }
 function jobClock(value) {
@@ -2673,7 +2777,7 @@ function continuingBatch(liveTasks) {
   const board = shots
     .filter(item => String(item.import_id || '') === String(current.import_id || ''))
     .slice()
-    .sort((a, b) => (Number(a.sort_order) - Number(b.sort_order)) || (Number(a.id) - Number(b.id)));
+    .sort((a, b) => (Number(a.list_order) - Number(b.list_order)) || (Number(a.id) - Number(b.id)));
   const latest = new Map();
   (detail.value?.tasks || []).forEach(task => {
     const key = String(task.shot_id);
@@ -2691,18 +2795,27 @@ function continuingBatch(liveTasks) {
   }
   return null;
 }
-async function startServerVideo(shotIds, videoCount = 1, generateEnd = true, fresh = false) {
+async function startServerVideo(shotIds, videoCount = 1, generateEnd = true, fresh = false, workflowId = 0) {
   const count = Math.min(8, Math.max(1, Math.round(Number(videoCount) || 1)));
+  const workflow = Number(workflowId) || 0;
+  const workflowName = videoWorkflows.value.find(item => item.id === workflow)?.name || '';
   try {
     const job = await request(`/projects/${projectKey()}/auto-jobs`, {
       method: 'post',
-      data: { shot_ids: shotIds, video_count: count, generate_end: generateEnd !== false, fresh: fresh === true },
+      data: {
+        shot_ids: shotIds,
+        video_count: count,
+        generate_end: generateEnd !== false,
+        fresh: fresh === true,
+        ...(workflow ? { workflow_id: workflow } : {}),
+      },
     });
     applyAutoJob(job);
     armServerPoll();
+    const used = workflowName || '满血 H3 首尾帧 [RefMod]';
     ElMessage.success(count > 1
-      ? `已提交 ${job?.total || shotIds.length} 个镜头，每个镜头 ${count} 条。按指定首帧或上镜尾帧生成满血 H3 首尾帧`
-      : `已提交 ${job?.total || shotIds.length} 条。按指定首帧或上镜尾帧生成满血 H3 首尾帧`);
+      ? `已提交 ${job?.total || shotIds.length} 个镜头，每个镜头 ${count} 条。使用 ${used}`
+      : `已提交 ${job?.total || shotIds.length} 条。使用 ${used}`);
     return job;
   } catch (err) {
     ElMessage.error(err.message || '没有提交');
@@ -2716,8 +2829,15 @@ function confirmVideoAuto() {
     ElMessage.error('请选择镜头');
     return;
   }
+  if (!videoAutoWorkflowId.value) {
+    ElMessage.error('请选择生视频工作流');
+    return;
+  }
   videoAutoOpen.value = false;
-  runAuto('video', chosen.map(row => row.id), false, { generateEnd: videoAutoGenerateEnd.value });
+  runAuto('video', chosen.map(row => row.id), false, {
+    generateEnd: videoAutoGenerateEnd.value,
+    workflowId: videoAutoWorkflowId.value,
+  });
 }
 function openVideoReset() {
   if (autoRunning.value || flowBusy.value) return;
@@ -2813,7 +2933,7 @@ async function runAuto(mode, selectedIds, fresh = false, options = {}) {
     }
   }
   if (mode === 'video') {
-    await startServerVideo(shots.map(row => row.id), 1, options.generateEnd !== false, fresh);
+    await startServerVideo(shots.map(row => row.id), 1, options.generateEnd !== false, fresh, options.workflowId);
     return;
   }
   const jobToken = lockJob();
@@ -2926,6 +3046,43 @@ function resetShotForm() {
   shot.frame_end_zh = '';
   shot.shot_sizes = [ '中景' ];
   shot.camera_moves = [ '固定' ];
+  shot.after_shot_id = null;
+}
+function shotPickLabel(row) {
+  const code = row?.shot_code || row?.id || '';
+  const text = String(row?.description || '').replace(/\s+/g, ' ').trim();
+  const clip = text.length > 24 ? `${text.slice(0, 24)}…` : text;
+  return clip ? `${code} ${clip}` : String(code);
+}
+const shotMoveTargets = computed(() => (detail.value?.shots || []).filter(row => (
+  String(row.import_id || '') === String(shotMoveImport.value || '') && String(row.id) !== String(shotMoveId.value || '')
+)));
+const shotMoveCode = computed(() => {
+  const row = (detail.value?.shots || []).find(item => String(item.id) === String(shotMoveId.value || ''));
+  return row?.shot_code || shotMoveId.value || '';
+});
+function openShotMove(row) {
+  shotMoveId.value = row.id;
+  shotMoveImport.value = row.import_id;
+  shotMoveAfter.value = null;
+  shotMoveOpen.value = true;
+}
+async function confirmShotMove() {
+  if (!shotMoveAfter.value) {
+    ElMessage.warning('请选择镜头');
+    return;
+  }
+  try {
+    await request(`/projects/${projectKey()}/shots/${shotMoveId.value}/move`, {
+      method: 'post',
+      data: { after_shot_id: shotMoveAfter.value },
+    });
+    shotMoveOpen.value = false;
+    await load();
+    ElMessage.success('顺序已调整');
+  } catch (err) {
+    ElMessage.error(err.message || '没有调整顺序');
+  }
 }
 function openShotCreate() {
   if (!selectedBoard.value) return;
@@ -2947,6 +3104,7 @@ async function addShot() {
         camera_moves: moves,
         camera_move: moves.join(','),
         import_id: current.importId,
+        after_shot_id: shot.after_shot_id || undefined,
       },
     });
     shotCreateOpen.value = false;
@@ -2980,7 +3138,7 @@ function stopServerPoll() {
 function armServerPoll() {
   if (!serverRunAlive || serverRunTimer) return;
   stopServerPoll();
-  serverRunTimer = setInterval(() => { syncServerRuns(); }, 3000);
+  serverRunTimer = setInterval(() => { syncServerRuns(); }, 1000);
   window[serverPollKey] = serverRunTimer;
 }
 async function syncServerRuns() {
@@ -2998,7 +3156,8 @@ async function syncServerRuns() {
       request(`/projects/${id}/runs`),
       request(`/projects/${id}/auto-jobs/current`).catch(() => null),
     ]);
-    const promptRuns = (data?.runs || []).filter(item => item.kind === 'prompt');
+    liveRuns.value = data?.runs || [];
+    const promptRuns = liveRuns.value.filter(item => item.kind === 'prompt');
     const tasks = data?.tasks || [];
     const jobRunning = job?.status === 'running';
     const tasksLive = tasks.length > 0;
@@ -3026,13 +3185,20 @@ async function syncServerRuns() {
       }
     }
     if (!jobRunning && !tasksLive && !runMark.controller) runMark.videoLive = false;
+    if (tasksLive && !(Number(autoVideo.total) > 0)) {
+      autoVideo.total = tasks.length;
+      autoVideo.done = 0;
+      autoVideo.active = tasks.length;
+      runMark.videoLive = true;
+    }
     if (!runMark.running) {
       if (runMark.promptLive && !runMark.prompt.total) {
         runMark.prompt.total = promptRuns.length;
         runMark.prompt.done = 0;
       }
     }
-    busy = Boolean(runMark.running || runMark.promptLive || jobRunning || tasksLive);
+    const textLive = liveRuns.value.some(item => [ 'script', 'outline', 'prompt', 'prompt-form' ].includes(item.kind));
+    busy = Boolean(runMark.running || runMark.promptLive || runMark.videoLive || textLive || jobRunning || tasksLive);
   } catch {
     busy = Boolean(serverRunTimer);
   } finally {
@@ -3249,10 +3415,23 @@ onUnmounted(() => {
 .cartoon-status-tag {
   margin: 0 4px 4px;
 }
+.cartoon-pace {
+  color: #2f8a5b;
+  font-size: 13px;
+  line-height: 32px;
+  white-space: nowrap;
+}
+.cartoon-prompt-tabs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
 .cartoon-prompt-tabs {
   display: flex;
   width: fit-content;
-  margin-bottom: 12px;
+  margin-bottom: 0;
   border: 1px solid rgba(47, 138, 91, 0.35);
   border-radius: 6px;
   overflow: hidden;

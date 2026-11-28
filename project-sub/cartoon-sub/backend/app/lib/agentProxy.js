@@ -96,7 +96,128 @@ function llmSessionFields(ctx) {
   return fields;
 }
 
-async function invokeSkill(ctx, { skill, action, payload, timeoutMs, signal }) {
+function consumeSse(buffer, onEvent) {
+  const chunks = buffer.split(/\r?\n\r?\n/);
+  const rest = chunks.pop() || '';
+  for (const chunk of chunks) {
+    if (!chunk.trim()) continue;
+    let event = 'message';
+    const dataLines = [];
+    for (const line of chunk.split(/\r?\n/)) {
+      if (line.startsWith('event:')) event = line.slice(6).trim();
+      else if (line.startsWith('data:')) dataLines.push(line.slice(5).trim());
+    }
+    if (!dataLines.length) continue;
+    let data = {};
+    try {
+      data = JSON.parse(dataLines.join('\n'));
+    } catch {
+      data = {};
+    }
+    onEvent(event, data);
+  }
+  return rest;
+}
+
+async function invokeSkill(ctx, options) {
+  if (typeof options?.onPace === 'function') return invokeSkillStream(ctx, options);
+  return invokeSkillJson(ctx, options);
+}
+
+async function invokeSkillStream(ctx, { skill, action, payload, timeoutMs, signal, onPace }) {
+  const url = `${platformBase(ctx)}/api/skills/${skill}/invoke-stream`;
+  const waitMs = resolveInvokeTimeout(ctx, timeoutMs);
+  const session = llmSessionFields(ctx);
+  const dispatcher = new Agent({
+    headersTimeout: 60000,
+    bodyTimeout: waitMs + 30000,
+    connectTimeout: 15000,
+  });
+  let chars = 0;
+  try {
+    const body = { action, ...(payload || {}), ...session };
+    const headers = { 'content-type': 'application/json', 'x-trace-app': 'cartoon' };
+    if (body.trace_run_id) headers['x-trace-run-id'] = String(body.trace_run_id);
+    if (body.trace_title) headers['x-trace-title'] = encodeURIComponent(String(body.trace_title));
+    delete body.trace_run_id;
+    delete body.trace_title;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: linkSignals([ AbortSignal.timeout(waitMs), signal ]),
+      dispatcher,
+    });
+    if (!res.ok || !String(res.headers.get('content-type') || '').includes('text/event-stream')) {
+      const data = await res.json().catch(() => ({}));
+      const message = data.error || data.message || `Agent HTTP ${res.status}`;
+      throw wrapAgentError(null, {
+        skill,
+        action,
+        status: res.status >= 500 ? 502 : res.status,
+        message: typeof message === 'string' ? message : `Agent HTTP ${res.status}`,
+        errorCode: String(data.code || data.error_code || `HTTP_${res.status}`),
+      });
+    }
+    const reader = res.body?.getReader();
+    if (!reader) throw wrapAgentError(null, { skill, action, status: 502, message: 'Agent 没有返回生成流', errorCode: 'NO_STREAM' });
+    const decoder = new TextDecoder();
+    let pending = '';
+    let doneBody = null;
+    let failed = '';
+    while (true) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      pending += decoder.decode(chunk.value, { stream: true });
+      pending = consumeSse(pending, (event, data) => {
+        if (event === 'delta') {
+          const text = String(data.text || '');
+          chars = text ? text.length : chars + String(data.delta || '').length;
+          onPace({ chars, label: '' });
+        } else if (event === 'status') {
+          onPace({ chars, label: data.label || '' });
+        } else if (event === 'done') {
+          doneBody = data;
+        } else if (event === 'error') {
+          failed = data.message || 'Agent 没有完成起草';
+        }
+      });
+    }
+    if (failed) {
+      throw wrapAgentError(null, { skill, action, status: 502, message: failed, errorCode: 'AGENT_STREAM' });
+    }
+    if (!doneBody) {
+      throw wrapAgentError(null, { skill, action, status: 502, message: 'Agent 生成流中断', errorCode: 'AGENT_STREAM' });
+    }
+    if (doneBody.output?.stoppedReason === 'no_llm' || doneBody.output?.stoppedReason === 'llm_error') {
+      const llmErr = wrapAgentError(null, {
+        skill,
+        action,
+        status: 502,
+        message: doneBody.output.summary || doneBody.reply || 'Agent 没有完成起草',
+        errorCode: String(doneBody.output.stoppedReason),
+      });
+      llmErr.response = doneBody;
+      throw llmErr;
+    }
+    return doneBody;
+  } catch (err) {
+    if (err?.skill) throw err;
+    if (signal?.aborted) {
+      throw wrapAgentError(err, { skill, action, status: 499, message: '已停止', errorCode: 'AGENT_ABORTED' });
+    }
+    const aborted = err?.name === 'AbortError' || /aborted due to timeout/i.test(String(err?.message || ''));
+    const errorCode = aborted ? 'AGENT_TIMEOUT' : String(err?.cause?.code || 'FETCH_FAILED');
+    const message = aborted
+      ? `Agent 调用超时（${Math.round(waitMs / 1000)} 秒仍未返回，技能 ${skill}/${action}）`
+      : `Agent 调用失败：${fetchFailureText(err)}`;
+    throw wrapAgentError(err, { skill, action, status: 503, message, errorCode });
+  } finally {
+    await dispatcher.close().catch(() => {});
+  }
+}
+
+async function invokeSkillJson(ctx, { skill, action, payload, timeoutMs, signal }) {
   const url = `${platformBase(ctx)}/api/skills/${skill}/invoke`;
   const waitMs = resolveInvokeTimeout(ctx, timeoutMs);
   const session = llmSessionFields(ctx);

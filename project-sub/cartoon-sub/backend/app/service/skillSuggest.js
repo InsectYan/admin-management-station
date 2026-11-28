@@ -8,6 +8,7 @@ const { present } = require('../lib/pipelineDefaults');
 const { profileEnabled } = require('../lib/modelGate');
 const { productionInput } = require('../lib/productionInput');
 const { reportAudit } = require('../lib/reportAudit');
+const { listOrder } = require('../lib/shotList');
 
 const REVIEW_NODES = [ 'script', 'storyboard', 'generate', 'voice', 'compose' ];
 

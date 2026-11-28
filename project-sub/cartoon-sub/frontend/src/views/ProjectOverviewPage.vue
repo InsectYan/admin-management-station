@@ -63,6 +63,7 @@
             <div v-if="supportsAv(detail.project.content_type)"><dt>专题</dt><dd>{{ topicTags.length ? topicTags.map(item => item.label).join('、') : '未选' }}</dd></div>
             <div v-if="isLocal"><dt>文案</dt><dd>本地文案</dd></div>
             <div v-else><dt>来源小说</dt><dd>{{ novelBrief?.title || '未绑定' }}</dd></div>
+            <div class="cartoon-overview__era"><dt>时代背景</dt><dd>{{ detail.project.era_note || '未填写' }}</dd></div>
             <div><dt>章节快照</dt><dd>{{ liveImports.length }}</dd></div>
             <div><dt>镜头</dt><dd>{{ detail.shots.length }}</dd></div>
             <div><dt>生成记录</dt><dd>{{ detail.tasks.length }}</dd></div>
@@ -170,7 +171,7 @@
             <div class="cartoon-board__main">
               <el-empty v-if="!selectedBoard" description="先选择一条章节快照" />
               <el-table v-else class="cartoon-shot-table" :data="boardPageRows">
-                <el-table-column prop="sort_order" label="#" width="70" fixed="left" />
+                <el-table-column type="index" label="#" width="70" fixed="left" />
                 <el-table-column label="场次" width="200">
                   <template #default="{ row }">{{ sceneCell(row) }}</template>
                 </el-table-column>
@@ -233,6 +234,9 @@
             </el-select>
           </el-form-item>
           <StyleClassFields v-model="editForm.style_layers" :classes="styleClasses" />
+          <el-form-item class="cartoon-edit-span" label="时代背景">
+            <el-input v-model="editForm.era_note" type="textarea" :rows="4" maxlength="2000" show-word-limit placeholder="例如：现代中国都市，日常是当代便装和城市室内。不要汉服、铠甲、西式古堡和未来制服。" />
+          </el-form-item>
           <el-form-item v-if="supportsAv(detail.project.content_type)" label="专题">
             <el-select v-model="editForm.topics" multiple clearable placeholder="可不选" style="width: 100%">
               <el-option v-for="item in topicOptions" :key="item.value" :label="item.label" :value="item.value" />
@@ -334,6 +338,7 @@ const editForm = reactive({
   visual_style: '',
   style_layers: {},
   topics: [],
+  era_note: '',
   genre_category_id: null,
   genre_subcategory_id: null,
   theme_ids: [],
@@ -532,6 +537,7 @@ async function openEdit() {
   editForm.visual_style = project.visual_style || '';
   editForm.style_layers = { ...(project.style_layers || {}) };
   editForm.topics = topicsOfProject(project);
+  editForm.era_note = project.era_note || '';
   const novel = novelBrief.value;
   editForm.genre_category_id = novel?.genre_category_id || null;
   editForm.genre_subcategory_id = novel?.genre_subcategory_id || null;
@@ -565,6 +571,7 @@ async function saveEdit() {
         visual_style: editForm.visual_style || '',
         style_layers: editForm.style_layers || {},
         topics: supportsAv(project.content_type) ? editForm.topics : [],
+        era_note: editForm.era_note || '',
       },
     });
     if (novelBrief.value?.id) {
@@ -675,6 +682,7 @@ onMounted(async () => {
 .cartoon-overview-stage { height: 100%; min-height: 0; overflow: hidden; }
 .cartoon-overview { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; padding: 16px 20px 24px; gap: 12px; box-sizing: border-box; }
 .cartoon-edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+.cartoon-edit-span { grid-column: 1 / -1; }
 .cartoon-overview__bar, .cartoon-overview__actions, .cartoon-overview__tags { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cartoon-overview__style { max-width: 180px; overflow: hidden; }
 .cartoon-overview__style :deep(.el-tag__content) {
@@ -754,6 +762,8 @@ onMounted(async () => {
 .cartoon-overview__facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; margin: 0; }
 .cartoon-overview__facts dt { color: #5c6b62; font-size: 12px; }
 .cartoon-overview__facts dd { margin: 4px 0 0; }
+.cartoon-overview__era { grid-column: 1 / -1; }
+.cartoon-overview__era dd { white-space: pre-wrap; line-height: 1.6; }
 .cartoon-overview__style-fact {
   display: -webkit-box;
   width: 100%;

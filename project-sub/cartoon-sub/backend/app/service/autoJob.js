@@ -2,6 +2,7 @@
 
 const Service = require('egg').Service;
 const { promptCoveredMs, fitDurationSec } = require('../lib/promptDuration');
+const { compareShots } = require('../lib/shotList');
 
 const OPEN = [ 'pending', 'running' ];
 const VIDEO_KINDS = [ 'video', 'i2v', 't2v', 'refmod' ];
@@ -173,14 +174,16 @@ class AutoJobService extends Service {
     };
   }
 
-  async mediaPlan(project, generateEnd) {
+  async mediaPlan(project, generateEnd, video) {
     const workflows = await this.ctx.service.generate.choices();
-    const video = workflows.find(entry => entry.media === 'video'
-      && /满血-h3-首尾帧/i.test(entry.name)
-      && /\[refmod\]/i.test(entry.name));
+    if (!video) {
+      video = workflows.find(entry => entry.media === 'video'
+        && /满血-h3-首尾帧/i.test(entry.name)
+        && /\[refmod\]/i.test(entry.name));
+    }
     if (!video) this.ctx.throw(400, '没有找到满血 H3 首尾帧 RefMod 工作流');
     if (generateEnd && !(video.images || []).some(slot => slot.role === 'end')) {
-      this.ctx.throw(400, '满血首尾帧工作流没有尾帧入口');
+      this.ctx.throw(400, `「${video.name}」没有尾帧入口`);
     }
     const images = workflows.filter(entry => entry.media === 'image' && !/反推|改图/.test(entry.name || ''));
     const runs = await this.ctx.model.FullRun.findAll({
@@ -217,7 +220,7 @@ class AutoJobService extends Service {
     }
   }
 
-  async start(projectId, shotIds, videoCountValue, generateEnd, fresh) {
+  async start(projectId, shotIds, videoCountValue, generateEnd, fresh, workflowId) {
     const project = await this.ctx.model.Project.findByPk(projectId);
     if (!project) this.ctx.throw(404, '项目不存在');
     const ids = [ ...new Set((Array.isArray(shotIds) ? shotIds : []).map(id => Number(id)).filter(id => id > 0)) ];
@@ -238,8 +241,14 @@ class AutoJobService extends Service {
     const byId = new Map(shots.map(shot => [ shot.id, shot ]));
     const ordered = ids.map(id => byId.get(id));
     if (ordered.some(shot => !shot)) this.ctx.throw(400, '有镜头不在当前项目里');
-    ordered.sort((a, b) => (Number(a.sort_order) - Number(b.sort_order)) || (Number(a.id) - Number(b.id)));
-    const plan = await this.mediaPlan(project, generateEnd !== false);
+    ordered.sort(compareShots);
+    const workflows = await this.ctx.service.generate.choices();
+    const requested = Number(workflowId) || 0;
+    const video = requested
+      ? workflows.find(entry => entry.id === requested && entry.media === 'video')
+      : null;
+    if (requested && !video) this.ctx.throw(400, '选中的工作流不是生视频工作流');
+    const plan = await this.mediaPlan(project, generateEnd !== false, video);
     const job = await this.ctx.model.AutoJob.create({
       project_id: project.id,
       status: 'running',
@@ -435,9 +444,6 @@ class AutoJobService extends Service {
           await job.update({ import_id: shot.import_id || null });
           job.import_id = shot.import_id || null;
           job.signal_key = `job:${job.id}`;
-        }
-        if (Number(shot.workflow_id) !== Number(job.video_workflow_id)) {
-          await shot.update({ workflow_id: job.video_workflow_id });
         }
         const chapter = shot.import_id ? await this.ctx.model.Import.findByPk(shot.import_id) : null;
         const scene = this.ctx.service.fullAuto.sceneLabel(chapter?.script_data || {}, shot);

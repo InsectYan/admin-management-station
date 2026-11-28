@@ -20,7 +20,8 @@ const { promptCoveredMs, fitDurationSec } = require('../lib/promptDuration');
 const { topicsOf, TOPIC_OPTIONS } = require('../lib/topics');
 const { assetFactText, namedAssets } = require('../lib/assetProfile');
 const { chapterParagraphs, resolveExcerpt, matchExcerpt } = require('../lib/sourceExcerpt');
-const { begin, finish } = require('../lib/activeRuns');
+const { begin, finish, notePace } = require('../lib/activeRuns');
+const { neighborWhere, neighborOrder } = require('../lib/shotList');
 const { openRun, closeRun, noteStep } = require('../lib/executionTrace');
 
 function outputOf(result) {
@@ -229,6 +230,11 @@ function lockIssues(script, body) {
   return settleScript(script, source, 0);
 }
 
+function scriptBody(script, fallback) {
+  const text = String(script?.script_text || '').trim();
+  return text || String(fallback || '');
+}
+
 function negativeNeedsRetry(prompt) {
   const negative = String(prompt?.negative_zh || '').trim();
   if (!negative) return true;
@@ -244,7 +250,7 @@ function styleWithoutBody(styleCtx) {
 const PROMPT_FORM_FIELDS = [
   { key: 'description', label: '涵盖内容', hint: '这一镜要拍的剧情。提示词按这段来写。', rows: 4 },
   { key: 'dialogue', label: '对白', hint: '这一镜里要说的原句。', rows: 3 },
-  { key: 'duration_sec', label: '时长', hint: '秒。动作按 5 到 15 秒，对白可以补到 30 秒。', rows: 1 },
+  { key: 'duration_sec', label: '时长', hint: '秒。动作按 5 到 15 秒，对白可以补到 20 秒。', rows: 1 },
   { key: 'shot_sizes', label: '景别', hint: '这一镜会用到的景别，多个用顿号分开。', rows: 1 },
   { key: 'camera_moves', label: '运镜', hint: '这一镜的运镜，按先后写，多个用顿号分开。', rows: 1 },
   { key: 'source_excerpt', label: '原文', hint: '这一镜对应的章节原文。', rows: 4 },
@@ -252,6 +258,7 @@ const PROMPT_FORM_FIELDS = [
   { key: 'wardrobe_state', label: '服装', hint: '这一镜结束时还穿着什么。', rows: 2 },
   { key: 'visual_style_label', label: '画面风格', hint: '项目选定的风格名称。只用于这次生成，不改项目设置。', rows: 1 },
   { key: 'visual_style_prompt', label: '风格说明', hint: '写进提示词的风格句子。只用于这次生成，不改项目设置。', rows: 3 },
+  { key: 'era_note', label: '时代背景', hint: '项目上的时代说明。这次生成会带上，不改项目设置。', rows: 3 },
   { key: 'genre', label: '题材', hint: '来源小说的题材。', rows: 1 },
   { key: 'genre_subcategory', label: '题材细分', hint: '来源小说的细分题材。', rows: 1 },
   { key: 'asset_facts', label: '人物卡', hint: '这一镜出场人物的年龄、性别和定性。', rows: 4 },
@@ -333,8 +340,15 @@ class DraftService extends Service {
     if (title) payload.trace_title = title;
     this.traceTitle = '';
     const started = Date.now();
+    const paceRow = this.paceRow;
     try {
-      const result = await invokeSkill(this.ctx, { ...spec, payload });
+      const result = await invokeSkill(this.ctx, {
+        ...spec,
+        payload,
+        onPace: paceRow
+          ? info => notePace(paceRow, info?.chars, info?.label)
+          : undefined,
+      });
       this.traceElapsed = Date.now() - started;
       this.traceErrorJson = '';
       this.traceResult = result;
@@ -415,6 +429,7 @@ class DraftService extends Service {
       genre_subcategory: novel?.genre_subcategory || '',
       novel_type: novel?.novel_type || '',
       title: novel?.title || project.name || '',
+      era_note: String(project.era_note || '').trim(),
       summary: novel?.summary || '',
       story_overview: novel?.story_overview || '',
       chapter_title: chapter?.chapter_title || '',
@@ -430,6 +445,7 @@ class DraftService extends Service {
   async suggestScript(projectId, importId) {
     const claim = begin(this.app, { projectId, kind: 'script', targetId: importId });
     if (claim.joined) return claim.done;
+    this.paceRow = claim.row;
     try {
       const result = await this.composeScript(projectId, importId, claim.signal);
       finish(this.app, claim.row, null, result);
@@ -437,6 +453,8 @@ class DraftService extends Service {
     } catch (err) {
       finish(this.app, claim.row, err);
       throw err;
+    } finally {
+      this.paceRow = null;
     }
   }
 
@@ -456,16 +474,15 @@ class DraftService extends Service {
   }
 
   async previousShotContext(projectId, importId, shot) {
-    const order = Number(shot?.sort_order);
-    if (!Number.isFinite(order)) return null;
+    if (!shot) return null;
     const { Op } = this.app.Sequelize;
     const prev = await this.ctx.model.Shot.findOne({
       where: {
         project_id: projectId,
         import_id: importId,
-        sort_order: { [Op.lt]: order },
+        ...neighborWhere(Op, shot, 'before'),
       },
-      order: [[ 'sort_order', 'DESC' ], [ 'id', 'DESC' ]],
+      order: neighborOrder('before'),
     });
     if (!prev) return null;
     const prompt = await this.ctx.model.Prompt.findOne({ where: { shot_id: prev.id } });
@@ -508,6 +525,19 @@ class DraftService extends Service {
 
   async composeScript(projectId, importId, signal) {
     const { project, chapter } = await this.load(projectId, importId);
+    const adapted = await invokeSkill(this.ctx, {
+      skill: 'cartoon-novel-script-skill',
+      action: 'draft',
+      timeoutMs: skillTimeout(this.ctx),
+      signal,
+      payload: {
+        chapter_title: chapter.chapter_title || '',
+        body: chapter.body,
+        era_note: String(project.era_note || '').trim(),
+      },
+    });
+    const scriptText = String(outputOf(adapted).script_text || '').trim();
+    if (scriptText.length < 20) this.ctx.throw(502, '小说没有转成剧本');
     const scriptResult = await invokeSkill(this.ctx, {
       skill: 'cartoon-script-skill',
       action: 'draft',
@@ -516,7 +546,8 @@ class DraftService extends Service {
       payload: {
         chapter_title: chapter.chapter_title || '',
         ...productionInput(project),
-        body: chapter.body,
+        era_note: String(project.era_note || '').trim(),
+        body: scriptText,
         asset_facts: await this.projectFactText(project.id),
       },
     });
@@ -529,12 +560,13 @@ class DraftService extends Service {
       const reply = String(scriptOutput.reply || scriptOutput.summary || '').replace(/\s+/g, ' ').trim();
       this.ctx.throw(502, reply ? `剧本没有定稿。${reply.slice(0, 240)}` : '剧本没有定稿');
     }
-    const settled = settleScript(scriptData, chapter.body, 0, { coverStory: true });
+    const settled = settleScript(scriptData, scriptText, 0, { coverStory: true });
     if (settled.issues.length) {
       this.ctx.throw(502, `剧本没有定稿。${settled.issues.slice(0, 4).join('；')}。这一稿没有保存，请再生成一次`);
     }
     const named = normalizeScript({
       ...settled.script,
+      script_text: scriptText,
       accepted: true,
       reject_reasons: [],
       shot_omissions: [],
@@ -556,7 +588,7 @@ class DraftService extends Service {
     if (!incoming || !Array.isArray(incoming.scenes) || !incoming.scenes.length) {
       this.ctx.throw(400, '需要场次');
     }
-    const settled = lockIssues(incoming, chapter.body);
+    const settled = lockIssues(incoming, scriptBody(incoming, chapter.body));
     if (settled.issues.length) {
       this.ctx.throw(400, `剧本还不能保存。${settled.issues.slice(0, 4).join('；')}`);
     }
@@ -580,6 +612,8 @@ class DraftService extends Service {
       const maxOrder = await this.ctx.model.Shot.max('sort_order', { where: { project_id: projectPk } });
       next = Number.isFinite(maxOrder) ? maxOrder + 1 : 0;
     }
+    const maxList = await this.ctx.model.Shot.max('list_order', { where: { project_id: projectPk } });
+    let listNext = maxList == null ? 0 : Number(maxList) + 1;
     const codes = await this.ctx.service.project.allocateShotCodes(projectPk, shots.length);
     const ids = [];
     for (let i = 0; i < shots.length; i += 1) {
@@ -589,6 +623,7 @@ class DraftService extends Service {
         import_id: importPk,
         video_task_id: episodeRow.id,
         sort_order: next,
+        list_order: listNext,
         shot_code: codes[i],
         shot_size: item.shot_size,
         camera_move: item.camera_move,
@@ -597,7 +632,7 @@ class DraftService extends Service {
         duration_ms: item.duration_sec * 1000,
         scene_index: Number.isInteger(Number(item.scene_index)) && Number(item.scene_index) > 0 ? Number(item.scene_index) : null,
         scene_label: sceneTitle(script, item),
-        source_excerpt: resolveExcerpt(chapter.body, {
+        source_excerpt: resolveExcerpt(scriptBody(script, chapter.body), {
           description: item.coverage,
           dialogue: item.dialogue,
         }, item.source_indexes),
@@ -611,15 +646,18 @@ class DraftService extends Service {
         const dropWardrobe = /wardrobe_state/i.test(message);
         const dropCode = /shot_code/i.test(message);
         const dropScene = /scene_index/i.test(message);
-        if (!dropWardrobe && !dropCode && !dropScene) throw err;
+        const dropList = /list_order/i.test(message);
+        if (!dropWardrobe && !dropCode && !dropScene && !dropList) throw err;
         if (dropWardrobe) delete fields.wardrobe_state;
         if (dropCode) delete fields.shot_code;
         if (dropScene) delete fields.scene_index;
+        if (dropList) delete fields.list_order;
         this.ctx.logger.warn('[cartoon] shot create retry: %s', message);
         row = await this.ctx.model.Shot.create(fields);
       }
       ids.push(row.id);
       next += 1;
+      listNext += 1;
     }
     return { episode: episodeRow, order: next, ids };
   }
@@ -639,6 +677,7 @@ class DraftService extends Service {
   async suggestShotOutline(projectId, importId, payload = {}) {
     const claim = begin(this.app, { projectId, kind: 'outline', targetId: importId });
     if (claim.joined) return claim.done;
+    this.paceRow = claim.row;
     try {
       const result = await this.composeOutline(projectId, importId, payload, claim.signal);
       finish(this.app, claim.row, null, result);
@@ -646,6 +685,8 @@ class DraftService extends Service {
     } catch (err) {
       finish(this.app, claim.row, err);
       throw err;
+    } finally {
+      this.paceRow = null;
     }
   }
 
@@ -664,12 +705,13 @@ class DraftService extends Service {
     if (existing.length && !replace) {
       this.ctx.throw(409, '该快照已有分镜，请确认后重新拆分');
     }
-    const settled = lockIssues(scriptData, chapter.body);
+    const sourceBody = scriptBody(scriptData, chapter.body);
+    const settled = lockIssues(scriptData, sourceBody);
     if (settled.issues.length) {
       this.ctx.throw(400, `剧本还不能交给分镜。${settled.issues.slice(0, 4).join('；')}`);
     }
     const styleCtx = await this.styleContext(project, chapter);
-    const spans = sceneSpans(settled.script, chapter.body);
+    const spans = sceneSpans(settled.script, sourceBody);
     const stylePayload = styleWithoutBody(styleCtx);
     const source = productionInput(project);
     const outline = [];
@@ -702,7 +744,7 @@ class DraftService extends Service {
         outline_only: true,
         scene_index: sceneIndex,
         ...stylePayload,
-        body: String(chapter.body || ''),
+        body: sourceBody,
         scene_spans: [ span ],
         ...source,
         min_shots: beat,
@@ -828,7 +870,7 @@ class DraftService extends Service {
     if (!scriptData || !Array.isArray(scriptData.scenes) || !scriptData.scenes.length) {
       this.ctx.throw(400, '请先生成并保存剧本');
     }
-    const settledScript = lockIssues(scriptData, chapter.body);
+    const settledScript = lockIssues(scriptData, scriptBody(scriptData, chapter.body));
     if (settledScript.issues.length) {
       this.ctx.throw(400, `剧本还不能交给分镜。${settledScript.issues.slice(0, 4).join('；')}`);
     }
@@ -840,6 +882,7 @@ class DraftService extends Service {
     if (!existing) this.ctx.throw(404, '镜头不存在');
     const claim = begin(this.app, { projectId: project.id, kind: 'prompt', targetId: existing.id });
     if (claim.joined) return claim.done;
+    this.paceRow = claim.row;
     const stop = {
       signal: claim.signal,
       stopped() { return claim.signal.aborted; },
@@ -1277,6 +1320,7 @@ class DraftService extends Service {
         elapsed_ms: Math.max(0, Date.now() - (this.executionStarted || Date.now())),
       });
       this.executionRunId = 0;
+      this.paceRow = null;
       stop.release();
     }
   }
@@ -1299,6 +1343,7 @@ class DraftService extends Service {
     const requirement = String(payload.requirement || '').trim();
     const claim = begin(this.app, { projectId: loaded.project.id, kind: 'prompt-form', targetId: loaded.shot.id });
     if (claim.joined) return claim.done;
+    this.paceRow = claim.row;
     const stop = {
       signal: claim.signal,
       stopped() { return claim.signal.aborted; },
@@ -1339,6 +1384,7 @@ class DraftService extends Service {
       finish(this.app, claim.row, err);
       throw err;
     } finally {
+      this.paceRow = null;
       stop.release();
     }
   }
@@ -1365,6 +1411,7 @@ class DraftService extends Service {
       wardrobe_state: String(shot.wardrobe_state || '').trim(),
       visual_style_label: String(style.visual_style_label || '').trim(),
       visual_style_prompt: String(style.visual_style_prompt || '').trim(),
+      era_note: String(style.era_note || '').trim(),
       genre: String(style.genre || '').trim(),
       genre_subcategory: String(style.genre_subcategory || '').trim(),
       asset_facts: facts,
@@ -1454,6 +1501,7 @@ class DraftService extends Service {
       ...styleWithoutBody(loaded.style),
       visual_style_label: String(map.visual_style_label || '').trim(),
       visual_style_prompt: String(map.visual_style_prompt || '').trim(),
+      era_note: String(map.era_note || '').trim(),
       genre: String(map.genre || '').trim(),
       genre_subcategory: String(map.genre_subcategory || '').trim(),
     };
@@ -1646,6 +1694,7 @@ class DraftService extends Service {
           visual_style: style.visual_style,
           visual_style_label: style.visual_style_label,
           visual_style_prompt: style.visual_style_prompt,
+          era_note: style.era_note,
           style_ids: style.style_ids || [],
           genre: [ style.genre, style.genre_subcategory, style.novel_type ].filter(Boolean).join(' / '),
           title: style.title,

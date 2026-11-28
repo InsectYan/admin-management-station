@@ -93,6 +93,7 @@ module.exports = app => {
   router.post('/api/projects/:id/imports/:importId/draft', controller.project.draft);
   router.post('/api/projects/:id/nodes/:nodeKey/run', controller.customNode.run);
   router.post('/api/projects/:id/shots', controller.project.addShot);
+  router.post('/api/projects/:id/shots/:shotId/move', controller.project.moveShot);
   router.post('/api/projects/:id/shots/purge', controller.project.purgeShots);
   router.post('/api/projects/:id/imports/:importId/shots/clear', controller.project.clearImportShots);
   router.get('/api/projects/:id/copy-blocks', controller.project.listCopyBlocks);

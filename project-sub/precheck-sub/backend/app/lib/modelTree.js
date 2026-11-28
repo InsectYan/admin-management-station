@@ -4,7 +4,7 @@ const MODEL_FOLDERS = [
   'checkpoints', 'loras', 'vae', 'diffusion_models', 'unet',
   'text_encoders', 'clip', 'clip_vision', 'controlnet',
   'embeddings', 'upscale_models', 'hypernetworks', 'style_models',
-  'gligen', 'configs', 'vae_approx', 'audio_encoders', 'model_patches',
+  'gligen', 'configs', 'vae_approx', 'audio_encoders', 'model_patches', 'pdd_acc',
 ];
 
 function allowedFolder(folder) {

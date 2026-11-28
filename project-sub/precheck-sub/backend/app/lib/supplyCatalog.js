@@ -345,6 +345,16 @@ const FAMILIES = [
           h3Local('h3-realism-people-t2v-i2v-r2v.safetensors', 'loras', 'H3-满血首尾帧视频-lora控制-显存不足\\loras\\h3-realism-people-t2v-i2v-r2v.safetensors'),
         ],
       },
+      {
+        id: 'pdd',
+        label: '8步加速',
+        folder: 'pdd_acc',
+        optional: true,
+        match: /minimax_h3_fl2va_pdd_acc/i,
+        options: [
+          h3Pdd('minimax_h3_fl2va_pdd_acc_8step_comfyui.safetensors'),
+        ],
+      },
     ],
   },
   {
@@ -458,6 +468,19 @@ function qwen21File(name, folder, splitDir) {
   );
   option.directory = `models/${folder}/qwen-image-2.1`;
   option.place = `${AITV_MODELS}\\${folder}\\qwen-image-2.1`;
+  return option;
+}
+
+function h3Pdd(name) {
+  const option = modelOption(
+    '',
+    'Hugging Face',
+    name,
+    'pdd_acc',
+    `https://huggingface.co/aptech0081/MiniMax-H3-Acc-LoRAs-ComfyUI/resolve/main/${name}`,
+  );
+  option.directory = 'models/pdd_acc';
+  option.place = `${PACK011_MODELS}\\pdd_acc`;
   return option;
 }
 

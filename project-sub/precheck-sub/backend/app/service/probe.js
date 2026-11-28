@@ -2,7 +2,7 @@
 
 const MODEL_FOLDERS = [
   'checkpoints', 'loras', 'vae', 'diffusion_models', 'unet',
-  'text_encoders', 'clip', 'clip_vision', 'controlnet',
+  'text_encoders', 'clip', 'clip_vision', 'controlnet', 'pdd_acc',
 ];
 
 async function readJson(url) {

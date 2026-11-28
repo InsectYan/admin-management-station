@@ -384,6 +384,14 @@ class ProjectController extends Controller {
     }
   }
 
+  async moveShot() {
+    try {
+      ok(this.ctx, await this.ctx.service.project.moveShot(this.ctx.params.id, this.ctx.params.shotId, this.ctx.request.body || {}));
+    } catch (err) {
+      fail(this.ctx, err);
+    }
+  }
+
   async showPanel() {
     try {
       ok(this.ctx, await this.ctx.service.project.panelOf(this.ctx.params.id));
@@ -624,7 +632,7 @@ class ProjectController extends Controller {
   async startAutoJob() {
     try {
       const body = this.ctx.request.body || {};
-      ok(this.ctx, await this.ctx.service.autoJob.start(this.ctx.params.id, body.shot_ids, body.video_count, body.generate_end, body.fresh));
+      ok(this.ctx, await this.ctx.service.autoJob.start(this.ctx.params.id, body.shot_ids, body.video_count, body.generate_end, body.fresh, body.workflow_id));
     } catch (err) {
       fail(this.ctx, err);
     }

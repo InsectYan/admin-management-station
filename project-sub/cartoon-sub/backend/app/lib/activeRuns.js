@@ -9,11 +9,32 @@ function keyOf(projectId, kind, targetId) {
   return `${projectId}:${kind}:${targetId}`;
 }
 
+function notePace(row, chars, label) {
+  if (!row || row.status !== 'running') return;
+  const count = Math.max(0, Number(chars) || 0);
+  const now = Date.now();
+  if (count < (Number(row.chars) || 0)) {
+    row.paceMark = { t: now, chars: 0 };
+    row.charsPerSec = 0;
+  }
+  row.chars = count;
+  if (label) row.label = String(label).slice(0, 40);
+  if (!row.paceMark) row.paceMark = { t: row.startedAt || now, chars: 0 };
+  const dt = now - row.paceMark.t;
+  if (dt < 700) return;
+  const dc = count - row.paceMark.chars;
+  row.charsPerSec = dc > 0 ? Math.max(1, Math.round(dc / (dt / 1000))) : 0;
+  row.paceMark = { t: now, chars: count };
+}
+
 function present(row) {
   return {
     kind: row.kind,
     target_id: row.targetId,
     started_at: row.startedAt,
+    label: row.label || '',
+    chars: Number(row.chars) || 0,
+    chars_per_sec: Number(row.charsPerSec) || 0,
   };
 }
 
@@ -78,4 +99,4 @@ function cancelProject(app, projectId) {
   return count;
 }
 
-module.exports = { begin, finish, list, cancelProject };
+module.exports = { begin, finish, list, cancelProject, notePace };

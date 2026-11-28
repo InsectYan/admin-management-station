@@ -34,6 +34,7 @@ module.exports = app => {
       },
     },
     summary: { type: TEXT, allowNull: true },
+    era_note: { type: TEXT, allowNull: false, defaultValue: '' },
     status: { type: STRING(32), allowNull: false, defaultValue: 'draft' },
     content_type: { type: STRING(32), allowNull: false, defaultValue: 'ai_comic' },
     package_id: { type: STRING(64), allowNull: true },

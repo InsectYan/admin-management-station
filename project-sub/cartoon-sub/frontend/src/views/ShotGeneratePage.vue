@@ -318,6 +318,8 @@ const moveOptions = ref([ '固定', '推', '急推', '拉', '急拉', '摇', '�
 const media = ref('video');
 const durationSec = ref(10);
 const workflowId = ref(null);
+const videoWorkflowId = ref(null);
+const imageWorkflowId = ref(null);
 const contracts = ref({});
 const IMAGE_TYPES = new Set([ 'image/png', 'image/jpeg', 'image/webp' ]);
 const files = reactive({});
@@ -940,15 +942,17 @@ async function load() {
   try {
     contracts.value = await request('/generate-inputs');
     packs.value = await request(`/projects/${projectId.value}/refmods`) || [];
-    const savedWorkflow = (contracts.value.workflows || []).find(item => item.id === Number(found.workflow_id));
-    if (savedWorkflow) {
-      echoing = true;
-      media.value = savedWorkflow.media || 'video';
-      workflowId.value = savedWorkflow.id;
-      echoing = false;
-    } else {
-      pickDefault(media.value);
-    }
+    const savedVideo = (contracts.value.workflows || []).find(item => item.id === Number(found.workflow_id) && item.media === 'video');
+    const savedImage = (contracts.value.workflows || []).find(item => item.id === Number(found.image_workflow_id) && item.media === 'image')
+      || (contracts.value.workflows || []).find(item => item.id === Number(found.workflow_id) && item.media === 'image');
+    videoWorkflowId.value = savedVideo?.id || null;
+    imageWorkflowId.value = savedImage?.id || null;
+    echoing = true;
+    media.value = 'video';
+    workflowId.value = videoWorkflowId.value;
+    if (imageWorkflowId.value) frameWorkflowId.value = imageWorkflowId.value;
+    echoing = false;
+    if (!workflowId.value) pickDefault('video');
     const live = (detail.tasks || [])
       .filter(item => String(item.shot_id) === String(found.id) && [ 'queued', 'running', 'saving' ].includes(item.status))
       .sort((a, b) => Number(b.id) - Number(a.id))[0];
@@ -970,8 +974,16 @@ async function load() {
   });
 }
 let echoing = false;
+let rememberWorkflow = true;
 function pickDefault(nextMedia) {
+  const remembered = nextMedia === 'video' ? videoWorkflowId.value : imageWorkflowId.value;
   const list = (contracts.value.workflows || []).filter(item => item.media === nextMedia);
+  if (remembered && list.some(item => item.id === remembered)) {
+    rememberWorkflow = false;
+    workflowId.value = remembered;
+    rememberWorkflow = true;
+    return;
+  }
   const nameOf = item => String(item?.name || '');
   const flf = nextMedia === 'video'
     ? (list.find(item => /满血-h3-首尾帧/i.test(nameOf(item)) && /\[refmod\]/i.test(nameOf(item)))
@@ -979,7 +991,9 @@ function pickDefault(nextMedia) {
     : null;
   const preferred = nextMedia === 'image' ? contracts.value.image?.workflow_id : null;
   const found = flf || list.find(item => item.id === preferred) || list[0];
+  rememberWorkflow = false;
   workflowId.value = found ? found.id : null;
+  rememberWorkflow = true;
 }
 function jobPercentOf(task) {
   if (!task) return 0;
@@ -1054,7 +1068,8 @@ async function saveAssets() {
         shot_sizes: shotSizes.value,
         camera_moves: cameraMoves.value,
         duration_sec: Number(durationSec.value) || undefined,
-        workflow_id: workflowId.value,
+        ...(videoWorkflowId.value ? { workflow_id: videoWorkflowId.value } : {}),
+        ...(imageWorkflowId.value ? { image_workflow_id: imageWorkflowId.value } : {}),
         stage_notes: stagePayload(),
         positive_zh: promptText.value,
         frame_start_zh: frameStartText.value,
@@ -1148,9 +1163,14 @@ function syncFrameSize() {
   if (Number(workflow?.height) > 0) frameHeight.value = workflow.height;
 }
 function ensureFrameWorkflow() {
-  if (frameWorkflowId.value && imageWorkflows.value.some(item => item.id === frameWorkflowId.value)) return;
+  if (frameWorkflowId.value && imageWorkflows.value.some(item => item.id === frameWorkflowId.value)) {
+    syncFrameSize();
+    return;
+  }
   const found = frameEditWorkflows.value[0] || frameTextWorkflows.value[0] || null;
+  echoing = true;
   frameWorkflowId.value = found ? found.id : null;
+  echoing = false;
   syncFrameSize();
 }
 async function generateFrame() {
@@ -1235,6 +1255,7 @@ async function generateFrame() {
   }
 }
 async function generate() {
+  if (jobLive.value) return;
   if (formTab.value === 'frames') {
     await generateFrame();
     return;
@@ -1350,9 +1371,17 @@ watch(media, () => {
   pickDefault(media.value);
   resetFiles();
 });
-watch(workflowId, resetFiles);
-watch(frameWorkflowId, () => {
+watch(workflowId, (id) => {
+  if (!echoing && rememberWorkflow) {
+    const row = (contracts.value.workflows || []).find(item => item.id === id);
+    if (row?.media === 'video') videoWorkflowId.value = id;
+    if (row?.media === 'image') imageWorkflowId.value = id;
+  }
+  resetFiles();
+});
+watch(frameWorkflowId, (id) => {
   if (echoing) return;
+  if (id) imageWorkflowId.value = id;
   syncFrameSize();
 });
 watch(slots, next => {

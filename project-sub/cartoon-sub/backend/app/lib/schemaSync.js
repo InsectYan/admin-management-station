@@ -59,6 +59,24 @@ async function dropOrphanTables(sequelize, expectedTables, logger) {
   }
 }
 
+async function backfillShotListOrder(sequelize, logger) {
+  const [ cols ] = await sequelize.query(`
+    SELECT column_name FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'cartoon_shots' AND column_name = 'list_order'
+  `);
+  if (!cols.length) return;
+  const [ rows ] = await sequelize.query(`
+    SELECT COUNT(*)::int AS total,
+           COUNT(*) FILTER (WHERE list_order <> 0)::int AS nonzero
+    FROM cartoon_shots
+  `);
+  const total = Number(rows[0]?.total) || 0;
+  const nonzero = Number(rows[0]?.nonzero) || 0;
+  if (!total || nonzero) return;
+  await sequelize.query('UPDATE cartoon_shots SET list_order = sort_order');
+  logger.info('[SchemaSync] Backfilled cartoon_shots.list_order from sort_order');
+}
+
 async function syncSchemaOnStartup(app) {
   const logger = app.logger;
   const sequelize = app.model;
@@ -70,6 +88,7 @@ async function syncSchemaOnStartup(app) {
   if (dbDir) await runSqlBootstrap(sequelize, dbDir, logger);
   await sequelize.sync({ alter: true });
   logger.info('[SchemaSync] Sequelize sync completed');
+  await backfillShotListOrder(sequelize, logger);
   await dropOrphanTables(sequelize, collectModelTableNames(app), logger);
 }
 

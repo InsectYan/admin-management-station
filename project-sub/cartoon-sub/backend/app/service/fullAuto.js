@@ -6,6 +6,7 @@ const { Op } = require('sequelize');
 const Service = require('egg').Service;
 const { invokeSkill } = require('../lib/agentProxy');
 const { cancelProject } = require('../lib/activeRuns');
+const { listOrder, neighborWhere, neighborOrder } = require('../lib/shotList');
 const { outputRoot, resolveInside } = require('../lib/mediaPaths');
 const { ownPassage, sceneIsSparse, polishSheetPrompt } = require('../lib/assetExcerpt');
 const {
@@ -735,6 +736,7 @@ class FullAutoService extends Service {
           known_assets: rosterText(assets),
             script_cast: scriptCast(chapter),
             visual_style_label: style?.visual_style_label || '',
+            era_note: style?.era_note || '',
             av_mode: topicsOf(project).includes('av'),
             topics: topicsOf(project),
         },
@@ -1350,11 +1352,7 @@ class FullAutoService extends Service {
   }
 
   async stepWorkflow(run) {
-    await this.ctx.model.Shot.update(
-      { workflow_id: run.video_workflow_id },
-      { where: { project_id: run.project_id, import_id: run.import_id } },
-    );
-    await this.pushLog(run, 'workflow', `每镜使用 ${run.video_workflow_name}`);
+    await this.pushLog(run, 'workflow', `这一轮视频使用 ${run.video_workflow_name}，不改镜头上的生视频工作流`);
     await this.pulse(run, 'workflow');
   }
 
@@ -1646,12 +1644,9 @@ class FullAutoService extends Service {
       where: {
         project_id: shot.project_id,
         import_id: shot.import_id || null,
-        [Op.or]: [
-          { sort_order: { [Op.lt]: shot.sort_order } },
-          { sort_order: shot.sort_order, id: { [Op.lt]: shot.id } },
-        ],
+        ...neighborWhere(Op, shot, 'before'),
       },
-      order: [[ 'sort_order', 'DESC' ], [ 'id', 'DESC' ]],
+      order: neighborOrder('before'),
     });
   }
 
@@ -1951,7 +1946,7 @@ class FullAutoService extends Service {
   async shotsOf(run) {
     return this.ctx.model.Shot.findAll({
       where: { project_id: run.project_id, import_id: run.import_id },
-      order: [[ 'sort_order', 'ASC' ], [ 'id', 'ASC' ]],
+      order: listOrder(),
     });
   }
 

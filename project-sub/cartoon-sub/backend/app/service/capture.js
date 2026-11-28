@@ -5,6 +5,7 @@ const path = require('path');
 const Service = require('egg').Service;
 const { outputRoot, resolveInside } = require('../lib/mediaPaths');
 const { bins, run, probeFile } = require('../lib/mediaTools');
+const { listOrder } = require('../lib/shotList');
 
 const VIDEO_KINDS = [ 'video', 'i2v', 't2v', 'refmod' ];
 

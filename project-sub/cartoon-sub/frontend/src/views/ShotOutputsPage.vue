@@ -221,6 +221,7 @@
       append-to-body
       destroy-on-close
     >
+      <div class="cartoon-prompt-tabs-row">
       <div class="cartoon-prompt-tabs" role="tablist">
         <button
           v-for="item in promptDialogParts"
@@ -231,6 +232,8 @@
           :aria-selected="promptDialogPart === item.key"
           @click="promptDialogPart = item.key"
         >{{ item.label }}</button>
+      </div>
+      <span v-if="promptDialogPace" class="cartoon-pace">{{ promptDialogPace }}</span>
       </div>
       <div class="cartoon-prompt-reset__columns">
         <section class="cartoon-prompt-reset__side">
@@ -403,6 +406,33 @@ const promptDialogParts = [
   { key: 'frame_end', label: '尾帧提示词' },
 ];
 const promptDialogBusy = computed(() => promptDialogSaving.value || promptDialogGenerating.value);
+const promptDialogRuns = ref([]);
+const promptDialogPace = computed(() => {
+  const id = shot.value?.id;
+  if (!id) return '';
+  const row = promptDialogRuns.value
+    .filter(item => (item.kind === 'prompt-form' || item.kind === 'prompt') && String(item.target_id) === String(id))
+    .sort((a, b) => Number(b.started_at || 0) - Number(a.started_at || 0))[0];
+  if (!row) return promptDialogGenerating.value ? '正在生成' : '';
+  const speed = Number(row.chars_per_sec) || 0;
+  return speed > 0 ? `${speed} 字/秒` : '正在生成';
+});
+let promptPaceTimer = null;
+async function syncPromptPace() {
+  const id = projectId.value;
+  if (!id) return;
+  try {
+    const data = await request(`/projects/${id}/runs`);
+    promptDialogRuns.value = data?.runs || [];
+  } catch {
+    promptDialogRuns.value = [];
+  }
+}
+function stopPromptPace() {
+  if (promptPaceTimer) clearInterval(promptPaceTimer);
+  promptPaceTimer = null;
+  promptDialogRuns.value = [];
+}
 const dialogTab = computed(() => {
   if (promptDialogPart.value === 'frame_end') return 'end';
   if (promptDialogPart.value === 'frame_start') return 'start';
@@ -412,6 +442,12 @@ const dialogPanel = computed(() => (promptDialogTask.value ? panelFor(promptDial
 const dialogEmpty = computed(() => {
   if (dialogTab.value === 'video') return '这条记录没有视频。';
   return dialogTab.value === 'end' ? '这条记录没有单独生成尾帧。' : '这条记录没有单独生成首帧。';
+});
+watch(promptDialogOpen, (open) => {
+  stopPromptPace();
+  if (!open) return;
+  syncPromptPace();
+  promptPaceTimer = setInterval(syncPromptPace, 1000);
 });
 function openPromptDialog(task) {
   promptDialogTask.value = task;
@@ -693,7 +729,10 @@ watch(() => props.reloadToken, (value) => {
   if (value) load();
 });
 onMounted(load);
-onUnmounted(stopPoll);
+onUnmounted(() => {
+  stopPoll();
+  stopPromptPace();
+});
 </script>
 
 <style scoped>
@@ -777,10 +816,22 @@ onUnmounted(stopPoll);
 .cartoon-brief:first-child { border-top: 0; padding-top: 0; }
 .cartoon-brief__head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .cartoon-brief__reset { margin-left: auto; }
+.cartoon-pace {
+  color: #2f8a5b;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.cartoon-prompt-tabs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
 .cartoon-prompt-tabs {
   display: flex;
   width: fit-content;
-  margin-bottom: 12px;
+  margin-bottom: 0;
   border: 1px solid rgba(47, 138, 91, 0.35);
   border-radius: 6px;
   overflow: hidden;
